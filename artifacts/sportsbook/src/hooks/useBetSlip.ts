@@ -13,26 +13,38 @@ interface BetSlipState {
   removeSelection: (id: string) => void;
   clearSlip: () => void;
   hasSelection: (id: string) => boolean;
+  /** Combined odds (product) — for accumulator display */
   totalOdds: number;
+  /** Estimated acca return */
   accaReturn: number;
+  /** Sum of all single estimated returns */
   totalSingleReturn: number;
+  /** Total staked across all singles */
+  totalSingleStaked: number;
 }
 
 const BetSlipContext = createContext<BetSlipState | null>(null);
 
 export function BetSlipProvider({ children }: { children: ReactNode }) {
-  const [selections, setSelections] = useState<Selection[]>([]);
-  const [betType, setBetTypeState] = useState<BetType>('acca');
-  const [stake, setStakeState] = useState('');
-  const [singleStakes, setSingleStakesState] = useState<Record<string, string>>({});
+  const [selections,    setSelections]    = useState<Selection[]>([]);
+  const [betType,       setBetTypeState]  = useState<BetType>('acca');
+  const [stake,         setStakeState]    = useState('');
+  const [singleStakes,  setSingleStakesState] = useState<Record<string, string>>({});
 
+  /**
+   * Add a selection. If another selection from the same market (same marketId)
+   * already exists, replace it — you can't back two outcomes from the same market.
+   */
   const addSelection = useCallback((selection: Selection) => {
-    setSelections((prev) => [...prev, selection]);
+    setSelections(prev => {
+      const withoutSameMarket = prev.filter(s => s.marketId !== selection.marketId);
+      return [...withoutSameMarket, selection];
+    });
   }, []);
 
   const removeSelection = useCallback((id: string) => {
-    setSelections((prev) => prev.filter((s) => s.id !== id));
-    setSingleStakesState((prev) => {
+    setSelections(prev => prev.filter(s => s.id !== id));
+    setSingleStakesState(prev => {
       const next = { ...prev };
       delete next[id];
       return next;
@@ -48,7 +60,7 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSingleStake = useCallback((id: string, s: string) => {
-    setSingleStakesState((prev) => ({ ...prev, [id]: s }));
+    setSingleStakesState(prev => ({ ...prev, [id]: s }));
   }, []);
 
   const clearSlip = useCallback(() => {
@@ -58,13 +70,19 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const hasSelection = useCallback(
-    (id: string) => selections.some((s) => s.id === id),
+    (id: string) => selections.some(s => s.id === id),
     [selections]
   );
 
-  const totalOdds = selections.reduce((acc, s) => acc * s.odds, 1);
+  const totalOdds = selections.length > 0
+    ? selections.reduce((acc, s) => acc * s.odds, 1)
+    : 1;
 
   const accaReturn = parseFloat(stake || '0') * totalOdds;
+
+  const totalSingleStaked = selections.reduce(
+    (acc, s) => acc + parseFloat(singleStakes[s.id] || '0'), 0
+  );
 
   const totalSingleReturn = selections.reduce((acc, s) => {
     const st = parseFloat(singleStakes[s.id] || '0');
@@ -78,7 +96,8 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
       singleStakes, setSingleStake,
       addSelection, removeSelection,
       clearSlip, hasSelection,
-      totalOdds, accaReturn, totalSingleReturn,
+      totalOdds, accaReturn,
+      totalSingleReturn, totalSingleStaked,
     },
     children,
   });

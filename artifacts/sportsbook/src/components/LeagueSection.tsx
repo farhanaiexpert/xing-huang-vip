@@ -5,7 +5,7 @@ import { ChevronRight } from 'lucide-react';
 export function LeagueSection({ league }: { league: League }) {
   if (!league.matches || league.matches.length === 0) return null;
 
-  const isFootball = league.sportId === 'soccer';
+  const isFootball = league.sportId === 'sp_soccer' || league.sportId === 'soccer';
   const liveCount  = league.matches.filter(m => m.isLive).length;
 
   return (
@@ -21,7 +21,6 @@ export function LeagueSection({ league }: { league: League }) {
           )}
           <h3 className="font-semibold text-[#F8FAFC] text-[13px] truncate">{league.name}</h3>
 
-          {/* Live badge */}
           {liveCount > 0 && (
             <span className="shrink-0 flex items-center gap-1 text-[9px] font-bold uppercase text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/20 px-1.5 py-0.5 rounded">
               <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
@@ -34,10 +33,7 @@ export function LeagueSection({ league }: { league: League }) {
           </span>
         </div>
 
-        <button
-          className="flex items-center gap-0.5 text-[11px] font-medium text-[#38BDF8]/60 hover:text-[#38BDF8] transition-colors shrink-0 ml-3"
-          data-testid="link-view-all"
-        >
+        <button className="flex items-center gap-0.5 text-[11px] font-medium text-[#38BDF8]/60 hover:text-[#38BDF8] transition-colors shrink-0 ml-3" data-testid="link-view-all">
           More <ChevronRight className="h-3 w-3" />
         </button>
       </div>
@@ -68,7 +64,12 @@ export function LeagueSection({ league }: { league: League }) {
       {/* Rows */}
       <div className="flex flex-col divide-y divide-[#253241]/50">
         {league.matches.map((match, idx) => (
-          <MatchRow key={match.id} match={match} isLast={idx === league.matches.length - 1} />
+          <MatchRow
+            key={match.id}
+            match={match}
+            leagueName={league.name}
+            isLast={idx === league.matches.length - 1}
+          />
         ))}
       </div>
     </div>
@@ -78,9 +79,9 @@ export function LeagueSection({ league }: { league: League }) {
 function getFlagEmoji(countryCode: string) {
   const map: Record<string, string> = {
     EU: '🇪🇺', GB: '🇬🇧', US: '🇺🇸', ES: '🇪🇸',
-    IT: '🇮🇹', GL: '🌐', DE: '🇩🇪', IN: '🇮🇳',
+    IT: '🇮🇹', GL: '🌐', DE: '🇩🇪', IN: '🇮🇳', FR: '🇫🇷',
   };
   if (map[countryCode]) return map[countryCode];
-  const codePoints = countryCode.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
+  const pts = countryCode.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0));
+  return String.fromCodePoint(...pts);
 }

@@ -2,9 +2,16 @@ export type BetType = 'single' | 'acca';
 
 export type Selection = {
   id: string;
+  /** Used to prevent duplicate picks from the same market */
+  marketId: string;
   matchId: string;
   matchName: string;
+  leagueName: string;
+  marketName: string;
+  /** Short label: "1" | "X" | "2" */
   selectionType: string;
+  /** Full display label: "Home Win" | "Draw" | "Away Win" | player name */
+  selectionName: string;
   odds: number;
 };
 

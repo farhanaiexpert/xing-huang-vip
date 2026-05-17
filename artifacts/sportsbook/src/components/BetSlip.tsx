@@ -1,32 +1,61 @@
+import { useState } from 'react';
 import { useBetSlip } from '../hooks/useBetSlip';
+import { useWallet } from '../hooks/useWallet';
+import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
+import { ConnectWalletModal } from './ConnectWalletModal';
 import { cn } from '../lib/utils';
-import { X, Trash2, Wallet, Target, TrendingUp } from 'lucide-react';
+import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
-import { useState } from 'react';
-import { ConnectWalletModal } from './ConnectWalletModal';
+import { Selection } from '../types';
 
 export function BetSlip({ className }: { className?: string }) {
   const {
     selections, betType, setBetType,
     stake, setStake,
     singleStakes, setSingleStake,
-    addSelection: _add, removeSelection, clearSlip,
-    hasSelection: _has,
-    totalOdds, accaReturn, totalSingleReturn,
+    removeSelection, clearSlip,
+    totalOdds, accaReturn, totalSingleReturn, totalSingleStaked,
   } = useBetSlip();
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
+
+  const { isConnected } = useWallet();
+  const [isWalletOpen,   setIsWalletOpen]   = useState(false);
+  const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
 
   const hasSelections = selections.length > 0;
 
-  // ── computed ──────────────────────────────────────────────────
-  const hasAccaStake  = !!stake && parseFloat(stake) > 0;
-  const totalSingleStaked = selections.reduce(
-    (s, sel) => s + parseFloat(singleStakes[sel.id] || '0'), 0
-  );
-  const canPlaceSingle = betType === 'single' && totalSingleStaked > 0;
-  const canPlaceAcca   = betType === 'acca'   && hasAccaStake;
-  const canPlace = canPlaceSingle || canPlaceAcca;
+  // ── Place bet ──────────────────────────────────────────────────
+  function handlePlaceBet() {
+    if (!isConnected) { setIsWalletOpen(true); return; }
+
+    const stakeNum   = betType === 'acca' ? parseFloat(stake || '0') : totalSingleStaked;
+    const payout     = betType === 'acca' ? accaReturn : totalSingleReturn;
+    const odds       = betType === 'acca' ? totalOdds  : (stakeNum > 0 ? payout / stakeNum : 1);
+
+    if (stakeNum <= 0) return;
+
+    setConfirmation({
+      betId:           `#BET-${Math.floor(Math.random() * 90000 + 10000)}`,
+      betType,
+      selections:      [...selections],
+      stake:           stakeNum,
+      totalOdds:       odds,
+      estimatedPayout: payout,
+      placedAt:        new Date(),
+    });
+  }
+
+  function handleConfirmationClose() {
+    setConfirmation(null);
+    clearSlip();
+  }
+
+  // ── Bet logic ─────────────────────────────────────────────────
+  const accaStakeNum     = parseFloat(stake || '0');
+  const canPlaceAcca     = isConnected && betType === 'acca'   && accaStakeNum > 0 && hasSelections;
+  const canPlaceSingle   = isConnected && betType === 'single' && totalSingleStaked > 0 && hasSelections;
+  const canPlace         = canPlaceAcca || canPlaceSingle;
+  const readyToStake     = hasSelections;
 
   return (
     <aside className={cn(
@@ -67,7 +96,7 @@ export function BetSlip({ className }: { className?: string }) {
           {/* Single / Acca toggle */}
           <div className="px-3 pt-3 pb-0 shrink-0">
             <div className="flex rounded-lg bg-[#0B0F14] border border-[#253241] p-0.5 gap-0.5">
-              {(['single', 'acca'] as const).map(type => (
+              {(['acca', 'single'] as const).map(type => (
                 <button
                   key={type}
                   onClick={() => setBetType(type)}
@@ -82,6 +111,14 @@ export function BetSlip({ className }: { className?: string }) {
                 </button>
               ))}
             </div>
+
+            {/* Acca warning when only 1 selection */}
+            {betType === 'acca' && selections.length === 1 && (
+              <div className="mt-2 flex items-start gap-1.5 text-[10px] text-[#FACC15]/80 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-lg px-2.5 py-2">
+                <AlertCircle className="h-3 w-3 shrink-0 mt-px" />
+                <span>Add more selections to build an accumulator</span>
+              </div>
+            )}
           </div>
 
           {betType === 'single' ? (
@@ -92,8 +129,10 @@ export function BetSlip({ className }: { className?: string }) {
               removeSelection={removeSelection}
               totalSingleStaked={totalSingleStaked}
               totalSingleReturn={totalSingleReturn}
+              isConnected={isConnected}
               canPlace={canPlaceSingle}
-              onPlaceBet={() => setIsWalletOpen(true)}
+              onConnectWallet={() => setIsWalletOpen(true)}
+              onPlaceBet={handlePlaceBet}
             />
           ) : (
             <AccaView
@@ -103,14 +142,18 @@ export function BetSlip({ className }: { className?: string }) {
               stake={stake}
               setStake={setStake}
               accaReturn={accaReturn}
+              isConnected={isConnected}
               canPlace={canPlaceAcca}
-              onPlaceBet={() => setIsWalletOpen(true)}
+              readyToStake={readyToStake}
+              onConnectWallet={() => setIsWalletOpen(true)}
+              onPlaceBet={handlePlaceBet}
             />
           )}
         </>
       )}
 
       <ConnectWalletModal open={isWalletOpen} onOpenChange={setIsWalletOpen} />
+      <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />
     </aside>
   );
 }
@@ -120,15 +163,18 @@ export function BetSlip({ className }: { className?: string }) {
 // ────────────────────────────────────────────────────────────────
 function SingleView({
   selections, singleStakes, setSingleStake, removeSelection,
-  totalSingleStaked, totalSingleReturn, canPlace, onPlaceBet,
+  totalSingleStaked, totalSingleReturn, isConnected, canPlace,
+  onConnectWallet, onPlaceBet,
 }: {
-  selections: ReturnType<typeof useBetSlip>['selections'];
+  selections: Selection[];
   singleStakes: Record<string, string>;
   setSingleStake: (id: string, v: string) => void;
   removeSelection: (id: string) => void;
   totalSingleStaked: number;
   totalSingleReturn: number;
+  isConnected: boolean;
   canPlace: boolean;
+  onConnectWallet: () => void;
   onPlaceBet: () => void;
 }) {
   return (
@@ -136,57 +182,39 @@ function SingleView({
       <ScrollArea className="flex-1 px-3">
         <div className="space-y-2 py-2">
           {selections.map(sel => {
-            const st   = parseFloat(singleStakes[sel.id] || '0');
-            const ret  = st > 0 ? (st * sel.odds).toFixed(2) : null;
+            const st  = parseFloat(singleStakes[sel.id] || '0');
+            const ret = st > 0 ? (st * sel.odds).toFixed(2) : null;
             return (
-              <div key={sel.id} className="rounded-xl bg-gradient-to-br from-[#18212B] to-[#121821] border border-[#253241] hover:border-[#2E3D50] transition-colors p-3">
-                {/* top row */}
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-[#94A3B8] truncate leading-relaxed">{sel.matchName}</p>
-                    <p className="text-xs font-semibold text-[#F8FAFC] leading-none mt-0.5">{sel.selectionType}</p>
+              <SelectionCard
+                key={sel.id}
+                sel={sel}
+                onRemove={() => removeSelection(sel.id)}
+                extra={
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#94A3B8] z-10 pointer-events-none">$</span>
+                      <Input
+                        type="number"
+                        placeholder="Stake"
+                        className="pl-6 pr-2 h-8 rounded-lg text-xs bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50"
+                        value={singleStakes[sel.id] || ''}
+                        onChange={e => setSingleStake(sel.id, e.target.value)}
+                      />
+                    </div>
+                    <div className="text-right shrink-0 w-[64px]">
+                      <p className="text-[9px] text-[#94A3B8]/60 leading-none mb-0.5">Return</p>
+                      <p className={cn('text-xs font-bold leading-none', ret ? 'text-[#22C55E]' : 'text-[#94A3B8]/40')}>
+                        {ret ? `$${ret}` : '—'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-base font-black text-[#FACC15] leading-none">{sel.odds.toFixed(2)}</span>
-                    <button
-                      onClick={() => removeSelection(sel.id)}
-                      data-testid={`button-remove-selection-${sel.id}`}
-                      className="p-1 rounded text-[#94A3B8]/50 hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* stake + return */}
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#94A3B8] z-10 pointer-events-none">$</span>
-                    <Input
-                      type="number"
-                      placeholder="Stake"
-                      className="pl-6 pr-2 h-8 rounded-lg text-xs bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50"
-                      value={singleStakes[sel.id] || ''}
-                      onChange={e => setSingleStake(sel.id, e.target.value)}
-                    />
-                  </div>
-                  <div className="text-right shrink-0 w-[60px]">
-                    <p className="text-[9px] text-[#94A3B8]/60 leading-none mb-0.5">Return</p>
-                    <p className={cn('text-xs font-bold leading-none', ret ? 'text-[#22C55E]' : 'text-[#94A3B8]/40')}>
-                      {ret ? `$${ret}` : '—'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* bottom accent */}
-                <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#00DFA9]/15 to-transparent" />
-              </div>
+                }
+              />
             );
           })}
         </div>
       </ScrollArea>
 
-      {/* Footer */}
       <div className="shrink-0 border-t border-[#253241] bg-gradient-to-b from-[#121821] to-[#0D1117] p-4 space-y-3">
         <div className="rounded-xl bg-[#0B0F14] border border-[#253241] px-3 py-2.5 space-y-1.5">
           <div className="flex justify-between items-center">
@@ -203,7 +231,13 @@ function SingleView({
             </span>
           </div>
         </div>
-        <PlaceBetButton canPlace={canPlace} onClick={onPlaceBet} />
+        <ActionButton
+          isConnected={isConnected}
+          canPlace={canPlace}
+          onConnectWallet={onConnectWallet}
+          onPlaceBet={onPlaceBet}
+          hasStake={totalSingleStaked > 0}
+        />
       </div>
     </>
   );
@@ -214,58 +248,47 @@ function SingleView({
 // ────────────────────────────────────────────────────────────────
 function AccaView({
   selections, removeSelection, totalOdds, stake, setStake,
-  accaReturn, canPlace, onPlaceBet,
+  accaReturn, isConnected, canPlace, readyToStake, onConnectWallet, onPlaceBet,
 }: {
-  selections: ReturnType<typeof useBetSlip>['selections'];
+  selections: Selection[];
   removeSelection: (id: string) => void;
   totalOdds: number;
   stake: string;
   setStake: (v: string) => void;
   accaReturn: number;
+  isConnected: boolean;
   canPlace: boolean;
+  readyToStake: boolean;
+  onConnectWallet: () => void;
   onPlaceBet: () => void;
 }) {
+  const stakeNum = parseFloat(stake || '0');
   return (
     <>
       {/* Bet type label */}
       <div className="px-4 pt-2.5 pb-1 flex items-center gap-2 shrink-0">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-[#94A3B8]/50">
-          {selections.length}-Fold Accumulator
+          {selections.length > 1 ? `${selections.length}-Fold Accumulator` : 'Single'}
         </span>
         <div className="flex-1 h-px bg-[#253241]" />
       </div>
 
-      {/* Selections — compact */}
       <ScrollArea className="flex-1 px-3">
         <div className="space-y-1.5 py-2">
           {selections.map(sel => (
-            <div key={sel.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#0B0F14] border border-[#253241] px-3 py-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-[#94A3B8] truncate leading-none mb-0.5">{sel.matchName}</p>
-                <p className="text-xs font-semibold text-[#F8FAFC] leading-none truncate">{sel.selectionType}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-sm font-black text-[#FACC15]">{sel.odds.toFixed(2)}</span>
-                <button
-                  onClick={() => removeSelection(sel.id)}
-                  data-testid={`button-remove-selection-${sel.id}`}
-                  className="p-0.5 rounded text-[#94A3B8]/40 hover:text-[#EF4444] transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
+            <SelectionCard key={sel.id} sel={sel} compact onRemove={() => removeSelection(sel.id)} />
           ))}
         </div>
       </ScrollArea>
 
-      {/* Footer */}
       <div className="shrink-0 border-t border-[#253241] bg-gradient-to-b from-[#121821] to-[#0D1117] p-4 space-y-3">
-        {/* Combined odds */}
+        {/* Odds + return summary */}
         <div className="rounded-xl bg-[#0B0F14] border border-[#253241] px-3 py-2.5 space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[11px] text-[#94A3B8]">Combined Odds</span>
-            <span className="text-sm font-bold text-[#FACC15]">{totalOdds.toFixed(2)}</span>
+            <span className="text-sm font-bold text-[#FACC15]">
+              {selections.length > 1 ? totalOdds.toFixed(2) : selections[0]?.odds.toFixed(2) ?? '—'}
+            </span>
           </div>
           <div className="h-px bg-[#253241]" />
           <div className="flex justify-between items-center">
@@ -276,7 +299,7 @@ function AccaView({
           </div>
         </div>
 
-        {/* Stake input */}
+        {/* Stake */}
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-[#94A3B8] z-10 pointer-events-none">$</span>
           <Input
@@ -289,35 +312,138 @@ function AccaView({
           />
         </div>
 
-        <PlaceBetButton canPlace={canPlace} onClick={onPlaceBet} />
+        <ActionButton
+          isConnected={isConnected}
+          canPlace={canPlace}
+          onConnectWallet={onConnectWallet}
+          onPlaceBet={onPlaceBet}
+          hasStake={stakeNum > 0}
+        />
       </div>
     </>
   );
 }
 
 // ────────────────────────────────────────────────────────────────
-// SHARED COMPONENTS
+// SELECTION CARD
 // ────────────────────────────────────────────────────────────────
-function PlaceBetButton({ canPlace, onClick }: { canPlace: boolean; onClick: () => void }) {
+function SelectionCard({
+  sel, onRemove, compact = false, extra,
+}: {
+  sel: Selection;
+  onRemove: () => void;
+  compact?: boolean;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div className={cn(
+      'relative rounded-xl border transition-colors group/card',
+      compact
+        ? 'bg-[#0B0F14] border-[#253241] px-3 py-2 hover:border-[#2E3D50]'
+        : 'bg-gradient-to-br from-[#18212B] to-[#121821] border-[#253241] hover:border-[#2E3D50] p-3'
+    )}>
+      {/* League pill */}
+      {sel.leagueName && (
+        <div className="flex items-center gap-1 mb-1.5">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]/50 leading-none truncate">
+            {sel.leagueName}
+          </span>
+          {sel.marketName && (
+            <>
+              <span className="text-[#253241] text-[9px]">·</span>
+              <span className="text-[9px] font-medium text-[#94A3B8]/40 leading-none truncate">{sel.marketName}</span>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] text-[#94A3B8] truncate leading-none mb-0.5">{sel.matchName}</p>
+          <p className={cn('font-semibold leading-none', compact ? 'text-xs text-[#F8FAFC]' : 'text-[13px] text-[#F8FAFC]')}>
+            {sel.selectionName || sel.selectionType}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={cn('font-black text-[#FACC15] leading-none tabular-nums', compact ? 'text-sm' : 'text-base')}>
+            {sel.odds.toFixed(2)}
+          </span>
+          <button
+            onClick={onRemove}
+            data-testid={`button-remove-selection-${sel.id}`}
+            className="p-1 rounded text-[#94A3B8]/40 hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+
+      {extra}
+
+      {/* Bottom glow accent on cards */}
+      {!compact && (
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#00DFA9]/12 to-transparent" />
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────
+// ACTION BUTTON (Place Bet / Connect Wallet / Enter Stake)
+// ────────────────────────────────────────────────────────────────
+function ActionButton({
+  isConnected, canPlace, hasStake, onConnectWallet, onPlaceBet,
+}: {
+  isConnected: boolean;
+  canPlace: boolean;
+  hasStake: boolean;
+  onConnectWallet: () => void;
+  onPlaceBet: () => void;
+}) {
+  if (!isConnected) {
+    return (
+      <button
+        onClick={onConnectWallet}
+        data-testid="button-connect-wallet-slip"
+        className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#00DFA9] text-[#0B0F14] hover:shadow-[0_0_28px_rgba(0,223,169,0.55),0_0_60px_rgba(0,223,169,0.2)] hover:scale-[1.02] active:scale-[0.97] transition-all duration-200 cursor-pointer"
+      >
+        <Wallet className="h-4 w-4 shrink-0" />
+        Connect Wallet to Bet
+      </button>
+    );
+  }
+
+  if (!hasStake) {
+    return (
+      <button
+        disabled
+        data-testid="button-place-bet"
+        className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#1E2A38] text-[#94A3B8]/40 cursor-not-allowed"
+      >
+        Enter Stake to Continue
+      </button>
+    );
+  }
+
   return (
     <button
-      onClick={onClick}
-      disabled={!canPlace}
+      onClick={onPlaceBet}
       data-testid="button-place-bet"
-      className={cn(
-        'w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200',
-        canPlace
-          ? 'bg-[#00DFA9] text-[#0B0F14] hover:shadow-[0_0_28px_rgba(0,223,169,0.55),0_0_60px_rgba(0,223,169,0.2)] hover:scale-[1.02] active:scale-[0.97] cursor-pointer'
-          : 'bg-[#1E2A38] text-[#94A3B8]/40 cursor-not-allowed'
-      )}
+      className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#00DFA9] text-[#0B0F14] hover:shadow-[0_0_28px_rgba(0,223,169,0.55),0_0_60px_rgba(0,223,169,0.2)] hover:scale-[1.02] active:scale-[0.97] transition-all duration-200 cursor-pointer"
     >
-      <Wallet className="h-4 w-4 shrink-0" />
-      {canPlace ? 'Connect Wallet to Bet' : 'Enter Stake to Continue'}
+      <CheckCircle2 className="h-4 w-4 shrink-0" />
+      Place Bet {canPlace ? '' : ''}
     </button>
   );
 }
 
+// ────────────────────────────────────────────────────────────────
+// EMPTY STATE
+// ────────────────────────────────────────────────────────────────
 function EmptyState() {
+  const { isConnected, shortAddress, walletName } = useWallet();
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-4 text-center">
       <div className="relative mb-5">
@@ -335,9 +461,30 @@ function EmptyState() {
         Select any odds from the matches to start building your bet
       </p>
 
-      <div className="w-full space-y-2 mb-5">
+      {/* Wallet status */}
+      {isConnected ? (
+        <div className="w-full mb-4 flex items-center gap-2 bg-[#00DFA9]/5 border border-[#00DFA9]/15 rounded-lg px-3 py-2.5">
+          <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] shrink-0" />
+          <div className="text-left min-w-0">
+            <p className="text-[9px] text-[#94A3B8]/50 uppercase tracking-wider font-medium leading-none">{walletName}</p>
+            <p className="text-[11px] font-mono font-semibold text-[#00DFA9] leading-none mt-0.5">{shortAddress}</p>
+          </div>
+          <CheckCircle2 className="h-3.5 w-3.5 text-[#00DFA9] ml-auto shrink-0" />
+        </div>
+      ) : (
+        <button
+          onClick={() => setIsWalletOpen(true)}
+          className="w-full mb-4 flex items-center gap-2 bg-[#121821] border border-[#253241] rounded-lg px-3 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all"
+        >
+          <Wallet className="h-4 w-4 text-[#94A3B8]/50 shrink-0" />
+          Connect wallet to place bets
+        </button>
+      )}
+
+      {/* Ghost selection rows */}
+      <div className="w-full space-y-2 mb-4">
         {[{ odds: '1.85', w: 20 }, { odds: '3.40', w: 14 }].map((item, i) => (
-          <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#121821] border border-[#253241]/40 opacity-30">
+          <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#121821] border border-[#253241]/40 opacity-25">
             <div className="flex flex-col items-start gap-1">
               <div className="h-1.5 rounded-full bg-[#253241]" style={{ width: `${item.w * 4}px` }} />
               <div className="h-1.5 w-10 rounded-full bg-[#253241]/50" />
@@ -353,6 +500,8 @@ function EmptyState() {
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_5px_rgba(0,223,169,0.8)]" />
         Click any odds button to add
       </p>
+
+      <ConnectWalletModal open={isWalletOpen} onOpenChange={setIsWalletOpen} />
     </div>
   );
 }

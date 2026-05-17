@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
+import { WalletProvider } from "@/hooks/useWallet";
 
 const queryClient = new QueryClient();
 
@@ -21,12 +22,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <BetSlipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </BetSlipProvider>
+        <WalletProvider>
+          <BetSlipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </BetSlipProvider>
+        </WalletProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

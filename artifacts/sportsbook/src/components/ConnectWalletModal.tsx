@@ -1,69 +1,136 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Button } from './ui/button';
-import { Wallet } from 'lucide-react';
+import { useWallet } from '../hooks/useWallet';
+import { Loader2 } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface ConnectWalletModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const wallets = [
+const WALLETS = [
   {
     name: 'MetaMask',
+    icon: '🦊',
     color: '#F6851B',
     description: 'Connect using browser extension',
   },
   {
     name: 'WalletConnect',
+    icon: '🔗',
     color: '#3B99FC',
     description: 'Scan with your mobile wallet',
   },
   {
     name: 'Coinbase Wallet',
+    icon: '💙',
     color: '#0052FF',
     description: 'Connect with Coinbase Wallet',
+  },
+  {
+    name: 'Phantom',
+    icon: '👻',
+    color: '#AB9FF2',
+    description: 'Solana & multi-chain wallet',
   },
 ];
 
 export function ConnectWalletModal({ open, onOpenChange }: ConnectWalletModalProps) {
+  const { connect, isConnecting, walletName, isConnected } = useWallet();
+
+  async function handleSelect(name: string) {
+    await connect(name);
+    onOpenChange(false);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-[#1B352D] border-border">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-center mb-2">Connect Wallet</DialogTitle>
-          <p className="text-center text-muted-foreground text-sm">Choose your preferred wallet to continue</p>
+    <Dialog open={open} onOpenChange={val => { if (!isConnecting) onOpenChange(val); }}>
+      <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden bg-[#0D1117] border border-[#253241] shadow-[0_24px_80px_rgba(0,0,0,0.7)]">
+        <DialogTitle className="sr-only">Connect Wallet</DialogTitle>
+
+        {/* Top accent */}
+        <div className="h-[2px] w-full bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-transparent" />
+
+        <DialogHeader className="px-6 pt-6 pb-4">
+          <DialogTitle className="text-lg font-bold text-[#F8FAFC]">Connect Wallet</DialogTitle>
+          <p className="text-sm text-[#94A3B8] mt-1">
+            Choose your preferred wallet to browse and place bets
+          </p>
         </DialogHeader>
-        <div className="flex flex-col gap-3 mt-2">
-          {wallets.map((wallet) => (
-            <Button
-              key={wallet.name}
-              variant="outline"
-              className="w-full justify-start h-14 bg-black/20 border-border hover:bg-black/30 hover:text-white"
-              onClick={() => onOpenChange(false)}
-              data-testid={`button-wallet-${wallet.name.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              <div
-                className="mr-4 h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: wallet.color + '22', border: `1.5px solid ${wallet.color}` }}
+
+        {/* Wallet list */}
+        <div className="px-4 pb-2 space-y-2">
+          {WALLETS.map(wallet => {
+            const isThisConnecting = isConnecting && walletName === wallet.name;
+            return (
+              <button
+                key={wallet.name}
+                onClick={() => handleSelect(wallet.name)}
+                disabled={isConnecting}
+                data-testid={`button-wallet-${wallet.name.toLowerCase().replace(/\s+/g, '-')}`}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all duration-200',
+                  isThisConnecting
+                    ? 'bg-[#00DFA9]/5 border-[#00DFA9]/40 shadow-[0_0_20px_rgba(0,223,169,0.1)]'
+                    : isConnecting
+                    ? 'bg-[#121821] border-[#253241] opacity-40 cursor-not-allowed'
+                    : 'bg-[#121821] border-[#253241] hover:bg-[#18212B] hover:border-[#2E3D50] cursor-pointer group'
+                )}
               >
-                <Wallet className="h-4 w-4" style={{ color: wallet.color }} />
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-semibold">{wallet.name}</div>
-                <div className="text-xs text-muted-foreground">{wallet.description}</div>
-              </div>
-            </Button>
-          ))}
+                {/* Icon */}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg transition-transform group-hover:scale-105"
+                  style={{
+                    backgroundColor: `${wallet.color}18`,
+                    border: `1.5px solid ${wallet.color}40`,
+                  }}
+                >
+                  {isThisConnecting
+                    ? <Loader2 className="h-5 w-5 animate-spin" style={{ color: wallet.color }} />
+                    : <span>{wallet.icon}</span>
+                  }
+                </div>
+
+                {/* Labels */}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-[#F8FAFC]">{wallet.name}</div>
+                  <div className="text-xs text-[#94A3B8]">
+                    {isThisConnecting ? 'Connecting…' : wallet.description}
+                  </div>
+                </div>
+
+                {/* Chevron / spinner */}
+                {isThisConnecting ? (
+                  <div
+                    className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin shrink-0"
+                    style={{ borderColor: `${wallet.color}60`, borderTopColor: wallet.color }}
+                  />
+                ) : (
+                  <svg
+                    className="h-4 w-4 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/70 transition-colors shrink-0"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
         </div>
-        <div className="mt-2 text-center">
-          <Button
-            variant="ghost"
+
+        {/* Footer */}
+        <div className="px-6 py-4 mt-2 border-t border-[#253241] flex items-center justify-between">
+          <p className="text-[11px] text-[#94A3B8]/50">
+            Mock connection — no real wallet required
+          </p>
+          <button
             onClick={() => onOpenChange(false)}
-            className="text-muted-foreground hover:text-white"
+            disabled={isConnecting}
             data-testid="button-cancel-wallet"
+            className="text-xs font-medium text-[#94A3B8] hover:text-[#F8FAFC] transition-colors disabled:opacity-40"
           >
             Cancel
-          </Button>
+          </button>
         </div>
       </DialogContent>
     </Dialog>
