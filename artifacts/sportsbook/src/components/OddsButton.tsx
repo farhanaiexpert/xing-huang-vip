@@ -1,6 +1,5 @@
 import { useBetSlip } from '../hooks/useBetSlip';
 import { cn } from '../lib/utils';
-import { Selection } from '../types';
 
 interface OddsButtonProps {
   matchId: string;
@@ -14,6 +13,10 @@ export function OddsButton({ matchId, matchName, selectionType, odds, className 
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const selectionId = `${matchId}-${selectionType}`;
   const isSelected = hasSelection(selectionId);
+
+  if (!odds) {
+    return <div className={cn("h-8 rounded", className)} />;
+  }
 
   const handleClick = () => {
     if (isSelected) {
@@ -33,17 +36,14 @@ export function OddsButton({ matchId, matchName, selectionType, odds, className 
     <button
       onClick={handleClick}
       className={cn(
-        "flex flex-col items-center justify-center rounded px-2 py-1.5 min-w-[3.5rem] transition-all duration-200 text-sm font-medium",
+        "flex items-center justify-center rounded h-8 transition-all duration-200 text-sm font-bold",
         isSelected
-          ? "bg-primary text-primary-foreground shadow-[0_0_10px_rgba(0,223,169,0.3)]"
-          : "bg-[#1B352D] text-foreground hover:bg-[#1B352D]/80 border border-transparent hover:border-border",
+          ? "bg-[#00DFA9] text-[#111111] shadow-[0_0_8px_rgba(0,223,169,0.4)] border-transparent"
+          : "bg-[#1B352D] text-[#F59E0B] border border-white/10 hover:bg-[#1B352D]/80 hover:border-white/20",
         className
       )}
     >
-      <span className={cn("text-[10px] mb-0.5", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>
-        {selectionType}
-      </span>
-      <span className="font-bold">{odds.toFixed(2)}</span>
+      {odds.toFixed(2)}
     </button>
   );
 }

@@ -41,4 +41,7 @@ export type FeaturedCard = {
   subtitle: string;
   odds: string;
   bgGradient: string;
+  selections?: string[];
+  boostLabel?: string;
+  returnExample?: string;
 };

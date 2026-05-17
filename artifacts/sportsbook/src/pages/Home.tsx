@@ -13,7 +13,7 @@ export function Home() {
   const { selections } = useBetSlip();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-[#111111] text-white overflow-hidden">
       <Header />
       
       <div className="flex-1 flex overflow-hidden relative">
@@ -34,16 +34,16 @@ export function Home() {
       <div className="xl:hidden fixed bottom-6 right-6 z-50">
         <Drawer>
           <DrawerTrigger asChild>
-            <Button size="icon" className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl relative group data-[state=open]:hidden">
+            <Button size="icon" className="h-14 w-14 rounded-full bg-[#13644B] hover:bg-[#13644B]/90 text-white shadow-xl relative group data-[state=open]:hidden">
               <Receipt className="h-6 w-6" />
               {selections.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs font-bold h-6 w-6 rounded-full flex items-center justify-center animate-in zoom-in">
+                <span className="absolute -top-2 -right-2 bg-[#00DFA9] text-[#111111] text-xs font-bold h-6 w-6 rounded-full flex items-center justify-center animate-in zoom-in">
                   {selections.length}
                 </span>
               )}
             </Button>
           </DrawerTrigger>
-          <DrawerContent className="bg-[#1B352D] border-border h-[80vh]">
+          <DrawerContent className="bg-[#1B352D] border-[#111111] h-[80vh]">
             <BetSlip className="w-full xl:flex h-full border-l-0" />
           </DrawerContent>
         </Drawer>

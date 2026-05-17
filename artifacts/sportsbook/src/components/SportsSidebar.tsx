@@ -14,16 +14,16 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
   const allSports = [...SPORTS].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <aside className={cn("w-56 lg:w-64 flex-col bg-[#1B352D] border-r border-border h-[calc(100vh-4rem)] sticky top-16 hidden lg:flex", className)}>
-      <ScrollArea className="flex-1 px-3 py-4">
-        <div className="space-y-6">
+    <aside className={cn("w-64 flex-col bg-[#1B352D] border-r border-[#111111] h-[calc(100vh-3rem)] sticky top-12 hidden lg:flex", className)}>
+      <ScrollArea className="flex-1 px-2 py-3">
+        <div className="space-y-4">
           
           {/* Trending Section */}
           <div>
-            <h3 className="flex items-center px-2 text-xs font-bold uppercase tracking-wider text-[#13644B] mb-2">
-              <TrendingUp className="mr-2 h-4 w-4" /> Trending
+            <h3 className="flex items-center px-3 text-[10px] font-bold uppercase tracking-wider text-[#00DFA9] mb-1">
+              <TrendingUp className="mr-2 h-3 w-3" /> Trending
             </h3>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <SidebarItem title="Weekend Soccer" icon="⚽" />
               <SidebarItem title="ATP/WTA Rome" icon="🎾" />
               <SidebarItem title="Italy Serie A" icon="⚽" />
@@ -35,10 +35,10 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
 
           {/* Most Used Section */}
           <div>
-            <h3 className="flex items-center px-2 text-xs font-bold uppercase tracking-wider text-[#13644B] mb-2">
-              <Trophy className="mr-2 h-4 w-4" /> Most Used
+            <h3 className="flex items-center px-3 text-[10px] font-bold uppercase tracking-wider text-[#00DFA9] mb-1">
+              <Trophy className="mr-2 h-3 w-3" /> Most Used
             </h3>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {popularSports.map(sport => (
                 <SidebarItem 
                   key={`popular-${sport.id}`}
@@ -53,10 +53,10 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
 
           {/* A-Z Section */}
           <div>
-            <h3 className="px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+            <h3 className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#13644B] mb-1">
               A-Z Sports
             </h3>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {allSports.map(sport => (
                 <SidebarItem 
                   key={`az-${sport.id}`}
@@ -90,13 +90,13 @@ function SidebarItem({
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+        "flex w-full items-center px-3 py-1 text-sm font-medium transition-colors border-l-2",
         isActive 
-          ? "bg-primary/10 text-primary" 
-          : "text-foreground/80 hover:bg-white/5 hover:text-foreground"
+          ? "border-[#00DFA9] text-[#00DFA9]" 
+          : "border-transparent text-white/80 hover:text-white hover:bg-white/5"
       )}
     >
-      <span className="mr-3 text-base" aria-hidden="true">{icon}</span>
+      <span className="mr-2 text-sm" aria-hidden="true">{icon}</span>
       {title}
     </button>
   );

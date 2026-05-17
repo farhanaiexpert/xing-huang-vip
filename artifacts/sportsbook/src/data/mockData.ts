@@ -115,7 +115,34 @@ export const LEAGUES: League[] = [
 ];
 
 export const FEATURED_CARDS: FeaturedCard[] = [
-  { id: 'f1', title: 'Accumulator Boost', subtitle: 'Arsenal, Man City & Barca all to win', odds: '8.50', bgGradient: 'from-[#13644B] to-[#1B352D]' },
-  { id: 'f2', title: 'Super Boost', subtitle: 'Djokovic to win 2-0', odds: '2.50', bgGradient: 'from-blue-900 to-indigo-900' },
-  { id: 'f3', title: 'Enhanced Odds', subtitle: 'Lakers & Warriors both to win', odds: '4.20', bgGradient: 'from-purple-900 to-fuchsia-900' },
+  { 
+    id: 'f1', 
+    title: 'ACCUMULATOR BOOST', 
+    subtitle: 'European Giants — Result/Both Teams to Score',
+    selections: ['Real Madrid & Yes (v Sevilla)', 'PSG & Yes (v Paris FC)', 'Monaco & Yes (v Strasbourg)', 'Barcelona & Yes (v Real Betis)'],
+    boostLabel: '+7.5% ACCA BOOST',
+    odds: '76.54',
+    returnExample: '€10 stake returns €822.09',
+    bgGradient: ''
+  },
+  { 
+    id: 'f2', 
+    title: 'EARLY PAYOUT',
+    subtitle: 'Full Time Result',
+    selections: ['Athletic Club (v Celta Vigo)', 'Atletico Madrid (v Girona)', 'Real Madrid (v Sevilla)'],
+    boostLabel: '+20% ACCA BOOST',
+    odds: '142.40',
+    returnExample: '€10 stake returns €1,706.87',
+    bgGradient: ''
+  },
+  { 
+    id: 'f3', 
+    title: 'BOTH TEAMS TO SCORE',
+    subtitle: 'Both Teams to Score',
+    selections: ['Yes (Athletic Club v Celta Vigo)', 'Yes (Atletico Madrid v Girona)', 'Yes (Elche v Getafe)'],
+    boostLabel: '+30% ACCA BOOST',
+    odds: '145.32',
+    returnExample: '€10 stake returns €1,886.24',
+    bgGradient: ''
+  },
 ];
