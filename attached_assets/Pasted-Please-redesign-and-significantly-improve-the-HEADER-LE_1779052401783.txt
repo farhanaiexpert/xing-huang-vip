@@ -1,0 +1,227 @@
+Please redesign and significantly improve the HEADER, LEFT SIDEBAR, and RIGHT BET SLIP SIDEBAR to make the platform feel like a world-class modern sportsbook dashboard.
+
+Do not rebuild the entire app.
+Focus only on improving:
+- layout
+- spacing
+- alignment
+- visual hierarchy
+- interactivity
+- responsiveness
+- polish
+- structure
+- premium feel
+
+The goal is:
+VERY modern
+VERY professional
+VERY clean
+VERY interactive
+VERY user-friendly
+VERY well-managed visually
+
+==================================================
+1. HEADER REDESIGN
+==================================================
+
+Current issues:
+- Header feels too flat
+- Navigation spacing is weak
+- Logo area lacks hierarchy
+- Connect Wallet button feels generic
+- Header lacks premium depth and structure
+
+Improve the header with:
+
+Layout:
+- Better vertical alignment
+- Better spacing between logo/nav/actions
+- Add max-width structure for cleaner balance
+- Sticky premium top navigation
+
+Visual Style:
+- Dark glassmorphism background
+- Subtle gradient overlay
+- Thin bottom border
+- Slight blur effect
+- Premium shadow depth
+
+Logo Area:
+- Make logo area more premium
+- Improve typography hierarchy
+- Add better spacing between icon/text/subtitle
+- Slight hover glow on logo
+
+Navigation:
+- Improve nav spacing
+- Add animated active indicator
+- Better hover transitions
+- Add subtle hover background
+- Make active page feel clearer
+
+Header Actions:
+- Improve search icon button
+- Improve notification button
+- Add cleaner icon containers
+- Add hover animations
+
+Connect Wallet Button:
+- Make it look premium fintech-quality
+- Better padding and alignment
+- Add hover glow effect
+- Add subtle gradient
+- Add active press animation
+- Add wallet icon alignment improvements
+
+Header should feel:
+- premium fintech
+- crypto-native
+- sportsbook-quality
+- modern dashboard
+
+==================================================
+2. LEFT SIDEBAR REDESIGN
+==================================================
+
+Current issues:
+- Sidebar feels too static
+- Sections are visually weak
+- Items need stronger hierarchy
+- Needs more structure and premium alignment
+- Hover states are too basic
+
+Improve sidebar with:
+
+Structure:
+- Better section spacing
+- Better grouping hierarchy
+- Cleaner padding system
+- Sticky professional layout
+
+Visual:
+- Dark layered background
+- Subtle inner shadows
+- Better separators/dividers
+- Add premium border system
+- Add slight gradient overlays
+
+Sidebar Items:
+- Better icon alignment
+- Better text spacing
+- Add interactive hover states
+- Add active item glow/accent
+- Add soft left active indicator
+- Add subtle hover animation
+- Add smoother transitions
+
+Section Titles:
+- Better typography
+- Better spacing
+- Small modern label styling
+- Better opacity hierarchy
+
+Interaction:
+- Hover should feel smooth and premium
+- Sidebar should feel responsive and alive
+- Add subtle animated hover background
+- Add slight movement/scale on active items
+
+Professional Touches:
+- Add subtle scrollbar styling
+- Add active counters/badges styling
+- Better alignment of numbers on right side
+- Improve visual rhythm
+
+Sidebar should feel like:
+- Bloomberg terminal
+- premium trading platform
+- world-class sportsbook navigation
+
+==================================================
+3. RIGHT BET SLIP SIDEBAR REDESIGN
+==================================================
+
+Current issues:
+- Bet slip feels empty
+- Layout too plain
+- Empty state weak
+- Needs stronger product feel
+- Needs more premium structure
+
+Improve the bet slip sidebar with:
+
+Layout:
+- Better internal spacing
+- Better hierarchy
+- Sticky premium panel
+- Better section separation
+
+Header:
+- Add stronger visual hierarchy
+- Improve icon alignment
+- Add live badge/count badge
+- Better title spacing
+
+Panel Style:
+- Glass/dark layered surface
+- Premium shadow depth
+- Better borders
+- Better internal containers
+
+Empty State:
+- Make it much more attractive
+- Add premium illustration/icon treatment
+- Add stronger helper text
+- Add call-to-action guidance
+- Add subtle animations
+- Add modern empty-state card
+
+Selected Bet Card:
+- Make selected odds card more premium
+- Better spacing/alignment
+- Better odds emphasis
+- Better remove button
+- Better hover states
+
+Stake Area:
+- Better input styling
+- Add currency alignment
+- Add premium focus state
+- Better typography
+
+Connect Wallet Button:
+- Full-width premium CTA
+- Strong hover animation
+- Glow effect
+- Better typography
+- Better spacing
+
+Micro Interactions:
+- Hover effects
+- Smooth transitions
+- Add-to-slip animation feel
+- Premium motion system
+
+==================================================
+4. OVERALL POLISH
+==================================================
+
+Please improve:
+- spacing consistency
+- typography hierarchy
+- border radius consistency
+- shadows
+- hover states
+- transitions
+- alignment
+- responsiveness
+- interaction quality
+
+Avoid:
+- flat UI
+- generic SaaS feeling
+- oversized empty spaces
+- casino-style flashy visuals
+
+Goal:
+Make the platform feel like a premium modern sportsbook + fintech trading dashboard with world-class UI quality.
