@@ -5,14 +5,11 @@ import { cn } from '../lib/utils';
 
 interface OddsButtonProps {
   matchId: string;
-  /** Stable ID for the market — used for dedup (one pick per market) */
   marketId: string;
   matchName: string;
   leagueName: string;
   marketName: string;
-  /** Short label: "1" | "X" | "2" */
   selectionType: string;
-  /** Full display label: "Home Win" | "Draw" | player name */
   selectionName: string;
   odds: number;
   className?: string;
@@ -33,7 +30,10 @@ export function OddsButton({
     return <div className={cn('h-9 w-[52px] rounded-lg', className)} />;
   }
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevent row-level click from firing
+    e.stopPropagation();
+
     if (isSelected) {
       removeSelection(selectionId);
     } else {
@@ -43,11 +43,9 @@ export function OddsButton({
         selectionType, selectionName, odds,
       });
 
-      // Brief pop animation
       setIsPulsing(true);
-      setTimeout(() => setIsPulsing(false), 300);
+      setTimeout(() => setIsPulsing(false), 280);
 
-      // Toast feedback
       toast({
         description: `${selectionName} @ ${odds.toFixed(2)} added to slip`,
         duration: 2000,

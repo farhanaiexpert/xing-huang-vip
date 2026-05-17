@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import { MatchDetail } from "@/pages/MatchDetail";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
 
@@ -13,6 +14,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/match/:id" component={MatchDetail} />
       <Route component={NotFound} />
     </Switch>
   );
