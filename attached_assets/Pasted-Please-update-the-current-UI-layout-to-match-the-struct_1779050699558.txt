@@ -1,0 +1,86 @@
+Please update the current UI layout to match the structure, spacing, and sportsbook dashboard feel of the second attached reference image.
+
+Important:
+- Keep our current color scheme:
+  #13644B
+  #1B352D
+  #FFFFFF
+  #111111
+  #00DFA9
+- Do not change the project stack.
+- Do not rebuild from scratch.
+- Improve the existing layout and styling.
+
+Main changes needed:
+
+1. Add a full top header
+- Full-width dark green header at the top
+- Logo/brand on the left
+- Main nav centered: All Sports, Sports, My Bets
+- Connect Wallet button on the right
+- Header should feel compact and professional
+
+2. Fix page layout width
+- Current layout has too much empty black space at the top and center
+- Make the layout look like a dense sportsbook dashboard
+- Main content should start below the header, not too far down
+- Use a 3-column layout:
+  left sidebar + center content + right bet slip
+
+3. Left sidebar
+- Make sidebar darker and closer to the reference style
+- Width around 260–300px
+- Sticky from below header
+- Add sections:
+  Trending
+  Most Used
+  A-Z
+- Use compact spacing, small icons, white text, green section headings
+
+4. Center content
+- Add large rounded search bar at the top
+- Add horizontal sports icon carousel below search
+- Add secondary sports tabs below carousel
+- Add “Featured Matches” heading with icon
+- Featured cards should be in one horizontal row
+- Cards should use dark gray background, not bright gradient cards
+- Each featured card should include:
+  title
+  market name
+  3–4 selections
+  boost label
+  final odds area at bottom
+
+5. Match odds table
+- Make match tables more like the second reference
+- Use dark gray rows
+- Add table header with columns: 1, X, 2
+- Team names on the left
+- Odds aligned in columns on the right
+- Odds text should be yellow/gold or accent color
+- Rows should be compact and dense
+- Add league/date header row above matches
+
+6. Right bet slip
+- Keep the right bet slip fixed/sticky
+- Make it thinner and closer to the reference
+- Header: Bet Slip with count badge
+- Selected bet item card
+- Bottom stake/return area
+- Connect Wallet button
+- Use dark green gradient background
+
+7. Remove current issues
+- Remove large empty spacing
+- Remove oversized cards
+- Remove bright blue/purple promotional cards
+- Remove layout feeling like SaaS dashboard
+- Make everything tighter, denser, and more sportsbook-style
+
+8. Responsive
+- Desktop should look like the second reference image
+- Tablet: sidebar collapses
+- Mobile: bet slip becomes bottom drawer and sports list becomes horizontal
+
+Goal:
+Our current project in image 1 should be restyled to look much closer to the layout and structure of image 2: professional sportsbook dashboard, compact, dark, dense, realistic, and premium.
