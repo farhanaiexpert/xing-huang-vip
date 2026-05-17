@@ -15,20 +15,14 @@ export function OddsButton({ matchId, matchName, selectionType, odds, className 
   const isSelected = hasSelection(selectionId);
 
   if (!odds) {
-    return <div className={cn("h-9 rounded-lg", className)} />;
+    return <div className={cn("h-9 w-[52px] rounded-lg", className)} />;
   }
 
   const handleClick = () => {
     if (isSelected) {
       removeSelection(selectionId);
     } else {
-      addSelection({
-        id: selectionId,
-        matchId,
-        matchName,
-        selectionType,
-        odds,
-      });
+      addSelection({ id: selectionId, matchId, matchName, selectionType, odds });
     }
   };
 
@@ -36,10 +30,23 @@ export function OddsButton({ matchId, matchName, selectionType, odds, className 
     <button
       onClick={handleClick}
       className={cn(
-        "flex items-center justify-center rounded-lg h-9 transition-all duration-150 text-sm",
+        "w-[52px] h-9 flex items-center justify-center rounded-lg text-sm font-bold transition-all duration-150 select-none",
         isSelected
-          ? "bg-[#00DFA9] text-[#0B0F14] font-bold shadow-[0_0_16px_rgba(0,223,169,0.45)] border-transparent scale-[1.04]"
-          : "bg-[#0B0F14] text-[#FACC15] font-bold border border-[#253241] hover:bg-[#121821] hover:text-[#FACC15] hover:border-[#38BDF8]/50 hover:scale-[1.02] hover:shadow-[0_0_8px_rgba(56,189,248,0.15)]",
+          ? [
+              "bg-[#00DFA9] text-[#0B0F14]",
+              "shadow-[0_0_18px_rgba(0,223,169,0.5),0_0_6px_rgba(0,223,169,0.3)]",
+              "scale-[1.05]",
+              "border border-transparent",
+            ].join(" ")
+          : [
+              "bg-[#0D1117] border border-[#253241]",
+              "text-[#FACC15]",
+              "hover:bg-[#18212B]",
+              "hover:border-[#38BDF8]/50",
+              "hover:shadow-[0_0_10px_rgba(56,189,248,0.15)]",
+              "hover:scale-[1.03]",
+              "hover:text-[#FACC15]",
+            ].join(" "),
         className
       )}
     >

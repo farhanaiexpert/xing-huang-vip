@@ -1,0 +1,243 @@
+Please redesign and significantly improve the MAIN CONTENT AREA, SPORTS CAROUSEL, FEATURED MATCHES, and ODDS TABLES to make the sportsbook dashboard feel world-class, realistic, dense, modern, and highly interactive.
+
+Do not rebuild from scratch.
+Improve the existing structure and UI.
+
+Goal:
+Create a premium sportsbook/trading dashboard experience similar to high-end sports data platforms.
+
+==================================================
+1. MAIN CONTENT LAYOUT IMPROVEMENTS
+==================================================
+
+Current issues:
+- Content still feels too flat
+- Layout lacks strong hierarchy
+- Sections feel disconnected
+- Too much dead space in some areas
+- Odds area needs stronger structure
+
+Improve with:
+- Better section spacing
+- Better content rhythm
+- Better vertical hierarchy
+- More balanced widths
+- Cleaner grid system
+- More realistic sportsbook density
+
+Add:
+- subtle section separation
+- content containers
+- layered surfaces
+- soft gradients
+- premium shadows
+
+The center area should feel:
+- information-rich
+- premium
+- highly organized
+- fast and readable
+
+==================================================
+2. SPORTS CATEGORY CAROUSEL
+==================================================
+
+Current issues:
+- Sports items feel too simple
+- Needs stronger interaction and polish
+- Icons/layout feel static
+
+Improve:
+- Turn sports items into premium interactive cards/buttons
+- Better icon sizing and alignment
+- Better hover states
+- Better selected state
+- Add subtle glow/border for active sport
+- Add micro interactions
+- Add horizontal scrolling behavior
+- Add smooth snapping on scroll
+
+Each sport card should include:
+- icon
+- sport name
+- optional live/market count badge
+
+Visual style:
+- dark layered card
+- premium border
+- hover elevation
+- active glow
+
+The sports area should feel:
+- premium
+- interactive
+- modern
+- easy to scan
+
+==================================================
+3. FEATURED MATCHES REDESIGN
+==================================================
+
+Current issues:
+- Cards still feel too basic
+- Need stronger visual hierarchy
+- Need more premium sportsbook feel
+
+Improve:
+- Better card proportions
+- Better spacing inside cards
+- Stronger title hierarchy
+- Better labels/badges
+- Better odds emphasis
+- Better content alignment
+
+Add:
+- premium market labels
+- subtle gradients
+- glass effects
+- hover lift animations
+- accent borders
+- market type indicators
+- popularity/fire icons if needed
+
+Cards should feel:
+- clickable
+- important
+- premium
+- exciting but professional
+
+Bottom odds area:
+- make final odds much more visually strong
+- use better typography
+- stronger alignment
+- better payout section
+
+==================================================
+4. ODDS TABLES REDESIGN
+==================================================
+
+This is the MOST IMPORTANT section.
+
+Current issues:
+- Tables still feel too generic
+- Rows need stronger sportsbook realism
+- Odds buttons need more premium interaction
+- Density can improve
+
+Transform tables into:
+REALISTIC SPORTSBOOK TABLES
+
+==================================================
+TABLE STRUCTURE
+==================================================
+
+Improve:
+- league headers
+- row spacing
+- column alignment
+- odds alignment
+- typography hierarchy
+- separators
+- hover states
+
+Add:
+- date labels
+- market labels
+- match metadata
+- subtle row hover glow
+- active selection states
+
+Each match row should include:
+- team names
+- match time
+- optional status chip
+- optional market count
+- aligned odds columns
+
+==================================================
+ODDS BUTTONS
+==================================================
+
+Very important.
+
+Improve:
+- button size
+- hover interaction
+- selected state
+- typography
+- spacing
+- border effects
+
+States:
+- default
+- hover
+- active/selected
+- disabled/suspended
+
+Selected odds should:
+- glow slightly
+- use accent highlight
+- feel responsive and satisfying
+
+Hover should:
+- animate smoothly
+- elevate slightly
+- brighten subtly
+
+==================================================
+5. MATCH ROW INTERACTIONS
+==================================================
+
+Add:
+- smooth row hover
+- subtle highlight on hover
+- clickable feel
+- improved cursor states
+- optional expand interaction
+
+Optional:
+- expandable market rows
+- quick market preview
+- favorite/star interaction
+
+==================================================
+6. RESPONSIVENESS
+==================================================
+
+Desktop:
+- dense sportsbook layout
+
+Tablet:
+- balanced table scaling
+
+Mobile:
+- maintain readability
+- preserve odds structure
+- horizontal odds scrolling if needed
+- keep interactions clean
+
+==================================================
+7. OVERALL DESIGN DIRECTION
+==================================================
+
+The interface should feel like:
+- premium sportsbook
+- crypto-native trading dashboard
+- modern financial terminal
+- highly interactive data product
+
+Avoid:
+- generic admin dashboard feel
+- empty layouts
+- oversized spacing
+- casino flashy style
+- childish gaming aesthetics
+
+Final result should feel:
+- realistic
+- premium
+- trustworthy
+- modern
+- very polished
+- professionally structured
+- easy to scan quickly
