@@ -1,0 +1,92 @@
+Please improve the current dashboard UI to make it much more modern, professional, attractive, interactive, and user-friendly.
+
+Do not rebuild from scratch. Keep the current functionality, but redesign the layout, spacing, visual hierarchy, and interactions.
+
+Current problems to fix:
+- The interface feels too empty and flat
+- Too much unused space in the center and right side
+- Featured cards feel too simple
+- Sports category area feels weak
+- Bet slip empty state feels too plain
+- Odds tables need stronger structure and better readability
+- Overall layout needs more premium fintech/sports trading feeling
+
+Design direction:
+Create a premium sports odds trading dashboard. It should feel modern, clean, fast, trustworthy, and interactive.
+
+Improve these areas:
+
+1. Header
+- Make the header more polished and premium
+- Add subtle glass/dark gradient effect
+- Improve logo spacing and nav active states
+- Make Connect Wallet button more premium with hover animation
+- Add clear active underline for selected nav item
+
+2. Left Sidebar
+- Improve section separation
+- Add better icons, hover states, and active item style
+- Make sidebar feel organized and less plain
+- Add subtle border/right glow
+- Keep it compact and easy to scan
+
+3. Main Content Layout
+- Reduce empty space
+- Use better max-width and grid alignment
+- Search bar should be more premium with hover/focus glow
+- Sports category icons should look like clean interactive cards
+- Add selected/hover states to sport cards
+- Add more sports in the horizontal area so it feels complete
+
+4. Featured Matches
+- Make featured cards more attractive
+- Use subtle gradients, borders, soft shadows, and hover lift
+- Add small labels/badges
+- Add “boost” indicators
+- Add bottom odds area with stronger visual hierarchy
+- Cards should feel clickable and premium
+
+5. Match Odds Tables
+- Make tables more professional and sportsbook-like
+- Add better league header styling
+- Add column labels clearly: 1 / X / 2
+- Improve row spacing, borders, team alignment
+- Add hover state on rows
+- Odds buttons should look clickable with hover glow
+- Selected odds should have a strong visual state
+- Add small status chips like “Today”, “Tomorrow”, “Featured”
+
+6. Bet Slip
+- Make the empty state more attractive
+- Add icon, short helper text, and CTA
+- When odds are selected, show a polished selected bet card
+- Improve stake input design
+- Improve estimated return section
+- Make Connect Wallet button full-width, premium, and animated
+- Right panel should feel like an important product area, not empty space
+
+7. Interactivity
+- Add smooth hover effects
+- Add selected states
+- Add subtle transitions
+- Add micro animations for cards/buttons
+- Add active sport filter behavior if possible
+- Add bet slip drawer behavior on mobile if possible
+
+8. Mobile Responsiveness
+- Make mobile layout excellent
+- Sidebar should collapse
+- Sports categories should scroll horizontally
+- Bet slip should become bottom drawer
+- Odds tables should remain readable on small screens
+
+Style requirements:
+- Keep the dark premium theme
+- Use clean professional spacing
+- Avoid casino-style flashy visuals
+- Avoid oversized elements
+- Avoid too much empty space
+- Make the UI feel like a real professional sports odds platform
+
+Goal:
+The final result should look like a premium, modern, interactive sportsbook dashboard that feels trustworthy, well-managed, clean, and easy to use.

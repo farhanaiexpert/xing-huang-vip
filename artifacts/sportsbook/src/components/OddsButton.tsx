@@ -36,10 +36,10 @@ export function OddsButton({ matchId, matchName, selectionType, odds, className 
     <button
       onClick={handleClick}
       className={cn(
-        "flex items-center justify-center rounded-lg h-9 transition-all duration-150 text-sm font-bold",
+        "flex items-center justify-center rounded-lg h-9 transition-all duration-150 text-sm",
         isSelected
-          ? "bg-[#00DFA9] text-[#0B0F14] shadow-[0_0_12px_rgba(0,223,169,0.35)] border-transparent"
-          : "bg-[#0B0F14] text-[#FACC15] border border-[#253241] hover:bg-[#121821] hover:border-[#38BDF8]/60",
+          ? "bg-[#00DFA9] text-[#0B0F14] font-bold shadow-[0_0_16px_rgba(0,223,169,0.45)] border-transparent scale-[1.04]"
+          : "bg-[#0B0F14] text-[#FACC15] font-bold border border-[#253241] hover:bg-[#121821] hover:text-[#FACC15] hover:border-[#38BDF8]/50 hover:scale-[1.02] hover:shadow-[0_0_8px_rgba(56,189,248,0.15)]",
         className
       )}
     >
