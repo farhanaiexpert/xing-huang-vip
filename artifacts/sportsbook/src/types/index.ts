@@ -1,3 +1,5 @@
+export type BetType = 'single' | 'acca';
+
 export type Selection = {
   id: string;
   matchId: string;
@@ -11,6 +13,7 @@ export type Match = {
   team1: string;
   team2: string;
   date: string;
+  dateTag: 'today' | 'tomorrow' | 'upcoming';
   leagueId: string;
   sportId: string;
   odds: {
@@ -18,6 +21,10 @@ export type Match = {
     draw?: number;
     away: number;
   };
+  isLive?: boolean;
+  liveMinute?: number;
+  score?: { home: number; away: number };
+  marketCount?: number;
 };
 
 export type League = {
