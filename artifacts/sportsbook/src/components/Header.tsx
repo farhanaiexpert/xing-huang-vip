@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { Search, Wallet, Link as LinkIcon, Menu } from 'lucide-react';
+import { Search, Wallet, TrendingUp, Menu, Bell } from 'lucide-react';
 import { Button } from './ui/button';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { useState } from 'react';
@@ -8,36 +8,43 @@ export function Header() {
   const [isWalletOpen, setIsWalletOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#1B352D] bg-[#13644B]">
-      <div className="flex h-12 items-center px-4 md:px-6">
+    <header className="sticky top-0 z-50 w-full h-14 bg-[#121821] border-b border-[#253241] shadow-[0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="flex h-full items-center px-4 md:px-6">
         <div className="flex items-center gap-2 mr-4 md:mr-8">
-          <Menu className="h-6 w-6 lg:hidden text-white" />
+          <Menu className="h-6 w-6 lg:hidden text-[#94A3B8]" />
           <Link href="/" className="flex items-center gap-2">
-            <LinkIcon className="h-6 w-6 text-white" />
+            <TrendingUp className="h-6 w-6 text-[#00DFA9]" />
             <span className="text-xl font-bold tracking-tight text-white hidden sm:inline-block">OddsChain</span>
           </Link>
         </div>
         
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium h-full">
-          <Link href="/" className="text-white font-semibold flex items-center h-full border-b-2 border-[#00DFA9] pt-[2px]">
+        <nav className="hidden md:flex items-center gap-6 text-sm h-full">
+          <Link href="/" className="text-[#F8FAFC] font-semibold flex items-center h-full border-b-2 border-[#00DFA9] pt-[2px]">
             All Sports
           </Link>
-          <span className="text-white/50 cursor-not-allowed flex items-center h-full pt-[2px]">
+          <span className="text-[#94A3B8] cursor-not-allowed flex items-center h-full hover:text-[#F8FAFC] transition-colors pt-[2px]">
             In-Play
           </span>
-          <span className="text-white/50 cursor-not-allowed flex items-center h-full pt-[2px]">
+          <span className="text-[#94A3B8] cursor-not-allowed flex items-center h-full hover:text-[#F8FAFC] transition-colors pt-[2px]">
             My Bets
           </span>
         </nav>
 
         <div className="ml-auto flex items-center space-x-2 md:space-x-4">
-          <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
+          <Button variant="ghost" size="icon" className="size-8 text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-transparent">
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>
           </Button>
           
+          <Button variant="ghost" size="icon" className="size-8 text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-transparent">
+            <Bell className="h-5 w-5" />
+            <span className="sr-only">Notifications</span>
+          </Button>
+
+          <div className="w-[1px] h-6 bg-[#253241] mx-1"></div>
+          
           <Button 
-            className="bg-[#1B352D] hover:bg-[#1B352D]/80 text-white border-0 h-8 px-3" 
+            className="bg-[#00DFA9] hover:bg-[#00DFA9]/90 text-[#0B0F14] font-semibold border-0 h-auto py-1.5 px-4 rounded-lg text-sm" 
             onClick={() => setIsWalletOpen(true)}
             data-testid="button-connect-wallet-header"
           >

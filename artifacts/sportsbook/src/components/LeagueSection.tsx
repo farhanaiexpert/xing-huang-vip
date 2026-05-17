@@ -9,35 +9,35 @@ export function LeagueSection({ league }: { league: League }) {
   const isFootball = league.sportId === 'soccer';
 
   return (
-    <div className="bg-[#111111] overflow-hidden mb-4 border border-[#1B352D] rounded-lg">
-      <div className="flex items-center justify-between px-3 py-2 bg-[#13644B]">
+    <div className="bg-[#18212B] overflow-hidden mb-3 border border-[#253241] rounded-xl">
+      <div className="flex items-center justify-between px-3 py-2 bg-[#121821]">
         <div className="flex items-center gap-2">
           {league.countryCode && (
             <span className="text-sm leading-none" aria-hidden="true">
               {getFlagEmoji(league.countryCode)}
             </span>
           )}
-          <h3 className="font-bold text-white text-sm">{league.name}</h3>
+          <h3 className="font-semibold text-[#F8FAFC] text-sm">{league.name}</h3>
         </div>
-        <Link href={`/league/${league.id}`} className="text-xs text-white/80 hover:text-white flex items-center">
+        <Link href={`/league/${league.id}`} className="text-xs text-[#38BDF8] hover:underline flex items-center">
           View All <ChevronRight className="h-3 w-3 ml-0.5" />
         </Link>
       </div>
       
       {/* Column Headers */}
-      <div className="flex items-center justify-between px-3 py-1 bg-[#1B352D] border-b border-[#111111]">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#0B0F14] border-b border-[#253241]">
         <div className="flex-1"></div>
-        <div className="flex items-center gap-1 w-[164px] shrink-0 justify-end">
+        <div className="flex items-center gap-1.5 w-[168px] shrink-0 justify-end">
           {isFootball ? (
             <>
-              <div className="w-[52px] text-center text-[10px] text-white/60">1</div>
-              <div className="w-[52px] text-center text-[10px] text-white/60">X</div>
-              <div className="w-[52px] text-center text-[10px] text-white/60">2</div>
+              <div className="w-[52px] text-center text-[10px] text-[#94A3B8]">1</div>
+              <div className="w-[52px] text-center text-[10px] text-[#94A3B8]">X</div>
+              <div className="w-[52px] text-center text-[10px] text-[#94A3B8]">2</div>
             </>
           ) : (
             <>
-              <div className="w-[52px] text-center text-[10px] text-white/60">1</div>
-              <div className="w-[52px] text-center text-[10px] text-white/60">2</div>
+              <div className="w-[52px] text-center text-[10px] text-[#94A3B8]">1</div>
+              <div className="w-[52px] text-center text-[10px] text-[#94A3B8]">2</div>
             </>
           )}
         </div>

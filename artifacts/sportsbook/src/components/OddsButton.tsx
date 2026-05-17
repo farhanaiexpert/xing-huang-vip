@@ -15,7 +15,7 @@ export function OddsButton({ matchId, matchName, selectionType, odds, className 
   const isSelected = hasSelection(selectionId);
 
   if (!odds) {
-    return <div className={cn("h-8 rounded", className)} />;
+    return <div className={cn("h-9 rounded-lg", className)} />;
   }
 
   const handleClick = () => {
@@ -36,10 +36,10 @@ export function OddsButton({ matchId, matchName, selectionType, odds, className 
     <button
       onClick={handleClick}
       className={cn(
-        "flex items-center justify-center rounded h-8 transition-all duration-200 text-sm font-bold",
+        "flex items-center justify-center rounded-lg h-9 transition-all duration-150 text-sm font-bold",
         isSelected
-          ? "bg-[#00DFA9] text-[#111111] shadow-[0_0_8px_rgba(0,223,169,0.4)] border-transparent"
-          : "bg-[#1B352D] text-[#F59E0B] border border-white/10 hover:bg-[#1B352D]/80 hover:border-white/20",
+          ? "bg-[#00DFA9] text-[#0B0F14] shadow-[0_0_12px_rgba(0,223,169,0.35)] border-transparent"
+          : "bg-[#0B0F14] text-[#FACC15] border border-[#253241] hover:bg-[#121821] hover:border-[#38BDF8]/60",
         className
       )}
     >

@@ -1,7 +1,7 @@
 import { ScrollArea } from './ui/scroll-area';
 import { SPORTS } from '../data/mockData';
 import { cn } from '../lib/utils';
-import { Trophy, TrendingUp } from 'lucide-react';
+import { Trophy, TrendingUp, List } from 'lucide-react';
 
 interface SportsSidebarProps {
   selectedSportId: string;
@@ -14,13 +14,13 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
   const allSports = [...SPORTS].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <aside className={cn("w-64 flex-col bg-[#1B352D] border-r border-[#111111] h-[calc(100vh-3rem)] sticky top-12 hidden lg:flex", className)}>
-      <ScrollArea className="flex-1 px-2 py-3">
-        <div className="space-y-4">
+    <aside className={cn("w-60 flex-col bg-[#0B0F14] border-r border-[#253241] h-[calc(100vh-3.5rem)] sticky top-14 hidden lg:flex", className)}>
+      <ScrollArea className="flex-1 px-2 py-4">
+        <div className="space-y-6">
           
           {/* Trending Section */}
           <div>
-            <h3 className="flex items-center px-3 text-[10px] font-bold uppercase tracking-wider text-[#00DFA9] mb-1">
+            <h3 className="flex items-center px-3 text-[10px] font-semibold uppercase tracking-widest text-[#94A3B8] mb-2">
               <TrendingUp className="mr-2 h-3 w-3" /> Trending
             </h3>
             <div className="space-y-0.5">
@@ -33,9 +33,11 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
             </div>
           </div>
 
+          <div className="h-[1px] bg-[#253241] mx-3"></div>
+
           {/* Most Used Section */}
           <div>
-            <h3 className="flex items-center px-3 text-[10px] font-bold uppercase tracking-wider text-[#00DFA9] mb-1">
+            <h3 className="flex items-center px-3 text-[10px] font-semibold uppercase tracking-widest text-[#94A3B8] mb-2">
               <Trophy className="mr-2 h-3 w-3" /> Most Used
             </h3>
             <div className="space-y-0.5">
@@ -51,10 +53,12 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
             </div>
           </div>
 
+          <div className="h-[1px] bg-[#253241] mx-3"></div>
+
           {/* A-Z Section */}
           <div>
-            <h3 className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#13644B] mb-1">
-              A-Z Sports
+            <h3 className="flex items-center px-3 text-[10px] font-semibold uppercase tracking-widest text-[#94A3B8] mb-2">
+              <List className="mr-2 h-3 w-3" /> A-Z Sports
             </h3>
             <div className="space-y-0.5">
               {allSports.map(sport => (
@@ -90,13 +94,18 @@ function SidebarItem({
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-center px-3 py-1 text-sm font-medium transition-colors border-l-2",
+        "flex w-full items-center px-3 py-1.5 text-sm transition-colors rounded-md group",
         isActive 
-          ? "border-[#00DFA9] text-[#00DFA9]" 
-          : "border-transparent text-white/80 hover:text-white hover:bg-white/5"
+          ? "bg-[#121821] text-[#00DFA9] font-medium" 
+          : "text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#121821]"
       )}
     >
-      <span className="mr-2 text-sm" aria-hidden="true">{icon}</span>
+      <div className="flex items-center w-4 h-full shrink-0 mr-1.5 relative">
+        {isActive && (
+          <div className="absolute -left-1 w-1.5 h-1.5 bg-[#00DFA9] rounded-full"></div>
+        )}
+        <span className="text-sm" aria-hidden="true">{icon}</span>
+      </div>
       {title}
     </button>
   );

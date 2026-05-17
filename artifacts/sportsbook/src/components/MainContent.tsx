@@ -19,35 +19,35 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
     : LEAGUES;
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#111111] overflow-hidden">
-      <ScrollArea className="flex-1 h-[calc(100vh-3rem)]">
+    <div className="flex-1 flex flex-col min-w-0 bg-[#0B0F14] overflow-hidden">
+      <ScrollArea className="flex-1 h-[calc(100vh-3.5rem)]">
         <div className="relative">
           {/* Search Bar */}
-          <div className="px-4 py-3">
+          <div className="px-4 pt-4 pb-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
               <Input 
-                className="w-full bg-[#1B352D] border-transparent rounded-full pl-9 h-10 focus-visible:ring-1 focus-visible:ring-[#00DFA9] text-white" 
+                className="w-full bg-[#121821] border border-[#253241] rounded-xl pl-9 h-10 focus-visible:ring-1 focus-visible:ring-[#00DFA9] focus-visible:border-transparent text-[#F8FAFC] placeholder:text-[#94A3B8]" 
                 placeholder="Search events, teams or leagues..." 
               />
             </div>
           </div>
 
           {/* Icon Carousel */}
-          <div className="px-4 mb-2">
+          <div className="px-4 py-2">
             <ScrollArea className="w-full whitespace-nowrap pb-2">
-              <div className="flex space-x-4 w-max">
+              <div className="flex space-x-2 w-max">
                 {popularSports.map(sport => (
                   <button 
                     key={`icon-${sport.id}`}
                     onClick={() => onSelectSport(sport.id)}
                     className={cn(
-                      "flex flex-col items-center justify-center p-2 rounded-lg min-w-[72px] transition-colors",
-                      selectedSportId === sport.id ? "text-[#00DFA9]" : "text-white hover:bg-white/5"
+                      "flex flex-col items-center justify-center p-2 rounded-xl min-w-[72px] transition-colors",
+                      selectedSportId === sport.id ? "bg-[#121821] text-[#00DFA9] ring-1 ring-[#00DFA9]/40" : "bg-transparent hover:bg-[#121821]"
                     )}
                   >
-                    <span className="text-xl mb-1">{sport.icon}</span>
-                    <span className="text-xs font-medium">{sport.name}</span>
+                    <span className="text-2xl mb-1">{sport.icon}</span>
+                    <span className={cn("text-[11px] font-medium transition-colors", selectedSportId === sport.id ? "text-[#00DFA9]" : "text-[#94A3B8]")}>{sport.name}</span>
                   </button>
                 ))}
               </div>
@@ -56,16 +56,16 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           </div>
 
           {/* Pill Tabs */}
-          <div className="px-4 mb-4">
+          <div className="px-4 pb-3">
             <ScrollArea className="w-full whitespace-nowrap pb-2">
               <div className="flex space-x-2 w-max">
                 <button
                   onClick={() => onSelectSport(null)}
                   className={cn(
-                    "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
+                    "px-3 py-1 rounded-full text-xs font-medium transition-colors",
                     !selectedSportId || selectedSportId === 'all' 
-                      ? "bg-[#1B352D] text-white" 
-                      : "text-white/60 hover:text-white hover:bg-white/5"
+                      ? "bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30" 
+                      : "bg-transparent text-[#94A3B8] hover:bg-[#121821] hover:text-[#F8FAFC]"
                   )}
                 >
                   All Sports
@@ -75,10 +75,10 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                     key={`pill-${sport.id}`}
                     onClick={() => onSelectSport(sport.id)}
                     className={cn(
-                      "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
+                      "px-3 py-1 rounded-full text-xs font-medium transition-colors",
                       selectedSportId === sport.id
-                        ? "bg-[#1B352D] text-white" 
-                        : "text-white/60 hover:text-white hover:bg-white/5"
+                        ? "bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/30" 
+                        : "bg-transparent text-[#94A3B8] hover:bg-[#121821] hover:text-[#F8FAFC]"
                     )}
                   >
                     {sport.name}
@@ -90,18 +90,18 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           </div>
         </div>
 
-        <div className="px-3 pb-8 max-w-[1200px] mx-auto">
+        <div className="px-4 pb-8 max-w-[1200px] mx-auto">
           {(!selectedSportId || selectedSportId === 'all') && (
             <FeaturedCards />
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredLeagues.length > 0 ? (
               filteredLeagues.map(league => (
                 <LeagueSection key={league.id} league={league} />
               ))
             ) : (
-              <div className="text-center py-12 text-muted-foreground bg-[#1B352D] rounded border border-white/5">
+              <div className="text-center py-12 text-[#94A3B8] bg-[#121821] rounded-xl border border-[#253241]">
                 <p>No matches available for this sport right now.</p>
               </div>
             )}

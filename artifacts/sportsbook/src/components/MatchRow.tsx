@@ -6,14 +6,14 @@ export function MatchRow({ match }: { match: Match }) {
   const isFootball = match.sportId === 'soccer';
 
   return (
-    <div className="flex items-center justify-between py-2 px-3 hover:bg-[#1B352D]/50 border-b border-[#1B352D] transition-colors gap-3 bg-[#111111]">
+    <div className="flex items-center justify-between py-2.5 px-3 hover:bg-[#1E2A38] border-b border-[#253241] last:border-0 transition-colors gap-3 bg-[#18212B]">
       <div className="flex flex-col flex-1 min-w-0">
-        <div className="text-[10px] text-muted-foreground mb-0.5">{match.date}</div>
-        <div className="font-medium text-xs text-white leading-snug truncate">{match.team1}</div>
-        {match.team2 && <div className="font-medium text-xs text-white leading-snug truncate">{match.team2}</div>}
+        <div className="text-[10px] text-[#94A3B8] mb-0.5">{match.date}</div>
+        <div className="font-medium text-sm text-[#F8FAFC] leading-snug truncate">{match.team1}</div>
+        {match.team2 && <div className="font-medium text-sm text-[#F8FAFC] leading-snug truncate">{match.team2}</div>}
       </div>
 
-      <div className="flex items-center gap-1 shrink-0 justify-end w-[164px]">
+      <div className="flex items-center gap-1.5 shrink-0 justify-end w-[168px]">
         {isFootball ? (
           <>
             <OddsButton 
