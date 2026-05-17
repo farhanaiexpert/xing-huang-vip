@@ -59,7 +59,7 @@ export function BetSlip({ className }: { className?: string }) {
 
   return (
     <aside className={cn(
-      'w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-14 hidden xl:flex',
+      'w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-0 hidden xl:flex',
       'bg-[#0D1117] border-l border-[#253241]',
       className
     )}>
