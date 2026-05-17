@@ -1,0 +1,91 @@
+Build Phase 1 of our sports odds platform.
+
+This first version should focus only on the frontpage UI/UX. Use the attached screenshots as layout inspiration, but create an original design, not a direct copy.
+
+Project scope:
+- Sports only
+- No casino
+- No live / in-play betting
+- Pre-match odds only
+- Wallet connect only, no email/password login
+- Daily odds update ready structure
+
+Color scheme:
+#13644B
+#1B352D
+#FFFFFF
+#111111
+#00DFA9
+
+Create a professional sportsbook-style dashboard frontpage with:
+
+1. Top header
+- Logo/brand placeholder
+- Main navigation
+- Search icon/input
+- Connect Wallet button
+- Clean dark layout
+
+2. Left sports sidebar
+- Sticky sidebar
+- Sports categories list
+- Trending / Popular section
+- A-Z sports list
+- Icons or simple visual indicators
+- Scrollable if content is long
+
+3. Main content area
+- Search bar
+- Horizontal sports category tabs
+- Featured odds cards
+- Pre-match match sections
+- League headers
+- Match rows
+- Odds buttons for 1 / X / 2 style markets
+- Selected odds state
+
+4. Right bet slip panel
+- Empty state
+- Selected odds list
+- Remove selection option
+- Stake input
+- Estimated payout
+- Connect Wallet to Place Bet button
+
+5. Interactions
+- Clicking an odd adds it to bet slip
+- Clicking again can update/remove selection
+- Stake input calculates estimated return
+- Connect Wallet opens a clean placeholder modal
+- Hover states for odds/buttons/cards
+- Selected odds should be highlighted using #00DFA9
+
+6. Responsive behavior
+- Desktop: left sidebar + main odds area + right bet slip
+- Tablet: sidebar collapses
+- Mobile: sports menu becomes horizontal/slide menu, bet slip becomes bottom drawer
+- Must look clean and professional on all screen sizes
+
+Important design direction:
+- This is a sportsbook dashboard, not a marketing landing page
+- Make it dense, structured, premium, and realistic
+- Avoid casino-style flashy effects
+- Avoid huge empty spacing
+- Use compact typography and clear odds tables
+- The interface should feel fast, serious, trustworthy, and data-focused
+
+Use mock data for now:
+- Football
+- Tennis
+- Basketball
+- Cricket
+- Esports
+- Horse Racing
+- Multiple leagues
+- Multiple matches
+- Realistic decimal odds
+
+Do not build backend yet.
+Do not build real wallet integration yet.
+Do not build admin panel yet.
+Only create Phase 1 frontpage UI with mock data and working frontend interactions.
