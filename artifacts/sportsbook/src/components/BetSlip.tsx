@@ -292,7 +292,7 @@ function AccaView({
           </div>
           <div className="h-px bg-[#253241]" />
           <div className="flex justify-between items-center">
-            <span className="text-[11px] text-[#94A3B8]">Est. Return</span>
+            <span className="text-[11px] text-[#94A3B8]">Potential Returns</span>
             <span className={cn('text-sm font-bold transition-colors', accaReturn > 0 ? 'text-[#22C55E]' : 'text-[#94A3B8]/40')}>
               {accaReturn > 0 ? `$${accaReturn.toFixed(2)}` : '—'}
             </span>
@@ -300,16 +300,35 @@ function AccaView({
         </div>
 
         {/* Stake */}
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-[#94A3B8] z-10 pointer-events-none">$</span>
-          <Input
-            type="number"
-            placeholder="Enter stake…"
-            data-testid="input-stake"
-            className="pl-7 pr-3 h-10 rounded-lg text-sm bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
-            value={stake}
-            onChange={e => setStake(e.target.value)}
-          />
+        <div className="space-y-1.5">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-[#94A3B8] z-10 pointer-events-none">$</span>
+            <Input
+              type="number"
+              placeholder="Enter stake…"
+              data-testid="input-stake"
+              className="pl-7 pr-3 h-10 rounded-lg text-sm bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
+              value={stake}
+              onChange={e => setStake(e.target.value)}
+            />
+          </div>
+          {/* Quick stake presets */}
+          <div className="grid grid-cols-4 gap-1">
+            {[5, 10, 25, 50].map(amt => (
+              <button
+                key={amt}
+                onClick={() => setStake(String(amt))}
+                className={cn(
+                  'h-7 rounded-lg text-[11px] font-semibold border transition-all duration-150',
+                  stake === String(amt)
+                    ? 'bg-[#00DFA9]/10 border-[#00DFA9]/40 text-[#00DFA9]'
+                    : 'bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80'
+                )}
+              >
+                ${amt}
+              </button>
+            ))}
+          </div>
         </div>
 
         <ActionButton

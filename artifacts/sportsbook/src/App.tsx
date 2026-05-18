@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import { MatchDetail } from "@/pages/MatchDetail";
+import MyBets from "@/pages/MyBets";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
 import { FavoritesProvider } from "@/hooks/useFavorites";
@@ -17,6 +18,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/match/:id" component={MatchDetail} />
+      <Route path="/my-bets" component={MyBets} />
       <Route component={NotFound} />
     </Switch>
   );

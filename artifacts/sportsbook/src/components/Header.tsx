@@ -60,7 +60,7 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-1 flex-1">
             <NavItem href="/" label="All Sports" active />
             <NavItem href="/" label="In-Play" disabled soon />
-            <NavItem href="/" label="My Bets" disabled soon />
+            <NavItem href="/my-bets" label="My Bets" />
           </nav>
 
           {/* Right */}
