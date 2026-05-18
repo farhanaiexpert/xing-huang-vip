@@ -81,34 +81,11 @@ export function FeaturedCards() {
                   (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
                 }}
               >
-                {/* Card top arc accent */}
-                <svg
-                  className="w-full block"
-                  viewBox="0 0 290 20"
-                  height="20"
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                >
-                  <defs>
-                    <linearGradient
-                      id={`arc-${card.id}`}
-                      gradientUnits="userSpaceOnUse"
-                      x1="0" y1="0" x2="290" y2="0"
-                    >
-                      <stop offset="0%"   stopColor={theme.color} stopOpacity="0" />
-                      <stop offset="18%"  stopColor={theme.color} stopOpacity="1" />
-                      <stop offset="82%"  stopColor={theme.color} stopOpacity="1" />
-                      <stop offset="100%" stopColor={theme.color} stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M0,18 Q145,2 290,18"
-                    fill="none"
-                    stroke={`url(#arc-${card.id})`}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
+                {/* Card top accent bar — left end matches card's border-radius */}
+                <div
+                  className="h-[2px] w-full rounded-tl-xl"
+                  style={{ background: `linear-gradient(90deg, ${theme.color}, transparent)` }}
+                />
 
                 <div className="p-4 flex flex-col flex-1">
                   {/* Badge */}
