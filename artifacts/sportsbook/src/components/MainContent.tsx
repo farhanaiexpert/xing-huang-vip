@@ -435,49 +435,35 @@ function NoResultsState({
 // ────────────────────────────────────────────────────────────────────────────
 // SITE FOOTER
 // ────────────────────────────────────────────────────────────────────────────
-const CRYPTO_METHODS = [
-  { symbol: '₿',  name: 'Bitcoin',  ticker: 'BTC' },
-  { symbol: 'Ξ',  name: 'Ethereum', ticker: 'ETH' },
-  { symbol: '◎',  name: 'Solana',   ticker: 'SOL' },
-  { symbol: '₮',  name: 'Tether',   ticker: 'USDT' },
-  { symbol: 'Ł',  name: 'Litecoin', ticker: 'LTC' },
-  { symbol: '⬡',  name: 'BNB',      ticker: 'BNB' },
-];
-
 const FOOTER_NAV = [
   {
     heading: 'Sports',
     links: [
-      { label: 'Soccer',        href: '/' },
-      { label: 'Tennis',        href: '/' },
-      { label: 'Basketball',    href: '/' },
-      { label: 'Esports',       href: '/' },
-      { label: 'Horse Racing',  href: '/' },
-      { label: 'Formula 1',     href: '/' },
-      { label: 'Boxing',        href: '/' },
-      { label: 'Cricket',       href: '/' },
+      { label: 'Soccer',       href: '/' },
+      { label: 'Tennis',       href: '/' },
+      { label: 'Basketball',   href: '/' },
+      { label: 'Esports',      href: '/' },
+      { label: 'Horse Racing', href: '/' },
+      { label: 'Formula 1',   href: '/' },
+      { label: 'Boxing',       href: '/' },
+      { label: 'Cricket',      href: '/' },
     ],
   },
   {
     heading: 'Platform',
     links: [
-      { label: 'All Sports',       href: '/' },
-      { label: 'In-Play Betting',  href: '/' },
-      { label: 'Accumulators',     href: '/' },
-      { label: 'Early Payout',     href: '/' },
-      { label: 'Acca Boost',       href: '/' },
-      { label: 'Bet History',      href: '/bet-history' },
+      { label: 'All Sports',   href: '/' },
+      { label: 'Bet History',  href: '/bet-history' },
+      { label: 'Help & Rules', href: '/help' },
     ],
   },
   {
     heading: 'Legal',
     links: [
-      { label: 'Help & Rules',          href: '/help' },
-      { label: 'Responsible Gambling',  href: '/help' },
-      { label: 'Terms & Conditions',    href: '/' },
-      { label: 'Privacy Policy',        href: '/' },
-      { label: 'AML Policy',            href: '/' },
-      { label: 'Cookie Policy',         href: '/' },
+      { label: 'Terms & Conditions',   href: '/' },
+      { label: 'Privacy Policy',       href: '/' },
+      { label: 'Responsible Gambling', href: '/help' },
+      { label: 'AML Policy',           href: '/' },
     ],
   },
 ];
@@ -545,25 +531,6 @@ function SiteFooter() {
               </ul>
             </div>
           ))}
-        </div>
-
-        {/* Crypto payments row */}
-        <div className="border-t border-[#253241]/50 pt-5 pb-4">
-          <p className="text-[9px] font-semibold text-[#94A3B8]/30 uppercase tracking-widest mb-3">
-            Crypto Payments Only
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {CRYPTO_METHODS.map((c) => (
-              <div
-                key={c.ticker}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#121821] border border-[#253241]/70"
-              >
-                <span className="text-[#00DFA9]/80 font-bold text-xs leading-none">{c.symbol}</span>
-                <span className="text-[11px] text-[#F8FAFC]/70 font-medium">{c.name}</span>
-                <span className="text-[9px] text-[#94A3B8]/35 font-mono">{c.ticker}</span>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Bottom bar */}
