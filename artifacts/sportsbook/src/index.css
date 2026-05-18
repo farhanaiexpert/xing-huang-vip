@@ -161,6 +161,33 @@
   }
 }
 
+/* ── Odds flash animations ─────────────────────────────────────────────────── */
+@keyframes oddsFlashUp {
+  0%   { color: #22C55E; text-shadow: 0 0 14px rgba(34,197,94,0.9); transform: scale(1.15); }
+  50%  { color: #22C55E; text-shadow: 0 0 7px rgba(34,197,94,0.5); transform: scale(1.08); }
+  100% { color: #FACC15; text-shadow: none; transform: scale(1); }
+}
+@keyframes oddsFlashDown {
+  0%   { color: #EF4444; text-shadow: 0 0 14px rgba(239,68,68,0.9); transform: scale(1.15); }
+  50%  { color: #EF4444; text-shadow: 0 0 7px rgba(239,68,68,0.5); transform: scale(1.08); }
+  100% { color: #FACC15; text-shadow: none; transform: scale(1); }
+}
+
+/* ── Bet confirmation checkmark ────────────────────────────────────────────── */
+@keyframes checkCircleDraw {
+  from { stroke-dashoffset: 166; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes checkTickDraw {
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes checkPop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 @layer utilities {
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;

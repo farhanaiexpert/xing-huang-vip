@@ -1,10 +1,11 @@
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Selection } from '../types';
-import { CheckCircle2, Copy, ExternalLink, ChevronRight } from 'lucide-react';
+import { Copy, ChevronRight, ArrowRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState } from 'react';
+import { Link } from 'wouter';
 
-interface BetConfirmation {
+export interface BetConfirmation {
   betId: string;
   betType: 'single' | 'acca';
   selections: Selection[];
@@ -35,45 +36,75 @@ export function BetConfirmationModal({ confirmation, onClose }: BetConfirmationM
 
   return (
     <Dialog open={!!confirmation} onOpenChange={open => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-[420px] p-0 overflow-hidden bg-[#0D1117] border border-[#253241] shadow-[0_24px_80px_rgba(0,0,0,0.7)]">
+      <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-[#0D1117] border border-[#253241] shadow-[0_32px_80px_rgba(0,0,0,0.8)]">
         <DialogTitle className="sr-only">Bet Placed Successfully</DialogTitle>
 
-        {/* Top accent */}
-        <div className="h-[3px] w-full bg-gradient-to-r from-[#00DFA9] via-[#00DFA9]/80 to-transparent" />
+        {/* Top accent bar */}
+        <div className="h-[3px] w-full bg-gradient-to-r from-[#00DFA9] via-[#00DFA9]/70 to-transparent" />
 
         {/* Success header */}
-        <div className="flex flex-col items-center pt-8 pb-5 px-6 text-center">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 rounded-full bg-[#00DFA9]/15 blur-xl scale-[1.8]" />
-            <div className="relative w-16 h-16 rounded-full bg-[#00DFA9]/10 border-2 border-[#00DFA9]/40 flex items-center justify-center shadow-[0_0_30px_rgba(0,223,169,0.3)]">
-              <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
-            </div>
+        <div className="flex flex-col items-center pt-7 pb-4 px-6 text-center">
+
+          {/* Animated SVG checkmark */}
+          <div className="relative mb-4" style={{ animation: 'checkPop 0.5s cubic-bezier(0.22,1,0.36,1) forwards' }}>
+            <div className="absolute inset-0 rounded-full bg-[#00DFA9]/15 blur-2xl scale-[2]" />
+            <svg
+              width="72" height="72" viewBox="0 0 72 72"
+              fill="none" className="relative"
+            >
+              {/* Glowing circle */}
+              <circle
+                cx="36" cy="36" r="26"
+                stroke="#00DFA9" strokeWidth="2.5" strokeLinecap="round"
+                fill="rgba(0,223,169,0.07)"
+                strokeDasharray="166"
+                style={{ animation: 'checkCircleDraw 0.5s ease-out 0.05s forwards', strokeDashoffset: 166 }}
+              />
+              {/* Tick mark */}
+              <path
+                d="M24 36.5L32.5 45L48 28"
+                stroke="#00DFA9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                strokeDasharray="48"
+                style={{ animation: 'checkTickDraw 0.35s ease-out 0.4s forwards', strokeDashoffset: 48 }}
+              />
+            </svg>
           </div>
 
-          <h2 className="text-xl font-bold text-[#F8FAFC] mb-1">Bet Placed!</h2>
+          <h2 className="text-[22px] font-black text-[#F8FAFC] mb-1 tracking-tight">Bet Placed!</h2>
           <p className="text-sm text-[#94A3B8]">
-            Your {betType === 'acca' ? 'accumulator' : 'single'} bet has been confirmed
+            Your {betType === 'acca'
+              ? `${selections.length}-fold accumulator`
+              : 'single'} bet is confirmed
           </p>
 
-          {/* Bet ID */}
+          {/* Bet ID chip */}
           <button
             onClick={handleCopyId}
-            className="mt-3 flex items-center gap-1.5 text-xs font-mono text-[#94A3B8]/70 hover:text-[#00DFA9] transition-colors group"
+            className={cn(
+              'mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all duration-150',
+              'bg-[#121821] border border-[#253241] hover:border-[#00DFA9]/40 group',
+              copied && 'border-[#00DFA9]/40 bg-[#00DFA9]/5'
+            )}
           >
-            <span>{betId}</span>
+            <span className={cn('transition-colors', copied ? 'text-[#00DFA9]' : 'text-[#94A3B8]/70 group-hover:text-[#00DFA9]')}>
+              {betId}
+            </span>
             {copied
-              ? <span className="text-[#00DFA9] text-[10px] font-sans font-medium">Copied!</span>
-              : <Copy className="h-3 w-3 opacity-50 group-hover:opacity-100" />
+              ? <span className="text-[#00DFA9] text-[10px] font-sans font-semibold">Copied!</span>
+              : <Copy className="h-3 w-3 text-[#94A3B8]/40 group-hover:text-[#00DFA9]/70 transition-colors" />
             }
           </button>
 
-          <p className="text-[10px] text-[#94A3B8]/40 mt-1">
-            {placedAt.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+          <p className="text-[10px] text-[#94A3B8]/40 mt-1.5">
+            {placedAt.toLocaleString('en-GB', {
+              day: '2-digit', month: 'short', year: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })}
           </p>
         </div>
 
         {/* Bet type badge */}
-        <div className="px-6 mb-3">
+        <div className="px-5 mb-3">
           <span className={cn(
             'inline-flex items-center text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full',
             betType === 'acca'
@@ -85,7 +116,7 @@ export function BetConfirmationModal({ confirmation, onClose }: BetConfirmationM
         </div>
 
         {/* Selections */}
-        <div className="px-6 space-y-1.5 mb-4 max-h-[180px] overflow-y-auto">
+        <div className="px-5 space-y-1.5 mb-4 max-h-[160px] overflow-y-auto">
           {selections.map(sel => (
             <div
               key={sel.id}
@@ -104,39 +135,40 @@ export function BetConfirmationModal({ confirmation, onClose }: BetConfirmationM
                   {sel.selectionName || sel.selectionType}
                 </p>
               </div>
-              <span className="text-sm font-black text-[#FACC15] tabular-nums shrink-0">
-                {sel.odds.toFixed(2)}
-              </span>
+              <div className="shrink-0 text-right">
+                <p className="text-[9px] text-[#94A3B8]/40 leading-none mb-0.5 uppercase tracking-wider">Odds</p>
+                <span className="text-sm font-black text-[#FACC15] tabular-nums">
+                  {sel.odds.toFixed(2)}
+                </span>
+              </div>
             </div>
           ))}
         </div>
 
         {/* Summary grid */}
-        <div className="mx-6 mb-6 rounded-xl bg-[#121821] border border-[#253241] overflow-hidden">
+        <div className="mx-5 mb-5 rounded-xl bg-[#0B0F14] border border-[#253241] overflow-hidden">
           <div className="grid grid-cols-3 divide-x divide-[#253241]">
-            <SummaryCell label="Stake" value={`$${stake.toFixed(2)}`} />
-            <SummaryCell label="Total Odds" value={totalOdds.toFixed(2)} highlight />
+            <SummaryCell label="Stake"      value={`$${stake.toFixed(2)}`} />
+            <SummaryCell label="Total Odds" value={totalOdds.toFixed(2)}   highlight />
             <SummaryCell label="Est. Return" value={`$${estimatedPayout.toFixed(2)}`} />
           </div>
-          <div className="border-t border-[#253241] px-4 py-2.5 flex items-center justify-between">
-            <span className="text-[11px] text-[#94A3B8]">Potential Profit</span>
-            <span className="text-sm font-bold text-[#22C55E]">+${profit.toFixed(2)}</span>
+          <div className="border-t border-[#253241] px-4 py-2.5 flex items-center justify-between bg-[#22C55E]/5">
+            <span className="text-[11px] font-medium text-[#94A3B8]">Potential Profit</span>
+            <span className="text-sm font-black text-[#22C55E]">+${profit.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="px-6 pb-6 flex flex-col gap-2">
-          <button
-            disabled
-            className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-[#121821] border border-[#253241] text-sm font-medium text-[#94A3B8]/50 cursor-not-allowed"
-          >
-            <ExternalLink className="h-4 w-4" />
-            View My Bets
-            <span className="text-[9px] bg-[#253241] text-[#94A3B8]/40 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider ml-1">Soon</span>
-          </button>
+        <div className="px-5 pb-5 flex flex-col gap-2">
+          <Link href="/bet-history" onClick={onClose}>
+            <button className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-[#121821] border border-[#253241] text-sm font-medium text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all duration-150">
+              View Bet History
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </Link>
           <button
             onClick={onClose}
-            className="w-full h-10 rounded-xl bg-[#00DFA9] text-[#0B0F14] text-sm font-bold flex items-center justify-center gap-1.5 hover:shadow-[0_0_24px_rgba(0,223,169,0.4)] hover:scale-[1.01] active:scale-[0.98] transition-all duration-150"
+            className="w-full h-11 rounded-xl bg-[#00DFA9] text-[#0B0F14] text-sm font-black flex items-center justify-center gap-1.5 hover:shadow-[0_0_28px_rgba(0,223,169,0.5)] hover:scale-[1.015] active:scale-[0.98] transition-all duration-150"
           >
             Done
             <ChevronRight className="h-4 w-4" />
@@ -160,5 +192,3 @@ function SummaryCell({ label, value, highlight }: { label: string; value: string
     </div>
   );
 }
-
-export type { BetConfirmation };

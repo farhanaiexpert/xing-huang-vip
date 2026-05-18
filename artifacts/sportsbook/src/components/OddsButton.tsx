@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Lock, TrendingUp, TrendingDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Lock } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useToast } from '../hooks/use-toast';
 import { useOddsSimulation, getMovement, getOddsDelta } from '../hooks/useOddsSimulation';
@@ -27,22 +27,41 @@ export function OddsButton({
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const { toast } = useToast();
   const { tick, suspendedMarketIds } = useOddsSimulation();
-  const [isPulsing, setIsPulsing] = useState(false);
-
+  const [isPulsing,  setIsPulsing]  = useState(false);
+  const [flashDir,   setFlashDir]   = useState<'up' | 'down' | null>(null);
+  const prevOddsRef = useRef<number | null>(null);
   const { format } = useOddsFormat();
 
-  const selectionId     = `${marketId}-${selectionType}`;
-  const isSelected      = hasSelection(selectionId);
-  const isSuspended     = suspendedMarketIds.has(marketId);
+  const selectionId  = `${marketId}-${selectionType}`;
+  const isSelected   = hasSelection(selectionId);
+  const isSuspended  = suspendedMarketIds.has(marketId);
 
   // Live odds simulation
   const movement    = isLive ? getMovement(selectionId, tick) : 'stable';
   const delta       = isLive ? getOddsDelta(selectionId, tick) : 0;
   const displayOdds = Math.max(1.01, odds + delta);
 
+  // Flash the number whenever displayOdds actually changes
+  useEffect(() => {
+    if (!isLive) return;
+    const prev = prevOddsRef.current;
+    if (prev !== null && prev !== displayOdds) {
+      const dir = displayOdds > prev ? 'up' : 'down';
+      setFlashDir(dir);
+      const t = setTimeout(() => setFlashDir(null), 700);
+      return () => clearTimeout(t);
+    }
+    prevOddsRef.current = displayOdds;
+  }, [displayOdds, isLive]);
+
+  // Sync ref after flash resolves
+  useEffect(() => {
+    prevOddsRef.current = displayOdds;
+  }, [displayOdds]);
+
   if (!odds) return <div className={cn('h-9 w-[52px] rounded-lg', className)} />;
 
-  // ── Suspended state ────────────────────────────────────────────────────────
+  // ── Suspended state ──────────────────────────────────────────────────────────
   if (isSuspended) {
     return (
       <div className={cn(
@@ -74,13 +93,18 @@ export function OddsButton({
     }
   };
 
-  // Movement colour tokens
+  // Movement colour tokens (for border / shadow on stable state)
   const movBorder = movement === 'up'   ? 'border-[#22C55E]/50'
                   : movement === 'down' ? 'border-[#EF4444]/50'
                   : '';
-  const movShadow = movement === 'up'   ? 'shadow-[0_0_8px_rgba(34,197,94,0.25)]'
-                  : movement === 'down' ? 'shadow-[0_0_8px_rgba(239,68,68,0.2)]'
+  const movShadow = movement === 'up'   ? 'shadow-[0_0_8px_rgba(34,197,94,0.3)]'
+                  : movement === 'down' ? 'shadow-[0_0_8px_rgba(239,68,68,0.25)]'
                   : '';
+
+  // Flash animation style applied to the odds number span
+  const flashStyle: React.CSSProperties = flashDir
+    ? { animation: `${flashDir === 'up' ? 'oddsFlashUp' : 'oddsFlashDown'} 0.65s ease-out forwards` }
+    : {};
 
   return (
     <button
@@ -111,27 +135,29 @@ export function OddsButton({
       {!isSelected && movement !== 'stable' && (
         <div className={cn(
           'absolute top-0 left-0 right-0 h-[2px] rounded-t',
-          movement === 'up'   ? 'bg-[#22C55E]' : 'bg-[#EF4444]'
+          movement === 'up' ? 'bg-[#22C55E]' : 'bg-[#EF4444]'
         )} />
       )}
 
-      {/* Odds value */}
-      <span className={cn(
-        'font-bold leading-none tabular-nums',
-        format === 'decimal' ? 'text-[13px]' : 'text-[11px]'
-      )}>
+      {/* Odds value — animated flash on change */}
+      <span
+        style={isSelected ? undefined : flashStyle}
+        className={cn(
+          'font-bold leading-none tabular-nums',
+          format === 'decimal' ? 'text-[13px]' : 'text-[11px]',
+          isSelected && 'text-[#0B0F14]',
+        )}
+      >
         {formatOdds(displayOdds, format)}
       </span>
 
-      {/* Movement indicator */}
-      {!isSelected && movement !== 'stable' && (
+      {/* Tiny movement arrow below number (only when NOT flashing) */}
+      {!isSelected && movement !== 'stable' && !flashDir && (
         <span className={cn(
-          'text-[8px] font-bold leading-none flex items-center gap-px mt-0.5',
+          'text-[7px] font-bold leading-none mt-0.5',
           movement === 'up' ? 'text-[#22C55E]' : 'text-[#EF4444]'
         )}>
-          {movement === 'up'
-            ? <TrendingUp  className="h-2 w-2" />
-            : <TrendingDown className="h-2 w-2" />}
+          {movement === 'up' ? '▲' : '▼'}
         </span>
       )}
     </button>
