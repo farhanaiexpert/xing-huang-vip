@@ -10,7 +10,8 @@ interface Runner {
   horse: string;
   jockey: string;
   odds: number;
-  silk: string; // tailwind bg color class
+  silk?: string;    // tailwind bg color class (fallback)
+  silkUrl?: string; // real jockey silk image URL
 }
 
 interface Race {
@@ -28,9 +29,9 @@ const RACES: Race[] = [
     venue: 'Morioka',
     minutesAway: 6,
     runners: [
-      { horse: "Ivy Spinel",     jockey: 'Yu Suzuki',       odds: 2.00, silk: 'bg-blue-500'   },
-      { horse: "Bird Has Flown", jockey: 'Shion Sasaki',    odds: 2.50, silk: 'bg-red-500'    },
-      { horse: "Kitano Couver",  jockey: 'Ryo Kobayashi',   odds: 6.00, silk: 'bg-yellow-500' },
+      { horse: "Ivy Spinel",     jockey: 'Yu Suzuki',     odds: 2.00, silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488701446_4_4.png' },
+      { horse: "Bird Has Flown", jockey: 'Shion Sasaki',  odds: 2.50, silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488701446_4_3.png' },
+      { horse: "Kitano Couver",  jockey: 'Ryo Kobayashi', odds: 6.00, silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488701446_4_9.png' },
     ],
   },
   {
@@ -39,9 +40,9 @@ const RACES: Race[] = [
     venue: 'Stawell',
     minutesAway: 11,
     runners: [
-      { horse: "Nothin' Wong Here", jockey: 'Billy Egan',    odds: 1.45,  silk: 'bg-green-500'  },
-      { horse: 'Cristaria',         jockey: 'Declan Bates',  odds: 10.00, silk: 'bg-purple-500' },
-      { horse: 'Crush Puppy',       jockey: 'Teo Nugent',    odds: 12.00, silk: 'bg-orange-500' },
+      { horse: "Nothin' Wong Here", jockey: 'Billy Egan',   odds: 1.45,  silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488700389_5_8.png'  },
+      { horse: 'Cristaria',         jockey: 'Declan Bates', odds: 10.00, silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488700389_5_12.png' },
+      { horse: 'Crush Puppy',       jockey: 'Teo Nugent',   odds: 12.00, silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488700389_5_13.png' },
     ],
   },
   {
@@ -50,9 +51,9 @@ const RACES: Race[] = [
     venue: 'Port Macquarie',
     minutesAway: 16,
     runners: [
-      { horse: "Salma's Star", jockey: 'Mollie Fitzgerald', odds: 3.20, silk: 'bg-pink-500'   },
-      { horse: 'The Lupercal', jockey: 'Grace Palmer',      odds: 4.40, silk: 'bg-cyan-500'   },
-      { horse: 'Stiorra',      jockey: 'Ben Looker',        odds: 4.80, silk: 'bg-lime-500'   },
+      { horse: "Salma's Star", jockey: 'Mollie Fitzgerald', odds: 3.20, silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488700352_6_8.png'  },
+      { horse: 'The Lupercal', jockey: 'Grace Palmer',      odds: 4.40, silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488700352_6_4.png'  },
+      { horse: 'Stiorra',      jockey: 'Ben Looker',        odds: 4.80, silkUrl: 'https://content001.bet365.com/JockeySilksTransparent/aussilks/488700352_6_12.png' },
     ],
   },
   {
@@ -61,9 +62,9 @@ const RACES: Race[] = [
     venue: 'Randwick',
     minutesAway: 24,
     runners: [
-      { horse: 'Doomben Flyer', jockey: 'James McDonald',   odds: 1.90, silk: 'bg-red-600'    },
-      { horse: 'Wild Thunder',  jockey: 'Hugh Bowman',       odds: 3.50, silk: 'bg-blue-600'   },
-      { horse: 'Silver Lining', jockey: 'Craig Williams',    odds: 5.50, silk: 'bg-slate-400'  },
+      { horse: 'Doomben Flyer', jockey: 'James McDonald', odds: 1.90, silk: 'bg-red-600'   },
+      { horse: 'Wild Thunder',  jockey: 'Hugh Bowman',    odds: 3.50, silk: 'bg-blue-600'  },
+      { horse: 'Silver Lining', jockey: 'Craig Williams', odds: 5.50, silk: 'bg-slate-400' },
     ],
   },
 ];
@@ -159,7 +160,15 @@ function RaceCard({ race, hasSelection, onSelect }: {
           return (
             <div key={i} className="flex items-center gap-2.5 px-3 py-2">
               {/* Silk */}
-              <div className={cn('w-5 h-5 rounded-md shrink-0 border-2 border-white/10', runner.silk)} />
+              {runner.silkUrl ? (
+                <img
+                  src={runner.silkUrl}
+                  alt={runner.jockey}
+                  className="w-7 h-7 shrink-0 object-contain"
+                />
+              ) : (
+                <div className={cn('w-5 h-5 rounded-md shrink-0 border-2 border-white/10', runner.silk)} />
+              )}
 
               {/* Horse + jockey */}
               <div className="flex-1 min-w-0">
