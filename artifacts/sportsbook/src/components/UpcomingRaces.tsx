@@ -88,6 +88,7 @@ export function UpcomingRaces() {
       addSelection({
         id:            selId,
         marketId:      `race_${race.id}`,
+        matchId:       `race_${race.id}`,
         matchName:     `${race.name} ${race.venue}`,
         leagueName:    'Horse Racing',
         marketName:    'Win',

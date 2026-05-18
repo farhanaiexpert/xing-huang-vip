@@ -1,0 +1,179 @@
+Implement the next major phase: Professional Match Detail Experience.
+
+Goal:
+Transform the sportsbook from a homepage-focused prototype into a realistic sportsbook product experience with deep, professional match detail pages and advanced market interaction.
+
+Keep everything frontend-only for now.
+Do not add backend/database/admin/real wallet integration yet.
+
+Requirements:
+
+==================================================
+1. MATCH DETAIL PAGE
+==================================================
+
+When a user clicks any match from the sportsbook homepage or odds tables:
+- open a dedicated professional sportsbook match detail page
+
+The page should feel:
+- premium
+- realistic
+- dense
+- interactive
+- modern sportsbook quality
+
+==================================================
+2. MATCH HERO SECTION
+==================================================
+
+At the top of the page show:
+- team names
+- league/tournament
+- match date/time
+- match status
+- breadcrumbs
+- featured badge if applicable
+- updated timestamp
+
+Add:
+- premium layout
+- dark layered surfaces
+- clean spacing
+- sportsbook-style hierarchy
+
+Optional:
+- team logo placeholders
+- match popularity indicator
+- market count
+
+==================================================
+3. MARKET NAVIGATION TABS
+==================================================
+
+Add sticky horizontal market tabs such as:
+- All Markets
+- Match Winner
+- Goals
+- Handicap
+- Both Teams To Score
+- Player Props
+- Specials
+
+Requirements:
+- smooth horizontal scrolling on mobile
+- active tab states
+- hover interactions
+- sticky behavior while scrolling
+
+==================================================
+4. ADVANCED MARKET GROUPS
+==================================================
+
+Create expandable/collapsible sportsbook market groups.
+
+Examples:
+- Match Winner
+- Double Chance
+- Over/Under
+- Handicap
+- Both Teams To Score
+- Correct Score
+- Team Totals
+- Player Props
+- Tennis Set Betting
+- Basketball Totals
+- Esports Map Winner
+
+Each market group should:
+- have clear title/header
+- market count
+- collapse/expand interaction
+- smooth transitions
+
+==================================================
+5. ODDS BUTTON EXPERIENCE
+==================================================
+
+Improve odds interactions:
+- premium odds buttons
+- hover states
+- selected states
+- suspended/locked states
+- flashing odds updates simulation
+- smooth selection animation
+
+Selected odds should:
+- clearly highlight
+- sync instantly with bet slip
+- feel responsive and satisfying
+
+==================================================
+6. BET SLIP INTEGRATION
+==================================================
+
+Improve integration between match page and bet slip:
+- smooth add-to-slip animation
+- visual feedback when added
+- better selection highlighting
+- support accumulator selections
+- maintain current bet logic
+
+==================================================
+7. SPORTSBOOK REALISM
+==================================================
+
+Add realistic sportsbook details:
+- market counts
+- “Updated recently” labels
+- featured market badges
+- trending indicators
+- popularity chips
+- odds movement indicators
+- suspended market examples
+
+==================================================
+8. RESPONSIVE EXPERIENCE
+==================================================
+
+Desktop:
+- premium sportsbook layout
+- sticky market tabs
+- sticky bet slip
+
+Mobile:
+- excellent market readability
+- compact odds grids
+- sticky mobile bet slip drawer
+- smooth tab scrolling
+
+==================================================
+9. VISUAL QUALITY
+==================================================
+
+Improve:
+- spacing consistency
+- typography hierarchy
+- card structure
+- layered surfaces
+- gradients
+- borders
+- hover states
+- transitions
+- alignment rhythm
+
+Avoid:
+- casino flashy visuals
+- giant empty spacing
+- generic SaaS dashboard feel
+
+==================================================
+10. IMPORTANT
+==================================================
+
+- Keep everything frontend-only
+- Keep current sportsbook structure intact
+- Keep current daily odds API integration working
+- Preserve current premium UI direction
+
+Goal:
+Make the platform feel like a real professional sportsbook product where users can deeply explore matches, markets, and betting options in a realistic sportsbook environment.

@@ -43,7 +43,7 @@ export function OddsButton({
 
   // Flash the number whenever displayOdds actually changes
   useEffect(() => {
-    if (!isLive) return;
+    if (!isLive) return undefined;
     const prev = prevOddsRef.current;
     if (prev !== null && prev !== displayOdds) {
       const dir = displayOdds > prev ? 'up' : 'down';
@@ -52,6 +52,7 @@ export function OddsButton({
       return () => clearTimeout(t);
     }
     prevOddsRef.current = displayOdds;
+    return undefined;
   }, [displayOdds, isLive]);
 
   // Sync ref after flash resolves

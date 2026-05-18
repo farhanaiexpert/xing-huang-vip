@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'wouter';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
-import { LEAGUES } from '../data/mockData';
 import { LeagueSection } from './LeagueSection';
 import { FeaturedCards } from './FeaturedCards';
 import { PopularBets } from './PopularBets';
@@ -10,8 +9,8 @@ import { UpcomingRaces } from './UpcomingRaces';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
-import { League } from '../types';
-import { useOddsApi } from '../hooks/useOddsApi';
+import { useOddsData } from '../hooks/useOddsData';
+import type { League } from '../types';
 
 interface MainContentProps {
   selectedSportId: string | null;
@@ -49,8 +48,6 @@ const PROMO_PILLS = [
   { id: 'acca-boost',   label: 'Acca Boost',   color: '#00DFA9' },
 ];
 
-// ── Stable "last updated" timestamp ─────────────────────────────────────────
-const UPDATED_AT = new Date();
 
 export function MainContent({ selectedSportId, onSelectSport }: MainContentProps) {
   const [dateFilter,  setDateFilter] = useState<DateFilter>('all');
@@ -58,22 +55,14 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
   const [isLoading,   setIsLoading]  = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Real odds from The Odds API
+  // Real + mock leagues from global context (also powers MatchDetail page)
   const {
-    realLeagues, loading: oddsLoading, refreshing: oddsRefreshing,
-    error: oddsError, fetchedAt, hasRealData,
+    allLeagues, loading: oddsLoading, refreshing: oddsRefreshing,
+    error: oddsError, hasRealData,
     isStale, lastUpdatedLabel, refresh: refreshOdds,
-  } = useOddsApi();
+  } = useOddsData();
 
   const [errorDismissed, setErrorDismissed] = useState(false);
-
-  // Merged league list: real leagues first, then mock leagues for sports not covered by real data
-  const allLeagues = useMemo<League[]>(() => {
-    if (!hasRealData) return LEAGUES;
-    const coveredSportIds = new Set(realLeagues.map(l => l.sportId));
-    const mockFallback = LEAGUES.filter(l => !coveredSportIds.has(l.sportId));
-    return [...realLeagues, ...mockFallback];
-  }, [hasRealData, realLeagues]);
 
   // Simulate initial data load
   useEffect(() => {

@@ -17,6 +17,7 @@ import { WalletProvider } from "@/hooks/useWallet";
 import { FavoritesProvider } from "@/hooks/useFavorites";
 import { OddsSimulationProvider } from "@/hooks/useOddsSimulation";
 import { OddsFormatProvider } from "@/hooks/useOddsFormat";
+import { OddsDataProvider } from "@/hooks/useOddsData";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 
 const queryClient = new QueryClient();
@@ -44,17 +45,19 @@ function App() {
       <TooltipProvider>
         <OddsFormatProvider>
           <OddsSimulationProvider>
-            <FavoritesProvider>
-              <WalletProvider>
-                <BetSlipProvider>
-                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                    <Router />
-                  </WouterRouter>
-                  <OnboardingGuide />
-                  <Toaster />
-                </BetSlipProvider>
-              </WalletProvider>
-            </FavoritesProvider>
+            <OddsDataProvider>
+              <FavoritesProvider>
+                <WalletProvider>
+                  <BetSlipProvider>
+                    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                      <Router />
+                    </WouterRouter>
+                    <OnboardingGuide />
+                    <Toaster />
+                  </BetSlipProvider>
+                </WalletProvider>
+              </FavoritesProvider>
+            </OddsDataProvider>
           </OddsSimulationProvider>
         </OddsFormatProvider>
       </TooltipProvider>

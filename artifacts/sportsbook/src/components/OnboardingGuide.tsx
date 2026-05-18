@@ -53,6 +53,7 @@ export function OnboardingGuide() {
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, []);
 
   function dismiss() {

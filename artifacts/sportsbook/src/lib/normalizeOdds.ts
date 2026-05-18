@@ -86,14 +86,14 @@ export function normalizeEvents(
         dateTag:     toDateTag(commence),
         leagueId:    `api_${config.key}`,
         sportId:     config.sportId,
-        isLive:      false,
+        isLive:      false as boolean,
         marketCount: 20,
         odds: {
           home,
           draw,
           away,
         },
-      } satisfies Match;
+      } as Match;
     })
     .filter((m): m is Match => m !== null);
 }
