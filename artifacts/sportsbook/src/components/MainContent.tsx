@@ -7,6 +7,7 @@ import { PopularBets } from './PopularBets';
 import { SkeletonLeague } from './SkeletonLeague';
 import { UpcomingRaces } from './UpcomingRaces';
 import { UpcomingMatchesCarousel } from './UpcomingMatchesCarousel';
+import { WinnersTicker } from './WinnersTicker';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -154,6 +155,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
         {/* ── Sticky controls ─────────────────────────────────────────── */}
         <div className="sticky top-0 z-20 bg-[#0B0F14]/97 backdrop-blur-md border-b border-[#253241]/60">
+
+          {/* Winners ticker */}
+          <WinnersTicker />
 
           {/* Search */}
           <div className="px-4 pt-3.5 pb-2.5">
