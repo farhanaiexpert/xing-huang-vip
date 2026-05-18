@@ -6,6 +6,7 @@ import { FeaturedCards } from './FeaturedCards';
 import { PopularBets } from './PopularBets';
 import { SkeletonLeague } from './SkeletonLeague';
 import { UpcomingRaces } from './UpcomingRaces';
+import { UpcomingMatchesCarousel } from './UpcomingMatchesCarousel';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -444,6 +445,13 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
             </>
           )}
         </div>
+
+        {/* ── Upcoming matches carousel ───────────────────────────────── */}
+        {!isLoading && !search.trim() && (
+          <div className="px-4 pt-2 pb-0">
+            <UpcomingMatchesCarousel />
+          </div>
+        )}
 
         {/* ── Status bar ──────────────────────────────────────────────── */}
         {!isLoading && (
