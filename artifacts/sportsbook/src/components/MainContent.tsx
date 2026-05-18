@@ -435,7 +435,7 @@ const TRUST_STATS = [
   { icon: <BarChart2   className="h-4 w-4" />, value: '$2.4B+',    label: 'Volume Wagered',  color: 'text-[#00DFA9]', glow: 'rgba(0,223,169,0.10)' },
   { icon: <Users       className="h-4 w-4" />, value: '142,000+',  label: 'Active Users',    color: 'text-[#38BDF8]', glow: 'rgba(56,189,248,0.10)' },
   { icon: <Zap         className="h-4 w-4" />, value: '< 0.3s',    label: 'Avg Settlement',  color: 'text-[#FACC15]', glow: 'rgba(250,204,21,0.10)' },
-  { icon: <Award       className="h-4 w-4" />, value: 'Est. 2021', label: '4 Yrs Operating', color: 'text-[#A78BFA]', glow: 'rgba(167,139,250,0.10)' },
+  { icon: <Award       className="h-4 w-4" />, value: 'Est. 2021', label: '5 Yrs Operating', color: 'text-[#A78BFA]', glow: 'rgba(167,139,250,0.10)' },
 ];
 
 const TRUST_BADGES = [
@@ -459,7 +459,7 @@ function TrustFooter() {
             <div className={cn('shrink-0', stat.color)}>{stat.icon}</div>
             <div className="min-w-0">
               <p className={cn('text-sm font-black leading-none tabular-nums', stat.color)}>{stat.value}</p>
-              <p className="text-[10px] text-[#94A3B8]/50 mt-0.5 leading-none truncate">{stat.label}</p>
+              <p className="text-[10px] text-[#94A3B8]/50 mt-1.5 leading-none truncate">{stat.label}</p>
             </div>
           </div>
         ))}
