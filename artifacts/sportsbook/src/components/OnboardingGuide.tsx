@@ -46,16 +46,17 @@ export function OnboardingGuide() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const seen = localStorage.getItem(STORAGE_KEY);
-    if (!seen) {
-      // Slight delay so the page renders first
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const lastSeen = stored ? parseInt(stored, 10) : 0;
+    const hours24 = 24 * 60 * 60 * 1000;
+    if (!lastSeen || Date.now() - lastSeen > hours24) {
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
   }, []);
 
   function dismiss() {
-    localStorage.setItem(STORAGE_KEY, '1');
+    localStorage.setItem(STORAGE_KEY, String(Date.now()));
     setVisible(false);
   }
 
