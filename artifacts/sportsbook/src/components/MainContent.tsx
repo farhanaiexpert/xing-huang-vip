@@ -435,87 +435,89 @@ function NoResultsState({
 // ────────────────────────────────────────────────────────────────────────────
 // SITE FOOTER
 // ────────────────────────────────────────────────────────────────────────────
-const FOOTER_SPORTS = [
-  'Soccer', 'Tennis', 'Basketball', 'Cricket', 'Esports',
-  'Horse Racing', 'Formula 1', 'Boxing', 'Golf', 'Darts',
-  'Ice Hockey', 'MMA', 'American Football', 'Baseball',
+const CRYPTO_METHODS = [
+  { symbol: '₿',  name: 'Bitcoin',  ticker: 'BTC' },
+  { symbol: 'Ξ',  name: 'Ethereum', ticker: 'ETH' },
+  { symbol: '◎',  name: 'Solana',   ticker: 'SOL' },
+  { symbol: '₮',  name: 'Tether',   ticker: 'USDT' },
+  { symbol: 'Ł',  name: 'Litecoin', ticker: 'LTC' },
+  { symbol: '⬡',  name: 'BNB',      ticker: 'BNB' },
 ];
 
-const FOOTER_COLS = [
+const FOOTER_NAV = [
   {
-    heading: 'Betting',
+    heading: 'Sports',
     links: [
-      { label: 'In-Play Betting', href: '/' },
-      { label: 'Bet Builder', href: '/' },
-      { label: 'Accumulators', href: '/' },
-      { label: 'Early Payout', href: '/' },
-      { label: 'Acca Boost', href: '/' },
-      { label: 'My Bet History', href: '/bet-history' },
+      { label: 'Soccer',        href: '/' },
+      { label: 'Tennis',        href: '/' },
+      { label: 'Basketball',    href: '/' },
+      { label: 'Esports',       href: '/' },
+      { label: 'Horse Racing',  href: '/' },
+      { label: 'Formula 1',     href: '/' },
+      { label: 'Boxing',        href: '/' },
+      { label: 'Cricket',       href: '/' },
     ],
   },
   {
-    heading: 'Company',
+    heading: 'Platform',
     links: [
-      { label: 'About OddsChain', href: '/' },
-      { label: 'Blog', href: '/' },
-      { label: 'Careers', href: '/' },
-      { label: 'Press & Media', href: '/' },
-      { label: 'Affiliate Program', href: '/' },
-      { label: 'API for Operators', href: '/' },
+      { label: 'All Sports',       href: '/' },
+      { label: 'In-Play Betting',  href: '/' },
+      { label: 'Accumulators',     href: '/' },
+      { label: 'Early Payout',     href: '/' },
+      { label: 'Acca Boost',       href: '/' },
+      { label: 'Bet History',      href: '/bet-history' },
     ],
   },
   {
-    heading: 'Help & Legal',
+    heading: 'Legal',
     links: [
-      { label: 'Help & Rules', href: '/help' },
-      { label: 'Responsible Gambling', href: '/help' },
-      { label: 'Self-Exclusion', href: '/help' },
-      { label: 'Privacy Policy', href: '/' },
-      { label: 'Terms & Conditions', href: '/' },
-      { label: 'Cookie Policy', href: '/' },
-      { label: 'AML Policy', href: '/' },
+      { label: 'Help & Rules',          href: '/help' },
+      { label: 'Responsible Gambling',  href: '/help' },
+      { label: 'Terms & Conditions',    href: '/' },
+      { label: 'Privacy Policy',        href: '/' },
+      { label: 'AML Policy',            href: '/' },
+      { label: 'Cookie Policy',         href: '/' },
     ],
   },
 ];
-
-const PAYMENT_METHODS = ['Visa', 'Mastercard', 'Bitcoin', 'Ethereum', 'Litecoin', 'PayPal', 'Skrill', 'Neteller', 'Bank Transfer'];
 
 function SiteFooter() {
   return (
-    <footer className="border-t border-[#253241] bg-[#0B0F14] mt-2">
-      {/* Main grid */}
-      <div className="px-6 pt-8 pb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
+    <footer className="border-t border-[#253241]/70 bg-[#0B0F14] mt-2">
+      <div className="px-6 pt-8 pb-4">
 
-          {/* Brand column */}
-          <div className="lg:col-span-1 space-y-4">
+        {/* Top row: brand + nav columns */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 pb-8">
+
+          {/* Brand */}
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/15 border border-[#00DFA9]/30 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/10 border border-[#00DFA9]/25 flex items-center justify-center">
                 <BarChart2 className="h-3.5 w-3.5 text-[#00DFA9]" />
               </div>
-              <span className="font-black text-[#F8FAFC] tracking-tight text-sm">OddsChain</span>
+              <span className="font-black text-[#F8FAFC] text-sm tracking-tight">OddsChain</span>
             </div>
-            <p className="text-[11px] text-[#94A3B8]/60 leading-relaxed">
-              Next-generation sports trading platform. Live odds, instant settlement, and provably fair markets.
+            <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[180px]">
+              Live odds, instant settlement, and provably fair sports markets.
             </p>
-            {/* License badge */}
-            <div className="flex items-start gap-1.5 p-2.5 rounded-lg bg-[#121821] border border-[#253241]">
-              <ShieldCheck className="h-3 w-3 text-[#00DFA9] mt-0.5 shrink-0" />
-              <p className="text-[9px] text-[#94A3B8]/50 leading-snug">
-                Licensed &amp; regulated by the Malta Gaming Authority (MGA/B2C/123/2021). Gambling can be addictive — play responsibly.
+            <div className="flex items-start gap-1.5 rounded-lg bg-[#121821] border border-[#253241]/80 p-2.5">
+              <ShieldCheck className="h-3 w-3 text-[#00DFA9]/70 mt-px shrink-0" />
+              <p className="text-[9px] text-[#94A3B8]/40 leading-snug">
+                Licensed by the Malta Gaming Authority · MGA/B2C/123/2021
               </p>
             </div>
-            {/* Social icons */}
-            <div className="flex items-center gap-2">
-              {[
-                { icon: <Twitter className="h-3.5 w-3.5" />, label: 'Twitter' },
+            {/* Socials */}
+            <div className="flex gap-1.5 pt-1">
+              {([
+                { icon: <Twitter className="h-3.5 w-3.5" />,   label: 'Twitter'   },
                 { icon: <Instagram className="h-3.5 w-3.5" />, label: 'Instagram' },
-                { icon: <Github className="h-3.5 w-3.5" />, label: 'GitHub' },
-              ].map((s) => (
+                { icon: <Github className="h-3.5 w-3.5" />,    label: 'GitHub'    },
+              ] as const).map((s) => (
                 <button
                   key={s.label}
                   aria-label={s.label}
-                  className="w-7 h-7 rounded-lg border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/50 hover:text-[#00DFA9] hover:border-[#00DFA9]/40 transition-colors duration-150"
+                  className="w-7 h-7 rounded-md border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150"
                 >
                   {s.icon}
                 </button>
@@ -523,33 +525,19 @@ function SiteFooter() {
             </div>
           </div>
 
-          {/* Sports column */}
-          <div>
-            <p className="text-[10px] font-bold text-[#94A3B8]/40 uppercase tracking-widest mb-3">Sports</p>
-            <ul className="space-y-1.5">
-              {FOOTER_SPORTS.map((sport) => (
-                <li key={sport}>
-                  <span className="text-[11px] text-[#94A3B8]/55 hover:text-[#00DFA9] cursor-pointer transition-colors duration-150 flex items-center gap-1 group">
-                    <ChevronRight className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity text-[#00DFA9] -ml-0.5" />
-                    {sport}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Link columns */}
-          {FOOTER_COLS.map((col) => (
+          {/* Nav columns */}
+          {FOOTER_NAV.map((col) => (
             <div key={col.heading}>
-              <p className="text-[10px] font-bold text-[#94A3B8]/40 uppercase tracking-widest mb-3">{col.heading}</p>
-              <ul className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-[#94A3B8]/35 uppercase tracking-widest mb-3">
+                {col.heading}
+              </p>
+              <ul className="space-y-2">
                 {col.links.map((link) => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-[11px] text-[#94A3B8]/55 hover:text-[#00DFA9] transition-colors duration-150 flex items-center gap-1 group"
+                      className="text-[11px] text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors duration-150"
                     >
-                      <ChevronRight className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity text-[#00DFA9] -ml-0.5" />
                       {link.label}
                     </Link>
                   </li>
@@ -559,47 +547,36 @@ function SiteFooter() {
           ))}
         </div>
 
-        {/* Payment methods */}
-        <div className="mt-8 pt-6 border-t border-[#253241]/60">
-          <p className="text-[10px] font-bold text-[#94A3B8]/30 uppercase tracking-widest mb-3">Accepted Payment Methods</p>
-          <div className="flex flex-wrap gap-1.5">
-            {PAYMENT_METHODS.map((method) => (
-              <span
-                key={method}
-                className="px-2.5 py-1 rounded-md bg-[#121821] border border-[#253241]/70 text-[10px] font-medium text-[#94A3B8]/50"
+        {/* Crypto payments row */}
+        <div className="border-t border-[#253241]/50 pt-5 pb-4">
+          <p className="text-[9px] font-semibold text-[#94A3B8]/30 uppercase tracking-widest mb-3">
+            Crypto Payments Only
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {CRYPTO_METHODS.map((c) => (
+              <div
+                key={c.ticker}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#121821] border border-[#253241]/70"
               >
-                {method}
-              </span>
+                <span className="text-[#00DFA9]/80 font-bold text-xs leading-none">{c.symbol}</span>
+                <span className="text-[11px] text-[#F8FAFC]/70 font-medium">{c.name}</span>
+                <span className="text-[9px] text-[#94A3B8]/35 font-mono">{c.ticker}</span>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Responsible gambling logos row */}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {['18+', 'BeGambleAware', 'GamStop', 'GamCare', 'Gambling Therapy'].map((badge) => (
-            <div key={badge} className="flex items-center gap-1 px-2 py-1 rounded border border-[#253241]/50 bg-[#0A0E13]">
-              <Lock className="h-2.5 w-2.5 text-[#94A3B8]/30" />
-              <span className="text-[9px] font-semibold text-[#94A3B8]/35">{badge}</span>
-            </div>
-          ))}
-          <div className="flex-1" />
-          <a
-            href="#"
-            className="flex items-center gap-1 text-[9px] text-[#94A3B8]/30 hover:text-[#94A3B8]/50 transition-colors"
-          >
-            Sitemap <ExternalLink className="h-2.5 w-2.5" />
-          </a>
+        {/* Bottom bar */}
+        <div className="border-t border-[#253241]/40 pt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[9px] text-[#94A3B8]/30">
+            © 2021–2026 OddsChain Ltd. All rights reserved. · 18+ · Gamble responsibly.
+          </p>
+          <div className="flex items-center gap-3">
+            {['18+', 'BeGambleAware', 'GamCare'].map((b) => (
+              <span key={b} className="text-[9px] font-semibold text-[#94A3B8]/25">{b}</span>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Bottom bar */}
-      <div className="border-t border-[#253241]/40 px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
-        <p className="text-[9px] text-[#94A3B8]/25">
-          © 2021–2026 OddsChain Ltd. All rights reserved. Registered in Malta. VAT MT12345678.
-        </p>
-        <p className="text-[9px] text-[#94A3B8]/20">
-          Odds are subject to change. Past results do not guarantee future outcomes. For entertainment purposes only.
-        </p>
       </div>
     </footer>
   );
