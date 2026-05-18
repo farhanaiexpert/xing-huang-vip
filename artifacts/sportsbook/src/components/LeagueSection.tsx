@@ -1,6 +1,45 @@
+import { useState } from 'react';
 import { League } from '../types';
 import { MatchRow } from './MatchRow';
 import { ChevronRight } from 'lucide-react';
+import { getLeagueLogo } from '../lib/leagueLogos';
+
+function getFlagEmoji(countryCode: string) {
+  const map: Record<string, string> = {
+    EU: '🇪🇺', GB: '🇬🇧', US: '🇺🇸', ES: '🇪🇸',
+    IT: '🇮🇹', GL: '🌐', DE: '🇩🇪', IN: '🇮🇳', FR: '🇫🇷',
+  };
+  if (map[countryCode]) return map[countryCode];
+  const pts = countryCode.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0));
+  return String.fromCodePoint(...pts);
+}
+
+/** Shows a real league/tournament logo image, falling back to a flag emoji. */
+function LeagueLogo({ name, fallback }: { name: string; fallback?: string }) {
+  const [failed, setFailed] = useState(false);
+  const url = !failed ? getLeagueLogo(name) : null;
+
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        className="h-5 w-5 object-contain shrink-0 drop-shadow-sm"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  if (fallback) {
+    return (
+      <span className="text-sm leading-none shrink-0" aria-hidden="true">
+        {fallback}
+      </span>
+    );
+  }
+  return null;
+}
 
 export function LeagueSection({ league }: { league: League }) {
   if (!league.matches || league.matches.length === 0) return null;
@@ -14,11 +53,10 @@ export function LeagueSection({ league }: { league: League }) {
       {/* League header */}
       <div className="flex items-center justify-between px-3.5 py-2.5 bg-[#0F1620] border-b border-[#253241]">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          {league.countryCode && (
-            <span className="text-sm leading-none shrink-0" aria-hidden="true">
-              {getFlagEmoji(league.countryCode)}
-            </span>
-          )}
+          <LeagueLogo
+            name={league.name}
+            fallback={league.countryCode ? getFlagEmoji(league.countryCode) : undefined}
+          />
           <h3 className="font-semibold text-[#F8FAFC] text-[13px] truncate">{league.name}</h3>
 
           {liveCount > 0 && (
@@ -74,14 +112,4 @@ export function LeagueSection({ league }: { league: League }) {
       </div>
     </div>
   );
-}
-
-function getFlagEmoji(countryCode: string) {
-  const map: Record<string, string> = {
-    EU: '🇪🇺', GB: '🇬🇧', US: '🇺🇸', ES: '🇪🇸',
-    IT: '🇮🇹', GL: '🌐', DE: '🇩🇪', IN: '🇮🇳', FR: '🇫🇷',
-  };
-  if (map[countryCode]) return map[countryCode];
-  const pts = countryCode.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0));
-  return String.fromCodePoint(...pts);
 }

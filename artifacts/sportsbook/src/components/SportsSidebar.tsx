@@ -16,13 +16,15 @@ interface SportsSidebarProps {
 }
 
 const TRENDING_ITEMS = [
-  { title: 'Weekend Soccer',   icon: '⚽', count: 284, sportId: 'sp_soccer'        },
-  { title: 'ATP/WTA Rome',     icon: '🎾', count: 449, sportId: 'sp_tennis'        },
-  { title: 'Italy Serie A',    icon: '⚽', count: 228, sportId: 'sp_soccer'        },
-  { title: 'Next Races',       icon: '🏇', count: 195, sportId: 'sp_horse_racing'  },
-  { title: 'Spain La Liga',    icon: '⚽', count: 183, sportId: 'sp_soccer'        },
-  { title: 'NBA Play-Offs',    icon: '🏀', count: 156, sportId: 'sp_nba'          },
-  { title: 'LoL World Champ.', icon: '🎮', count: 128, sportId: 'sp_esports'      },
+  { title: 'Weekend Soccer',    icon: '⚽', count: 284, sportId: 'sp_soccer'       },
+  { title: 'French Open — ATP', icon: '🎾', count: 449, sportId: 'sp_tennis'       },
+  { title: 'French Open — WTA', icon: '🎾', count: 312, sportId: 'sp_tennis'       },
+  { title: 'India Premier Lg.', icon: '🏏', count: 247, sportId: 'sp_cricket'      },
+  { title: 'MMA / UFC',         icon: '🥋', count: 198, sportId: 'sp_mma'          },
+  { title: 'Italy Serie A',     icon: '⚽', count: 228, sportId: 'sp_soccer'       },
+  { title: 'Next Races',        icon: '🏇', count: 195, sportId: 'sp_horse_racing' },
+  { title: 'Spain La Liga',     icon: '⚽', count: 183, sportId: 'sp_soccer'       },
+  { title: 'NBA Play-Offs',     icon: '🏀', count: 156, sportId: 'sp_nba'         },
 ];
 const MAX_COUNT = 449;
 
