@@ -7,6 +7,10 @@ import Home from "@/pages/Home";
 import { MatchDetail } from "@/pages/MatchDetail";
 import { BetHistory } from "@/pages/BetHistory";
 import { Help } from "@/pages/Help";
+import { Terms } from "@/pages/Terms";
+import { Privacy } from "@/pages/Privacy";
+import { ResponsibleGambling } from "@/pages/ResponsibleGambling";
+import { AMLPolicy } from "@/pages/AMLPolicy";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
 import { FavoritesProvider } from "@/hooks/useFavorites";
@@ -20,8 +24,12 @@ function Router() {
     <Switch>
       <Route path="/"             component={Home}       />
       <Route path="/match/:id"    component={MatchDetail} />
-      <Route path="/bet-history"  component={BetHistory} />
-      <Route path="/help"         component={Help}       />
+      <Route path="/bet-history"          component={BetHistory}          />
+      <Route path="/help"                 component={Help}                />
+      <Route path="/terms"                component={Terms}               />
+      <Route path="/privacy"              component={Privacy}             />
+      <Route path="/responsible-gambling" component={ResponsibleGambling} />
+      <Route path="/aml"                  component={AMLPolicy}           />
       <Route component={NotFound} />
     </Switch>
   );

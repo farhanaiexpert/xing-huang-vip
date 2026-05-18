@@ -460,10 +460,10 @@ const FOOTER_NAV = [
   {
     heading: 'Legal',
     links: [
-      { label: 'Terms & Conditions',   href: '/' },
-      { label: 'Privacy Policy',       href: '/' },
-      { label: 'Responsible Gambling', href: '/help' },
-      { label: 'AML Policy',           href: '/' },
+      { label: 'Terms & Conditions',   href: '/terms' },
+      { label: 'Privacy Policy',       href: '/privacy' },
+      { label: 'Responsible Gambling', href: '/responsible-gambling' },
+      { label: 'AML Policy',           href: '/aml' },
     ],
   },
 ];
