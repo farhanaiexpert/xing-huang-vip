@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useBetSlip } from '../hooks/useBetSlip';
+import { useOddsFormat } from '../hooks/useOddsFormat';
+import { formatOdds } from '../lib/oddsFormat';
 import { cn } from '../lib/utils';
 import { Flag } from 'lucide-react';
 
@@ -138,6 +140,7 @@ function RaceCard({ race, hasSelection, onSelect }: {
   hasSelection: (id: string) => boolean;
   onSelect: (runner: Runner) => void;
 }) {
+  const { format } = useOddsFormat();
   return (
     <div className="rounded-xl bg-[#121821] border border-[#253241] overflow-hidden">
       {/* Card header */}
@@ -186,7 +189,7 @@ function RaceCard({ race, hasSelection, onSelect }: {
                     : 'bg-[#0B1220] border-[#2A3A52] text-[#FACC15] hover:bg-[#FACC15]/10 hover:border-[#FACC15]/40'
                 )}
               >
-                {runner.odds.toFixed(2)}
+                {formatOdds(runner.odds, format)}
               </button>
             </div>
           );

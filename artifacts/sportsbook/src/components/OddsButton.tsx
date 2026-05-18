@@ -3,6 +3,8 @@ import { Lock, TrendingUp, TrendingDown } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useToast } from '../hooks/use-toast';
 import { useOddsSimulation, getMovement, getOddsDelta } from '../hooks/useOddsSimulation';
+import { useOddsFormat } from '../hooks/useOddsFormat';
+import { formatOdds } from '../lib/oddsFormat';
 import { cn } from '../lib/utils';
 
 interface OddsButtonProps {
@@ -26,6 +28,8 @@ export function OddsButton({
   const { toast } = useToast();
   const { tick, suspendedMarketIds } = useOddsSimulation();
   const [isPulsing, setIsPulsing] = useState(false);
+
+  const { format } = useOddsFormat();
 
   const selectionId     = `${marketId}-${selectionType}`;
   const isSelected      = hasSelection(selectionId);
@@ -112,8 +116,11 @@ export function OddsButton({
       )}
 
       {/* Odds value */}
-      <span className="text-[13px] font-bold leading-none tabular-nums">
-        {displayOdds.toFixed(2)}
+      <span className={cn(
+        'font-bold leading-none tabular-nums',
+        format === 'decimal' ? 'text-[13px]' : 'text-[11px]'
+      )}>
+        {formatOdds(displayOdds, format)}
       </span>
 
       {/* Movement indicator */}

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useWallet } from '../hooks/useWallet';
+import { useOddsFormat } from '../hooks/useOddsFormat';
+import { formatOdds } from '../lib/oddsFormat';
 import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { cn } from '../lib/utils';
@@ -354,6 +356,7 @@ function SelectionCard({
   compact?: boolean;
   extra?: React.ReactNode;
 }) {
+  const { format } = useOddsFormat();
   return (
     <div className={cn(
       'relative rounded-xl border transition-colors group/card',
@@ -385,7 +388,7 @@ function SelectionCard({
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <span className={cn('font-black text-[#FACC15] leading-none tabular-nums', compact ? 'text-sm' : 'text-base')}>
-            {sel.odds.toFixed(2)}
+            {formatOdds(sel.odds, format)}
           </span>
           <button
             onClick={onRemove}

@@ -4,9 +4,12 @@ import { ConnectWalletModal } from './ConnectWalletModal';
 import { useWallet } from '../hooks/useWallet';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '../lib/utils';
+import { useOddsFormat } from '../hooks/useOddsFormat';
+import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 
 export function Header() {
   const { isConnected, shortAddress, walletName, disconnect } = useWallet();
+  const { format, setFormat } = useOddsFormat();
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [showAddressMenu, setShowAddressMenu] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -72,7 +75,27 @@ export function Header() {
               <span className="pointer-events-none absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.9)]" />
             </div>
 
-            <div className="h-5 w-px bg-[#253241] mx-2" />
+            <div className="h-5 w-px bg-[#253241] mx-1.5" />
+
+            {/* Odds format switcher */}
+            <div className="flex items-center rounded-lg bg-[#0B0F14] border border-[#253241] p-0.5 gap-0.5">
+              {(Object.keys(FORMAT_LABELS) as OddsFormat[]).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFormat(f)}
+                  className={cn(
+                    'px-2.5 h-7 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-150',
+                    format === f
+                      ? 'bg-[#18212B] text-[#00DFA9] shadow-sm'
+                      : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
+                  )}
+                >
+                  {FORMAT_LABELS[f]}
+                </button>
+              ))}
+            </div>
+
+            <div className="h-5 w-px bg-[#253241] mx-1.5" />
 
             {isConnected && shortAddress ? (
               <div className="relative" ref={menuRef}>

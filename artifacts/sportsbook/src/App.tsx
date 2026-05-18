@@ -10,6 +10,7 @@ import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
 import { FavoritesProvider } from "@/hooks/useFavorites";
 import { OddsSimulationProvider } from "@/hooks/useOddsSimulation";
+import { OddsFormatProvider } from "@/hooks/useOddsFormat";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <OddsFormatProvider>
         <OddsSimulationProvider>
           <FavoritesProvider>
             <WalletProvider>
@@ -40,6 +42,7 @@ function App() {
             </WalletProvider>
           </FavoritesProvider>
         </OddsSimulationProvider>
+        </OddsFormatProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
