@@ -133,7 +133,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       )}
 
       {/* Odds buttons */}
-      <div className="flex items-center shrink-0" style={{ width: isSoccer ? '174px' : '116px' }}>
+      <div className="flex items-center gap-1 shrink-0" style={{ width: isSoccer ? '186px' : '122px' }}>
         {isSoccer ? (
           <>
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
