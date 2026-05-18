@@ -1,4 +1,4 @@
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Search, Wallet, BarChart2, Bell, LogOut, Copy, ChevronDown } from 'lucide-react';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { useWallet } from '../hooks/useWallet';
@@ -61,9 +61,10 @@ export function Header() {
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-1 flex-1">
-            <NavItem href="/" label="All Sports" active />
-            <NavItem href="/" label="In-Play" disabled soon />
-            <NavItem href="/my-bets" label="My Bets" />
+            <NavItem href="/"            label="Sportsbook"   />
+            <NavItem href="/bet-history" label="Bet History"  />
+            <NavItem href="/help"        label="Help"         />
+            <NavItem href="/"            label="In-Play" disabled soon />
           </nav>
 
           {/* Right */}
@@ -172,7 +173,9 @@ function MenuAction({ icon, label, onClick, danger }: { icon: React.ReactNode; l
   );
 }
 
-function NavItem({ href, label, active, disabled, soon }: { href: string; label: string; active?: boolean; disabled?: boolean; soon?: boolean }) {
+function NavItem({ href, label, disabled, soon }: { href: string; label: string; active?: boolean; disabled?: boolean; soon?: boolean }) {
+  const [location] = useLocation();
+  const isActive = href === '/' ? location === '/' : location.startsWith(href);
   const base = "relative flex items-center gap-1.5 px-3 h-14 text-sm font-medium transition-all duration-150 select-none";
   if (disabled) return (
     <span className={`${base} text-[#94A3B8]/50 cursor-not-allowed`}>
@@ -180,7 +183,7 @@ function NavItem({ href, label, active, disabled, soon }: { href: string; label:
       {soon && <span className="text-[9px] font-semibold uppercase tracking-wider bg-[#253241] text-[#94A3B8] px-1.5 py-0.5 rounded">Soon</span>}
     </span>
   );
-  if (active) return (
+  if (isActive) return (
     <Link href={href} className={`${base} text-[#F8FAFC] font-semibold`}>
       {label}
       <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-[#00DFA9] shadow-[0_0_8px_rgba(0,223,169,0.7)]" />

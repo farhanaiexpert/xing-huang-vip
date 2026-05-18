@@ -5,7 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import { MatchDetail } from "@/pages/MatchDetail";
-import MyBets from "@/pages/MyBets";
+import { BetHistory } from "@/pages/BetHistory";
+import { Help } from "@/pages/Help";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
 import { FavoritesProvider } from "@/hooks/useFavorites";
@@ -17,9 +18,10 @@ const queryClient = new QueryClient();
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/match/:id" component={MatchDetail} />
-      <Route path="/my-bets" component={MyBets} />
+      <Route path="/"             component={Home}       />
+      <Route path="/match/:id"    component={MatchDetail} />
+      <Route path="/bet-history"  component={BetHistory} />
+      <Route path="/help"         component={Help}       />
       <Route component={NotFound} />
     </Switch>
   );
@@ -30,18 +32,18 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <OddsFormatProvider>
-        <OddsSimulationProvider>
-          <FavoritesProvider>
-            <WalletProvider>
-              <BetSlipProvider>
-                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                  <Router />
-                </WouterRouter>
-                <Toaster />
-              </BetSlipProvider>
-            </WalletProvider>
-          </FavoritesProvider>
-        </OddsSimulationProvider>
+          <OddsSimulationProvider>
+            <FavoritesProvider>
+              <WalletProvider>
+                <BetSlipProvider>
+                  <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                    <Router />
+                  </WouterRouter>
+                  <Toaster />
+                </BetSlipProvider>
+              </WalletProvider>
+            </FavoritesProvider>
+          </OddsSimulationProvider>
         </OddsFormatProvider>
       </TooltipProvider>
     </QueryClientProvider>
