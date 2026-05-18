@@ -7,7 +7,7 @@ import { PopularBets } from './PopularBets';
 import { SkeletonLeague } from './SkeletonLeague';
 import { UpcomingRaces } from './UpcomingRaces';
 import { cn } from '../lib/utils';
-import { Search, X, TrendingUp, ChevronRight } from 'lucide-react';
+import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award } from 'lucide-react';
 import { Input } from './ui/input';
 import { League } from '../types';
 
@@ -371,6 +371,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           />
         )}
 
+        {/* ── Trust footer ────────────────────────────────────────────── */}
+        {!isLoading && <TrustFooter />}
+
       </div>
     </div>
   );
@@ -421,6 +424,63 @@ function NoResultsState({
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// TRUST FOOTER
+// ────────────────────────────────────────────────────────────────────────────
+const TRUST_STATS = [
+  { icon: <BarChart2   className="h-4 w-4" />, value: '$2.4B+',    label: 'Volume Wagered',  color: 'text-[#00DFA9]', glow: 'rgba(0,223,169,0.10)' },
+  { icon: <Users       className="h-4 w-4" />, value: '142,000+',  label: 'Active Users',    color: 'text-[#38BDF8]', glow: 'rgba(56,189,248,0.10)' },
+  { icon: <Zap         className="h-4 w-4" />, value: '< 0.3s',    label: 'Avg Settlement',  color: 'text-[#FACC15]', glow: 'rgba(250,204,21,0.10)' },
+  { icon: <Award       className="h-4 w-4" />, value: 'Est. 2021', label: '4 Yrs Operating', color: 'text-[#A78BFA]', glow: 'rgba(167,139,250,0.10)' },
+];
+
+const TRUST_BADGES = [
+  { icon: <Lock        className="h-3 w-3" />, label: 'SSL 256-bit' },
+  { icon: <ShieldCheck className="h-3 w-3" />, label: 'Provably Fair' },
+  { icon: <ShieldCheck className="h-3 w-3" />, label: 'KYC Verified' },
+  { icon: <Zap         className="h-3 w-3" />, label: 'Instant Payouts' },
+];
+
+function TrustFooter() {
+  return (
+    <div className="mx-4 mb-6 mt-2 space-y-3">
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {TRUST_STATS.map((stat, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-2.5 rounded-xl bg-[#121821] border border-[#253241] px-3 py-3 hover:border-[#2E3D50] transition-colors duration-200"
+            style={{ boxShadow: `inset 0 0 20px ${stat.glow}` }}
+          >
+            <div className={cn('shrink-0', stat.color)}>{stat.icon}</div>
+            <div className="min-w-0">
+              <p className={cn('text-sm font-black leading-none tabular-nums', stat.color)}>{stat.value}</p>
+              <p className="text-[10px] text-[#94A3B8]/50 mt-0.5 leading-none truncate">{stat.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Security badges + small print */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {TRUST_BADGES.map((badge, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0A0E13] border border-[#253241]/60 text-[10px] font-medium text-[#94A3B8]/60"
+          >
+            <span className="text-[#00DFA9]/70">{badge.icon}</span>
+            {badge.label}
+          </div>
+        ))}
+        <div className="flex-1" />
+        <p className="text-[9px] text-[#94A3B8]/25 leading-none whitespace-nowrap">
+          OddsChain · For entertainment purposes
+        </p>
+      </div>
     </div>
   );
 }
