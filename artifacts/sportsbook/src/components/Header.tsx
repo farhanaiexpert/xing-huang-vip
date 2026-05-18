@@ -42,7 +42,13 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full">
-        <div className="flex h-14 items-center px-4 md:px-6 gap-4 bg-[#0D1117]/95 border-b border-[#253241]/80 backdrop-blur-xl shadow-[0_1px_12px_rgba(0,0,0,0.5)]">
+        <div
+          className="flex h-14 items-center px-4 md:px-6 gap-4 border-b border-[#253241]/70 backdrop-blur-xl"
+          style={{
+            background: 'linear-gradient(110deg, #06101E 0%, #0D1117 45%, #071812 100%)',
+            boxShadow: '0 1px 0 rgba(0,223,169,0.06), 0 4px 24px rgba(0,0,0,0.55)',
+          }}
+        >
 
           {/* Logo */}
           <div className="flex items-center gap-3 shrink-0">
