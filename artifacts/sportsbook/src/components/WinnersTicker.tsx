@@ -95,10 +95,10 @@ export function WinnersTicker() {
     return () => clearInterval(id);
   }, []);
 
-  // Duration: ~80px per winner entry at current pill size, 45px/s scroll speed
+  // Duration: ~340px per winner pill + separator, 85px/s scroll speed
   const PILL_PX   = 340; // approx width per pill + separator
-  const SPEED     = 55;  // px per second
-  const duration  = Math.max(40, (winners.length * PILL_PX) / SPEED);
+  const SPEED     = 85;  // px per second — slightly faster
+  const duration  = Math.max(30, (winners.length * PILL_PX) / SPEED);
 
   return (
     <div
