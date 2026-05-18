@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { Header } from '@/components/Header';
+import { ConnectWalletModal } from '@/components/ConnectWalletModal';
+import { useWallet } from '@/hooks/useWallet';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ArrowLeft, TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ArrowLeft, TrendingUp, TrendingDown, BarChart2, Wallet, ShieldCheck } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────
 // MOCK DATA
@@ -130,6 +132,8 @@ type Filter = 'all' | 'open' | 'settled';
 
 export function MyBets() {
   const [filter, setFilter] = useState<Filter>('all');
+  const [walletOpen, setWalletOpen] = useState(false);
+  const { isConnected } = useWallet();
 
   const filtered = MOCK_BETS.filter(b => {
     if (filter === 'open')    return b.status === 'pending';
@@ -143,6 +147,43 @@ export function MyBets() {
   const winRate    = settled.length > 0 ? Math.round((won.length / settled.length) * 100) : 0;
   const netPL      = MOCK_BETS.reduce((acc, b) => acc + (b.status === 'pending' ? 0 : b.profit), 0);
   const totalStake = MOCK_BETS.reduce((acc, b) => acc + b.stake, 0);
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white">
+        <Header />
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-sm w-full">
+            <div className="relative mx-auto w-20 h-20 mb-6">
+              <div className="absolute inset-0 rounded-3xl bg-[#00DFA9]/5 blur-2xl scale-[2]" />
+              <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#18212B] to-[#121821] border border-[#253241] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.4)]">
+                <Wallet className="h-9 w-9 text-[#94A3B8]/40" />
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">Connect your wallet</h2>
+            <p className="text-sm text-[#94A3B8] leading-relaxed mb-8">
+              Your bet history is tied to your wallet. Connect to view your open and settled bets.
+            </p>
+
+            <button
+              onClick={() => setWalletOpen(true)}
+              className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#00DFA9] text-[#0B0F14] hover:shadow-[0_0_28px_rgba(0,223,169,0.5)] hover:scale-[1.02] active:scale-[0.97] transition-all duration-200"
+            >
+              <Wallet className="h-4 w-4 shrink-0" />
+              Connect Wallet
+            </button>
+
+            <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-[#94A3B8]/40">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Non-custodial · Your keys, your bets
+            </div>
+          </div>
+        </div>
+        <ConnectWalletModal open={walletOpen} onOpenChange={setWalletOpen} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white">
