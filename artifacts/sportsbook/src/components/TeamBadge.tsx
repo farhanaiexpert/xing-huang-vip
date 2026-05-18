@@ -66,18 +66,13 @@ export function TeamBadge({ name, sportIcon, size = 'md', className }: TeamBadge
 
   if (logoUrl) {
     return (
-      <div className={cn(
-        cfg.box, cfg.radius,
-        'overflow-hidden bg-white flex items-center justify-center shrink-0',
-        'shadow-[0_2px_8px_rgba(0,0,0,0.35)] ring-1 ring-black/10',
-        className,
-      )}>
+      <div className={cn(cfg.box, 'flex items-center justify-center shrink-0', className)}>
         <img
           src={logoUrl}
           alt={`${name} logo`}
           loading="lazy"
           decoding="async"
-          className={cn('w-full h-full object-contain', cfg.img)}
+          className="w-full h-full object-contain drop-shadow-md"
           onError={() => setImgFailed(true)}
         />
       </div>
