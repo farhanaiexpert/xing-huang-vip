@@ -3,6 +3,7 @@ import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { LEAGUES } from '../data/mockData';
 import { LeagueSection } from './LeagueSection';
 import { FeaturedCards } from './FeaturedCards';
+import { PopularBets } from './PopularBets';
 import { SkeletonLeague } from './SkeletonLeague';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight } from 'lucide-react';
@@ -56,7 +57,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
   // Simulate initial data load
   useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 650);
+    const t = setTimeout(() => setIsLoading(false), 200);
     return () => clearTimeout(t);
   }, []);
 
@@ -139,7 +140,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0B0F14] overflow-hidden">
-      <ScrollArea className="flex-1 h-[calc(100vh-3.5rem)]">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden h-[calc(100vh-3.5rem)]" style={{ scrollbarWidth: 'none' }}>
 
         {/* ── Sticky controls ─────────────────────────────────────────── */}
         <div className="sticky top-0 z-20 bg-[#0B0F14]/97 backdrop-blur-md border-b border-[#253241]/60">
@@ -313,6 +314,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           ) : (
             <>
               {showFeatured && <FeaturedCards />}
+              {showFeatured && <PopularBets />}
 
               {/* Live heading */}
               {dateFilter === 'today' && liveCount > 0 && (
@@ -364,7 +366,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           />
         )}
 
-      </ScrollArea>
+      </div>
     </div>
   );
 }

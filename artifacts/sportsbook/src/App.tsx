@@ -7,6 +7,8 @@ import Home from "@/pages/Home";
 import { MatchDetail } from "@/pages/MatchDetail";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
+import { FavoritesProvider } from "@/hooks/useFavorites";
+import { OddsSimulationProvider } from "@/hooks/useOddsSimulation";
 
 const queryClient = new QueryClient();
 
@@ -24,14 +26,18 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WalletProvider>
-          <BetSlipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </BetSlipProvider>
-        </WalletProvider>
+        <OddsSimulationProvider>
+          <FavoritesProvider>
+            <WalletProvider>
+              <BetSlipProvider>
+                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                  <Router />
+                </WouterRouter>
+                <Toaster />
+              </BetSlipProvider>
+            </WalletProvider>
+          </FavoritesProvider>
+        </OddsSimulationProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

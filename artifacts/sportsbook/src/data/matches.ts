@@ -268,6 +268,108 @@ export const MATCH_BL2: MatchEntity = {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
+// LIGUE 1
+// ═════════════════════════════════════════════════════════════════════════════
+
+export const MATCH_LF1: MatchEntity = {
+  id: 'lf1', leagueId: 'lg_ligue1', sportId: 'sp_soccer',
+  homeTeamId: 'tm_psg_l1', awayTeamId: 'tm_lyon',
+  homeTeamName: 'PSG', awayTeamName: 'Lyon',
+  startTime: '2026-05-17T19:00:00Z', dateTag: 'today', displayDate: 'Today, 19:00',
+  status: 'live', isLive: true, liveMinute: 52, score: { home: 2, away: 0 },
+  isFeatured: true, marketCount: 96,
+  primaryMarket: mr('lf1', 1.40, 4.50, 7.50),
+};
+
+export const MATCH_LF2: MatchEntity = {
+  id: 'lf2', leagueId: 'lg_ligue1', sportId: 'sp_soccer',
+  homeTeamId: 'tm_monaco', awayTeamId: 'tm_marseille',
+  homeTeamName: 'Monaco', awayTeamName: 'Marseille',
+  startTime: '2026-05-17T21:00:00Z', dateTag: 'today', displayDate: 'Today, 21:00',
+  status: 'upcoming', isLive: false,
+  isFeatured: false, marketCount: 74,
+  primaryMarket: mr('lf2', 2.10, 3.25, 3.40),
+};
+
+export const MATCH_LF3: MatchEntity = {
+  id: 'lf3', leagueId: 'lg_ligue1', sportId: 'sp_soccer',
+  homeTeamId: 'tm_lille', awayTeamId: 'tm_nice',
+  homeTeamName: 'Lille', awayTeamName: 'Nice',
+  startTime: '2026-05-18T20:00:00Z', dateTag: 'tomorrow', displayDate: 'Tomorrow, 20:00',
+  status: 'upcoming', isLive: false,
+  isFeatured: false, marketCount: 61,
+  primaryMarket: mr('lf3', 2.30, 3.10, 3.00),
+};
+
+export const MATCH_LF4: MatchEntity = {
+  id: 'lf4', leagueId: 'lg_ligue1', sportId: 'sp_soccer',
+  homeTeamId: 'tm_lens', awayTeamId: 'tm_rennes',
+  homeTeamName: 'Lens', awayTeamName: 'Rennes',
+  startTime: '2026-05-22T20:00:00Z', dateTag: 'upcoming', displayDate: 'Sat, 20:00',
+  status: 'upcoming', isLive: false,
+  isFeatured: false, marketCount: 56,
+  primaryMarket: mr('lf4', 1.95, 3.30, 3.75),
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// LOL WORLD CHAMPIONSHIP
+// ═════════════════════════════════════════════════════════════════════════════
+
+export const MATCH_LOL1: MatchEntity = {
+  id: 'lol1', leagueId: 'lg_lol_worlds', sportId: 'sp_esports',
+  homeTeamId: 'tm_t1', awayTeamId: 'tm_jdg',
+  homeTeamName: 'T1', awayTeamName: 'JDG Gaming',
+  startTime: '2026-05-17T13:00:00Z', dateTag: 'today', displayDate: 'Today, 13:00',
+  status: 'live', isLive: true, liveMinute: 0, score: { home: 1, away: 0 },
+  isFeatured: true, marketCount: 32,
+  primaryMarket: mw('lol1', 1.75, 2.05),
+};
+
+export const MATCH_LOL2: MatchEntity = {
+  id: 'lol2', leagueId: 'lg_lol_worlds', sportId: 'sp_esports',
+  homeTeamId: 'tm_cloud9', awayTeamId: 'tm_fnatic',
+  homeTeamName: 'Cloud9', awayTeamName: 'Fnatic',
+  startTime: '2026-05-17T16:00:00Z', dateTag: 'today', displayDate: 'Today, 16:00',
+  status: 'upcoming', isLive: false,
+  isFeatured: false, marketCount: 26,
+  primaryMarket: mw('lol2', 1.60, 2.30),
+};
+
+export const MATCH_LOL3: MatchEntity = {
+  id: 'lol3', leagueId: 'lg_lol_worlds', sportId: 'sp_esports',
+  homeTeamId: 'tm_geng', awayTeamId: 'tm_t1',
+  homeTeamName: 'Gen.G', awayTeamName: 'T1',
+  startTime: '2026-05-18T13:00:00Z', dateTag: 'tomorrow', displayDate: 'Tomorrow, 13:00',
+  status: 'upcoming', isLive: false,
+  isFeatured: false, marketCount: 28,
+  primaryMarket: mw('lol3', 2.10, 1.72),
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// BUNDESLIGA (additional)
+// ═════════════════════════════════════════════════════════════════════════════
+
+export const MATCH_BL3: MatchEntity = {
+  id: 'bl3', leagueId: 'lg_bundesliga', sportId: 'sp_soccer',
+  homeTeamId: 'tm_frankfurt', awayTeamId: 'tm_stuttgart',
+  homeTeamName: 'Eintracht Frankfurt', awayTeamName: 'VfB Stuttgart',
+  startTime: '2026-05-17T17:30:00Z', dateTag: 'today', displayDate: 'Today, 17:30',
+  status: 'live', isLive: true, liveMinute: 23, score: { home: 0, away: 1 },
+  isFeatured: false, marketCount: 82,
+  primaryMarket: mr('bl3', 2.55, 3.20, 2.65),
+};
+
+export const MATCH_BL4: MatchEntity = {
+  id: 'bl4', leagueId: 'lg_bundesliga', sportId: 'sp_soccer',
+  homeTeamId: 'tm_wolfsburg', awayTeamId: 'tm_dortmund',
+  homeTeamName: 'Wolfsburg', awayTeamName: 'Borussia Dortmund',
+  startTime: '2026-05-18T15:30:00Z', dateTag: 'tomorrow', displayDate: 'Tomorrow, 15:30',
+  status: 'upcoming', isLive: false,
+  isFeatured: false, marketCount: 70,
+  primaryMarket: mr('bl4', 3.10, 3.30, 2.20),
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
 // NBA PLAYOFFS
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -462,15 +564,29 @@ export const MATCH_CR2: MatchEntity = {
 // ═════════════════════════════════════════════════════════════════════════════
 
 export const ALL_MATCHES: MatchEntity[] = [
+  // Premier League
   MATCH_M1, MATCH_M2, MATCH_M3, MATCH_M3B,
+  // La Liga
   MATCH_M4, MATCH_M5, MATCH_M5B,
+  // Champions League
   MATCH_M6, MATCH_M7, MATCH_M7B,
+  // Serie A
   MATCH_SA1, MATCH_SA2, MATCH_SA3,
-  MATCH_BL1, MATCH_BL2,
+  // Bundesliga
+  MATCH_BL1, MATCH_BL2, MATCH_BL3, MATCH_BL4,
+  // Ligue 1
+  MATCH_LF1, MATCH_LF2, MATCH_LF3, MATCH_LF4,
+  // NBA
   MATCH_M8, MATCH_M9, MATCH_M9B,
+  // Tennis
   MATCH_M10, MATCH_M11, MATCH_M11B, MATCH_M11C,
+  // CS2
   MATCH_M12, MATCH_M13, MATCH_M13B,
+  // LoL Worlds
+  MATCH_LOL1, MATCH_LOL2, MATCH_LOL3,
+  // Horse Racing
   MATCH_M14, MATCH_M15, MATCH_M16, MATCH_M17, MATCH_M18,
+  // Cricket
   MATCH_CR1, MATCH_CR2,
 ];
 

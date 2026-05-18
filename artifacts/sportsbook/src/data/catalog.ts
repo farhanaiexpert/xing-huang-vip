@@ -104,11 +104,31 @@ export const TEAMS_CATALOG: TeamEntity[] = [
   { id: 'tm_bucks',       sportId: 'sp_nba',    leagueId: 'lg_nba',       name: 'Bucks',             shortName: 'MIL', countryCode: 'US' },
   { id: 'tm_nuggets',     sportId: 'sp_nba',    leagueId: 'lg_nba',       name: 'Nuggets',           shortName: 'DEN', countryCode: 'US' },
   { id: 'tm_heat',        sportId: 'sp_nba',    leagueId: 'lg_nba',       name: 'Heat',              shortName: 'MIA', countryCode: 'US' },
-  // Esports
-  { id: 'tm_vitality',    sportId: 'sp_esports', leagueId: 'lg_cs2',      name: 'Team Vitality',     shortName: 'VIT', countryCode: 'FR' },
-  { id: 'tm_navi',        sportId: 'sp_esports', leagueId: 'lg_cs2',      name: 'Natus Vincere',     shortName: 'NAV', countryCode: 'UA' },
-  { id: 'tm_g2',          sportId: 'sp_esports', leagueId: 'lg_cs2',      name: 'G2 Esports',        shortName: 'G2',  countryCode: 'DE' },
-  { id: 'tm_faze',        sportId: 'sp_esports', leagueId: 'lg_cs2',      name: 'FaZe Clan',         shortName: 'FAZ', countryCode: 'US' },
+  // Esports — CS2
+  { id: 'tm_vitality',    sportId: 'sp_esports', leagueId: 'lg_cs2',       name: 'Team Vitality',     shortName: 'VIT', countryCode: 'FR' },
+  { id: 'tm_navi',        sportId: 'sp_esports', leagueId: 'lg_cs2',       name: 'Natus Vincere',     shortName: 'NAV', countryCode: 'UA' },
+  { id: 'tm_g2',          sportId: 'sp_esports', leagueId: 'lg_cs2',       name: 'G2 Esports',        shortName: 'G2',  countryCode: 'DE' },
+  { id: 'tm_faze',        sportId: 'sp_esports', leagueId: 'lg_cs2',       name: 'FaZe Clan',         shortName: 'FAZ', countryCode: 'US' },
+  // Esports — LoL Worlds
+  { id: 'tm_t1',          sportId: 'sp_esports', leagueId: 'lg_lol_worlds', name: 'T1',               shortName: 'T1',  countryCode: 'KR' },
+  { id: 'tm_jdg',         sportId: 'sp_esports', leagueId: 'lg_lol_worlds', name: 'JDG Gaming',       shortName: 'JDG', countryCode: 'CN' },
+  { id: 'tm_cloud9',      sportId: 'sp_esports', leagueId: 'lg_lol_worlds', name: 'Cloud9',            shortName: 'C9',  countryCode: 'US' },
+  { id: 'tm_fnatic',      sportId: 'sp_esports', leagueId: 'lg_lol_worlds', name: 'Fnatic',            shortName: 'FNC', countryCode: 'GB' },
+  { id: 'tm_geng',        sportId: 'sp_esports', leagueId: 'lg_lol_worlds', name: 'Gen.G',             shortName: 'GNG', countryCode: 'KR' },
+  // Ligue 1
+  { id: 'tm_psg_l1',      sportId: 'sp_soccer',  leagueId: 'lg_ligue1',    name: 'PSG',               shortName: 'PSG', countryCode: 'FR' },
+  { id: 'tm_lyon',        sportId: 'sp_soccer',  leagueId: 'lg_ligue1',    name: 'Lyon',              shortName: 'LYO', countryCode: 'FR' },
+  { id: 'tm_monaco',      sportId: 'sp_soccer',  leagueId: 'lg_ligue1',    name: 'Monaco',            shortName: 'MON', countryCode: 'FR' },
+  { id: 'tm_marseille',   sportId: 'sp_soccer',  leagueId: 'lg_ligue1',    name: 'Marseille',         shortName: 'MAR', countryCode: 'FR' },
+  { id: 'tm_lille',       sportId: 'sp_soccer',  leagueId: 'lg_ligue1',    name: 'Lille',             shortName: 'LIL', countryCode: 'FR' },
+  { id: 'tm_nice',        sportId: 'sp_soccer',  leagueId: 'lg_ligue1',    name: 'Nice',              shortName: 'NIC', countryCode: 'FR' },
+  { id: 'tm_lens',        sportId: 'sp_soccer',  leagueId: 'lg_ligue1',    name: 'Lens',              shortName: 'LEN', countryCode: 'FR' },
+  { id: 'tm_rennes',      sportId: 'sp_soccer',  leagueId: 'lg_ligue1',    name: 'Rennes',            shortName: 'REN', countryCode: 'FR' },
+  // Bundesliga extra
+  { id: 'tm_frankfurt',   sportId: 'sp_soccer',  leagueId: 'lg_bundesliga', name: 'Eintracht Frankfurt', shortName: 'SGE', countryCode: 'DE' },
+  { id: 'tm_stuttgart',   sportId: 'sp_soccer',  leagueId: 'lg_bundesliga', name: 'VfB Stuttgart',     shortName: 'VFB', countryCode: 'DE' },
+  { id: 'tm_dortmund',    sportId: 'sp_soccer',  leagueId: 'lg_bundesliga', name: 'Borussia Dortmund', shortName: 'BVB', countryCode: 'DE' },
+  { id: 'tm_wolfsburg',   sportId: 'sp_soccer',  leagueId: 'lg_bundesliga', name: 'Wolfsburg',         shortName: 'WOB', countryCode: 'DE' },
 ];
 
 // ── Market Types ───────────────────────────────────────────────────────────────

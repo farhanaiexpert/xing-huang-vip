@@ -1,6 +1,7 @@
 import { useLocation } from 'wouter';
 import { Match } from '../types';
 import { OddsButton } from './OddsButton';
+import { useFavorites } from '../hooks/useFavorites';
 import { cn } from '../lib/utils';
 
 interface MatchRowProps {
@@ -9,12 +10,16 @@ interface MatchRowProps {
   isLast?: boolean;
 }
 
+const SPORT_ICONS: Record<string, string> = {
+  sp_soccer: '⚽', sp_tennis: '🎾', sp_nba: '🏀', sp_basketball: '🏀',
+  sp_esports: '🎮', sp_horse_racing: '🏇', sp_cricket: '🏏',
+  sp_boxing: '🥊', sp_mma: '🥋', sp_formula_1: '🏎️',
+};
+
 function getMarketMeta(sportId: string, matchId: string) {
-  const isSoccer = sportId === 'sp_soccer' || sportId === 'soccer';
-  const isHorse  = sportId === 'sp_horse_racing' || sportId === 'horse_racing';
-  if (isSoccer) return { marketId: `mkt_${matchId}_mr`,  marketName: 'Match Result' };
-  if (isHorse)  return { marketId: `mkt_${matchId}_wo`,  marketName: 'Win' };
-  return             { marketId: `mkt_${matchId}_mw`,  marketName: 'Match Winner' };
+  if (sportId === 'sp_soccer')                     return { marketId: `mkt_${matchId}_mr`, marketName: 'Match Result' };
+  if (sportId === 'sp_horse_racing')               return { marketId: `mkt_${matchId}_wo`, marketName: 'Win' };
+  return                                                  { marketId: `mkt_${matchId}_mw`, marketName: 'Match Winner' };
 }
 
 function getSelectionName(selectionType: '1' | 'X' | '2', match: Match): string {
@@ -24,28 +29,32 @@ function getSelectionName(selectionType: '1' | 'X' | '2', match: Match): string 
   return selectionType;
 }
 
-export function MatchRow({ match, leagueName, isLast: _isLast }: MatchRowProps) {
-  const [, setLocation] = useLocation();
+export function MatchRow({ match, leagueName }: MatchRowProps) {
+  const [, setLocation]  = useLocation();
+  const { addRecentMatch } = useFavorites();
 
   const matchName = match.team2
     ? `${match.team1} vs ${match.team2}`
     : match.team1;
 
-  const isSoccer  = match.sportId === 'sp_soccer' || match.sportId === 'soccer';
-  const isCricket = match.sportId === 'sp_cricket' || match.sportId === 'cricket';
-  const isHorse   = match.sportId === 'sp_horse_racing' || match.sportId === 'horse_racing';
-
+  const isSoccer  = match.sportId === 'sp_soccer';
+  const isCricket = match.sportId === 'sp_cricket';
+  const isHorse   = match.sportId === 'sp_horse_racing';
   const isToday    = match.dateTag === 'today';
   const isTomorrow = match.dateTag === 'tomorrow';
   const [dayPart, timePart] = match.date.split(', ');
 
   const { marketId, marketName } = getMarketMeta(match.sportId, match.id);
-  const sharedOddsProps = { matchId: match.id, marketId, matchName, leagueName, marketName };
+  const sharedOddsProps = { matchId: match.id, marketId, matchName, leagueName, marketName, isLive: match.isLive };
 
   function handleRowClick(e: React.MouseEvent) {
-    // Don't navigate if the user clicked an odds button
-    const target = e.target as HTMLElement;
-    if (target.closest('button[data-testid^="odds-btn"]')) return;
+    if ((e.target as HTMLElement).closest('button[data-testid^="odds-btn"]')) return;
+    addRecentMatch({
+      id: match.id,
+      name: matchName,
+      leagueName,
+      sportIcon: SPORT_ICONS[match.sportId] ?? '🏆',
+    });
     setLocation(`/match/${match.id}`);
   }
 
@@ -116,7 +125,7 @@ export function MatchRow({ match, leagueName, isLast: _isLast }: MatchRowProps) 
 
       {/* Market count */}
       {match.marketCount && match.marketCount > 1 && (
-        <div className="shrink-0 hidden md:flex items-center gap-0.5">
+        <div className="shrink-0 hidden md:flex">
           <span className="text-[10px] text-[#94A3B8]/40 group-hover:text-[#38BDF8]/60 transition-colors font-medium tabular-nums">
             +{match.marketCount}
           </span>
@@ -124,19 +133,19 @@ export function MatchRow({ match, leagueName, isLast: _isLast }: MatchRowProps) 
       )}
 
       {/* Odds buttons */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center shrink-0" style={{ width: isSoccer ? '174px' : '116px' }}>
         {isSoccer ? (
           <>
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
             <OddsButton {...sharedOddsProps} selectionType="X" selectionName="Draw"                         odds={match.odds.draw ?? 0} />
             <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
+            <div className="w-[18px]" />
           </>
         ) : (
           <>
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
-            {match.odds.away > 0 && (
-              <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
-            )}
+            <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
+            <div className="w-[12px]" />
           </>
         )}
       </div>
@@ -145,8 +154,8 @@ export function MatchRow({ match, leagueName, isLast: _isLast }: MatchRowProps) 
 }
 
 function LiveIndicator({ match }: { match: Match }) {
-  const isTennis  = match.sportId === 'sp_tennis'  || match.sportId === 'tennis';
-  const isCricket = match.sportId === 'sp_cricket' || match.sportId === 'cricket';
+  const isTennis  = match.sportId === 'sp_tennis';
+  const isCricket = match.sportId === 'sp_cricket';
   if (isTennis && match.score)  return <span className="text-[11px] font-bold text-[#F8FAFC] tabular-nums">{match.score.home}–{match.score.away}</span>;
   if (isCricket && match.score) return <span className="text-[10px] font-bold text-[#F8FAFC] tabular-nums">{match.score.home}/{match.score.away}</span>;
   if (match.liveMinute)         return <span className="text-[11px] font-bold text-[#EF4444]/80 tabular-nums">{match.liveMinute}'</span>;
