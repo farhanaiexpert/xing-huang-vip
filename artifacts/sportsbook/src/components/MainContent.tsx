@@ -59,7 +59,13 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Real odds from The Odds API
-  const { realLeagues, loading: oddsLoading, error: oddsError, fetchedAt, hasRealData } = useOddsApi();
+  const {
+    realLeagues, loading: oddsLoading, refreshing: oddsRefreshing,
+    error: oddsError, fetchedAt, hasRealData,
+    isStale, lastUpdatedLabel, refresh: refreshOdds,
+  } = useOddsApi();
+
+  const [errorDismissed, setErrorDismissed] = useState(false);
 
   // Merged league list: real leagues first, then mock leagues for sports not covered by real data
   const allLeagues = useMemo<League[]>(() => {
@@ -300,36 +306,82 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               </div>
             )}
 
-            {/* Real data status badge */}
+            {/* Real data status badge + refresh button */}
             {!isLoading && !hasActiveFilter && (
-              <div className="ml-auto shrink-0">
-                {oddsLoading && (
+              <div className="ml-auto shrink-0 flex items-center gap-2">
+                {(oddsLoading || oddsRefreshing) && (
                   <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/40 font-medium">
                     <RefreshCw className="h-3 w-3 animate-spin" />
-                    Fetching live odds…
+                    {oddsRefreshing ? 'Refreshing…' : 'Fetching odds…'}
                   </span>
                 )}
-                {!oddsLoading && hasRealData && (
-                  <span className="flex items-center gap-1.5 text-[10px] text-[#00DFA9]/70 font-semibold">
+                {!oddsLoading && !oddsRefreshing && hasRealData && (
+                  <span className="flex items-center gap-1.5 text-[10px] font-semibold"
+                    style={{ color: isStale ? 'rgba(250,204,21,0.7)' : 'rgba(0,223,169,0.7)' }}>
                     <Wifi className="h-3 w-3" />
-                    Live odds
-                    {fetchedAt && (
-                      <span className="text-[#94A3B8]/35 font-normal">
-                        · updated {fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    )}
+                    {lastUpdatedLabel || 'Live odds'}
                   </span>
                 )}
-                {!oddsLoading && oddsError && (
+                {!oddsLoading && !oddsRefreshing && oddsError && !hasRealData && (
                   <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/35 font-medium">
                     <WifiOff className="h-3 w-3" />
                     Using cached data
                   </span>
                 )}
+                <button
+                  onClick={refreshOdds}
+                  disabled={oddsLoading || oddsRefreshing}
+                  title="Refresh odds now"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold border border-[#253241] text-[#94A3B8]/60 hover:text-[#F8FAFC] hover:border-[#253241]/80 hover:bg-[#121821] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
+                >
+                  <RefreshCw className={`h-2.5 w-2.5 ${oddsRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
               </div>
             )}
           </div>
         </div>
+
+        {/* ── Error banner ────────────────────────────────────────────── */}
+        {!isLoading && oddsError && !errorDismissed && (
+          <div className="mx-4 mt-3 flex items-start gap-3 px-4 py-3 rounded-xl bg-[#EF4444]/8 border border-[#EF4444]/20 text-[#EF4444]/80">
+            <WifiOff className="h-4 w-4 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold leading-snug">
+                {hasRealData ? 'Odds refresh failed — showing cached data' : 'Could not fetch live odds — using demo data'}
+              </p>
+              <p className="text-[11px] text-[#EF4444]/50 mt-0.5 leading-relaxed">
+                {oddsError.includes('401') || oddsError.includes('Unauthorized')
+                  ? 'API key invalid or expired. Check your VITE_ODDS_API_KEY.'
+                  : 'Network issue. Odds will auto-refresh on your next visit.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setErrorDismissed(true)}
+              className="shrink-0 p-1 rounded-md text-[#EF4444]/40 hover:text-[#EF4444]/70 hover:bg-[#EF4444]/10 transition-all"
+              aria-label="Dismiss"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* ── Stale data banner ───────────────────────────────────────── */}
+        {!isLoading && isStale && hasRealData && !oddsError && (
+          <div className="mx-4 mt-3 flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#FACC15]/6 border border-[#FACC15]/20">
+            <span className="text-[11px] text-[#FACC15]/70 flex-1">
+              Odds data is over 24 hours old.
+            </span>
+            <button
+              onClick={refreshOdds}
+              disabled={oddsRefreshing}
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-[#FACC15]/80 hover:text-[#FACC15] disabled:opacity-40 transition-colors"
+            >
+              <RefreshCw className={`h-3 w-3 ${oddsRefreshing ? 'animate-spin' : ''}`} />
+              Refresh now
+            </button>
+          </div>
+        )}
 
         {/* ── Content ─────────────────────────────────────────────────── */}
         <div className="px-4 pt-4 pb-2">
@@ -409,8 +461,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           <StatusBar
             matchCount={totalMatchCount}
             leagueCount={filteredLeagues.length}
-            updatedAt={fetchedAt ?? UPDATED_AT}
             isLive={hasRealData}
+            isStale={isStale}
+            lastUpdatedLabel={lastUpdatedLabel}
           />
         )}
 
@@ -653,23 +706,28 @@ function TrustFooter() {
 // STATUS BAR
 // ────────────────────────────────────────────────────────────────────────────
 function StatusBar({
-  matchCount, leagueCount, updatedAt, isLive,
-}: { matchCount: number; leagueCount: number; updatedAt: Date; isLive?: boolean }) {
-  const timeStr = updatedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  matchCount, leagueCount, isLive, lastUpdatedLabel, isStale,
+}: {
+  matchCount: number; leagueCount: number;
+  isLive?: boolean; lastUpdatedLabel?: string; isStale?: boolean;
+}) {
+  const dotColor  = isStale ? '#FACC15' : isLive ? '#00DFA9' : '#94A3B8';
+  const textColor = isStale
+    ? 'rgba(250,204,21,0.6)'
+    : isLive
+      ? 'rgba(0,223,169,0.6)'
+      : 'rgba(148,163,184,0.4)';
 
   return (
     <div className="mx-4 mb-6 mt-4 flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl bg-[#0A0E13] border border-[#253241]/40">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="flex items-center gap-1.5 text-[10px] shrink-0"
-          style={{ color: isLive ? 'rgba(0,223,169,0.7)' : 'rgba(148,163,184,0.5)' }}>
-          <span className="w-1.5 h-1.5 rounded-full"
-            style={{
-              background:  isLive ? '#00DFA9' : '#94A3B8',
-              boxShadow:   isLive ? '0 0 4px rgba(0,223,169,0.7)' : 'none',
-              animation:   isLive ? 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' : 'none',
-            }}
-          />
-          {isLive ? 'Real-time odds' : 'Simulated'}
+        <span className="flex items-center gap-1.5 text-[10px] shrink-0" style={{ color: textColor }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{
+            background: dotColor,
+            boxShadow:  isLive && !isStale ? '0 0 4px rgba(0,223,169,0.7)' : 'none',
+            animation:  isLive && !isStale ? 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' : 'none',
+          }} />
+          {isStale ? 'Odds may be outdated' : isLive ? 'Real-time odds' : 'Simulated'}
         </span>
         <span className="text-[10px] text-[#253241]">|</span>
         <span className="text-[10px] text-[#94A3B8]/40 tabular-nums">
@@ -678,7 +736,9 @@ function StatusBar({
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[10px] text-[#94A3B8]/30">Odds updated {timeStr}</span>
+        {lastUpdatedLabel && (
+          <span className="text-[10px] text-[#94A3B8]/30">{lastUpdatedLabel}</span>
+        )}
         <span className="text-[10px] text-[#253241]">·</span>
         <span className="text-[10px] text-[#94A3B8]/30">All times local</span>
       </div>

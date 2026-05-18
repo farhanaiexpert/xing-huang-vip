@@ -1,0 +1,71 @@
+Implement automatic daily sportsbook updates using The Odds API.
+
+Goal:
+Keep the “All Sports” platform updated every 24 hours with fresh upcoming matches and latest pre-match odds while preserving the current premium sportsbook UI and interactions.
+
+Requirements:
+
+1. Daily Automatic Updates
+- Fetch fresh matches and odds every 24 hours
+- Automatically refresh sportsbook data daily
+- Replace outdated odds with new API data
+- Remove expired or completed matches automatically
+- Add newly available upcoming events automatically
+
+2. Sportsbook Data Updates
+Update the existing sportsbook structure dynamically:
+- sports
+- leagues
+- tournaments
+- matches
+- betting markets
+- odds
+- featured events
+
+Keep the current structured sportsbook data model intact.
+
+3. Refresh System Logic
+- Automatically check for updates when the app starts
+- Store a “last updated” timestamp
+- If more than 24 hours passed:
+  - fetch fresh odds and matches from The Odds API
+- Otherwise:
+  - temporarily use cached frontend data
+
+4. Updated Indicators
+Add sportsbook update indicators such as:
+- “Updated today”
+- “Last updated X hours ago”
+- visible update timestamp in the interface
+
+5. Loading & Error Handling
+- Show loading skeletons while refreshing odds
+- Show clean loading states
+- If API fails:
+  - fallback to existing mock/cached data
+  - show clean error notification/message
+
+6. Performance Optimization
+- Avoid unnecessary API requests
+- Optimize API usage for free-tier limits
+- Cache sportsbook data temporarily in frontend state
+- Prevent repeated fetch loops
+
+7. Sports To Refresh
+Fetch/update:
+- Soccer
+- Basketball
+- Tennis
+- Cricket
+- MMA/UFC
+
+8. Important Rules
+- Use pre-match odds only
+- No live betting
+- No backend/database yet
+- No admin panel yet
+- Keep everything frontend-only for now
+- Preserve current sportsbook design, layout, and interactions
+
+Goal:
+Make the “All Sports” platform automatically display fresh daily sports matches and updated odds while maintaining a realistic, modern, and professional sportsbook experience.
