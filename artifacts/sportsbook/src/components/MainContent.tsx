@@ -8,9 +8,10 @@ import { PopularBets } from './PopularBets';
 import { SkeletonLeague } from './SkeletonLeague';
 import { UpcomingRaces } from './UpcomingRaces';
 import { cn } from '../lib/utils';
-import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, ExternalLink } from 'lucide-react';
+import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
 import { League } from '../types';
+import { useOddsApi } from '../hooks/useOddsApi';
 
 interface MainContentProps {
   selectedSportId: string | null;
@@ -57,6 +58,17 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
   const [isLoading,   setIsLoading]  = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Real odds from The Odds API
+  const { realLeagues, loading: oddsLoading, error: oddsError, fetchedAt, hasRealData } = useOddsApi();
+
+  // Merged league list: real leagues first, then mock leagues for sports not covered by real data
+  const allLeagues = useMemo<League[]>(() => {
+    if (!hasRealData) return LEAGUES;
+    const coveredSportIds = new Set(realLeagues.map(l => l.sportId));
+    const mockFallback = LEAGUES.filter(l => !coveredSportIds.has(l.sportId));
+    return [...realLeagues, ...mockFallback];
+  }, [hasRealData, realLeagues]);
+
   // Simulate initial data load
   useEffect(() => {
     const t = setTimeout(() => setIsLoading(false), 200);
@@ -87,13 +99,13 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
   // Count live matches
   const liveCount = useMemo(
-    () => LEAGUES.flatMap(l => l.matches).filter(m => m.isLive).length,
-    []
+    () => allLeagues.flatMap(l => l.matches).filter(m => m.isLive).length,
+    [allLeagues]
   );
 
   // Filtered leagues
   const filteredLeagues = useMemo<League[]>(() => {
-    let leagues = LEAGUES;
+    let leagues = allLeagues;
 
     if (selectedSportId && !['all', 'early-payout', 'acca-boost'].includes(selectedSportId)) {
       leagues = leagues.filter(l =>
@@ -287,6 +299,35 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 )}
               </div>
             )}
+
+            {/* Real data status badge */}
+            {!isLoading && !hasActiveFilter && (
+              <div className="ml-auto shrink-0">
+                {oddsLoading && (
+                  <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/40 font-medium">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Fetching live odds…
+                  </span>
+                )}
+                {!oddsLoading && hasRealData && (
+                  <span className="flex items-center gap-1.5 text-[10px] text-[#00DFA9]/70 font-semibold">
+                    <Wifi className="h-3 w-3" />
+                    Live odds
+                    {fetchedAt && (
+                      <span className="text-[#94A3B8]/35 font-normal">
+                        · updated {fetchedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </span>
+                )}
+                {!oddsLoading && oddsError && (
+                  <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/35 font-medium">
+                    <WifiOff className="h-3 w-3" />
+                    Using cached data
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -368,7 +409,8 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           <StatusBar
             matchCount={totalMatchCount}
             leagueCount={filteredLeagues.length}
-            updatedAt={UPDATED_AT}
+            updatedAt={fetchedAt ?? UPDATED_AT}
+            isLive={hasRealData}
           />
         )}
 
@@ -611,16 +653,23 @@ function TrustFooter() {
 // STATUS BAR
 // ────────────────────────────────────────────────────────────────────────────
 function StatusBar({
-  matchCount, leagueCount, updatedAt,
-}: { matchCount: number; leagueCount: number; updatedAt: Date }) {
+  matchCount, leagueCount, updatedAt, isLive,
+}: { matchCount: number; leagueCount: number; updatedAt: Date; isLive?: boolean }) {
   const timeStr = updatedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <div className="mx-4 mb-6 mt-4 flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl bg-[#0A0E13] border border-[#253241]/40">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/50 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_4px_rgba(0,223,169,0.7)]" />
-          Live
+        <span className="flex items-center gap-1.5 text-[10px] shrink-0"
+          style={{ color: isLive ? 'rgba(0,223,169,0.7)' : 'rgba(148,163,184,0.5)' }}>
+          <span className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background:  isLive ? '#00DFA9' : '#94A3B8',
+              boxShadow:   isLive ? '0 0 4px rgba(0,223,169,0.7)' : 'none',
+              animation:   isLive ? 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' : 'none',
+            }}
+          />
+          {isLive ? 'Real-time odds' : 'Simulated'}
         </span>
         <span className="text-[10px] text-[#253241]">|</span>
         <span className="text-[10px] text-[#94A3B8]/40 tabular-nums">
