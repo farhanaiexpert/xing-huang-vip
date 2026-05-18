@@ -5,6 +5,7 @@ import { LeagueSection } from './LeagueSection';
 import { FeaturedCards } from './FeaturedCards';
 import { PopularBets } from './PopularBets';
 import { SkeletonLeague } from './SkeletonLeague';
+import { UpcomingRaces } from './UpcomingRaces';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight } from 'lucide-react';
 import { Input } from './ui/input';
@@ -347,7 +348,11 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               <div className="space-y-2.5">
                 {filteredLeagues.length > 0 ? (
                   filteredLeagues.map(league => (
-                    <LeagueSection key={league.id} league={league} />
+                    <div key={league.id}>
+                      <LeagueSection league={league} />
+                      {/* Upcoming Races appears immediately after Ligue 1 */}
+                      {!search.trim() && league.id === 'lg_ligue1' && <UpcomingRaces />}
+                    </div>
                   ))
                 ) : (
                   <NoResultsState search={search} onClear={clearSearch} onReset={() => { onSelectSport(null); setDateFilter('all'); setSearch(''); }} />
