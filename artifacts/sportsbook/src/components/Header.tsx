@@ -61,7 +61,7 @@ export function Header() {
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-1 flex-1">
-            <NavItem href="/"            label="Sportsbook"   />
+            <NavItem href="/"            label="All Sports"   />
             <NavItem href="/bet-history" label="Bet History"  />
             <NavItem href="/help"        label="Help"         />
             <NavItem href="/"            label="In-Play" disabled soon />
