@@ -1,6 +1,7 @@
 import { useLocation } from 'wouter';
 import { ChevronLeft, Wifi, Clock, AlertCircle, Star } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { TeamBadge } from '../TeamBadge';
 import type { MatchEntity } from '../../data/types';
 import type { LeagueEntity } from '../../data/types';
 
@@ -149,20 +150,6 @@ function HorseHeader({ match, sportIcon, league }: {
   );
 }
 
-function TeamBadge({ name, sportIcon, size = 'md' }: { name: string; sportIcon: string; size?: 'md' | 'lg' }) {
-  const initials = name.split(' ').map(w => w[0]).slice(0, 3).join('').toUpperCase();
-  const sz = size === 'lg' ? 'w-16 h-16 text-2xl' : 'w-10 h-10 text-base';
-  return (
-    <div className={cn(
-      'rounded-2xl bg-gradient-to-br from-[#1E2A38] to-[#121821] border border-[#253241]',
-      'flex items-center justify-center font-bold text-[#F8FAFC] shrink-0',
-      'shadow-[0_4px_20px_rgba(0,0,0,0.4)]',
-      sz
-    )}>
-      {initials.length <= 2 ? initials : sportIcon}
-    </div>
-  );
-}
 
 function LivePill({ match }: { match: MatchEntity }) {
   return (

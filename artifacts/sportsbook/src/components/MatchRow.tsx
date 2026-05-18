@@ -1,6 +1,7 @@
 import { useLocation } from 'wouter';
 import { Match } from '../types';
 import { OddsButton } from './OddsButton';
+import { TeamBadge } from './TeamBadge';
 import { useFavorites } from '../hooks/useFavorites';
 import { cn } from '../lib/utils';
 
@@ -96,13 +97,19 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       <div className="h-9 w-px bg-[#253241]/60 shrink-0" />
 
       {/* Teams */}
-      <div className="flex flex-col gap-1 min-w-0 flex-1">
+      <div className="flex flex-col gap-1.5 min-w-0 flex-1">
         {isHorse ? (
-          <span className="text-[13px] font-semibold text-[#F8FAFC] leading-none truncate">{match.team1}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <TeamBadge name={match.team1} sportIcon="🏇" size="xs" className="shrink-0" />
+            <span className="text-[13px] font-semibold text-[#F8FAFC] leading-none truncate">{match.team1}</span>
+          </div>
         ) : (
           <>
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[13px] font-medium leading-none truncate text-[#F8FAFC]">{match.team1}</span>
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <TeamBadge name={match.team1} size="xs" className="shrink-0" />
+                <span className="text-[13px] font-medium leading-none truncate text-[#F8FAFC]">{match.team1}</span>
+              </div>
               {match.isLive && match.score !== undefined && (
                 <span className={cn('text-[13px] font-black tabular-nums leading-none shrink-0', match.score.home >= match.score.away ? 'text-[#00DFA9]' : 'text-[#94A3B8]')}>
                   {match.score.home}
@@ -111,7 +118,10 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
             </div>
             {match.team2 && (
               <div className="flex items-center justify-between gap-1">
-                <span className="text-[13px] font-medium text-[#94A3B8] leading-none truncate group-hover:text-[#F8FAFC] transition-colors">{match.team2}</span>
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <TeamBadge name={match.team2} size="xs" className="shrink-0" />
+                  <span className="text-[13px] font-medium text-[#94A3B8] leading-none truncate group-hover:text-[#F8FAFC] transition-colors">{match.team2}</span>
+                </div>
                 {match.isLive && match.score !== undefined && (
                   <span className={cn('text-[13px] font-black tabular-nums leading-none shrink-0', match.score.away > match.score.home ? 'text-[#00DFA9]' : 'text-[#94A3B8]')}>
                     {isCricket ? '—' : match.score.away}
