@@ -20,20 +20,20 @@ interface MainContentProps {
 type DateFilter = 'all' | 'today' | 'tomorrow' | 'upcoming';
 
 const CAROUSEL_SPORTS = [
-  { id: 'soccer',            name: 'Soccer',       icon: '⚽', count: 284 },
-  { id: 'tennis',            name: 'Tennis',       icon: '🎾', count: 96  },
-  { id: 'basketball',        name: 'Basketball',   icon: '🏀', count: 42  },
-  { id: 'cricket',           name: 'Cricket',      icon: '🏏', count: 18  },
-  { id: 'esports',           name: 'Esports',      icon: '🎮', count: 63  },
-  { id: 'horse-racing',      name: 'Horse Racing', icon: '🏇', count: 195 },
-  { id: 'formula-1',         name: 'Formula 1',    icon: '🏎️', count: 12  },
-  { id: 'boxing',            name: 'Boxing',       icon: '🥊', count: 8   },
-  { id: 'golf',              name: 'Golf',         icon: '⛳', count: 24  },
-  { id: 'darts',             name: 'Darts',        icon: '🎯', count: 31  },
-  { id: 'ice-hockey',        name: 'Ice Hockey',   icon: '🏒', count: 54  },
-  { id: 'mma',               name: 'MMA',          icon: '🥋', count: 14  },
-  { id: 'nba',               name: 'NBA',          icon: '🏀', count: 22  },
-  { id: 'american-football', name: 'NFL',          icon: '🏈', count: 16  },
+  { id: 'soccer',            name: 'Soccer',       icon: '⚽', count: 1247 },
+  { id: 'tennis',            name: 'Tennis',       icon: '🎾', count: 486  },
+  { id: 'basketball',        name: 'Basketball',   icon: '🏀', count: 318  },
+  { id: 'cricket',           name: 'Cricket',      icon: '🏏', count: 124  },
+  { id: 'esports',           name: 'Esports',      icon: '🎮', count: 203  },
+  { id: 'horse-racing',      name: 'Horse Racing', icon: '🏇', count: 847  },
+  { id: 'formula-1',         name: 'Formula 1',    icon: '🏎️', count: 38   },
+  { id: 'boxing',            name: 'Boxing',       icon: '🥊', count: 24   },
+  { id: 'golf',              name: 'Golf',         icon: '⛳', count: 96   },
+  { id: 'darts',             name: 'Darts',        icon: '🎯', count: 48   },
+  { id: 'ice-hockey',        name: 'Ice Hockey',   icon: '🏒', count: 178  },
+  { id: 'mma',               name: 'MMA',          icon: '🥋', count: 35   },
+  { id: 'nba',               name: 'NBA',          icon: '🏀', count: 156  },
+  { id: 'american-football', name: 'NFL',          icon: '🏈', count: 28   },
 ];
 
 const DATE_FILTERS: { id: DateFilter; label: string }[] = [
