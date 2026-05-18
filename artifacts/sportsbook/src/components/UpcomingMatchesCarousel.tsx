@@ -258,32 +258,61 @@ function MatchCard({ match, league }: MatchCardProps) {
 export function UpcomingMatchesCarousel() {
   const { allLeagues } = useOddsData();
 
-  // Build a flat list of (match, league) pairs from upcoming non-live matches
+  // Build a flat list of (match, league) pairs from upcoming non-live matches,
+  // prioritised by league prestige (PL → La Liga → Serie A → Bundesliga → UCL → Ligue 1 → NBA → …)
   const items = useMemo(() => {
-    const pairs: { match: Match; league: League }[] = [];
+    // Lower tier = shown first; max = cards shown per league
+    const LEAGUE_TIERS: { test: RegExp; tier: number; max: number }[] = [
+      { test: /premier league/i,     tier: 1,  max: 3 },
+      { test: /la liga/i,            tier: 2,  max: 3 },
+      { test: /serie a/i,            tier: 3,  max: 3 },
+      { test: /bundesliga/i,         tier: 4,  max: 3 },
+      { test: /champions league/i,   tier: 5,  max: 3 },
+      { test: /ligue 1/i,            tier: 6,  max: 3 },
+      { test: /\bnba\b/i,            tier: 7,  max: 2 },
+      { test: /french open/i,        tier: 8,  max: 2 },
+      { test: /ipl|indian premier/i, tier: 9,  max: 2 },
+      { test: /mma|ufc/i,            tier: 10, max: 2 },
+      { test: /cricket/i,            tier: 11, max: 2 },
+    ];
 
-    // Priority: today → tomorrow → upcoming; within each, preserve natural order
-    const ORDER: Record<string, number> = { today: 0, tomorrow: 1, upcoming: 2 };
+    const getTier = (name: string) => {
+      for (const p of LEAGUE_TIERS) {
+        if (p.test.test(name)) return { tier: p.tier, max: p.max };
+      }
+      return { tier: 99, max: 1 };
+    };
+
+    type Pair = { match: Match; league: League; tier: number; max: number };
+    const pairs: Pair[] = [];
 
     for (const league of allLeagues) {
+      const { tier, max } = getTier(league.name);
       for (const match of league.matches) {
         if (!match.isLive && match.team2) {
-          pairs.push({ match, league });
+          pairs.push({ match, league, tier, max });
         }
       }
     }
 
-    // Stable sort by dateTag priority
-    pairs.sort((a, b) => (ORDER[a.match.dateTag] ?? 3) - (ORDER[b.match.dateTag] ?? 3));
+    // Sort: league tier first, then today → tomorrow → upcoming
+    const DATE_ORDER: Record<string, number> = { today: 0, tomorrow: 1, upcoming: 2 };
+    pairs.sort((a, b) => {
+      if (a.tier !== b.tier) return a.tier - b.tier;
+      return (DATE_ORDER[a.match.dateTag] ?? 3) - (DATE_ORDER[b.match.dateTag] ?? 3);
+    });
 
-    // Deduplicate by sport so we show variety (max 3 per sport)
-    const sportCount: Record<string, number> = {};
-    return pairs.filter(({ match }) => {
-      const count = sportCount[match.sportId] ?? 0;
-      if (count >= 3) return false;
-      sportCount[match.sportId] = count + 1;
-      return true;
-    }).slice(0, 16);
+    // Respect per-league caps and total cap
+    const leagueCount: Record<string, number> = {};
+    const result: { match: Match; league: League }[] = [];
+    for (const { match, league, max } of pairs) {
+      const seen = leagueCount[league.id] ?? 0;
+      if (seen >= max) continue;
+      leagueCount[league.id] = seen + 1;
+      result.push({ match, league });
+      if (result.length >= 18) break;
+    }
+    return result;
   }, [allLeagues]);
 
   if (items.length === 0) return null;
