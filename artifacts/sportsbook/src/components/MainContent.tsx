@@ -453,6 +453,7 @@ const FOOTER_NAV = [
     heading: 'Platform',
     links: [
       { label: 'All Sports',   href: '/' },
+      { label: 'Promotions',   href: '/promotions' },
       { label: 'Bet History',  href: '/bet-history' },
       { label: 'Help & Rules', href: '/help' },
     ],
