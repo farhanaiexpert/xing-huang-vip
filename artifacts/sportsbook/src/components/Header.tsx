@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { Search, Wallet, BarChart2, Bell, LogOut, Copy, ChevronDown, X, CheckCircle2, TrendingUp, Gift, Zap, Clock } from 'lucide-react';
+import { Search, Wallet, BarChart2, Bell, LogOut, Copy, ChevronDown, X } from 'lucide-react';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { useWallet } from '../hooks/useWallet';
 import { useState, useRef, useEffect } from 'react';
@@ -7,49 +7,6 @@ import { cn } from '../lib/utils';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 
-// ─── Mock notifications ───────────────────────────────────────────────────────
-const NOTIFICATIONS = [
-  {
-    id: 1,
-    icon: <CheckCircle2 className="h-4 w-4" />,
-    iconColor: 'text-[#22C55E]',
-    iconBg: 'bg-[#22C55E]/10',
-    title: 'Bet Settled — Won',
-    desc: 'Arsenal Win · +$18.50 credited to your balance',
-    time: '2 min ago',
-    unread: true,
-  },
-  {
-    id: 2,
-    icon: <TrendingUp className="h-4 w-4" />,
-    iconColor: 'text-[#FACC15]',
-    iconBg: 'bg-[#FACC15]/10',
-    title: 'Odds Movement',
-    desc: 'Man City Win drifted 1.85 → 2.10 on your watchlist',
-    time: '14 min ago',
-    unread: true,
-  },
-  {
-    id: 3,
-    icon: <Gift className="h-4 w-4" />,
-    iconColor: 'text-[#00DFA9]',
-    iconBg: 'bg-[#00DFA9]/10',
-    title: 'Free Bet Friday',
-    desc: '$10 free bet credited — use before midnight Sunday',
-    time: '1 hr ago',
-    unread: true,
-  },
-  {
-    id: 4,
-    icon: <Zap className="h-4 w-4" />,
-    iconColor: 'text-[#38BDF8]',
-    iconBg: 'bg-[#38BDF8]/10',
-    title: 'Match Starting',
-    desc: 'Arsenal vs Chelsea has just kicked off · In-play odds live',
-    time: '2 hr ago',
-    unread: false,
-  },
-];
 
 export function Header() {
   const { isConnected, shortAddress, walletName, disconnect } = useWallet();
@@ -59,13 +16,11 @@ export function Header() {
   const [showSearch,       setShowSearch]       = useState(false);
   const [showNotifs,       setShowNotifs]       = useState(false);
   const [searchQuery,      setSearchQuery]      = useState('');
-  const [readIds,          setReadIds]          = useState<Set<number>>(new Set());
   const [copied,           setCopied]           = useState(false);
   const menuRef   = useRef<HTMLDivElement>(null);
   const notifsRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const unreadCount = NOTIFICATIONS.filter(n => n.unread && !readIds.has(n.id)).length;
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -103,7 +58,6 @@ export function Header() {
 
   function handleOpenNotifs() {
     setShowNotifs(v => !v);
-    setReadIds(new Set(NOTIFICATIONS.map(n => n.id)));
   }
 
   // Quick search results (filter mock sports/pages)
@@ -245,40 +199,19 @@ export function Header() {
               <HeaderIconBtn aria-label="Notifications" onClick={handleOpenNotifs}>
                 <Bell className="h-4 w-4" />
               </HeaderIconBtn>
-              {unreadCount > 0 && (
-                <span className="pointer-events-none absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#00DFA9] text-[#0B0F14] text-[9px] font-black flex items-center justify-center shadow-[0_0_8px_rgba(0,223,169,0.8)]">
-                  {unreadCount}
-                </span>
-              )}
 
               {/* Notifications dropdown */}
               {showNotifs && (
-                <div className="absolute right-0 top-[calc(100%+8px)] w-80 bg-[#0D1117] border border-[#253241] rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.7)] overflow-hidden z-50">
+                <div className="absolute right-0 top-[calc(100%+8px)] w-72 bg-[#0D1117] border border-[#253241] rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.7)] overflow-hidden z-50">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#253241]">
                     <p className="text-sm font-bold text-[#F8FAFC]">Notifications</p>
-                    <span className="text-[10px] text-[#94A3B8]/50">All read</span>
                   </div>
-                  <div className="divide-y divide-[#253241]/50 max-h-80 overflow-y-auto">
-                    {NOTIFICATIONS.map(n => (
-                      <div key={n.id} className="flex items-start gap-3 px-4 py-3 hover:bg-[#253241]/20 transition-colors">
-                        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5', n.iconBg)}>
-                          <span className={n.iconColor}>{n.icon}</span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[12px] font-semibold text-[#F8FAFC] leading-tight">{n.title}</p>
-                          <p className="text-[11px] text-[#94A3B8]/60 mt-0.5 leading-snug">{n.desc}</p>
-                          <div className="flex items-center gap-1 mt-1.5">
-                            <Clock className="h-2.5 w-2.5 text-[#94A3B8]/30" />
-                            <span className="text-[9px] text-[#94A3B8]/35">{n.time}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="border-t border-[#253241] px-4 py-2.5">
-                    <button className="w-full text-[11px] text-[#00DFA9]/70 hover:text-[#00DFA9] font-medium transition-colors text-center">
-                      View all notifications
-                    </button>
+                  <div className="flex flex-col items-center justify-center py-10 px-4 gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#253241]/50 flex items-center justify-center">
+                      <Bell className="h-5 w-5 text-[#94A3B8]/40" />
+                    </div>
+                    <p className="text-sm text-[#94A3B8]/50 text-center">No notifications yet</p>
+                    <p className="text-[11px] text-[#94A3B8]/30 text-center leading-snug">Bet settlements, odds alerts and<br />promotions will appear here</p>
                   </div>
                 </div>
               )}
