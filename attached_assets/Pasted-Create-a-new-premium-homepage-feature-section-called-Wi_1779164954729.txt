@@ -1,0 +1,190 @@
+Create a new premium homepage feature section called “WinSpin”.
+
+Important:
+Do NOT build the actual game yet.
+For now, only build the frontend promotional section and wallet-gated entry experience.
+
+Goal:
+Create a highly attractive, modern, and engaging sportsbook-style feature section that encourages users to connect their wallet before entering future WinSpin challenges and reward-based prediction games.
+
+The section should feel:
+- premium
+- exciting
+- modern
+- competitive
+- rewarding
+- crypto-native
+- sportsbook-focused
+
+Avoid:
+- casino slot machine feeling
+- childish gaming visuals
+- excessive neon overload
+
+==================================================
+1. SECTION NAME
+==================================================
+
+Main title:
+WinSpin
+
+Subtitle examples:
+- Spin into boosted sports rewards
+- Predict smart. Win bigger.
+- Daily sports challenges are coming.
+- Connect your wallet to unlock WinSpin
+
+==================================================
+2. SECTION LAYOUT
+==================================================
+
+Create a premium interactive hero-style section.
+
+Include:
+- large modern headline
+- supporting text
+- premium visual area
+- mock spinning wheel preview
+- challenge/reward cards
+- strong CTA button
+
+The layout should feel:
+- futuristic sportsbook
+- premium fintech
+- modern sports platform
+- engaging but professional
+
+==================================================
+3. WINSPIN WHEEL PREVIEW
+==================================================
+
+Do NOT build real spinning logic yet.
+
+Only create:
+- premium wheel preview/mockup
+- glowing wheel UI
+- challenge segments
+- subtle idle rotation animation
+- hover effects
+
+Example wheel labels:
+- 2x Boost
+- Football Picks
+- Tennis Challenge
+- 5x Reward
+- Daily Streak
+- Lucky Match
+- High Odds
+- Mega Spin
+
+Make the wheel feel:
+- premium
+- interactive
+- futuristic
+- modern
+- clean
+
+==================================================
+4. WALLET GATE EXPERIENCE
+==================================================
+
+Before entering WinSpin:
+show a premium wallet connection gate.
+
+Example text:
+“Connect your wallet to unlock WinSpin challenges, streak rewards, and boosted sports opportunities.”
+
+Add:
+- large premium Connect Wallet button
+- modern modal trigger
+- wallet icons/placeholders
+- glow hover effects
+- secure/trusted feel
+
+The wallet gate should feel:
+- exclusive
+- premium
+- secure
+- modern
+
+==================================================
+5. FEATURED CHALLENGE CARDS
+==================================================
+
+Add attractive preview cards such as:
+
+Examples:
+- Predict 3 correct football matches
+- Win up to 5x rewards
+- Weekend WinSpin Challenge
+- Daily Streak Boost
+- High Odds Rush
+
+Cards should include:
+- challenge title
+- reward multiplier
+- sport icon
+- countdown/timer placeholder
+- “Coming Soon” badge
+
+==================================================
+6. INTERACTIONS
+==================================================
+
+Add:
+- hover animations
+- glow effects
+- smooth transitions
+- subtle motion
+- premium button feedback
+- card hover elevation
+- idle wheel animation
+
+==================================================
+7. VISUAL STYLE
+==================================================
+
+Use:
+- dark premium layered surfaces
+- subtle gradients
+- modern glass effects
+- accent glow
+- sportsbook-style typography
+- compact professional spacing
+
+Avoid:
+- cheap casino feeling
+- childish game UI
+- oversized cartoon visuals
+
+==================================================
+8. RESPONSIVE DESIGN
+==================================================
+
+Desktop:
+- immersive premium section
+
+Tablet:
+- balanced stacked layout
+
+Mobile:
+- compact premium experience
+- wheel scales correctly
+- CTA remains highly visible
+
+==================================================
+9. IMPORTANT
+==================================================
+
+- Do NOT build the actual game yet
+- Do NOT build real rewards or payouts
+- Do NOT build leaderboard backend
+- Do NOT build spin mechanics yet
+
+This phase is ONLY:
+- promotional frontend section
+- wallet-gated experience
+- premium teaser for future gameplay
+
+Goal:
+Make WinSpin feel like a highly engaging upcoming feature that encourages users to connect their wallet and return daily.

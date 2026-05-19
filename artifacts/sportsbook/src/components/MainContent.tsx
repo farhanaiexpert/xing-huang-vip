@@ -13,6 +13,7 @@ import { SportQuickNav } from './SportQuickNav';
 import { TennisHighlights } from './TennisHighlights';
 import { NBAHighlights } from './NBAHighlights';
 import { EuropaLeagueFinal } from './EuropaLeagueFinal';
+import { WinSpin } from './WinSpin';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -415,6 +416,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
             <>
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
+              {showFeatured && <WinSpin />}
               {!search.trim() && selectedSportId === 'tennis' && <TennisHighlights />}
               {!search.trim() && selectedSportId === 'nba' && <NBAHighlights />}
               {!search.trim() && selectedSportId === 'ucl-final' && <EuropaLeagueFinal />}
