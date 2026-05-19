@@ -458,9 +458,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                       {!search.trim() && league.id === 'lg_ligue1' && <UpcomingRaces />}
                     </div>
                   ))
-                ) : (
+                ) : selectedSportId !== 'ucl-final' ? (
                   <NoResultsState search={search} onClear={clearSearch} onReset={() => { onSelectSport(null); setDateFilter('all'); setSearch(''); }} />
-                )}
+                ) : null}
               </div>
             </>
           )}
