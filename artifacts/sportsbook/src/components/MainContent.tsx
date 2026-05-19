@@ -70,8 +70,6 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
     isStale, lastUpdatedLabel, refresh: refreshOdds,
   } = useOddsData();
 
-  const [errorDismissed, setErrorDismissed] = useState(false);
-
   // Simulate initial data load
   useEffect(() => {
     const t = setTimeout(() => setIsLoading(false), 200);
@@ -350,31 +348,6 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           </div>
         </div>
 
-        {/* ── Error banner ────────────────────────────────────────────── */}
-        {!isLoading && oddsError && !errorDismissed && (
-          <div className="mx-4 mt-3 flex items-start gap-3 px-4 py-3 rounded-xl bg-[#EF4444]/8 border border-[#EF4444]/20 text-[#EF4444]/80">
-            <WifiOff className="h-4 w-4 mt-0.5 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-semibold leading-snug">
-                {hasRealData ? 'Odds refresh failed — showing cached data' : 'Could not fetch live odds — using demo data'}
-              </p>
-              <p className="text-[11px] text-[#EF4444]/50 mt-0.5 leading-relaxed">
-                {oddsError === 'QUOTA_EXHAUSTED'
-                  ? 'Monthly API quota reached. Top up credits at the-odds-api.com to restore live odds.'
-                  : oddsError === 'INVALID_KEY'
-                  ? 'API key rejected. Check your VITE_ODDS_API_KEY secret.'
-                  : 'Network issue. Odds will auto-refresh on your next visit.'}
-              </p>
-            </div>
-            <button
-              onClick={() => setErrorDismissed(true)}
-              className="shrink-0 p-1 rounded-md text-[#EF4444]/40 hover:text-[#EF4444]/70 hover:bg-[#EF4444]/10 transition-all"
-              aria-label="Dismiss"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
 
         {/* ── Stale data banner ───────────────────────────────────────── */}
         {!isLoading && isStale && hasRealData && !oddsError && (
