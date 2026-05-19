@@ -287,23 +287,20 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               All Sports
             </button>
 
-            {/* Results count — shows on the right when filtered */}
-            {!isLoading && hasActiveFilter && (
-              <div className="ml-auto flex items-center gap-1.5 text-[11px] text-[#94A3B8]/60 font-medium select-none">
-                <span className="text-[#F8FAFC]/80 font-bold">{totalMatchCount}</span>
-                <span>event{totalMatchCount !== 1 ? 's' : ''}</span>
-                {filteredLeagues.length > 0 && (
-                  <>
+            {/* Right-side: status + results count + always-visible refresh */}
+            {!isLoading && (
+              <div className="ml-auto shrink-0 flex items-center gap-2">
+                {/* Results count when filtered */}
+                {hasActiveFilter && filteredLeagues.length > 0 && (
+                  <span className="flex items-center gap-1.5 text-[11px] text-[#94A3B8]/60 font-medium select-none">
+                    <span className="text-[#F8FAFC]/80 font-bold">{totalMatchCount}</span>
+                    <span>event{totalMatchCount !== 1 ? 's' : ''}</span>
                     <span className="text-[#253241]">·</span>
                     <span>{filteredLeagues.length} league{filteredLeagues.length !== 1 ? 's' : ''}</span>
-                  </>
+                  </span>
                 )}
-              </div>
-            )}
 
-            {/* Real data status badge + refresh button */}
-            {!isLoading && !hasActiveFilter && (
-              <div className="ml-auto shrink-0 flex items-center gap-2">
+                {/* Live odds status badge */}
                 {(oddsLoading || oddsRefreshing) && (
                   <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/40 font-medium">
                     <RefreshCw className="h-3 w-3 animate-spin" />
@@ -323,6 +320,8 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                     Using cached data
                   </span>
                 )}
+
+                {/* Always-visible Refresh button */}
                 <button
                   onClick={refreshOdds}
                   disabled={oddsLoading || oddsRefreshing}
