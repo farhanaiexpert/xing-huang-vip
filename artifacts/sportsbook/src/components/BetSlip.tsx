@@ -475,34 +475,24 @@ function SelectionCard({
   const { format } = useOddsFormat();
   return (
     <div className={cn(
-      'relative rounded-xl border transition-colors group/card overflow-hidden',
+      'relative rounded-xl border transition-colors group/card w-full max-w-full overflow-hidden',
       compact
         ? 'bg-[#0B0F14] border-[#253241] px-3 py-2 hover:border-[#2E3D50]'
         : 'bg-gradient-to-br from-[#18212B] to-[#121821] border-[#253241] hover:border-[#2E3D50] p-3'
     )}>
-      {/* League pill */}
+      {/* Row 1 — league · market */}
       {sel.leagueName && (
-        <div className="flex items-center gap-1 mb-1.5 min-w-0 overflow-hidden">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]/50 leading-none truncate min-w-0 shrink">
-            {sel.leagueName}
-          </span>
-          {sel.marketName && (
-            <>
-              <span className="text-[#253241] text-[9px] shrink-0">·</span>
-              <span className="text-[9px] font-medium text-[#94A3B8]/40 leading-none truncate min-w-0 shrink">{sel.marketName}</span>
-            </>
-          )}
-        </div>
+        <p className="w-full text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]/50 leading-snug mb-1 break-words [overflow-wrap:anywhere]">
+          {sel.leagueName}{sel.marketName ? <span className="font-medium normal-case tracking-normal text-[#94A3B8]/40"> · {sel.marketName}</span> : null}
+        </p>
       )}
 
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0 overflow-hidden">
-          <p className="text-[11px] text-[#94A3B8] truncate leading-none mb-0.5">{sel.matchName}</p>
-          <p className={cn('font-semibold leading-none truncate', compact ? 'text-xs text-[#F8FAFC]' : 'text-[13px] text-[#F8FAFC]')}>
-            {sel.selectionName || sel.selectionType}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+      {/* Row 2 — match name + odds/remove pinned right */}
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <p className="flex-1 min-w-0 text-[11px] text-[#94A3B8] leading-snug break-words [overflow-wrap:anywhere]">
+          {sel.matchName}
+        </p>
+        <div className="flex items-center gap-1 shrink-0 self-start">
           <span className={cn('font-black text-[#FACC15] leading-none tabular-nums', compact ? 'text-sm' : 'text-base')}>
             {formatOdds(sel.odds, format)}
           </span>
@@ -515,6 +505,14 @@ function SelectionCard({
           </button>
         </div>
       </div>
+
+      {/* Row 3 — selection / pick name */}
+      <p className={cn(
+        'w-full leading-snug break-words [overflow-wrap:anywhere]',
+        compact ? 'text-xs font-semibold text-[#F8FAFC]' : 'text-[13px] font-semibold text-[#F8FAFC]'
+      )}>
+        {sel.selectionName || sel.selectionType}
+      </p>
 
       {extra}
 
