@@ -173,8 +173,8 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
   return (
     <aside className={cn(
       forceExpanded
-        ? 'flex flex-col w-full h-full'
-        : 'w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] fixed right-0 top-14 hidden xl:flex border-t border-[#253241]',
+        ? 'flex flex-col w-full h-full overflow-hidden'
+        : 'w-[260px] shrink-0 flex flex-col h-[calc(100vh-3.5rem)] fixed right-0 top-14 hidden xl:flex border-t border-[#253241] overflow-hidden',
       'bg-[#0D1117] border-l border-[#253241]',
       className
     )}>
@@ -204,6 +204,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
       </div>
 
       {/* ── Body ───────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
       {!hasSelections ? (
         <EmptyState />
       ) : (
@@ -267,6 +268,8 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
         </>
       )}
 
+      </div>
+
       <ConnectWalletModal open={isWalletOpen} onOpenChange={setIsWalletOpen} />
       <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />
     </aside>
@@ -294,7 +297,7 @@ function SingleView({
 }) {
   return (
     <>
-      <ScrollArea className="flex-1 px-3">
+      <ScrollArea className="flex-1 min-h-0 px-3">
         <div className="space-y-2 py-2">
           {selections.map(sel => {
             const st  = parseFloat(singleStakes[sel.id] || '0');
@@ -388,7 +391,7 @@ function AccaView({
         <div className="flex-1 h-px bg-[#253241]" />
       </div>
 
-      <ScrollArea className="flex-1 px-3">
+      <ScrollArea className="flex-1 min-h-0 px-3">
         <div className="space-y-1.5 py-2">
           {selections.map(sel => (
             <SelectionCard key={sel.id} sel={sel} compact onRemove={() => removeSelection(sel.id)} />
