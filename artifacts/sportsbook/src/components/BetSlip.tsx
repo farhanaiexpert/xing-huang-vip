@@ -475,30 +475,30 @@ function SelectionCard({
   const { format } = useOddsFormat();
   return (
     <div className={cn(
-      'relative rounded-xl border transition-colors group/card',
+      'relative rounded-xl border transition-colors group/card overflow-hidden',
       compact
         ? 'bg-[#0B0F14] border-[#253241] px-3 py-2 hover:border-[#2E3D50]'
         : 'bg-gradient-to-br from-[#18212B] to-[#121821] border-[#253241] hover:border-[#2E3D50] p-3'
     )}>
       {/* League pill */}
       {sel.leagueName && (
-        <div className="flex items-center gap-1 mb-1.5">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]/50 leading-none truncate">
+        <div className="flex items-center gap-1 mb-1.5 min-w-0 overflow-hidden">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]/50 leading-none truncate min-w-0 shrink">
             {sel.leagueName}
           </span>
           {sel.marketName && (
             <>
-              <span className="text-[#253241] text-[9px]">·</span>
-              <span className="text-[9px] font-medium text-[#94A3B8]/40 leading-none truncate">{sel.marketName}</span>
+              <span className="text-[#253241] text-[9px] shrink-0">·</span>
+              <span className="text-[9px] font-medium text-[#94A3B8]/40 leading-none truncate min-w-0 shrink">{sel.marketName}</span>
             </>
           )}
         </div>
       )}
 
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <p className="text-[11px] text-[#94A3B8] truncate leading-none mb-0.5">{sel.matchName}</p>
-          <p className={cn('font-semibold leading-none', compact ? 'text-xs text-[#F8FAFC]' : 'text-[13px] text-[#F8FAFC]')}>
+          <p className={cn('font-semibold leading-none truncate', compact ? 'text-xs text-[#F8FAFC]' : 'text-[13px] text-[#F8FAFC]')}>
             {sel.selectionName || sel.selectionType}
           </p>
         </div>
