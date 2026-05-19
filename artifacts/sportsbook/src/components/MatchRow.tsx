@@ -119,7 +119,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
             {match.team2 && (
               <div className="flex items-center justify-between gap-1">
                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <TeamBadge name={match.team2} size="xs" className="shrink-0" />
+                  <TeamBadge name={match.team2} sportIcon={SPORT_ICONS[match.sportId]} size="xs" className="shrink-0" />
                   <span className="text-[13px] font-medium text-[#94A3B8] leading-none truncate group-hover:text-[#F8FAFC] transition-colors">{match.team2}</span>
                 </div>
                 {match.isLive && match.score !== undefined && (
