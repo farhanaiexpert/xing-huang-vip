@@ -10,9 +10,11 @@ import { UpcomingRaces } from './UpcomingRaces';
 import { UpcomingMatchesCarousel } from './UpcomingMatchesCarousel';
 import { WinnersTicker } from './WinnersTicker';
 import { SportQuickNav } from './SportQuickNav';
+import { SoccerHighlights } from './SoccerHighlights';
 import { TennisHighlights } from './TennisHighlights';
 import { NBAHighlights } from './NBAHighlights';
 import { EuropaLeagueFinal } from './EuropaLeagueFinal';
+import { ESoccerHighlights } from './ESoccerHighlights';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -454,18 +456,22 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
                       {/*
                         ── Highlight sections injected just above French Open - ATP ──
-                        All Sports: Tennis → NBA → Europa League (in order requested)
+                        All Sports: Soccer → Tennis → NBA → Europa League → ESoccer
                         Individual tabs: only that sport's section
                       */}
                       {!search.trim() && league.id === 'lg_atp_rome' && showFeatured && (
                         <>
+                          <SoccerHighlights />
                           <TennisHighlights />
                           <NBAHighlights />
                           <EuropaLeagueFinal />
+                          <ESoccerHighlights />
                         </>
                       )}
-                      {!search.trim() && league.id === 'lg_atp_rome' && selectedSportId === 'tennis' && <TennisHighlights />}
-                      {!search.trim() && league.id === 'lg_nba'      && selectedSportId === 'nba'    && <NBAHighlights />}
+                      {!search.trim() && league.id === 'lg_pl'       && selectedSportId === 'soccer'  && <SoccerHighlights />}
+                      {!search.trim() && league.id === 'lg_atp_rome' && selectedSportId === 'tennis'  && <TennisHighlights />}
+                      {!search.trim() && league.id === 'lg_nba'      && selectedSportId === 'nba'     && <NBAHighlights />}
+                      {!search.trim() && league.id === 'lg_cs2'      && selectedSportId === 'esports' && <ESoccerHighlights />}
 
                       <LeagueSection league={league} />
                       {/* Upcoming Races appears immediately after Ligue 1 */}
