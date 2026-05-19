@@ -12,6 +12,7 @@ import { WinnersTicker } from './WinnersTicker';
 import { SportQuickNav } from './SportQuickNav';
 import { TennisHighlights } from './TennisHighlights';
 import { NBAHighlights } from './NBAHighlights';
+import { EuropaLeagueFinal } from './EuropaLeagueFinal';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -416,6 +417,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               {showFeatured && <PopularBets />}
               {!search.trim() && selectedSportId === 'tennis' && <TennisHighlights />}
               {!search.trim() && selectedSportId === 'nba' && <NBAHighlights />}
+              {!search.trim() && selectedSportId === 'ucl-final' && <EuropaLeagueFinal />}
 
               {/* Live heading */}
               {dateFilter === 'today' && liveCount > 0 && (
