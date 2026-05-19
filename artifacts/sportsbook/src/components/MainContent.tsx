@@ -416,9 +416,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
 
-              {!search.trim() && selectedSportId === 'tennis' && <TennisHighlights />}
-              {!search.trim() && selectedSportId === 'nba' && <NBAHighlights />}
-              {!search.trim() && selectedSportId === 'ucl-final' && <EuropaLeagueFinal />}
+              {!search.trim() && (showFeatured || selectedSportId === 'tennis') && <TennisHighlights />}
+              {!search.trim() && (showFeatured || selectedSportId === 'nba') && <NBAHighlights />}
+              {!search.trim() && (showFeatured || selectedSportId === 'ucl-final') && <EuropaLeagueFinal />}
 
               {/* Live heading */}
               {dateFilter === 'today' && liveCount > 0 && (
