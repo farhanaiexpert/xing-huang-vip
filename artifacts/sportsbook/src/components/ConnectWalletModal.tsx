@@ -15,16 +15,7 @@ const WALLETS = [
     description: 'Browser extension',
     popular: true,
     logo: (
-      <svg viewBox="0 0 40 40" fill="none" className="w-7 h-7">
-        <path d="M35.9 4L22.3 13.7l2.5-5.9L35.9 4z" fill="#E17726" stroke="#E17726" strokeWidth=".25" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M4.1 4l13.5 9.8-2.4-5.9L4.1 4z" fill="#E27625" stroke="#E27625" strokeWidth=".25" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M30.9 27.8l-3.6 5.5 7.7 2.1 2.2-7.5-6.3-.1z" fill="#E27625" stroke="#E27625" strokeWidth=".25" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M2.8 27.9l2.2 7.5 7.7-2.1-3.6-5.5-6.3.1z" fill="#E27625" stroke="#E27625" strokeWidth=".25" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M12.3 18.2l-2.1 3.2 7.5.3-.3-8.1-5.1 4.6z" fill="#E27625" stroke="#E27625" strokeWidth=".25" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M27.7 18.2l-5.2-4.7-.3 8.2 7.5-.3-2-3.2z" fill="#E27625" stroke="#E27625" strokeWidth=".25" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M12.7 33.3l4.5-2.2-3.9-3-.6 5.2z" fill="#E27625" stroke="#E27625" strokeWidth=".25" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M22.8 31.1l4.5 2.2-.6-5.2-3.9 3z" fill="#E27625" stroke="#E27625" strokeWidth=".25" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
+      <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/meta.svg" alt="MetaMask" className="w-7 h-7 object-contain" />
     ),
   },
   {
@@ -57,10 +48,7 @@ const WALLETS = [
     description: 'Solana & multi-chain',
     popular: false,
     logo: (
-      <svg viewBox="0 0 40 40" fill="none" className="w-7 h-7">
-        <rect width="40" height="40" rx="12" fill="#AB9FF2" fillOpacity=".15"/>
-        <path d="M30 15c0-4.4-4.5-8-10-8S10 10.6 10 15c0 3.6 2.6 6.7 6.4 7.8-.3 1.1-.8 2.1-1.4 3 2.5-.3 4.8-1.5 6.5-3.3.5 0 1.1.1 1.6.1 2.7 0 5.2-.8 7-2.2V21c0 3-2.5 5.5-5.6 5.5H23c-.5 0-1 .4-1 .9s.4.9 1 .9h1.5c4.2 0 7.5-3.3 7.5-7.3H30V15z" fill="#AB9FF2"/>
-      </svg>
+      <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/4850.sp3ow1.192x192.webp" alt="Phantom" className="w-7 h-7 object-contain rounded-lg" />
     ),
   },
 ];
