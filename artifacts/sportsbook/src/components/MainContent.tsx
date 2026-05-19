@@ -14,6 +14,7 @@ import { TennisHighlights } from './TennisHighlights';
 import { SoccerHighlights } from './SoccerHighlights';
 import { NBAHighlights } from './NBAHighlights';
 import { EuropaLeagueFinal } from './EuropaLeagueFinal';
+import { SportDetailPage, SPORT_DETAIL_IDS } from './SportDetailPage';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -388,6 +389,18 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               <SkeletonLeague rows={4} cols={3} />
               <SkeletonLeague rows={3} cols={2} />
               <SkeletonLeague rows={2} cols={3} />
+            </div>
+          ) : selectedSportId && SPORT_DETAIL_IDS.has(selectedSportId) ? (
+            /* ── Sport detail page (American Football, Aussie Rules, Badminton, Basketball) ── */
+            <div className="-mx-4 -mt-4">
+              <SportDetailPage
+                sportId={selectedSportId}
+                leagues={filteredLeagues}
+                onBack={() => { onSelectSport(null); setDateFilter('all'); }}
+                lastUpdatedLabel={lastUpdatedLabel}
+                onRefresh={refreshOdds}
+                isRefreshing={oddsRefreshing}
+              />
             </div>
           ) : (
             <>

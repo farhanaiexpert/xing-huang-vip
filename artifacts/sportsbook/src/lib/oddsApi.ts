@@ -55,22 +55,30 @@ export interface OddsApiSportConfig {
  */
 export const ODDS_API_SPORTS: OddsApiSportConfig[] = [
   // ── Soccer ───────────────────────────────────────────────────────────────────
-  { key: 'soccer_epl',               sportId: 'sp_soccer',      leagueName: 'Premier League',        countryCode: 'GB', hasDraw: true  },
-  { key: 'soccer_spain_la_liga',     sportId: 'sp_soccer',      leagueName: 'La Liga',               countryCode: 'ES', hasDraw: true  },
-  { key: 'soccer_italy_serie_a',     sportId: 'sp_soccer',      leagueName: 'Serie A',               countryCode: 'IT', hasDraw: true  },
-  { key: 'soccer_france_ligue_one',  sportId: 'sp_soccer',      leagueName: 'Ligue 1',               countryCode: 'FR', hasDraw: true  },
-  { key: 'soccer_germany_bundesliga',sportId: 'sp_soccer',      leagueName: 'Bundesliga',            countryCode: 'DE', hasDraw: true  },
-  { key: 'soccer_uefa_champs_league',sportId: 'sp_soccer',      leagueName: 'Champions League',      countryCode: 'EU', hasDraw: true  },
+  { key: 'soccer_epl',               sportId: 'sp_soccer',            leagueName: 'Premier League',        countryCode: 'GB', hasDraw: true  },
+  { key: 'soccer_spain_la_liga',     sportId: 'sp_soccer',            leagueName: 'La Liga',               countryCode: 'ES', hasDraw: true  },
+  { key: 'soccer_italy_serie_a',     sportId: 'sp_soccer',            leagueName: 'Serie A',               countryCode: 'IT', hasDraw: true  },
+  { key: 'soccer_france_ligue_one',  sportId: 'sp_soccer',            leagueName: 'Ligue 1',               countryCode: 'FR', hasDraw: true  },
+  { key: 'soccer_germany_bundesliga',sportId: 'sp_soccer',            leagueName: 'Bundesliga',            countryCode: 'DE', hasDraw: true  },
+  { key: 'soccer_uefa_champs_league',sportId: 'sp_soccer',            leagueName: 'Champions League',      countryCode: 'EU', hasDraw: true  },
+  // ── American Football ────────────────────────────────────────────────────────
+  { key: 'americanfootball_nfl',     sportId: 'sp_american_football', leagueName: 'NFL',                   countryCode: 'US', hasDraw: false },
+  { key: 'americanfootball_ncaaf',   sportId: 'sp_american_football', leagueName: 'NCAAF',                 countryCode: 'US', hasDraw: false },
+  { key: 'americanfootball_ufl',     sportId: 'sp_american_football', leagueName: 'UFL',                   countryCode: 'US', hasDraw: false },
+  // ── Australian Rules ─────────────────────────────────────────────────────────
+  { key: 'aussierules_afl',          sportId: 'sp_aussie_rules',      leagueName: 'AFL',                   countryCode: 'AU', hasDraw: false },
   // ── Basketball ────────────────────────────────────────────────────────────────
-  { key: 'basketball_nba',           sportId: 'sp_basketball',  leagueName: 'NBA',                   countryCode: 'US', hasDraw: false },
+  { key: 'basketball_nba',           sportId: 'sp_basketball',        leagueName: 'NBA',                   countryCode: 'US', hasDraw: false },
+  { key: 'basketball_ncaab',         sportId: 'sp_basketball',        leagueName: 'NCAA Basketball',       countryCode: 'US', hasDraw: false },
+  { key: 'basketball_euroleague',    sportId: 'sp_basketball',        leagueName: 'EuroLeague',            countryCode: 'EU', hasDraw: false },
   // ── Tennis ────────────────────────────────────────────────────────────────────
-  { key: 'tennis_atp_french_open',   sportId: 'sp_tennis',      leagueName: 'French Open — ATP',     countryCode: 'FR', hasDraw: false },
-  { key: 'tennis_wta_french_open',   sportId: 'sp_tennis',      leagueName: 'French Open — WTA',     countryCode: 'FR', hasDraw: false },
+  { key: 'tennis_atp_french_open',   sportId: 'sp_tennis',            leagueName: 'French Open — ATP',     countryCode: 'FR', hasDraw: false },
+  { key: 'tennis_wta_french_open',   sportId: 'sp_tennis',            leagueName: 'French Open — WTA',     countryCode: 'FR', hasDraw: false },
   // ── Cricket ───────────────────────────────────────────────────────────────────
-  { key: 'cricket_ipl',              sportId: 'sp_cricket',     leagueName: 'Indian Premier League', countryCode: 'IN', hasDraw: false },
-  { key: 'cricket_international_t20',sportId: 'sp_cricket',     leagueName: 'International T20',     countryCode: 'GL', hasDraw: false },
+  { key: 'cricket_ipl',              sportId: 'sp_cricket',           leagueName: 'Indian Premier League', countryCode: 'IN', hasDraw: false },
+  { key: 'cricket_international_t20',sportId: 'sp_cricket',           leagueName: 'International T20',     countryCode: 'GL', hasDraw: false },
   // ── MMA ───────────────────────────────────────────────────────────────────────
-  { key: 'mma_mixed_martial_arts',   sportId: 'sp_mma',         leagueName: 'MMA / UFC',             countryCode: 'US', hasDraw: false },
+  { key: 'mma_mixed_martial_arts',   sportId: 'sp_mma',               leagueName: 'MMA / UFC',             countryCode: 'US', hasDraw: false },
 ];
 
 /** sportIds that real data covers — used to suppress mock leagues for the same sport */
