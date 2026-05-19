@@ -80,7 +80,7 @@ function BoostCard({ card, matchup }: { card: NbaBoostCard; matchup: NbaMatchup 
           {card.selections.map((sel, i) => (
             <div key={i} className="flex items-start gap-2">
               <TeamIcon
-                iconUrl={`${NBA_CDN}${sel.teamAbbr === matchup.away.abbr ? matchup.away.iconUrl.split('/').pop()! : matchup.home.iconUrl.split('/').pop()!}`}
+                iconUrl={sel.teamAbbr === matchup.away.abbr ? matchup.away.iconUrl : matchup.home.iconUrl}
                 abbr={sel.teamAbbr}
                 color={sel.teamAbbr === matchup.away.abbr ? matchup.away.color : matchup.home.color}
                 size={14}
