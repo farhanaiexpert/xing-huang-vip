@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronRight, BarChart2, Zap, ShieldCheck, TrendingUp } from 'lucide-react';
 import { OddsButton } from './OddsButton';
+import { useBetSlip } from '../hooks/useBetSlip';
 import { cn } from '../lib/utils';
 
 // ── CDN ────────────────────────────────────────────────────────────────────────
@@ -84,199 +85,266 @@ const ALL_MATCHES: SoccerMatch[] = [
 ];
 
 // ── BET BUILDER player data ────────────────────────────────────────────────────
-interface PlayerRow {
-  name: string; form: (0|1)[];
-  kitUrl: string; kitColor: string; no: string;
-  toScore: number; scoreOrAssist: number; toBeBooked: number;
-}
-type BbTab = 'Main' | 'Shots on Target' | 'Shots' | 'Fouls' | 'Tackles';
-const BB_TABS: BbTab[] = ['Main', 'Shots on Target', 'Shots', 'Fouls', 'Tackles'];
+
 const BOU_KIT = CDN + 'Bournemouth_Home_Front_25_26.svg';
 const MCI_KIT = CDN + 'Man%20City%20Home%2025_26%20Front.svg';
 
-const PLAYERS_MAIN: PlayerRow[] = [
-  { name: 'Erling Haaland',    form: [0,1,1,1,1], kitUrl: MCI_KIT, kitColor: '#6CABDD', no: '9',  toScore: 1.53, scoreOrAssist: 1.36, toBeBooked: 5.50 },
-  { name: 'Antoine Semenyo',   form: [0,0,0,0,1], kitUrl: BOU_KIT, kitColor: '#C8102E', no: '29', toScore: 2.30, scoreOrAssist: 1.80, toBeBooked: 4.00 },
-  { name: 'Rayan Cherki',      form: [1,0,0,0,0], kitUrl: MCI_KIT, kitColor: '#6CABDD', no: '10', toScore: 2.75, scoreOrAssist: 1.66, toBeBooked: 4.75 },
-  { name: 'Eli Junior Kroupi', form: [1,0,1,1,0], kitUrl: BOU_KIT, kitColor: '#C8102E', no: '22', toScore: 3.10, scoreOrAssist: 2.37, toBeBooked: 3.25 },
-  { name: 'Evanilson',         form: [0,0,0,0,0], kitUrl: BOU_KIT, kitColor: '#C8102E', no: '19', toScore: 3.20, scoreOrAssist: 2.62, toBeBooked: 4.50 },
-  { name: 'Rayan Vitor',       form: [0,0,1,1,1], kitUrl: MCI_KIT, kitColor: '#6CABDD', no: '37', toScore: 3.60, scoreOrAssist: 2.50, toBeBooked: 4.33 },
+type BbMarket = 'main' | 'shots_on_target' | 'shots' | 'fouls' | 'tackles';
+
+interface BbPlayer {
+  name: string; no: string; kitUrl: string; kitColor: string; last5: string;
+}
+interface BbCol { label: string; odds: number }
+
+const BB_PLAYERS: BbPlayer[] = [
+  { name: 'Erling Haaland',    no: '9',  kitUrl: MCI_KIT, kitColor: '#6CABDD', last5: '0  1  1  1  1' },
+  { name: 'Antoine Semenyo',   no: '29', kitUrl: BOU_KIT, kitColor: '#C8102E', last5: '0  0  0  0  1' },
+  { name: 'Rayan Cherki',      no: '10', kitUrl: MCI_KIT, kitColor: '#6CABDD', last5: '1  0  0  0  0' },
+  { name: 'Eli Junior Kroupi', no: '22', kitUrl: BOU_KIT, kitColor: '#C8102E', last5: '1  0  1  1  0' },
+  { name: 'Evanilson',         no: '19', kitUrl: BOU_KIT, kitColor: '#C8102E', last5: '0  0  0  0  0' },
+  { name: 'Rayan Vitor',       no: '37', kitUrl: MCI_KIT, kitColor: '#6CABDD', last5: '0  0  1  1  1' },
 ];
 
-// ── Odds chip ──────────────────────────────────────────────────────────────────
-function OddsChip({ odds, active, onClick }: { odds: number; active: boolean; onClick: () => void }) {
+const BB_MARKET_DATA: Record<BbMarket, { cols: string[]; rows: BbCol[][] }> = {
+  main: {
+    cols: ['To Score', 'Score or Assist', 'To be Booked'],
+    rows: [
+      [{ label:'To Score', odds:1.53 }, { label:'Score or Assist', odds:1.36 }, { label:'To be Booked', odds:5.50 }],
+      [{ label:'To Score', odds:2.30 }, { label:'Score or Assist', odds:1.80 }, { label:'To be Booked', odds:4.00 }],
+      [{ label:'To Score', odds:2.75 }, { label:'Score or Assist', odds:1.66 }, { label:'To be Booked', odds:4.75 }],
+      [{ label:'To Score', odds:3.10 }, { label:'Score or Assist', odds:2.37 }, { label:'To be Booked', odds:3.25 }],
+      [{ label:'To Score', odds:3.20 }, { label:'Score or Assist', odds:2.62 }, { label:'To be Booked', odds:4.50 }],
+      [{ label:'To Score', odds:3.60 }, { label:'Score or Assist', odds:2.50 }, { label:'To be Booked', odds:4.33 }],
+    ],
+  },
+  shots_on_target: {
+    cols: ['0', '1+', '2+'],
+    rows: [
+      [{ label:'0', odds:2.80 }, { label:'1+', odds:1.35 }, { label:'2+', odds:2.60 }],
+      [{ label:'0', odds:3.20 }, { label:'1+', odds:1.55 }, { label:'2+', odds:3.10 }],
+      [{ label:'0', odds:2.95 }, { label:'1+', odds:1.42 }, { label:'2+', odds:2.85 }],
+      [{ label:'0', odds:3.50 }, { label:'1+', odds:1.62 }, { label:'2+', odds:3.40 }],
+      [{ label:'0', odds:3.30 }, { label:'1+', odds:1.58 }, { label:'2+', odds:3.20 }],
+      [{ label:'0', odds:3.10 }, { label:'1+', odds:1.48 }, { label:'2+', odds:2.95 }],
+    ],
+  },
+  shots: {
+    cols: ['0', '1+', '2+'],
+    rows: [
+      [{ label:'0', odds:4.50 }, { label:'1+', odds:1.18 }, { label:'2+', odds:1.75 }],
+      [{ label:'0', odds:4.80 }, { label:'1+', odds:1.22 }, { label:'2+', odds:1.90 }],
+      [{ label:'0', odds:4.20 }, { label:'1+', odds:1.20 }, { label:'2+', odds:1.80 }],
+      [{ label:'0', odds:5.00 }, { label:'1+', odds:1.25 }, { label:'2+', odds:2.00 }],
+      [{ label:'0', odds:4.60 }, { label:'1+', odds:1.21 }, { label:'2+', odds:1.88 }],
+      [{ label:'0', odds:4.30 }, { label:'1+', odds:1.19 }, { label:'2+', odds:1.78 }],
+    ],
+  },
+  fouls: {
+    cols: ['0', '1+', '2+'],
+    rows: [
+      [{ label:'0', odds:2.40 }, { label:'1+', odds:1.50 }, { label:'2+', odds:2.20 }],
+      [{ label:'0', odds:2.60 }, { label:'1+', odds:1.55 }, { label:'2+', odds:2.40 }],
+      [{ label:'0', odds:2.50 }, { label:'1+', odds:1.52 }, { label:'2+', odds:2.30 }],
+      [{ label:'0', odds:2.35 }, { label:'1+', odds:1.48 }, { label:'2+', odds:2.15 }],
+      [{ label:'0', odds:2.70 }, { label:'1+', odds:1.60 }, { label:'2+', odds:2.50 }],
+      [{ label:'0', odds:2.45 }, { label:'1+', odds:1.51 }, { label:'2+', odds:2.25 }],
+    ],
+  },
+  tackles: {
+    cols: ['0', '1+', '2+'],
+    rows: [
+      [{ label:'0', odds:3.80 }, { label:'1+', odds:1.28 }, { label:'2+', odds:2.10 }],
+      [{ label:'0', odds:4.10 }, { label:'1+', odds:1.32 }, { label:'2+', odds:2.30 }],
+      [{ label:'0', odds:3.90 }, { label:'1+', odds:1.30 }, { label:'2+', odds:2.20 }],
+      [{ label:'0', odds:4.00 }, { label:'1+', odds:1.31 }, { label:'2+', odds:2.25 }],
+      [{ label:'0', odds:4.20 }, { label:'1+', odds:1.35 }, { label:'2+', odds:2.40 }],
+      [{ label:'0', odds:3.70 }, { label:'1+', odds:1.27 }, { label:'2+', odds:2.05 }],
+    ],
+  },
+};
+
+const BB_MARKET_TABS: { id: BbMarket; label: string }[] = [
+  { id: 'main',            label: 'Main'            },
+  { id: 'shots_on_target', label: 'Shots on Target' },
+  { id: 'shots',           label: 'Shots'           },
+  { id: 'fouls',           label: 'Fouls'           },
+  { id: 'tackles',         label: 'Tackles'         },
+];
+
+// ── Wired prop cell (adds to bet slip) ─────────────────────────────────────────
+function PropCell({
+  matchId, matchName, leagueName, market, player, col,
+}: {
+  matchId: string; matchName: string; leagueName: string;
+  market: BbMarket; player: BbPlayer; col: BbCol;
+}) {
+  const { addSelection, removeSelection, hasSelection } = useBetSlip();
+  const selType = `${player.name}_${market}_${col.label}`;
+  const selId   = `${matchId}_bb_${market}-${selType}`;
+  const active  = hasSelection(selId);
+
+  function toggle() {
+    if (active) removeSelection(selId);
+    else addSelection({
+      id: selId,
+      marketId: `${matchId}_bb_${market}`,
+      matchId, matchName, leagueName,
+      marketName: col.label,
+      selectionType: selType,
+      selectionName: `${player.name} — ${col.label}`,
+      odds: col.odds,
+    });
+  }
+
   return (
     <button
-      onClick={onClick}
-      className="min-w-[58px] py-2 rounded-lg text-[13px] font-bold tabular-nums text-center transition-all"
-      style={active
-        ? { background: '#FACC15', color: '#0B0F14', boxShadow: '0 0 10px rgba(250,204,21,0.3)' }
-        : { background: 'rgba(250,204,21,0.06)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.15)' }
-      }
+      onClick={toggle}
+      className={cn(
+        'flex-1 py-2.5 text-center tabular-nums font-bold text-[13px] transition-all duration-150 rounded select-none',
+        active
+          ? 'text-[#00DFA9] bg-[#00DFA9]/10'
+          : 'text-[#FACC15] hover:text-[#FDE68A] hover:bg-[#FACC15]/5'
+      )}
     >
-      {odds.toFixed(2)}
+      {col.odds.toFixed(2)}
     </button>
+  );
+}
+
+// ── Player row ─────────────────────────────────────────────────────────────────
+function BbPlayerRow({
+  player, playerIdx, matchId, matchName, leagueName, market, cols,
+}: {
+  player: BbPlayer; playerIdx: number;
+  matchId: string; matchName: string; leagueName: string;
+  market: BbMarket; cols: BbCol[];
+}) {
+  return (
+    <div className="flex items-center border-b border-[#1C2736] last:border-0 hover:bg-[#0B1220]/60 transition-colors">
+      {/* Player info */}
+      <div className="w-[190px] shrink-0 flex items-center gap-2.5 px-4 py-3 min-w-0">
+        <div className="relative shrink-0">
+          <KitImg url={player.kitUrl} alt={player.name} size={30} color={player.kitColor} />
+          <span
+            className="absolute -bottom-0.5 -right-1 text-[8px] font-black leading-none"
+            style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}
+          >
+            {player.no}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-semibold text-[#F8FAFC] leading-tight truncate">{player.name}</p>
+          <p className="text-[10px] text-[#94A3B8]/45 font-medium mt-0.5 tabular-nums tracking-wide">{player.last5}</p>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="w-px self-stretch bg-[#253241]/50 shrink-0" />
+
+      {/* Market columns */}
+      <div className="flex flex-1">
+        {cols.map((col, i) => (
+          <PropCell
+            key={i}
+            matchId={matchId} matchName={matchName} leagueName={leagueName}
+            market={market} player={player} col={col}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
 // ── BET BUILDER section ────────────────────────────────────────────────────────
 function BetBuilderSection({ match }: { match: SoccerMatch }) {
-  const [tab, setTab] = useState<BbTab>('Main');
-  const [selected, setSelected] = useState<string | null>(null);
-  const toggle = (k: string) => setSelected(p => p === k ? null : k);
+  const [market, setMarket] = useState<BbMarket>('main');
+  const [showAll, setShowAll] = useState(false);
+
+  const data    = BB_MARKET_DATA[market];
+  const visible = showAll ? BB_PLAYERS : BB_PLAYERS.slice(0, 5);
+  const matchName = `${match.home} v ${match.away}`;
 
   return (
-    <div
-      className="mt-3 rounded-2xl overflow-hidden"
-      style={{
-        border: '1px solid rgba(0,223,169,0.18)',
-        background: 'linear-gradient(180deg,#15202E 0%,#121821 100%)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-      }}
-    >
-      {/* Header */}
-      <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg,#00DFA9 0%,rgba(0,223,169,0.1) 100%)' }} />
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full"
-            style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.25)' }}
-          >
-            <BarChart2 className="w-3.5 h-3.5 text-[#00DFA9]" />
-            <span className="text-[11px] font-black text-[#00DFA9] tracking-widest uppercase">Bet Builder</span>
-            <span
-              className="text-[11px] font-black px-1 py-0.5 rounded"
-              style={{ background: '#00DFA9', color: '#0B0F14' }}
-            >+</span>
-          </div>
+    <div className="mt-3 rounded-xl overflow-hidden" style={{ background: '#0D1219', border: '1px solid #253241' }}>
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#253241]">
+        <div className="flex items-center gap-1">
+          <span className="text-[13px] font-black tracking-wide text-[#00DFA9]">BET BUILDER</span>
+          <span className="text-[13px] font-black ml-0.5 text-[#00DFA9]">+</span>
         </div>
-        <button className="flex items-center gap-1 text-[11px] font-semibold text-[#38BDF8] hover:text-[#7DD3FC] transition-colors">
+        <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#94A3B8]/60 hover:text-[#F8FAFC] transition-colors">
           Player Markets <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* Match header */}
-      <div
-        className="mx-4 mb-3 rounded-xl px-4 py-3 flex items-center justify-center gap-4"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #253241' }}
-      >
-        <div className="flex items-center gap-2 flex-1 justify-end">
-          <span className="text-[13px] font-semibold text-[#F8FAFC]">{match.home}</span>
-          <KitImg url={match.homeKit} alt={match.home} size={32} color={match.homeColor} />
+      <div className="flex items-center justify-center gap-4 py-3.5 border-b border-[#1C2736]">
+        <div className="flex items-center gap-2">
+          <KitImg url={match.homeKit} alt={match.home} size={26} color={match.homeColor} />
+          <span className="text-[13px] font-bold text-[#F8FAFC]">{match.home}</span>
         </div>
-        <div className="flex flex-col items-center">
-          <span className="text-[11px] font-black text-[#94A3B8]/40 uppercase tracking-wider">vs</span>
-          <span className="text-[9px] text-[#94A3B8]/30 font-medium mt-0.5">{match.time}</span>
-        </div>
-        <div className="flex items-center gap-2 flex-1">
-          <KitImg url={match.awayKit} alt={match.away} size={32} color={match.awayColor} />
-          <span className="text-[13px] font-semibold text-[#F8FAFC]">{match.away}</span>
+        <span className="text-[12px] font-black text-[#4B5C6B]">v</span>
+        <div className="flex items-center gap-2">
+          <KitImg url={match.awayKit} alt={match.away} size={26} color={match.awayColor} />
+          <span className="text-[13px] font-bold text-[#F8FAFC]">{match.away}</span>
         </div>
       </div>
+      <p className="text-center text-[10.5px] text-[#94A3B8]/50 py-1.5 border-b border-[#1C2736] font-medium">
+        {match.league} · {match.time}
+      </p>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto scrollbar-none">
-        {BB_TABS.map(t => (
+      {/* Market tabs — underline style matching Europa */}
+      <div className="flex border-b border-[#1C2736] bg-[#0B1017] overflow-x-auto">
+        {BB_MARKET_TABS.map(tab => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className="shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all"
-            style={tab === t
-              ? { background: 'rgba(0,223,169,0.12)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.3)' }
-              : { background: 'rgba(255,255,255,0.03)', color: '#94A3B8', border: '1px solid rgba(255,255,255,0.05)' }
-            }
+            key={tab.id}
+            onClick={() => { setMarket(tab.id); setShowAll(false); }}
+            className={cn(
+              'px-4 py-2.5 text-[12px] font-semibold transition-colors whitespace-nowrap shrink-0',
+              market === tab.id
+                ? 'text-[#F8FAFC] border-b-2 border-[#F8FAFC] -mb-px'
+                : 'text-[#94A3B8]/60 hover:text-[#F8FAFC]'
+            )}
           >
-            {t}
+            {tab.label}
           </button>
         ))}
       </div>
 
       {/* Column headers */}
-      <div
-        className="flex items-center px-4 py-2 border-y"
-        style={{ borderColor: 'rgba(37,50,65,0.7)', background: 'rgba(13,21,32,0.4)' }}
-      >
-        <div className="flex-1 text-[10px] font-bold text-[#94A3B8]/40 uppercase tracking-wider">Player / Last 5</div>
-        {['To Score', 'Score or Assist', 'To be Booked'].map(h => (
-          <div key={h} className="w-[68px] text-center text-[9.5px] font-bold text-[#94A3B8]/40 uppercase tracking-wide leading-tight px-1">
-            {h}
-          </div>
-        ))}
+      <div className="flex items-center border-b border-[#1C2736] bg-[#0B1017]">
+        <div className="w-[190px] shrink-0 px-4 py-1.5">
+          <span className="text-[10px] font-bold text-[#94A3B8]/50 uppercase tracking-wider">Player / Last 5</span>
+        </div>
+        <div className="w-px self-stretch bg-[#253241]/50 shrink-0" />
+        <div className="flex flex-1">
+          {data.cols.map(h => (
+            <div key={h} className="flex-1 text-center py-1.5 text-[11px] font-bold text-[#94A3B8]/60">{h}</div>
+          ))}
+        </div>
       </div>
 
       {/* Player rows */}
-      {PLAYERS_MAIN.map((p, i) => {
-        const rk = p.name;
-        return (
-          <div
-            key={i}
-            className="flex items-center px-4 py-2.5 transition-colors"
-            style={{ borderBottom: '1px solid rgba(37,50,65,0.5)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(13,21,32,0.5)')}
-            onMouseLeave={e => (e.currentTarget.style.background = '')}
-          >
-            {/* Kit + name + form */}
-            <div className="flex-1 flex items-center gap-3 min-w-0">
-              <div className="relative shrink-0">
-                <KitImg url={p.kitUrl} alt={p.name} size={34} color={p.kitColor} />
-                <span
-                  className="absolute -bottom-0.5 -right-1 text-[8px] font-black leading-none"
-                  style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}
-                >
-                  {p.no}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-[12.5px] font-semibold text-[#F8FAFC] leading-none truncate">{p.name}</p>
-                <div className="flex items-center gap-1 mt-1.5">
-                  {p.form.map((f, fi) => (
-                    <div
-                      key={fi}
-                      className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-black"
-                      style={{
-                        background: f ? 'rgba(0,223,169,0.18)' : 'rgba(148,163,184,0.08)',
-                        color: f ? '#00DFA9' : '#94A3B8',
-                        border: `1px solid ${f ? 'rgba(0,223,169,0.35)' : 'rgba(148,163,184,0.12)'}`,
-                      }}
-                    >
-                      {f}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+      {visible.map((player, idx) => (
+        <BbPlayerRow
+          key={player.name}
+          player={player}
+          playerIdx={idx}
+          matchId={match.id}
+          matchName={matchName}
+          leagueName={match.league}
+          market={market}
+          cols={data.rows[idx] ?? data.rows[0]}
+        />
+      ))}
 
-            {/* Odds */}
-            {(['toScore', 'scoreOrAssist', 'toBeBooked'] as const).map(c => (
-              <div key={c} className="w-[68px] flex justify-center px-0.5">
-                <OddsChip
-                  odds={p[c]}
-                  active={selected === `${rk}_${c}`}
-                  onClick={() => toggle(`${rk}_${c}`)}
-                />
-              </div>
-            ))}
-          </div>
-        );
-      })}
-
-      {/* Show more + next match */}
-      <div className="px-4 py-3 flex items-center justify-between gap-3">
-        <button className="flex items-center gap-1.5 text-[11px] font-semibold text-[#38BDF8]/70 hover:text-[#38BDF8] transition-colors">
-          Show more <ChevronRight className="w-3 h-3" />
-        </button>
-        <div
-          className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer flex-1 justify-end"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #253241' }}
-        >
-          <KitImg url={ALL_MATCHES[1].homeKit} alt={ALL_MATCHES[1].home} size={18} color={ALL_MATCHES[1].homeColor} />
-          <span className="text-[11px] font-medium text-[#94A3B8]/70 truncate">
-            {ALL_MATCHES[1].home} <span className="text-[#94A3B8]/30">v</span> {ALL_MATCHES[1].away}
-          </span>
-          <KitImg url={ALL_MATCHES[1].awayKit} alt={ALL_MATCHES[1].away} size={18} color={ALL_MATCHES[1].awayColor} />
-          <ChevronRight className="w-3.5 h-3.5 text-[#94A3B8]/30 shrink-0" />
-        </div>
-      </div>
+      {/* Show more */}
+      <button
+        onClick={() => setShowAll(v => !v)}
+        className="w-full py-2.5 text-[12px] font-semibold text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors border-t border-[#1C2736] flex items-center justify-center gap-1"
+      >
+        {showAll ? 'Show less ↑' : 'Show more ↓'}
+      </button>
     </div>
   );
 }
