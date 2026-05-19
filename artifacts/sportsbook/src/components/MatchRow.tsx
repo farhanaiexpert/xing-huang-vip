@@ -43,6 +43,11 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
   const isHorse   = match.sportId === 'sp_horse_racing';
   const isToday    = match.dateTag === 'today';
   const isTomorrow = match.dateTag === 'tomorrow';
+
+  const isHot = !!(match.marketCount && (
+    match.marketCount >= 90 ||
+    (match.isLive && match.marketCount >= 70)
+  ));
   const [dayPart, timePart] = match.date.split(', ');
 
   const { marketId, marketName } = getMarketMeta(match.sportId, match.id);
@@ -133,14 +138,23 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
         )}
       </div>
 
-      {/* Market count */}
-      {match.marketCount && match.marketCount > 1 && (
-        <div className="shrink-0 hidden md:flex">
-          <span className="text-[10px] text-[#94A3B8]/40 group-hover:text-[#38BDF8]/60 transition-colors font-medium tabular-nums">
+      {/* Hot badge / market count */}
+      <div className="shrink-0 flex flex-col items-center gap-1">
+        {isHot && (
+          <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.15)]">
+            <span className="text-[10px] leading-none">🔥</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-orange-400 leading-none">Hot</span>
+          </div>
+        )}
+        {match.marketCount && match.marketCount > 1 && (
+          <span className={cn(
+            'text-[10px] font-medium tabular-nums transition-colors hidden md:block',
+            isHot ? 'text-orange-400/50' : 'text-[#94A3B8]/40 group-hover:text-[#38BDF8]/60'
+          )}>
             +{match.marketCount}
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Odds buttons */}
       <div className="flex items-center gap-1.5 shrink-0" style={{ width: isSoccer ? '192px' : '126px' }}>
