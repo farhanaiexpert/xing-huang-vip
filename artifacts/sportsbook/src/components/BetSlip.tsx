@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
@@ -11,7 +11,7 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Selection } from '../types';
 
-export function BetSlip({ className, forceExpanded }: { className?: string; forceExpanded?: boolean }) {
+export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }: { className?: string; forceExpanded?: boolean; isScrolled?: boolean }) {
   const {
     selections, betType, setBetType,
     stake, setStake,
@@ -23,18 +23,8 @@ export function BetSlip({ className, forceExpanded }: { className?: string; forc
   const { isConnected } = useWallet();
   const [isWalletOpen,   setIsWalletOpen]   = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
-  const [isScrolled,     setIsScrolled]     = useState(false);
+  const isScrolled = !forceExpanded && !!isScrolledProp;
   const [compactExpanded, setCompactExpanded] = useState(false);
-
-  // Track main content scroll to switch between full/compact mode
-  useEffect(() => {
-    if (forceExpanded) return;
-    const el = document.getElementById('main-content-scroll');
-    if (!el) return;
-    const handler = () => setIsScrolled(el.scrollTop > 90);
-    el.addEventListener('scroll', handler, { passive: true });
-    return () => el.removeEventListener('scroll', handler);
-  }, [forceExpanded]);
 
   const hasSelections = selections.length > 0;
 
