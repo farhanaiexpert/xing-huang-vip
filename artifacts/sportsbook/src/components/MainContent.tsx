@@ -590,64 +590,60 @@ const FOOTER_NAV = [
   },
 ];
 
+const SOCIAL_LINKS = [
+  { icon: <Twitter   className="h-3.5 w-3.5" />, label: 'Twitter'   },
+  { icon: <Instagram className="h-3.5 w-3.5" />, label: 'Instagram' },
+  { icon: <Github    className="h-3.5 w-3.5" />, label: 'GitHub'    },
+] as const;
+
 function SiteFooter() {
   return (
     <footer className="border-t border-[#253241]/70 bg-[#0B0F14] mt-2">
-      <div className="px-6 pt-8 pb-4">
+      <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-4">
 
-        {/* Top row: brand + nav columns */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 pb-8">
-
-          {/* Brand */}
-          <div className="space-y-3">
-            <div className="flex items-center">
-              <img
-                src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
-                alt="GoBet"
-                className="h-7 w-auto object-contain"
-                style={{ filter: 'drop-shadow(0 0 6px rgba(0,223,169,0.15))' }}
-              />
-            </div>
-            <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[180px]">
-              Live odds, instant settlement, and provably fair sports markets.
+        {/* ── MOBILE brand strip (hidden on sm+) ────────────────────────── */}
+        <div className="flex items-start justify-between gap-4 mb-5 sm:hidden">
+          <div className="min-w-0">
+            <img
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
+              alt="GoBet"
+              className="h-7 w-auto object-contain mb-1.5"
+              style={{ filter: 'drop-shadow(0 0 6px rgba(0,223,169,0.15))' }}
+            />
+            <p className="text-[11px] text-[#94A3B8]/50 leading-snug">
+              Live odds · instant settlement · provably fair
             </p>
-            <div className="flex items-start gap-1.5 rounded-lg bg-[#121821] border border-[#253241]/80 p-2.5">
-              <ShieldCheck className="h-3 w-3 text-[#00DFA9]/70 mt-px shrink-0" />
-              <p className="text-[9px] text-[#94A3B8]/40 leading-snug">
-                Licensed by the Malta Gaming Authority · MGA/B2C/123/2021
-              </p>
-            </div>
-            {/* Socials */}
-            <div className="flex gap-1.5 pt-1">
-              {([
-                { icon: <Twitter className="h-3.5 w-3.5" />,   label: 'Twitter'   },
-                { icon: <Instagram className="h-3.5 w-3.5" />, label: 'Instagram' },
-                { icon: <Github className="h-3.5 w-3.5" />,    label: 'GitHub'    },
-              ] as const).map((s) => (
-                <button
-                  key={s.label}
-                  aria-label={s.label}
-                  className="w-7 h-7 rounded-md border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150"
-                >
-                  {s.icon}
-                </button>
-              ))}
-            </div>
           </div>
+          <div className="flex gap-1.5 shrink-0 pt-0.5">
+            {SOCIAL_LINKS.map((s) => (
+              <button key={s.label} aria-label={s.label}
+                className="w-8 h-8 rounded-lg border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150">
+                {s.icon}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          {/* Nav columns */}
+        {/* ── MOBILE license badge (hidden on sm+) ─────────────────────── */}
+        <div className="flex items-start gap-1.5 rounded-lg bg-[#121821] border border-[#253241]/80 p-2.5 mb-5 sm:hidden">
+          <ShieldCheck className="h-3 w-3 text-[#00DFA9]/70 mt-px shrink-0" />
+          <p className="text-[9px] text-[#94A3B8]/40 leading-snug">
+            Licensed by the Malta Gaming Authority · MGA/B2C/123/2021
+          </p>
+        </div>
+
+        {/* ── MOBILE nav grid — 3 columns of links (hidden on sm+) ─────── */}
+        <div className="sm:hidden grid grid-cols-3 gap-x-2 gap-y-1 pb-5 border-b border-[#253241]/40">
           {FOOTER_NAV.map((col) => (
             <div key={col.heading}>
-              <p className="text-[10px] font-semibold text-[#94A3B8]/35 uppercase tracking-widest mb-3">
+              <p className="text-[9px] font-bold text-[#94A3B8]/30 uppercase tracking-widest mb-2">
                 {col.heading}
               </p>
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-[11px] text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors duration-150"
-                    >
+                    <Link href={link.href}
+                      className="text-[11px] text-[#94A3B8]/55 hover:text-[#F8FAFC] transition-colors duration-150 leading-snug block">
                       {link.label}
                     </Link>
                   </li>
@@ -657,13 +653,60 @@ function SiteFooter() {
           ))}
         </div>
 
-        {/* Bottom bar */}
-        <div className="border-t border-[#253241]/40 pt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[9px] text-[#94A3B8]/30">
-            © 2021–2026 GoBet Ltd. All rights reserved. · 18+ · Gamble responsibly.
+        {/* ── DESKTOP 4-col grid (hidden on mobile) ────────────────────── */}
+        <div className="hidden sm:grid sm:grid-cols-4 gap-8 pb-8">
+          <div className="space-y-3">
+            <img
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
+              alt="GoBet"
+              className="h-7 w-auto object-contain"
+              style={{ filter: 'drop-shadow(0 0 6px rgba(0,223,169,0.15))' }}
+            />
+            <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[180px]">
+              Live odds, instant settlement, and provably fair sports markets.
+            </p>
+            <div className="flex items-start gap-1.5 rounded-lg bg-[#121821] border border-[#253241]/80 p-2.5">
+              <ShieldCheck className="h-3 w-3 text-[#00DFA9]/70 mt-px shrink-0" />
+              <p className="text-[9px] text-[#94A3B8]/40 leading-snug">
+                Licensed by the Malta Gaming Authority · MGA/B2C/123/2021
+              </p>
+            </div>
+            <div className="flex gap-1.5 pt-1">
+              {SOCIAL_LINKS.map((s) => (
+                <button key={s.label} aria-label={s.label}
+                  className="w-7 h-7 rounded-md border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150">
+                  {s.icon}
+                </button>
+              ))}
+            </div>
+          </div>
+          {FOOTER_NAV.map((col) => (
+            <div key={col.heading}>
+              <p className="text-[10px] font-semibold text-[#94A3B8]/35 uppercase tracking-widest mb-3">
+                {col.heading}
+              </p>
+              <ul className="space-y-2">
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <Link href={link.href}
+                      className="text-[11px] text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors duration-150">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Bottom bar ────────────────────────────────────────────────── */}
+        <div className="pt-4 sm:border-t sm:border-[#253241]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <p className="text-[10px] text-[#94A3B8]/30 leading-snug">
+            © 2021–2026 GoBet Ltd. All rights reserved.
+            <span className="hidden sm:inline"> · 18+ · Gamble responsibly.</span>
           </p>
-          <div className="flex items-center gap-3">
-            {['18+', 'BeGambleAware', 'GamCare'].map((b) => (
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            {['18+', 'BeGambleAware', 'GamCare', 'Gamble Responsibly'].map((b) => (
               <span key={b} className="text-[9px] font-semibold text-[#94A3B8]/25">{b}</span>
             ))}
           </div>

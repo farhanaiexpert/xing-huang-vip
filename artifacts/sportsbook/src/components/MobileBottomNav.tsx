@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Home, Grid3X3, Receipt, Gift, MoreHorizontal } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
@@ -12,6 +12,15 @@ export function MobileBottomNav() {
   const { selections } = useBetSlip();
   const [betSlipOpen, setBetSlipOpen] = useState(false);
   const [sportsOpen, setSportsOpen] = useState(false);
+
+  // Auto-open bet slip when a new selection is added (mobile UX)
+  const prevCountRef = useRef(selections.length);
+  useEffect(() => {
+    if (selections.length > prevCountRef.current) {
+      setBetSlipOpen(true);
+    }
+    prevCountRef.current = selections.length;
+  }, [selections.length]);
 
   function handleSelectSport(sportId: string) {
     window.dispatchEvent(new CustomEvent('mobile-sport-select', { detail: sportId }));
