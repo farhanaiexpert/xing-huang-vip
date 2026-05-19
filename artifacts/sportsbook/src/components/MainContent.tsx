@@ -451,6 +451,22 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                     <div key={league.id}>
                       {/* Bet Builder appears immediately before MMA / UFC */}
                       {!search.trim() && league.sportId === 'sp_mma' && <BetBuilder />}
+
+                      {/*
+                        ── Highlight sections injected just above French Open - ATP ──
+                        All Sports: Tennis → NBA → Europa League (in order requested)
+                        Individual tabs: only that sport's section
+                      */}
+                      {!search.trim() && league.id === 'lg_atp_rome' && showFeatured && (
+                        <>
+                          <TennisHighlights />
+                          <NBAHighlights />
+                          <EuropaLeagueFinal />
+                        </>
+                      )}
+                      {!search.trim() && league.id === 'lg_atp_rome' && selectedSportId === 'tennis' && <TennisHighlights />}
+                      {!search.trim() && league.id === 'lg_nba'      && selectedSportId === 'nba'    && <NBAHighlights />}
+
                       <LeagueSection league={league} />
                       {/* Upcoming Races appears immediately after Ligue 1 */}
                       {!search.trim() && league.id === 'lg_ligue1' && <UpcomingRaces />}
@@ -461,13 +477,8 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 ) : null}
               </div>
 
-              {/* ── Sport highlight sections — after leagues, best order ── */}
-              {/* 1. Europa League Final (football/soccer, marquee event) */}
-              {!search.trim() && (showFeatured || selectedSportId === 'ucl-final') && <EuropaLeagueFinal />}
-              {/* 2. NBA */}
-              {!search.trim() && (showFeatured || selectedSportId === 'nba') && <NBAHighlights />}
-              {/* 3. Tennis */}
-              {!search.trim() && (showFeatured || selectedSportId === 'tennis') && <TennisHighlights />}
+              {/* Europa League Final for its dedicated tab (no league rows exist for ucl-final) */}
+              {!search.trim() && selectedSportId === 'ucl-final' && <EuropaLeagueFinal />}
             </>
           )}
         </div>
