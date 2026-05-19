@@ -5,6 +5,7 @@ import { useToast } from '../hooks/use-toast';
 import { useOddsSimulation, getMovement, getOddsDelta } from '../hooks/useOddsSimulation';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { formatOdds } from '../lib/oddsFormat';
+import { playOddsAdd, playOddsRemove } from '../lib/oddsSound';
 import { cn } from '../lib/utils';
 
 interface OddsButtonProps {
@@ -78,8 +79,10 @@ export function OddsButton({
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isSelected) {
+      playOddsRemove();
       removeSelection(selectionId);
     } else {
+      playOddsAdd();
       addSelection({
         id: selectionId, marketId, matchId,
         matchName, leagueName, marketName,
