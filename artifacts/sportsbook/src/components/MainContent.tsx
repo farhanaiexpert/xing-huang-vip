@@ -11,6 +11,7 @@ import { UpcomingMatchesCarousel } from './UpcomingMatchesCarousel';
 import { WinnersTicker } from './WinnersTicker';
 import { SportQuickNav } from './SportQuickNav';
 import { TennisHighlights } from './TennisHighlights';
+import { SoccerHighlights } from './SoccerHighlights';
 import { NBAHighlights } from './NBAHighlights';
 import { EuropaLeagueFinal } from './EuropaLeagueFinal';
 import { cn } from '../lib/utils';
@@ -415,6 +416,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
             <>
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
+              {showFeatured && <SoccerHighlights />}
               {showFeatured && <TennisHighlights />}
               {showFeatured && <NBAHighlights />}
               {showFeatured && <EuropaLeagueFinal />}
