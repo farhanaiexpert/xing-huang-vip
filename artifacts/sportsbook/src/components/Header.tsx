@@ -63,6 +63,7 @@ export function Header() {
   // Quick search results (filter mock sports/pages)
   const QUICK_LINKS = [
     { label: 'All Sports',      href: '/' },
+    { label: 'WinSpin',         href: '/winspin' },
     { label: 'Promotions',      href: '/promotions' },
     { label: 'Bet History',     href: '/bet-history' },
     { label: 'Help & Rules',    href: '/help' },
@@ -183,6 +184,7 @@ export function Header() {
             <NavItem href="/promotions"   label="Promotions"  />
             <NavItem href="/bet-history"  label="Bet History" />
             <NavItem href="/help"         label="Help"        />
+            <WinSpinNavItem />
             <NavItem href="/"             label="In-Play" disabled soon />
           </nav>
 
@@ -318,6 +320,37 @@ function MenuAction({ icon, label, onClick, danger }: { icon: React.ReactNode; l
       {icon}
       {label}
     </button>
+  );
+}
+
+function WinSpinNavItem() {
+  const [location] = useLocation();
+  const isActive = location.startsWith('/winspin');
+  return (
+    <Link
+      href="/winspin"
+      className="relative flex items-center gap-1.5 px-3 h-16 text-[13px] font-semibold transition-all duration-150 select-none group"
+    >
+      <img
+        src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/wheel-spin.webp"
+        alt="WinSpin"
+        className="w-5 h-5 object-contain shrink-0 transition-transform duration-300 group-hover:rotate-45"
+        style={{ filter: isActive ? 'drop-shadow(0 0 4px rgba(0,223,169,0.8))' : 'none' }}
+      />
+      <span
+        className="font-black tracking-tight"
+        style={
+          isActive
+            ? { background: 'linear-gradient(90deg,#00DFA9,#38BDF8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }
+            : { color: 'rgba(248,250,252,0.55)' }
+        }
+      >
+        WinSpin
+      </span>
+      {isActive && (
+        <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-gradient-to-r from-transparent via-[#00DFA9] to-transparent shadow-[0_0_10px_rgba(0,223,169,0.8)]" />
+      )}
+    </Link>
   );
 }
 
