@@ -252,7 +252,20 @@ function MatchTable({ matchup }: { matchup: NbaMatchup }) {
   );
 }
 
-// ── Player prop row ────────────────────────────────────────────────────────────
+// ── Jersey number badge ───────────────────────────────────────────────────────
+
+function JerseyBadge({ number, color }: { number: string; color: string }) {
+  return (
+    <div
+      className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center font-black text-white select-none"
+      style={{ background: color, fontSize: number.length > 2 ? '8px' : '10px', letterSpacing: '-0.5px' }}
+    >
+      {number}
+    </div>
+  );
+}
+
+// ── Inline odds cell (plain text style, no button border) ─────────────────────
 
 function PropCell({
   matchId, marketId, matchName, leagueName, market, row, threshold,
@@ -261,9 +274,9 @@ function PropCell({
   market: NbaMarket; row: PlayerPropRow; threshold: { value: number; odds: number };
 }) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
-  const selType = `${row.player.name}_${market}_${threshold.value}`;
-  const selId   = `${marketId}-${selType}`;
-  const active  = hasSelection(selId);
+  const selType  = `${row.player.name}_${market}_${threshold.value}`;
+  const selId    = `${marketId}-${selType}`;
+  const active   = hasSelection(selId);
   const mktLabel = market === 'points'   ? 'Points'
                  : market === 'assists'  ? 'Assists'
                  : market === 'rebounds' ? 'Rebounds'
@@ -284,10 +297,10 @@ function PropCell({
     <button
       onClick={toggle}
       className={cn(
-        'flex-1 py-2.5 text-[12px] font-bold tabular-nums text-center rounded-md transition-all duration-150 border',
+        'flex-1 py-2 text-center tabular-nums font-bold text-[13px] transition-all duration-150 rounded select-none',
         active
-          ? 'bg-[#00DFA9] text-[#0B0F14] border-transparent shadow-[0_0_12px_rgba(0,223,169,0.4)]'
-          : 'bg-[#0B1220] border-[#2A3A52] text-[#FACC15] hover:bg-[#18212B] hover:border-[#38BDF8]/40'
+          ? 'text-[#00DFA9] bg-[#00DFA9]/10'
+          : 'text-[#FACC15] hover:text-[#FDE68A] hover:bg-[#FACC15]/5'
       )}
     >
       {threshold.odds.toFixed(2)}
@@ -295,27 +308,31 @@ function PropCell({
   );
 }
 
-function PlayerPropRowItem({ row, matchup, market, showAll }: { row: PlayerPropRow; matchup: NbaMatchup; market: NbaMarket; showAll: boolean }) {
-  const mid = matchup.id;
+// ── Player row ────────────────────────────────────────────────────────────────
+
+function PlayerPropRowItem({ row, matchup, market }: { row: PlayerPropRow; matchup: NbaMatchup; market: NbaMarket }) {
+  const mid       = matchup.id;
   const matchName = `${matchup.away.name} @ ${matchup.home.name}`;
+  const teamColor = row.player.team === 'away' ? matchup.away.color : matchup.home.color;
+
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#253241]/40 hover:bg-[#121821]/40 transition-colors group last:border-0">
-      {/* Jersey icon + name + last 5 */}
-      <div className="w-[160px] shrink-0 flex items-start gap-2 min-w-0">
-        <TeamIcon iconUrl={row.player.iconUrl} abbr={row.player.abbr} color={row.player.team === 'away' ? matchup.away.color : matchup.home.color} size={22} />
+    <div className="flex items-center border-b border-[#1C2736] last:border-0 hover:bg-[#0B1220]/60 transition-colors group">
+      {/* Player info */}
+      <div className="w-[200px] shrink-0 flex items-center gap-2.5 px-4 py-3 min-w-0">
+        <JerseyBadge number={row.player.number} color={teamColor} />
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-[#F8FAFC] leading-none truncate">{row.player.name}</p>
-          <p className="text-[10px] text-[#94A3B8]/40 font-medium mt-0.5 tabular-nums">
-            {row.last5.map(v => Math.round(v)).join(' ')}
+          <p className="text-[12.5px] font-semibold text-[#F8FAFC] leading-tight truncate">{row.player.name}</p>
+          <p className="text-[10px] text-[#94A3B8]/45 font-medium mt-0.5 tabular-nums tracking-wide">
+            {row.last5.map(v => Math.round(v)).join('  ')}
           </p>
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="w-px self-stretch bg-[#253241]/60" />
+      {/* Vertical divider */}
+      <div className="w-px self-stretch bg-[#253241]/50 shrink-0" />
 
-      {/* Threshold odds */}
-      <div className="flex-1 flex gap-1.5">
+      {/* Odds columns */}
+      <div className="flex flex-1">
         {row.thresholds.map(t => (
           <PropCell
             key={t.value}
@@ -347,18 +364,17 @@ function BetBuilderPlus({ matchup }: { matchup: NbaMatchup }) {
   const [showAll, setShowAll] = useState(false);
 
   const rows    = useMemo(() => generatePlayerProps(matchup, market), [matchup, market]);
-  const visible = showAll ? rows : rows.slice(0, 4);
-
-  // Threshold column headers from first row
+  const visible = showAll ? rows : rows.slice(0, 5);
   const headers = rows[0]?.thresholds.map(t => t.value) ?? [];
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ background: '#0F1620', border: '1px solid #253241' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#253241]">
-        <div className="flex items-center gap-2">
-          <span className="text-[13px] font-black text-[#00DFA9] tracking-wide">BET BUILDER</span>
-          <span className="text-[13px] font-black text-[#00DFA9]">+</span>
+    <div className="rounded-xl overflow-hidden" style={{ background: '#0D1219', border: '1px solid #253241' }}>
+
+      {/* Top bar: BET BUILDER + / Player Markets */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#253241]">
+        <div className="flex items-center gap-1">
+          <span className="text-[13px] font-black tracking-wide" style={{ color: '#00DFA9' }}>BET BUILDER</span>
+          <span className="text-[13px] font-black ml-0.5" style={{ color: '#00DFA9' }}>+</span>
         </div>
         <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#94A3B8]/60 hover:text-[#F8FAFC] transition-colors">
           Player Markets
@@ -367,32 +383,34 @@ function BetBuilderPlus({ matchup }: { matchup: NbaMatchup }) {
       </div>
 
       {/* Match header */}
-      <div className="flex items-center justify-center gap-3 py-3 border-b border-[#253241]/60">
+      <div className="flex items-center justify-center gap-4 py-3.5 border-b border-[#1C2736]">
         <div className="flex items-center gap-2">
-          <TeamIcon iconUrl={matchup.away.iconUrl} abbr={matchup.away.abbr} color={matchup.away.color} size={28} />
+          <TeamIcon iconUrl={matchup.away.iconUrl} abbr={matchup.away.abbr} color={matchup.away.color} size={26} />
           <span className="text-[13px] font-bold text-[#F8FAFC]">{matchup.away.name}</span>
         </div>
-        <span className="text-[12px] font-black text-[#94A3B8]/50">@</span>
+        <span className="text-[12px] font-black text-[#4B5C6B]">@</span>
         <div className="flex items-center gap-2">
-          <TeamIcon iconUrl={matchup.home.iconUrl} abbr={matchup.home.abbr} color={matchup.home.color} size={28} />
+          <TeamIcon iconUrl={matchup.home.iconUrl} abbr={matchup.home.abbr} color={matchup.home.color} size={26} />
           <span className="text-[13px] font-bold text-[#F8FAFC]">{matchup.home.name}</span>
         </div>
       </div>
-      <p className="text-center text-[10px] text-[#94A3B8]/40 py-1.5 border-b border-[#253241]/40 font-medium">
-        NBA · {matchup.day} · {matchup.time}
+
+      {/* Sub-title */}
+      <p className="text-center text-[10.5px] text-[#94A3B8]/50 py-1.5 border-b border-[#1C2736] font-medium">
+        NBA {matchup.day.split(',')[0]} {matchup.time}
       </p>
 
       {/* Market tabs */}
-      <div className="flex gap-0 border-b border-[#253241]">
+      <div className="flex border-b border-[#1C2736] bg-[#0B1017]">
         {MARKET_TABS.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setMarket(tab.id)}
+            onClick={() => { setMarket(tab.id); setShowAll(false); }}
             className={cn(
-              'flex-1 py-2 text-[11px] font-semibold transition-all duration-150',
+              'px-4 py-2.5 text-[12px] font-semibold transition-colors whitespace-nowrap',
               market === tab.id
-                ? 'text-[#F8FAFC] border-b-2 border-[#00DFA9] -mb-px bg-[#00DFA9]/5'
-                : 'text-[#94A3B8]/60 hover:text-[#F8FAFC] hover:bg-[#121821]/40'
+                ? 'text-[#F8FAFC] border-b-2 border-[#F8FAFC] -mb-px'
+                : 'text-[#94A3B8]/60 hover:text-[#F8FAFC]'
             )}
           >
             {tab.label}
@@ -401,28 +419,33 @@ function BetBuilderPlus({ matchup }: { matchup: NbaMatchup }) {
       </div>
 
       {/* Column headers */}
-      <div className="flex items-center px-3 py-1.5 border-b border-[#253241]/40 text-[10px] font-bold text-[#94A3B8]/50 uppercase tracking-wider">
-        <div className="w-[160px] shrink-0">Player / Last 5</div>
-        <div className="w-px mx-2 self-stretch" />
-        <div className="flex-1 flex gap-1.5">
+      <div className="flex items-center border-b border-[#1C2736] bg-[#0B1017]">
+        <div className="w-[200px] shrink-0 px-4 py-1.5">
+          <span className="text-[10px] font-bold text-[#94A3B8]/50 uppercase tracking-wider">Player / Last 5</span>
+        </div>
+        <div className="w-px self-stretch bg-[#253241]/50 shrink-0" />
+        <div className="flex flex-1">
           {headers.map(h => (
-            <div key={h} className="flex-1 text-center tabular-nums">{h}+</div>
+            <div key={h} className="flex-1 text-center py-1.5 text-[11px] font-bold text-[#94A3B8]/60 tabular-nums">
+              {h}
+            </div>
           ))}
         </div>
       </div>
 
       {/* Player rows */}
       {visible.map(row => (
-        <PlayerPropRowItem key={row.player.name} row={row} matchup={matchup} market={market} showAll={showAll} />
+        <PlayerPropRowItem key={row.player.name} row={row} matchup={matchup} market={market} />
       ))}
 
       {/* Show more */}
-      {rows.length > 4 && (
+      {rows.length > 5 && (
         <button
           onClick={() => setShowAll(v => !v)}
-          className="w-full py-2.5 text-[11px] font-semibold text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors border-t border-[#253241]/60"
+          className="w-full py-2.5 text-[12px] font-semibold text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors border-t border-[#1C2736] flex items-center justify-center gap-1"
         >
-          {showAll ? 'Show less ↑' : `Show more ↓`}
+          {showAll ? 'Show less' : 'Show more'}
+          <span className="text-[10px]">{showAll ? '↑' : '↓'}</span>
         </button>
       )}
     </div>
