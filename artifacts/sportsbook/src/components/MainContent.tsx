@@ -584,7 +584,6 @@ const FOOTER_NAV = [
     links: [
       { label: 'Terms & Conditions',   href: '/terms' },
       { label: 'Privacy Policy',       href: '/privacy' },
-      { label: 'Responsible Gambling', href: '/responsible-gambling' },
       { label: 'AML Policy',           href: '/aml' },
     ],
   },

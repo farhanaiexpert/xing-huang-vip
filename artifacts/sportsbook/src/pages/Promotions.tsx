@@ -425,8 +425,7 @@ export function Promotions() {
           <p className="text-[10px] text-[#94A3B8]/35 leading-relaxed">
             All promotions are subject to GoBet's general{' '}
             <Link href="/terms" className="underline hover:text-[#94A3B8]/60 transition-colors">Terms & Conditions</Link>
-            {' '}and individual promotion terms. Bonus funds cannot be withdrawn until wagering requirements are met.{' '}
-            <Link href="/responsible-gambling" className="underline hover:text-[#94A3B8]/60 transition-colors">Responsible Gambling</Link>
+            {' '}and individual promotion terms. Bonus funds cannot be withdrawn until wagering requirements are met.
           </p>
         </div>
       </main>

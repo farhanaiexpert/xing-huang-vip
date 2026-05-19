@@ -10,7 +10,6 @@ import { Help } from "@/pages/Help";
 import { Promotions } from "@/pages/Promotions";
 import { Terms } from "@/pages/Terms";
 import { Privacy } from "@/pages/Privacy";
-import { ResponsibleGambling } from "@/pages/ResponsibleGambling";
 import { AMLPolicy } from "@/pages/AMLPolicy";
 import { WinSpinPage } from "@/pages/WinSpinPage";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
@@ -34,7 +33,6 @@ function Router() {
       <Route path="/help"                 component={Help}                />
       <Route path="/terms"                component={Terms}               />
       <Route path="/privacy"              component={Privacy}             />
-      <Route path="/responsible-gambling" component={ResponsibleGambling} />
       <Route path="/aml"                  component={AMLPolicy}           />
       <Route path="/winspin"              component={WinSpinPage}         />
       <Route component={NotFound} />
