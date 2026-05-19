@@ -1,18 +1,24 @@
 /**
  * SPORT DETAIL PAGE
- * Bet365-style sport page with Featured / Competitions / Futures / Offers tabs.
- * Rendered by MainContent when a "sport detail" sport ID is selected.
+ * Bet365-style sport page with configurable tabs per sport.
+ * Supports: featured/coupons/matches, competitions, futures/outrights,
+ *           offers, freeGames tabs. Plus inline sections: BetBoost,
+ *           InPlay, MatchCoupon, MatchLists.
  */
 import { useState, useMemo } from 'react';
-import { ArrowLeft, RefreshCw, ChevronRight, Trophy, Tag, Star, Flame } from 'lucide-react';
+import {
+  ArrowLeft, RefreshCw, ChevronRight, Trophy, Tag, Star,
+  Flame, Zap, ChevronDown, MonitorPlay, Gamepad2,
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { League } from '../types';
-import { SPORT_DETAIL_CONFIGS, SPORT_DETAIL_IDS, type MockMatchCard } from '../data/sportDetailData';
+import {
+  SPORT_DETAIL_CONFIGS, SPORT_DETAIL_IDS,
+  type MockMatchCard, type TabId,
+} from '../data/sportDetailData';
 import { useBetSlip } from '../hooks/useBetSlip';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-type TabId = 'featured' | 'competitions' | 'futures' | 'offers';
 
 interface Props {
   sportId:          string;
@@ -23,7 +29,7 @@ interface Props {
   isRefreshing?:    boolean;
 }
 
-// ── Flag helper ────────────────────────────────────────────────────────────────
+// ── Flag helper ───────────────────────────────────────────────────────────────
 
 function flag(cc: string): string {
   if (!cc) return '';
@@ -35,15 +41,6 @@ function flag(cc: string): string {
     ).join('');
   } catch { return '🌐'; }
 }
-
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'featured',     label: 'Featured'      },
-  { id: 'competitions', label: 'Competitions'  },
-  { id: 'futures',      label: 'Futures'       },
-  { id: 'offers',       label: 'Offers'        },
-];
 
 // ── Odds button ───────────────────────────────────────────────────────────────
 
@@ -57,21 +54,11 @@ function OddsButton({
   const active = hasSelection(selectionId);
 
   function toggle() {
-    if (active) {
-      removeSelection(selectionId);
-    } else {
-      addSelection({
-        id:            selectionId,
-        marketId,
-        matchId,
-        matchName,
-        leagueName,
-        marketName:    'Match Result',
-        selectionType: label,
-        selectionName,
-        odds,
-      });
-    }
+    if (active) removeSelection(selectionId);
+    else addSelection({
+      id: selectionId, marketId, matchId, matchName, leagueName,
+      marketName: 'Match Result', selectionType: label, selectionName, odds,
+    });
   }
 
   return (
@@ -90,69 +77,264 @@ function OddsButton({
   );
 }
 
-// ── Match card (Featured grid item) ──────────────────────────────────────────
+// ── Match card ────────────────────────────────────────────────────────────────
 
 function MatchCard({ match, leagueName }: { match: MockMatchCard; leagueName: string }) {
-  const marketId = `${match.id}_h2h`;
+  const marketId  = `${match.id}_h2h`;
   const matchName = `${match.team1} v ${match.team2}`;
 
   return (
     <div className={cn(
-      'bg-[#121821] rounded-xl border transition-all duration-200',
+      'bg-[#121821] rounded-xl border transition-all duration-200 flex flex-col',
       match.isLive
-        ? 'border-[#EF4444]/30 shadow-[0_0_16px_rgba(239,68,68,0.08)]'
+        ? 'border-[#EF4444]/30 shadow-[0_0_12px_rgba(239,68,68,0.07)]'
         : 'border-[#253241] hover:border-[#2E3D50]'
     )}>
-      {/* Live badge */}
+      {/* Live / score bar */}
       {match.isLive && (
-        <div className="px-3 pt-2.5 pb-0 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
+        <div className="px-3 pt-2.5 pb-0 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse shrink-0" />
           <span className="text-[10px] font-bold text-[#EF4444] uppercase tracking-wider">Live</span>
+          {match.liveStatus && (
+            <span className="text-[10px] text-[#94A3B8]/50">{match.liveStatus}</span>
+          )}
         </div>
       )}
 
       {/* Teams */}
-      <div className="px-3 pt-3 pb-2">
-        <div className="flex flex-col gap-1.5 min-h-[48px]">
+      <div className="px-3 pt-3 pb-2 flex-1">
+        {/* Team 1 */}
+        <div className="flex items-center gap-1.5 mb-1.5">
+          {match.team1Country && (
+            <span className="text-sm leading-none shrink-0">{flag(match.team1Country)}</span>
+          )}
           <p className="text-[13px] font-semibold text-[#F8FAFC] leading-tight truncate">{match.team1}</p>
-          <p className="text-[13px] font-semibold text-[#F8FAFC] leading-tight truncate">{match.team2}</p>
+          {match.score1 && (
+            <span className="ml-auto text-[12px] font-bold text-[#F8FAFC] tabular-nums shrink-0">{match.score1}</span>
+          )}
         </div>
-        <p className="text-[11px] text-[#94A3B8]/55 mt-1.5 flex items-center gap-1">
-          <span className="inline-block w-1 h-1 rounded-full bg-[#38BDF8]/40" />
-          {match.dateLabel}
-        </p>
+        {/* Team 2 */}
+        <div className="flex items-center gap-1.5">
+          {match.team2Country && (
+            <span className="text-sm leading-none shrink-0">{flag(match.team2Country)}</span>
+          )}
+          <p className="text-[13px] font-semibold text-[#F8FAFC] leading-tight truncate">{match.team2}</p>
+          {match.score2 && (
+            <span className="ml-auto text-[12px] font-bold text-[#F8FAFC] tabular-nums shrink-0">{match.score2}</span>
+          )}
+        </div>
+        {/* Date */}
+        {!match.isLive && (
+          <p className="text-[11px] text-[#94A3B8]/50 mt-2 flex items-center gap-1">
+            <span className="inline-block w-1 h-1 rounded-full bg-[#38BDF8]/40" />
+            {match.dateLabel}
+          </p>
+        )}
       </div>
 
       {/* Odds */}
       <div className="px-3 pb-3 flex gap-2">
         <OddsButton
-          label="1" odds={match.odds1}
-          selectionId={`${match.id}_1`} marketId={marketId}
-          matchId={match.id} matchName={matchName} leagueName={leagueName}
-          selectionName={match.team1}
+          label="1" odds={match.odds1} selectionId={`${match.id}_1`}
+          marketId={marketId} matchId={match.id} matchName={matchName}
+          leagueName={leagueName} selectionName={match.team1}
         />
         {match.oddsDraw != null && (
           <OddsButton
-            label="X" odds={match.oddsDraw}
-            selectionId={`${match.id}_x`} marketId={marketId}
-            matchId={match.id} matchName={matchName} leagueName={leagueName}
-            selectionName="Draw"
+            label="X" odds={match.oddsDraw} selectionId={`${match.id}_x`}
+            marketId={marketId} matchId={match.id} matchName={matchName}
+            leagueName={leagueName} selectionName="Draw"
           />
         )}
         <OddsButton
-          label="2" odds={match.odds2}
-          selectionId={`${match.id}_2`} marketId={marketId}
-          matchId={match.id} matchName={matchName} leagueName={leagueName}
-          selectionName={match.team2}
+          label="2" odds={match.odds2} selectionId={`${match.id}_2`}
+          marketId={marketId} matchId={match.id} matchName={matchName}
+          leagueName={leagueName} selectionName={match.team2}
         />
       </div>
     </div>
   );
 }
 
-// ── Featured tab ──────────────────────────────────────────────────────────────
+// ── Section header ────────────────────────────────────────────────────────────
 
-function FeaturedTab({
+function SectionHeader({ label, icon }: { label: string; icon?: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 mb-3 mt-1">
+      {icon}
+      <span className="text-[13px] font-bold text-[#00DFA9]">{label}</span>
+      <div className="flex-1 h-px bg-gradient-to-r from-[#00DFA9]/20 to-transparent" />
+    </div>
+  );
+}
+
+// ── BetBoost section ──────────────────────────────────────────────────────────
+
+function BetBoostSection({ cards }: { cards: NonNullable<typeof import('../data/sportDetailData').SPORT_DETAIL_CONFIGS[string]['betBoostCards']> }) {
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Zap className="h-3.5 w-3.5 text-[#00DFA9]" />
+        <span className="text-[13px] font-bold text-[#00DFA9]">Bet Boost</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[#00DFA9]/20 to-transparent" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        {cards.map(card => (
+          <div
+            key={card.id}
+            className="bg-[#121821] rounded-xl border border-[#253241] hover:border-[#2E3D50] p-3.5 cursor-pointer transition-all duration-150 flex flex-col gap-2"
+          >
+            <div className="flex items-center gap-1">
+              <Zap className="h-2.5 w-2.5 text-[#00DFA9]" />
+              <span className="text-[9px] font-bold text-[#00DFA9] uppercase tracking-wider">BET BOOST »</span>
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight">{card.title}</p>
+              {card.subtitle && (
+                <p className="text-[11px] text-[#94A3B8]/60 mt-0.5 leading-tight">{card.subtitle}</p>
+              )}
+              <p className="text-[10px] text-[#94A3B8]/40 mt-1">{card.matchName}</p>
+            </div>
+            <div className="flex items-center gap-1.5 mt-auto pt-1">
+              <span className="text-[11px] text-[#94A3B8]/50 tabular-nums line-through">{card.baseOdds.toFixed(2)}</span>
+              <span className="text-[10px] text-[#94A3B8]/30">»</span>
+              <span className="text-[14px] font-bold text-[#00DFA9] tabular-nums">{card.boostedOdds.toFixed(2)}</span>
+            </div>
+            <p className="text-[10px] text-[#94A3B8]/40">{card.exampleReturn}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── In-Play section ───────────────────────────────────────────────────────────
+
+function InPlaySection({ items }: { items: NonNullable<typeof import('../data/sportDetailData').SPORT_DETAIL_CONFIGS[string]['inPlayItems']> }) {
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
+        <span className="text-[13px] font-bold text-[#EF4444]">In-Play</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[#EF4444]/20 to-transparent" />
+      </div>
+      <div className="space-y-1">
+        {items.map(item => (
+          <div
+            key={item.id}
+            className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#EF4444]/25 cursor-pointer transition-all duration-150"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse shrink-0" />
+            <span className="flex-1 text-[13px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">{item.name}</span>
+            <ChevronRight className="h-3.5 w-3.5 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/60 shrink-0 transition-colors" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Match Coupon section ──────────────────────────────────────────────────────
+
+function MatchCouponSection({ items }: { items: NonNullable<typeof import('../data/sportDetailData').SPORT_DETAIL_CONFIGS[string]['matchCouponItems']> }) {
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[13px] font-bold text-[#F8FAFC]">Match Coupon</span>
+        <div className="flex-1 h-px bg-[#253241]/60" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0">
+        {items.map(item => (
+          <div
+            key={item.id}
+            className="group flex items-center gap-2 py-2.5 border-b border-[#253241]/40 cursor-pointer hover:bg-[#121821] px-2 rounded transition-all"
+          >
+            <ChevronRight className="h-3.5 w-3.5 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/60 shrink-0 transition-colors" />
+            <span className="text-[13px] text-[#94A3B8]/70 group-hover:text-[#F8FAFC] transition-colors">{item.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Match Lists section (Esports) ─────────────────────────────────────────────
+
+function MatchListsSection({ items }: { items: NonNullable<typeof import('../data/sportDetailData').SPORT_DETAIL_CONFIGS[string]['matchLists']> }) {
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Gamepad2 className="h-3.5 w-3.5 text-[#94A3B8]/60" />
+        <span className="text-[13px] font-bold text-[#F8FAFC]">Match Lists</span>
+        <div className="flex-1 h-px bg-[#253241]/60" />
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-0">
+        {items.map(item => (
+          <div
+            key={item.id}
+            className="group flex items-center justify-between py-3 border-b border-[#253241]/40 cursor-pointer hover:bg-[#121821] px-2 rounded transition-all"
+          >
+            <span className={cn(
+              'text-[13px] font-medium transition-colors',
+              item.isHighlighted ? 'text-[#D1D9E2]' : 'text-[#94A3B8]/65 group-hover:text-[#D1D9E2]'
+            )}>
+              {item.name}
+            </span>
+            {item.count != null && (
+              <span className="flex items-center gap-0.5 text-[10px] font-bold text-[#F8FAFC] bg-[#00DFA9]/20 border border-[#00DFA9]/30 px-1.5 py-0.5 rounded-sm">
+                {item.count}
+                <ChevronRight className="h-2.5 w-2.5 text-[#00DFA9]/60" />
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Boxing competitions in coupons (collapsible) ──────────────────────────────
+
+function BoxingCompSection({ sportId }: { sportId: string }) {
+  const [open, setOpen] = useState(false);
+  const config = SPORT_DETAIL_CONFIGS[sportId];
+  if (!config.competitions.length) return null;
+
+  return (
+    <div className="mt-6">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#2E3D50] transition-all"
+      >
+        <span className="text-[14px] font-bold text-[#F8FAFC]">{config.name}</span>
+        <ChevronDown className={cn('h-4 w-4 text-[#94A3B8]/60 transition-transform duration-200', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div className="mt-1 bg-[#121821] rounded-xl border border-[#253241] overflow-hidden">
+          {config.competitions.map((comp, i) => (
+            <div
+              key={comp.id}
+              className={cn(
+                'group flex items-center gap-3 px-5 py-3.5 cursor-pointer hover:bg-[#18212B] transition-all',
+                i < config.competitions.length - 1 && 'border-b border-[#253241]/40'
+              )}
+            >
+              <span className="text-lg leading-none w-6 text-center shrink-0">
+                {comp.countryCode ? flag(comp.countryCode) : '🌐'}
+              </span>
+              <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">{comp.name}</span>
+              <ChevronRight className="h-4 w-4 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/70 shrink-0 transition-colors" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main tab (Featured / Coupons / Matches) ───────────────────────────────────
+
+function MainTab({
   sportId, leagues, lastUpdatedLabel, onRefresh, isRefreshing,
 }: {
   sportId: string; leagues: League[]; lastUpdatedLabel: string;
@@ -160,34 +342,25 @@ function FeaturedTab({
 }) {
   const config = SPORT_DETAIL_CONFIGS[sportId];
 
-  // Build match groups: prefer real API leagues, fall back to mock matches
   const groups = useMemo(() => {
     if (leagues.length > 0) {
-      // Use real API data — group by league
       return leagues.map(l => ({
         leagueName:  l.name,
         countryCode: l.countryCode ?? '',
         matches:     l.matches.map(m => ({
-          id:        m.id,
-          team1:     m.team1,
-          team2:     m.team2,
-          leagueName: l.name,
-          dateLabel: m.date,
-          odds1:     m.odds.home,
-          odds2:     m.odds.away,
-          oddsDraw:  m.odds.draw,
-          isLive:    m.isLive,
+          id: m.id, team1: m.team1, team2: m.team2,
+          leagueName: l.name, dateLabel: m.date,
+          odds1: m.odds.home, odds2: m.odds.away, oddsDraw: m.odds.draw,
+          isLive: m.isLive,
         } satisfies MockMatchCard)),
       }));
     }
-    // Fall back to mock matches grouped by leagueName
     const map = new Map<string, MockMatchCard[]>();
     for (const m of config.mockMatches) {
       const arr = map.get(m.leagueName) ?? [];
       arr.push(m);
       map.set(m.leagueName, arr);
     }
-    // Infer countryCode from competitions config
     return Array.from(map.entries()).map(([leagueName, matches]) => {
       const comp = config.competitions.find(c => c.name === leagueName);
       return { leagueName, countryCode: comp?.countryCode ?? '', matches };
@@ -195,6 +368,7 @@ function FeaturedTab({
   }, [leagues, config]);
 
   const hasData = groups.some(g => g.matches.length > 0);
+  const featuredLabel = config.featuredSectionLabel ?? 'Featured Matches';
 
   return (
     <div className="px-5 py-4">
@@ -207,12 +381,11 @@ function FeaturedTab({
             </span>
           )}
           {!isRefreshing && lastUpdatedLabel && (
-            <span className="text-[10px] text-[#94A3B8]/45 font-medium">{lastUpdatedLabel}</span>
+            <span className="text-[10px] text-[#94A3B8]/40 font-medium">{lastUpdatedLabel}</span>
           )}
         </div>
         <button
-          onClick={onRefresh}
-          disabled={isRefreshing}
+          onClick={onRefresh} disabled={isRefreshing}
           className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-semibold border border-[#253241] text-[#94A3B8]/60 hover:text-[#F8FAFC] hover:bg-[#121821] disabled:opacity-30 transition-all"
         >
           <RefreshCw className={cn('h-2.5 w-2.5', isRefreshing && 'animate-spin')} />
@@ -222,24 +395,15 @@ function FeaturedTab({
 
       {hasData ? (
         <div className="space-y-6">
-          {groups.map(group => (
-            <div key={group.leagueName}>
-              {/* League header */}
-              <div className="flex items-center gap-2 mb-3">
-                {group.countryCode && (
-                  <span className="text-base leading-none">{flag(group.countryCode)}</span>
-                )}
-                <span className="text-[13px] font-bold text-[#00DFA9]">{group.leagueName}</span>
-                <div className="flex-1 h-px bg-gradient-to-r from-[#00DFA9]/20 to-transparent ml-1" />
-              </div>
-              {/* Match card grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {group.matches.map(match => (
-                  <MatchCard key={match.id} match={match} leagueName={group.leagueName} />
-                ))}
-              </div>
+          {/* Featured section header */}
+          <div>
+            <SectionHeader label={featuredLabel} />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {groups.flatMap(g => g.matches).slice(0, 6).map(match => (
+                <MatchCard key={match.id} match={match} leagueName={match.leagueName} />
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center text-center py-16 px-6 bg-[#121821] rounded-xl border border-[#253241]">
@@ -258,6 +422,23 @@ function FeaturedTab({
           </button>
         </div>
       )}
+
+      {/* Optional sections */}
+      {config.inPlayItems && config.inPlayItems.length > 0 && (
+        <InPlaySection items={config.inPlayItems} />
+      )}
+      {config.betBoostCards && config.betBoostCards.length > 0 && (
+        <BetBoostSection cards={config.betBoostCards} />
+      )}
+      {config.matchCouponItems && config.matchCouponItems.length > 0 && (
+        <MatchCouponSection items={config.matchCouponItems} />
+      )}
+      {config.matchLists && config.matchLists.length > 0 && (
+        <MatchListsSection items={config.matchLists} />
+      )}
+      {config.showCompInCoupons && (
+        <BoxingCompSection sportId={sportId} />
+      )}
     </div>
   );
 }
@@ -266,7 +447,16 @@ function FeaturedTab({
 
 function CompetitionsTab({ sportId }: { sportId: string }) {
   const config = SPORT_DETAIL_CONFIGS[sportId];
-
+  if (!config.competitions.length) {
+    return (
+      <div className="flex flex-col items-center text-center py-16 px-6">
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-[#18212B] border border-[#253241] mb-4">
+          <Trophy className="h-6 w-6 text-[#94A3B8]/30" />
+        </div>
+        <p className="text-[14px] text-[#94A3B8]/50">No competitions listed</p>
+      </div>
+    );
+  }
   return (
     <div className="py-2">
       {config.competitions.map((comp, i) => (
@@ -280,13 +470,9 @@ function CompetitionsTab({ sportId }: { sportId: string }) {
           <span className="text-xl leading-none w-7 text-center shrink-0">
             {comp.countryCode ? flag(comp.countryCode) : '🌐'}
           </span>
-          <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">
-            {comp.name}
-          </span>
+          <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">{comp.name}</span>
           {comp.matchCount != null && (
-            <span className="text-[11px] font-semibold text-[#94A3B8]/45 tabular-nums mr-1">
-              {comp.matchCount}
-            </span>
+            <span className="text-[11px] font-semibold text-[#94A3B8]/45 tabular-nums mr-1">{comp.matchCount}</span>
           )}
           <ChevronRight className="h-4 w-4 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/70 shrink-0 transition-colors" />
         </div>
@@ -295,11 +481,10 @@ function CompetitionsTab({ sportId }: { sportId: string }) {
   );
 }
 
-// ── Futures tab ───────────────────────────────────────────────────────────────
+// ── Futures / Outrights tab ───────────────────────────────────────────────────
 
 function FuturesTab({ sportId }: { sportId: string }) {
   const config = SPORT_DETAIL_CONFIGS[sportId];
-
   return (
     <div className="py-2">
       {config.futuresMarkets.map((market, i) => (
@@ -313,9 +498,7 @@ function FuturesTab({ sportId }: { sportId: string }) {
           <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#18212B] border border-[#253241] shrink-0">
             <Trophy className="h-3.5 w-3.5 text-[#FACC15]/60" />
           </div>
-          <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">
-            {market}
-          </span>
+          <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">{market}</span>
           <ChevronRight className="h-4 w-4 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/70 shrink-0 transition-colors" />
         </div>
       ))}
@@ -327,31 +510,11 @@ function FuturesTab({ sportId }: { sportId: string }) {
 
 function OffersTab({ sportId }: { sportId: string }) {
   const config = SPORT_DETAIL_CONFIGS[sportId];
-
   const offers = [
-    {
-      id: 'acca-boost',
-      title: 'Acca Boost',
-      desc: `Get up to 70% extra winnings on your ${config.name} accumulators with 3+ selections.`,
-      tag: 'Popular',
-      color: '#00DFA9',
-    },
-    {
-      id: 'early-payout',
-      title: 'Early Payout Offer',
-      desc: `If your ${config.name} selection goes 2 goals/scores ahead — we pay you out early as a winner.`,
-      tag: 'Best Value',
-      color: '#38BDF8',
-    },
-    {
-      id: 'same-game',
-      title: 'Same Game Multi',
-      desc: `Combine multiple selections from the same ${config.name} match for a boosted multi-bet.`,
-      tag: 'New',
-      color: '#A78BFA',
-    },
+    { id: 'acca-boost',   title: 'Acca Boost',       desc: `Get up to 70% extra winnings on your ${config.name} accumulators with 3+ selections.`, tag: 'Popular',    color: '#00DFA9' },
+    { id: 'early-payout', title: 'Early Payout Offer',desc: `If your ${config.name} selection goes 2 scores ahead — we pay you out early as a winner.`, tag: 'Best Value', color: '#38BDF8' },
+    { id: 'same-game',    title: 'Same Game Multi',   desc: `Combine multiple selections from the same ${config.name} match for a boosted multi-bet.`, tag: 'New',        color: '#A78BFA' },
   ];
-
   return (
     <div className="px-5 py-4 space-y-3">
       {offers.map(offer => (
@@ -369,10 +532,7 @@ function OffersTab({ sportId }: { sportId: string }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[14px] font-semibold text-[#F8FAFC]">{offer.title}</span>
-              <span
-                style={{ color: offer.color, backgroundColor: `${offer.color}15` }}
-                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-              >
+              <span style={{ color: offer.color, backgroundColor: `${offer.color}15` }} className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
                 {offer.tag}
               </span>
             </div>
@@ -381,6 +541,48 @@ function OffersTab({ sportId }: { sportId: string }) {
           <ChevronRight className="h-4 w-4 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/60 shrink-0 mt-1 transition-colors" />
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── Free Games tab (Basketball) ───────────────────────────────────────────────
+
+function FreeGamesTab() {
+  const games = [
+    { id: 'sg_1', title: 'Score Predictor',      desc: 'Predict the final score of tonights NBA game and win a free bet.',   icon: '🎯', color: '#00DFA9' },
+    { id: 'sg_2', title: 'Fantasy Pick\'em',     desc: 'Select your top 5 players for todays slate and compete for prizes.', icon: '⭐', color: '#38BDF8' },
+    { id: 'sg_3', title: 'Top Scorer Challenge', desc: 'Pick the top scorer across all games tonight for a cash reward.',    icon: '🏆', color: '#FACC15' },
+    { id: 'sg_4', title: 'Half-time Predictor',  desc: 'Predict half-time leaders in 3 games and earn free bet credits.',   icon: '⏱️', color: '#A78BFA' },
+  ];
+  return (
+    <div className="px-5 py-4">
+      <div className="flex items-center gap-2 mb-4">
+        <MonitorPlay className="h-4 w-4 text-[#00DFA9]" />
+        <span className="text-[14px] font-bold text-[#F8FAFC]">Free to Play Games</span>
+        <span className="text-[9px] font-bold text-[#00DFA9] bg-[#00DFA9]/15 border border-[#00DFA9]/25 px-1.5 py-0.5 rounded uppercase tracking-wider">
+          Free Entry
+        </span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {games.map(game => (
+          <div
+            key={game.id}
+            style={{ borderColor: `${game.color}20` }}
+            className="group flex items-start gap-3 p-4 rounded-xl bg-[#121821] border cursor-pointer hover:bg-[#18212B] transition-all"
+          >
+            <div
+              style={{ backgroundColor: `${game.color}12` }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+            >
+              {game.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-semibold text-[#F8FAFC] mb-0.5">{game.title}</p>
+              <p className="text-[12px] text-[#94A3B8]/55 leading-relaxed">{game.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -400,6 +602,32 @@ export function SportDetailPage({
           leagues.flatMap(l => l.matches).filter(m => m.isLive).length,
     [config, leagues]
   );
+
+  function renderTabContent() {
+    switch (activeTab) {
+      case 'featured':
+      case 'coupons':
+      case 'matches':
+        return (
+          <MainTab
+            sportId={sportId} leagues={leagues}
+            lastUpdatedLabel={lastUpdatedLabel}
+            onRefresh={onRefresh} isRefreshing={isRefreshing}
+          />
+        );
+      case 'competitions':
+        return <CompetitionsTab sportId={sportId} />;
+      case 'futures':
+      case 'outrights':
+        return <FuturesTab sportId={sportId} />;
+      case 'offers':
+        return <OffersTab sportId={sportId} />;
+      case 'freeGames':
+        return <FreeGamesTab />;
+      default:
+        return null;
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-full">
@@ -426,8 +654,7 @@ export function SportDetailPage({
         </div>
 
         <button
-          onClick={onRefresh}
-          disabled={isRefreshing}
+          onClick={onRefresh} disabled={isRefreshing}
           title="Refresh data"
           className="flex items-center justify-center w-8 h-8 rounded-lg text-[#94A3B8]/50 hover:text-[#00DFA9] hover:bg-[#00DFA9]/8 disabled:opacity-30 transition-all duration-150"
         >
@@ -436,13 +663,13 @@ export function SportDetailPage({
       </div>
 
       {/* ── Tab bar ────────────────────────────────────────────────────── */}
-      <div className="flex border-b border-[#253241]/60 bg-[#0B0F14] sticky top-0 z-10">
-        {TABS.map(tab => (
+      <div className="flex border-b border-[#253241]/60 bg-[#0B0F14] sticky top-0 z-10 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        {config.tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'relative flex items-center gap-1.5 px-5 py-3 text-[13px] font-semibold transition-all duration-150 whitespace-nowrap',
+              'relative flex items-center gap-1.5 px-5 py-3 text-[13px] font-semibold transition-all duration-150 whitespace-nowrap shrink-0',
               activeTab === tab.id
                 ? 'text-[#F8FAFC]'
                 : 'text-[#94A3B8]/55 hover:text-[#94A3B8]/90'
@@ -452,7 +679,7 @@ export function SportDetailPage({
             {tab.id === 'featured' && liveCount > 0 && (
               <Flame className="h-3 w-3 text-[#EF4444]" />
             )}
-            {tab.id === 'futures' && (
+            {(tab.id === 'futures' || tab.id === 'outrights') && (
               <Star className="h-2.5 w-2.5 text-[#FACC15]/60" />
             )}
             {activeTab === tab.id && (
@@ -463,18 +690,7 @@ export function SportDetailPage({
       </div>
 
       {/* ── Tab content ────────────────────────────────────────────────── */}
-      {activeTab === 'featured' && (
-        <FeaturedTab
-          sportId={sportId}
-          leagues={leagues}
-          lastUpdatedLabel={lastUpdatedLabel}
-          onRefresh={onRefresh}
-          isRefreshing={isRefreshing}
-        />
-      )}
-      {activeTab === 'competitions' && <CompetitionsTab sportId={sportId} />}
-      {activeTab === 'futures'      && <FuturesTab sportId={sportId} />}
-      {activeTab === 'offers'       && <OffersTab sportId={sportId} />}
+      {renderTabContent()}
 
     </div>
   );

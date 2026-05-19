@@ -77,6 +77,8 @@ export const ODDS_API_SPORTS: OddsApiSportConfig[] = [
   // ── Cricket ───────────────────────────────────────────────────────────────────
   { key: 'cricket_ipl',              sportId: 'sp_cricket',           leagueName: 'Indian Premier League', countryCode: 'IN', hasDraw: false },
   { key: 'cricket_international_t20',sportId: 'sp_cricket',           leagueName: 'International T20',     countryCode: 'GL', hasDraw: false },
+  // ── Baseball ─────────────────────────────────────────────────────────────────
+  { key: 'baseball_mlb',             sportId: 'sp_baseball',          leagueName: 'MLB',                   countryCode: 'US', hasDraw: false },
   // ── MMA ───────────────────────────────────────────────────────────────────────
   { key: 'mma_mixed_martial_arts',   sportId: 'sp_mma',               leagueName: 'MMA / UFC',             countryCode: 'US', hasDraw: false },
 ];

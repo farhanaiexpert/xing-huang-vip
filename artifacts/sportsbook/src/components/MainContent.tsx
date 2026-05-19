@@ -391,7 +391,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               <SkeletonLeague rows={2} cols={3} />
             </div>
           ) : selectedSportId && SPORT_DETAIL_IDS.has(selectedSportId) ? (
-            /* ── Sport detail page (American Football, Aussie Rules, Badminton, Basketball) ── */
+            /* ── Sport detail page ── */
             <div className="-mx-4 -mt-4">
               <SportDetailPage
                 sportId={selectedSportId}
