@@ -315,7 +315,6 @@ function SportIconImg({ src }: { src: string }) {
       alt=""
       loading="lazy"
       className="w-4 h-4 object-contain shrink-0"
-      style={{ filter: 'brightness(0) invert(0.55)' }}
       onError={() => setFailed(true)}
     />
   );
