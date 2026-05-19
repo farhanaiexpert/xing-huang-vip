@@ -416,10 +416,6 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
 
-              {!search.trim() && (showFeatured || selectedSportId === 'tennis') && <TennisHighlights />}
-              {!search.trim() && (showFeatured || selectedSportId === 'nba') && <NBAHighlights />}
-              {!search.trim() && (showFeatured || selectedSportId === 'ucl-final') && <EuropaLeagueFinal />}
-
               {/* Live heading */}
               {dateFilter === 'today' && liveCount > 0 && (
                 <div className="flex items-center gap-2 mb-3">
@@ -448,6 +444,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 </div>
               )}
 
+              {/* ── League match sections (Premier League, La Liga, etc.) ── */}
               <div className="space-y-2.5">
                 {filteredLeagues.length > 0 ? (
                   filteredLeagues.map(league => (
@@ -463,6 +460,14 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                   <NoResultsState search={search} onClear={clearSearch} onReset={() => { onSelectSport(null); setDateFilter('all'); setSearch(''); }} />
                 ) : null}
               </div>
+
+              {/* ── Sport highlight sections — after leagues, best order ── */}
+              {/* 1. Europa League Final (football/soccer, marquee event) */}
+              {!search.trim() && (showFeatured || selectedSportId === 'ucl-final') && <EuropaLeagueFinal />}
+              {/* 2. NBA */}
+              {!search.trim() && (showFeatured || selectedSportId === 'nba') && <NBAHighlights />}
+              {/* 3. Tennis */}
+              {!search.trim() && (showFeatured || selectedSportId === 'tennis') && <TennisHighlights />}
             </>
           )}
         </div>
