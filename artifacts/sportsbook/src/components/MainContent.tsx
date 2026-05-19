@@ -404,7 +404,6 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           ) : (
             <>
               {showFeatured && <FeaturedCards />}
-              {showFeatured && <BetBuilder />}
               {showFeatured && <PopularBets />}
 
               {/* Live heading */}
@@ -439,6 +438,8 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 {filteredLeagues.length > 0 ? (
                   filteredLeagues.map(league => (
                     <div key={league.id}>
+                      {/* Bet Builder appears immediately before MMA / UFC */}
+                      {!search.trim() && league.sportId === 'sp_mma' && <BetBuilder />}
                       <LeagueSection league={league} />
                       {/* Upcoming Races appears immediately after Ligue 1 */}
                       {!search.trim() && league.id === 'lg_ligue1' && <UpcomingRaces />}
