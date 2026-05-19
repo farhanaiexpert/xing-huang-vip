@@ -93,7 +93,7 @@ export function Home() {
             <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 rounded-full bg-[#253241]" />
             </div>
-            <BetSlip className="w-full xl:flex h-full border-l-0" />
+            <BetSlip className="w-full xl:flex h-full border-l-0" forceExpanded />
           </DrawerContent>
         </Drawer>
       </div>

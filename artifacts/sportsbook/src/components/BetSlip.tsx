@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
@@ -6,12 +6,12 @@ import { formatOdds } from '../lib/oddsFormat';
 import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { cn } from '../lib/utils';
-import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Selection } from '../types';
 
-export function BetSlip({ className }: { className?: string }) {
+export function BetSlip({ className, forceExpanded }: { className?: string; forceExpanded?: boolean }) {
   const {
     selections, betType, setBetType,
     stake, setStake,
@@ -23,6 +23,18 @@ export function BetSlip({ className }: { className?: string }) {
   const { isConnected } = useWallet();
   const [isWalletOpen,   setIsWalletOpen]   = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
+  const [isScrolled,     setIsScrolled]     = useState(false);
+  const [compactExpanded, setCompactExpanded] = useState(false);
+
+  // Track main content scroll to switch between full/compact mode
+  useEffect(() => {
+    if (forceExpanded) return;
+    const el = document.getElementById('main-content-scroll');
+    if (!el) return;
+    const handler = () => setIsScrolled(el.scrollTop > 90);
+    el.addEventListener('scroll', handler, { passive: true });
+    return () => el.removeEventListener('scroll', handler);
+  }, [forceExpanded]);
 
   const hasSelections = selections.length > 0;
 
@@ -58,6 +70,115 @@ export function BetSlip({ className }: { className?: string }) {
   const canPlaceSingle   = isConnected && betType === 'single' && totalSingleStaked > 0 && hasSelections;
   const canPlace         = canPlaceAcca || canPlaceSingle;
   const readyToStake     = hasSelections;
+
+  // ── Compact floating card (shown when scrolled) ─────────────────
+  if (isScrolled && !forceExpanded) {
+    return (
+      <>
+        <aside className="w-[244px] fixed right-3 top-[4.25rem] hidden xl:flex flex-col z-50 rounded-2xl overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.04)] bg-[#121821]/96 backdrop-blur-xl border border-[#253241]/80 transition-all duration-300">
+
+          {/* Compact header */}
+          <div className="flex items-center justify-between px-3.5 py-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-lg flex items-center justify-center overflow-hidden bg-[#00DFA9]/10">
+                <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/soccer.png" alt="" className="w-4 h-4 object-contain" />
+              </div>
+              <span className="text-[12px] font-semibold text-[#F8FAFC] tracking-tight">Bet Slip</span>
+              {hasSelections && (
+                <span className="text-[9px] font-bold bg-[#00DFA9] text-[#0B0F14] px-1.5 py-0.5 rounded-full leading-none tabular-nums">
+                  {selections.length}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {hasSelections && (
+                <button onClick={clearSlip} className="p-1 rounded-lg text-[#94A3B8]/50 hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+              <button onClick={() => setCompactExpanded(p => !p)} className="p-1 rounded-lg text-[#94A3B8]/50 hover:text-[#F8FAFC] hover:bg-[#253241]/50 transition-all">
+                {compactExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Compact body */}
+          {!hasSelections ? (
+            compactExpanded && (
+              <div className="px-3.5 pb-3.5 border-t border-[#253241]/50">
+                <p className="text-[11px] text-[#94A3B8]/50 text-center pt-3">Pick a selection to start</p>
+              </div>
+            )
+          ) : (
+            <div className="border-t border-[#253241]/50">
+              {/* Quick stats row */}
+              <div className="flex items-center gap-2 px-3.5 py-2">
+                <span className="text-[10px] text-[#94A3B8]/60">{selections.length} selection{selections.length !== 1 ? 's' : ''}</span>
+                <div className="flex-1 h-px bg-[#253241]/40" />
+                {betType === 'acca' && totalOdds > 1 && (
+                  <span className="text-[10px] font-bold text-[#00DFA9]">{totalOdds.toFixed(2)}x</span>
+                )}
+              </div>
+
+              {compactExpanded && (
+                <div className="px-3.5 pb-3.5 space-y-2.5">
+                  {/* Type toggle */}
+                  <div className="flex rounded-xl bg-[#0B0F14]/80 border border-[#253241]/60 p-0.5 gap-0.5">
+                    {(['acca', 'single'] as const).map(type => (
+                      <button key={type} onClick={() => setBetType(type)}
+                        className={cn('flex-1 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all',
+                          betType === type ? 'bg-[#18212B] text-[#F8FAFC] shadow-sm' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
+                        )}>
+                        {type === 'single' ? 'Singles' : 'Acca'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Stake */}
+                  {betType === 'acca' ? (
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-[#94A3B8]/50 font-medium pointer-events-none">£</span>
+                        <Input type="number" placeholder="0.00" value={stake} onChange={e => setStake(e.target.value)}
+                          className="pl-6 h-8 text-[12px] bg-[#0B0F14] border-[#253241]/60 text-[#F8FAFC] rounded-xl focus-visible:ring-1 focus-visible:ring-[#00DFA9]/40" />
+                      </div>
+                      {accaReturn > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-[#94A3B8]/50">Est. Return</span>
+                          <span className="text-[11px] font-bold text-[#00DFA9]">£{accaReturn.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    totalSingleStaked > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-[#94A3B8]/50">Total staked</span>
+                        <span className="text-[11px] font-bold text-[#F8FAFC]">£{totalSingleStaked.toFixed(2)}</span>
+                      </div>
+                    )
+                  )}
+
+                  {/* Place bet */}
+                  <button onClick={handlePlaceBet} disabled={!canPlace}
+                    className={cn('w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200',
+                      canPlace
+                        ? 'bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 shadow-[0_0_16px_rgba(0,223,169,0.25)]'
+                        : 'bg-[#253241]/30 text-[#94A3B8]/30 cursor-not-allowed'
+                    )}>
+                    {isConnected ? 'Place Bet' : 'Connect Wallet'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </aside>
+
+        {/* Modals */}
+        {isWalletOpen && <ConnectWalletModal isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />}
+        {confirmation && <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />}
+      </>
+    );
+  }
 
   return (
     <aside className={cn(
