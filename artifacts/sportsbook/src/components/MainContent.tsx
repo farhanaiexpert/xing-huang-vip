@@ -415,6 +415,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
             <>
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
+              {showFeatured && <TennisHighlights />}
+              {showFeatured && <NBAHighlights />}
+              {showFeatured && <EuropaLeagueFinal />}
 
               {!search.trim() && selectedSportId === 'tennis' && <TennisHighlights />}
               {!search.trim() && selectedSportId === 'nba' && <NBAHighlights />}
