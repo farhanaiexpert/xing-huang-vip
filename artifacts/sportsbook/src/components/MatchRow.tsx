@@ -100,14 +100,14 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       <div className="flex flex-col gap-1.5 min-w-0 flex-1">
         {isHorse ? (
           <div className="flex items-center gap-2 min-w-0">
-            <TeamBadge name={match.team1} sportIcon="🏇" size="xs" className="shrink-0" />
+            <TeamBadge name={match.team1} sportIcon={SPORT_ICONS[match.sportId]} size="xs" className="shrink-0" />
             <span className="text-[13px] font-semibold text-[#F8FAFC] leading-none truncate">{match.team1}</span>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between gap-1">
               <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                <TeamBadge name={match.team1} size="xs" className="shrink-0" />
+                <TeamBadge name={match.team1} sportIcon={SPORT_ICONS[match.sportId]} size="xs" className="shrink-0" />
                 <span className="text-[13px] font-medium leading-none truncate text-[#F8FAFC]">{match.team1}</span>
               </div>
               {match.isLive && match.score !== undefined && (
