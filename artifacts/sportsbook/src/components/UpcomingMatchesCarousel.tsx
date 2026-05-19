@@ -13,6 +13,7 @@ import { useLocation } from 'wouter';
 import { Flame, ChevronRight, Clock, Zap } from 'lucide-react';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { TeamBadge } from './TeamBadge';
+import { JerseySilk } from './JerseySilk';
 import { cn } from '../lib/utils';
 import { useOddsData } from '../hooks/useOddsData';
 import { useBetSlip } from '../hooks/useBetSlip';
@@ -177,7 +178,10 @@ function MatchCard({ match, league }: MatchCardProps) {
       <div className="relative flex items-center justify-between px-4 py-4 gap-2">
         {/* Home */}
         <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-          <TeamBadge name={match.team1} sportIcon={theme.icon} size="md" />
+          {isSoccer
+            ? <JerseySilk team={match.team1} size="md" sportIcon={theme.icon} />
+            : <TeamBadge name={match.team1} sportIcon={theme.icon} size="md" />
+          }
           <span className="text-[11px] font-semibold text-[#F8FAFC] text-center leading-tight line-clamp-2 w-full">
             {match.team1}
           </span>
@@ -199,8 +203,11 @@ function MatchCard({ match, league }: MatchCardProps) {
 
         {/* Away */}
         <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-          <TeamBadge name={match.team2 ?? match.team1} sportIcon={theme.icon} size="md" />
-          <span className="text-[11px] font-semibold text-[#94A3B8] text-center leading-tight line-clamp-2 w-full group-hover:text-[#F8FAFC]">
+          {isSoccer
+            ? <JerseySilk team={match.team2 ?? match.team1} size="md" sportIcon={theme.icon} flip />
+            : <TeamBadge name={match.team2 ?? match.team1} sportIcon={theme.icon} size="md" />
+          }
+          <span className="text-[11px] font-semibold text-[#94A3B8] text-center leading-tight line-clamp-2 w-full">
             {match.team2 ?? 'TBD'}
           </span>
         </div>
