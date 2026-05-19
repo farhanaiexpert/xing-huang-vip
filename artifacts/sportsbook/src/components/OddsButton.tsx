@@ -113,6 +113,7 @@ export function OddsButton({
       data-testid={`odds-btn-${matchId}-${selectionType}`}
       className={cn(
         'relative w-[52px] h-9 flex flex-col items-center justify-center rounded-lg select-none overflow-hidden',
+        isLive ? 'gap-[1px] pt-0.5 pb-0.5' : '',
         'transition-all duration-200',
         isSelected
           ? [
@@ -152,15 +153,62 @@ export function OddsButton({
         {formatOdds(displayOdds, format)}
       </span>
 
-      {/* Tiny movement arrow below number (only when NOT flashing) */}
-      {!isSelected && movement !== 'stable' && !flashDir && (
-        <span className={cn(
-          'text-[7px] font-bold leading-none mt-0.5',
-          movement === 'up' ? 'text-[#22C55E]' : 'text-[#EF4444]'
-        )}>
-          {movement === 'up' ? '▲' : '▼'}
-        </span>
+      {/* Sparkline — live matches only, hidden when selected */}
+      {isLive && !isSelected && (
+        <OddsSparkline selectionId={selectionId} tick={tick} baseOdds={odds} />
       )}
     </button>
+  );
+}
+
+// ── Sparkline ─────────────────────────────────────────────────────────────────
+
+function OddsSparkline({ selectionId, tick, baseOdds }: {
+  selectionId: string;
+  tick: number;
+  baseOdds: number;
+}) {
+  const POINTS = 5;
+  const pts: number[] = [];
+  for (let i = POINTS - 1; i >= 0; i--) {
+    const t = Math.max(0, tick - i);
+    pts.push(Math.max(1.01, baseOdds + getOddsDelta(selectionId, t)));
+  }
+
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const range = max - min || 0.001;
+
+  const W = 32, H = 7;
+  const coordStr = pts
+    .map((p, i) => {
+      const x = (i / (POINTS - 1)) * W;
+      const y = H - ((p - min) / range) * (H - 1);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+
+  const last  = pts[POINTS - 1];
+  const first = pts[0];
+  const color = last > first ? '#22C55E' : last < first ? '#EF4444' : '#475569';
+
+  return (
+    <svg width={W} height={H} className="opacity-55 shrink-0">
+      <polyline
+        points={coordStr}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* End-point dot */}
+      <circle
+        cx={(((POINTS - 1) / (POINTS - 1)) * W).toFixed(1)}
+        cy={(H - ((last - min) / range) * (H - 1)).toFixed(1)}
+        r="1.5"
+        fill={color}
+      />
+    </svg>
   );
 }
