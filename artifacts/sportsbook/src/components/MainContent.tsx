@@ -9,6 +9,7 @@ import { SkeletonLeague } from './SkeletonLeague';
 import { UpcomingRaces } from './UpcomingRaces';
 import { UpcomingMatchesCarousel } from './UpcomingMatchesCarousel';
 import { WinnersTicker } from './WinnersTicker';
+import { SportQuickNav } from './SportQuickNav';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -159,6 +160,13 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
           {/* Winners ticker */}
           <WinnersTicker />
+
+          {/* Quick sport navigation */}
+          <SportQuickNav
+            selectedId={selectedSportId}
+            liveCount={liveCount}
+            onSelect={onSelectSport}
+          />
 
           {/* Search */}
           <div className="px-4 pt-3.5 pb-2.5">
