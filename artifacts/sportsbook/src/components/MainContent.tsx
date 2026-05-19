@@ -10,6 +10,7 @@ import { UpcomingRaces } from './UpcomingRaces';
 import { UpcomingMatchesCarousel } from './UpcomingMatchesCarousel';
 import { WinnersTicker } from './WinnersTicker';
 import { SportQuickNav } from './SportQuickNav';
+import { TennisHighlights } from './TennisHighlights';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -412,6 +413,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
             <>
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
+              {!search.trim() && selectedSportId === 'tennis' && <TennisHighlights />}
 
               {/* Live heading */}
               {dateFilter === 'today' && liveCount > 0 && (
