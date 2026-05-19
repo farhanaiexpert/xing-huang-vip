@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { LeagueSection } from './LeagueSection';
 import { FeaturedCards } from './FeaturedCards';
+import { BetBuilder } from './BetBuilder';
 import { PopularBets } from './PopularBets';
 import { SkeletonLeague } from './SkeletonLeague';
 import { UpcomingRaces } from './UpcomingRaces';
@@ -403,6 +404,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           ) : (
             <>
               {showFeatured && <FeaturedCards />}
+              {showFeatured && <BetBuilder />}
               {showFeatured && <PopularBets />}
 
               {/* Live heading */}
