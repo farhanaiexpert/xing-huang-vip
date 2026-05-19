@@ -172,7 +172,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   return (
     <aside className={cn(
-      'w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] fixed right-0 top-14 hidden xl:flex',
+      'w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] fixed right-0 top-14 hidden xl:flex border-t border-[#253241]',
       'bg-[#0D1117] border-l border-[#253241]',
       className
     )}>
