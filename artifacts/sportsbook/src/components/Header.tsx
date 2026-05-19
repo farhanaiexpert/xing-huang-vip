@@ -169,7 +169,7 @@ export function Header() {
                 <BarChart2 className="relative h-4 w-4 text-[#00DFA9]" />
               </div>
               <div className="hidden sm:flex flex-col leading-none">
-                <span className="text-[15px] font-black tracking-tight text-[#F8FAFC]">OddsChain</span>
+                <span className="text-[15px] font-black tracking-tight text-[#F8FAFC]">GoBet</span>
                 <span className="text-[9px] text-[#00DFA9]/60 font-semibold tracking-[0.15em] uppercase mt-0.5">Sports Trading</span>
               </div>
             </Link>

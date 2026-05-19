@@ -1,7 +1,7 @@
 /**
  * DATA LAYER TYPES
  * ─────────────────────────────────────────────────────────────────────────────
- * This file defines the canonical data model for the OddsChain sportsbook.
+ * This file defines the canonical data model for the GoBet sportsbook.
  * These types represent the shape of data that will later be served by the
  * backend API / database. The UI adapter layer (src/data/index.ts) translates
  * these entities into the UI types (src/types/index.ts) consumed by components.

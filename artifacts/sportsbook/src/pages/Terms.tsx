@@ -5,11 +5,11 @@ import { ArrowLeft, FileText } from 'lucide-react';
 const SECTIONS = [
   {
     title: 'Agreement to Terms',
-    body: 'By accessing or using OddsChain you agree to be bound by these Terms & Conditions. If you do not agree, you must not use this platform. We reserve the right to update these terms at any time; continued use after changes constitutes acceptance.',
+    body: 'By accessing or using GoBet you agree to be bound by these Terms & Conditions. If you do not agree, you must not use this platform. We reserve the right to update these terms at any time; continued use after changes constitutes acceptance.',
   },
   {
     title: 'Eligibility',
-    body: 'You must be at least 18 years of age (or the legal gambling age in your jurisdiction, whichever is higher) to use OddsChain. By registering you confirm that you meet this requirement and that gambling is legal where you reside.',
+    body: 'You must be at least 18 years of age (or the legal gambling age in your jurisdiction, whichever is higher) to use GoBet. By registering you confirm that you meet this requirement and that gambling is legal where you reside.',
   },
   {
     title: 'Account Responsibility',
@@ -17,19 +17,19 @@ const SECTIONS = [
   },
   {
     title: 'Betting Rules',
-    body: 'All bets are final once confirmed. OddsChain reserves the right to void bets placed on incorrect odds, suspended markets, or events affected by integrity concerns. Winnings are credited to your account balance after settlement.',
+    body: 'All bets are final once confirmed. GoBet reserves the right to void bets placed on incorrect odds, suspended markets, or events affected by integrity concerns. Winnings are credited to your account balance after settlement.',
   },
   {
     title: 'Intellectual Property',
-    body: 'All content on this platform — including logos, data, design, and software — is owned by OddsChain Ltd and may not be reproduced or distributed without written permission.',
+    body: 'All content on this platform — including logos, data, design, and software — is owned by GoBet Ltd and may not be reproduced or distributed without written permission.',
   },
   {
     title: 'Limitation of Liability',
-    body: 'OddsChain is not liable for losses arising from system outages, data errors, or events beyond our reasonable control. Our total liability to you in any circumstance shall not exceed the value of funds held in your account.',
+    body: 'GoBet is not liable for losses arising from system outages, data errors, or events beyond our reasonable control. Our total liability to you in any circumstance shall not exceed the value of funds held in your account.',
   },
   {
     title: 'Governing Law',
-    body: 'These terms are governed by the laws of Malta. Any disputes shall be subject to the exclusive jurisdiction of the Maltese courts. OddsChain is licensed by the Malta Gaming Authority (MGA/B2C/123/2021).',
+    body: 'These terms are governed by the laws of Malta. Any disputes shall be subject to the exclusive jurisdiction of the Maltese courts. GoBet is licensed by the Malta Gaming Authority (MGA/B2C/123/2021).',
   },
 ];
 

@@ -5,7 +5,7 @@ import { ArrowLeft, Shield } from 'lucide-react';
 const SECTIONS = [
   {
     title: 'Our Commitment',
-    body: 'OddsChain is committed to preventing money laundering and terrorist financing. We operate in full compliance with the EU Anti-Money Laundering Directive (AMLD) and the requirements of the Malta Gaming Authority.',
+    body: 'GoBet is committed to preventing money laundering and terrorist financing. We operate in full compliance with the EU Anti-Money Laundering Directive (AMLD) and the requirements of the Malta Gaming Authority.',
   },
   {
     title: 'Know Your Customer (KYC)',
@@ -21,7 +21,7 @@ const SECTIONS = [
   },
   {
     title: 'Suspicious Activity Reporting',
-    body: 'OddsChain has a designated Money Laundering Reporting Officer (MLRO). Suspicious transactions are reported to the Financial Intelligence Analysis Unit (FIAU) in Malta as required by law.',
+    body: 'GoBet has a designated Money Laundering Reporting Officer (MLRO). Suspicious transactions are reported to the Financial Intelligence Analysis Unit (FIAU) in Malta as required by law.',
   },
   {
     title: 'Record Keeping',

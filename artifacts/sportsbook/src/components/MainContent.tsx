@@ -579,7 +579,7 @@ function SiteFooter() {
               <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/10 border border-[#00DFA9]/25 flex items-center justify-center">
                 <BarChart2 className="h-3.5 w-3.5 text-[#00DFA9]" />
               </div>
-              <span className="font-black text-[#F8FAFC] text-sm tracking-tight">OddsChain</span>
+              <span className="font-black text-[#F8FAFC] text-sm tracking-tight">GoBet</span>
             </div>
             <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[180px]">
               Live odds, instant settlement, and provably fair sports markets.
@@ -633,7 +633,7 @@ function SiteFooter() {
         {/* Bottom bar */}
         <div className="border-t border-[#253241]/40 pt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[9px] text-[#94A3B8]/30">
-            © 2021–2026 OddsChain Ltd. All rights reserved. · 18+ · Gamble responsibly.
+            © 2021–2026 GoBet Ltd. All rights reserved. · 18+ · Gamble responsibly.
           </p>
           <div className="flex items-center gap-3">
             {['18+', 'BeGambleAware', 'GamCare'].map((b) => (
@@ -696,7 +696,7 @@ function TrustFooter() {
         ))}
         <div className="flex-1" />
         <p className="text-[9px] text-[#94A3B8]/25 leading-none whitespace-nowrap">
-          OddsChain · For entertainment purposes
+          GoBet · For entertainment purposes
         </p>
       </div>
     </div>

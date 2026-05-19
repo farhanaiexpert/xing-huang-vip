@@ -17,7 +17,7 @@ const SECTIONS = [
   },
   {
     title: 'Cookies',
-    body: 'OddsChain uses essential cookies to keep you logged in and remember your preferences (e.g. odds format). Analytics cookies help us understand usage patterns. You can manage cookie preferences in your browser settings.',
+    body: 'GoBet uses essential cookies to keep you logged in and remember your preferences (e.g. odds format). Analytics cookies help us understand usage patterns. You can manage cookie preferences in your browser settings.',
   },
   {
     title: 'Data Retention',

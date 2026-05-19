@@ -20,7 +20,7 @@ const SECTIONS = [
     summary: 'Odds represent the probability of an outcome and determine your potential return.',
     content: [
       { heading: 'What are odds?', text: 'Odds are numbers that tell you how much profit you can make relative to your stake. For example, odds of 2.00 mean you double your money if you win — stake $10, return $20.' },
-      { heading: 'Decimal odds (default)', text: 'OddsChain shows decimal odds by default. Your total return (stake + profit) = Stake × Odds. So $10 at 3.50 returns $35 total, a profit of $25.' },
+      { heading: 'Decimal odds (default)', text: 'GoBet shows decimal odds by default. Your total return (stake + profit) = Stake × Odds. So $10 at 3.50 returns $35 total, a profit of $25.' },
       { heading: 'Fractional odds', text: 'Common in the UK. 5/2 means for every $2 you stake, you win $5 profit. To convert: (numerator ÷ denominator) + 1 = decimal equivalent.' },
       { heading: 'American odds', text: 'Common in the US. Positive (+150) shows profit on a $100 stake. Negative (−200) shows how much you need to stake to win $100. Use the DEC / FRAC / US toggle in the header to switch formats.' },
       { heading: 'Odds movement', text: 'Odds can shorten (get smaller) or drift (get bigger) as events approach or money comes in. Live odds update in real time during a match.' },
@@ -75,7 +75,7 @@ const SECTIONS = [
     title: 'Connecting a Wallet',
     summary: 'You need to connect a Web3 wallet before placing any bets.',
     content: [
-      { heading: 'Why a wallet?', text: 'OddsChain is a decentralised sportsbook. Your wallet is your identity and your funds. There are no accounts or passwords — just your wallet address.' },
+      { heading: 'Why a wallet?', text: 'GoBet is a decentralised sportsbook. Your wallet is your identity and your funds. There are no accounts or passwords — just your wallet address.' },
       { heading: 'How to connect', text: 'Click the green "Connect Wallet" button in the top right of the header. Choose MetaMask, Coinbase Wallet, WalletConnect, or any other supported provider.' },
       { heading: 'What happens after connection', text: 'Your shortened wallet address appears in the header confirming you\'re connected. The Bet Slip will now allow you to place bets and your Bet History will be linked to your address.' },
       { heading: 'Browsing without a wallet', text: 'You can browse all matches, view odds, and build up a Bet Slip without connecting. Only placing a bet requires connection.' },
@@ -118,7 +118,7 @@ export function Help() {
           </Link>
           <div>
             <h1 className="text-xl font-bold text-[#F8FAFC] leading-none">Help & Rules</h1>
-            <p className="text-xs text-[#94A3B8] mt-0.5">How OddsChain works</p>
+            <p className="text-xs text-[#94A3B8] mt-0.5">How GoBet works</p>
           </div>
         </div>
 
@@ -246,7 +246,7 @@ export function Help() {
 
         <div className="mt-8 text-center">
           <p className="text-[10px] text-[#94A3B8]/30">
-            OddsChain · All odds subject to change · 18+
+            GoBet · All odds subject to change · 18+
           </p>
         </div>
       </div>
