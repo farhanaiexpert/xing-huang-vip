@@ -59,7 +59,7 @@ export interface PlayerPropRow {
 
 const CLE: NbaTeamDef = {
   name: 'CLE Cavaliers', abbr: 'CLE', color: '#6F263D',
-  iconUrl: `${NBA_CDN}CLE_Cavaliers_Icon_Front_25.svg`,
+  iconUrl: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/CLE_Cavaliers_Icon_Front_25.svg',
   players: [
     { name: 'Donovan Mitchell',  number: '45', ppg: 26.5, apg: 5.8,  rpg: 4.7,  tpg: 2.1 },
     { name: 'James Harden',      number: '1',  ppg: 20.0, apg: 8.5,  rpg: 4.5,  tpg: 2.0 },
