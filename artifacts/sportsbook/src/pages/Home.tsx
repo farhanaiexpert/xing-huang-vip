@@ -39,6 +39,9 @@ export function Home() {
           onSelectSport={setSelectedSportId}
         />
 
+        {/* Spacer to reserve room for the fixed BetSlip panel */}
+        <div className="w-[260px] shrink-0 hidden xl:block" />
+
         <BetSlip />
       </div>
 

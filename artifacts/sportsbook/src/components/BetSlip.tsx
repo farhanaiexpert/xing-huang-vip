@@ -61,7 +61,7 @@ export function BetSlip({ className }: { className?: string }) {
 
   return (
     <aside className={cn(
-      'w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-0 hidden xl:flex',
+      'w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] fixed right-0 top-14 hidden xl:flex',
       'bg-[#0D1117] border-l border-[#253241]',
       className
     )}>
@@ -69,8 +69,8 @@ export function BetSlip({ className }: { className?: string }) {
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#253241] bg-gradient-to-b from-[#121821] to-[#0D1117] shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center overflow-hidden bg-[#00DFA9]/10 border border-[#00DFA9]/20">
-            <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/casino-chips.png" alt="" className="w-5 h-5 object-contain" />
+          <div className="w-6 h-6 rounded-md flex items-center justify-center overflow-hidden bg-[#00DFA9]/10">
+            <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/soccer.png" alt="" className="w-5 h-5 object-contain" />
           </div>
           <span className="text-sm font-semibold text-[#F8FAFC]">Bet Slip</span>
           {hasSelections && (
