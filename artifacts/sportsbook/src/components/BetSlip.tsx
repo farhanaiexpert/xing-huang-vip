@@ -69,8 +69,8 @@ export function BetSlip({ className }: { className?: string }) {
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#253241] bg-gradient-to-b from-[#121821] to-[#0D1117] shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center bg-[#00DFA9]/10 border border-[#00DFA9]/20">
-            <Target className="h-3.5 w-3.5 text-[#00DFA9]" />
+          <div className="w-6 h-6 rounded-md flex items-center justify-center overflow-hidden bg-[#00DFA9]/10 border border-[#00DFA9]/20">
+            <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/casino-chips.png" alt="" className="w-5 h-5 object-contain" />
           </div>
           <span className="text-sm font-semibold text-[#F8FAFC]">Bet Slip</span>
           {hasSelections && (
