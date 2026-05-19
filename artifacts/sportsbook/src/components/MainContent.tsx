@@ -357,8 +357,10 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 {hasRealData ? 'Odds refresh failed — showing cached data' : 'Could not fetch live odds — using demo data'}
               </p>
               <p className="text-[11px] text-[#EF4444]/50 mt-0.5 leading-relaxed">
-                {oddsError.includes('401') || oddsError.includes('Unauthorized')
-                  ? 'API key invalid or expired. Check your VITE_ODDS_API_KEY.'
+                {oddsError === 'QUOTA_EXHAUSTED'
+                  ? 'Monthly API quota reached. Top up credits at the-odds-api.com to restore live odds.'
+                  : oddsError === 'INVALID_KEY'
+                  ? 'API key rejected. Check your VITE_ODDS_API_KEY secret.'
                   : 'Network issue. Odds will auto-refresh on your next visit.'}
               </p>
             </div>

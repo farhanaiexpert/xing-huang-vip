@@ -15,6 +15,7 @@ import { normalizeEvents, buildLeague } from '../lib/normalizeOdds';
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
 const STORAGE_KEY  = 'oddschain_v1';
+const QUOTA_KEY    = 'oddschain_quota_exhausted';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface StoredEntry {
@@ -38,6 +39,18 @@ function saveToStorage(entry: StoredEntry): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entry));
   } catch { /* storage quota exceeded — silently skip */ }
+}
+
+function isQuotaExhausted(): boolean {
+  try { return localStorage.getItem(QUOTA_KEY) === '1'; } catch { return false; }
+}
+
+function setQuotaExhausted(): void {
+  try { localStorage.setItem(QUOTA_KEY, '1'); } catch {}
+}
+
+function clearQuotaExhausted(): void {
+  try { localStorage.removeItem(QUOTA_KEY); } catch {}
 }
 
 // ─── Module-level session cache (faster than localStorage) ───────────────────
@@ -80,7 +93,10 @@ async function fetchAllLeagues(
   for (const item of resolved) {
     if (!item) continue;
     if (!item.ok) {
-      if (!anyError && 'err' in item) anyError = (item as { err: Error }).err.message;
+      const msg = 'err' in item ? (item as { err: Error }).err.message : '';
+      // Quota exhausted — propagate immediately, no point processing more
+      if (msg === 'QUOTA_EXHAUSTED') return { leagues: [], error: 'QUOTA_EXHAUSTED' };
+      if (!anyError) anyError = msg;
       continue;
     }
     const matches = normalizeEvents(item.events, item.config);
@@ -133,6 +149,7 @@ export function useOddsApi(): UseOddsApiResult {
     if (!isMounted.current) return;
 
     if (leagues.length > 0) {
+      clearQuotaExhausted();
       const now: StoredEntry = { leagues, fetchedAt: Date.now() };
       _sessionCache = now;
       saveToStorage(now);
@@ -140,6 +157,7 @@ export function useOddsApi(): UseOddsApiResult {
       setFetchedAt(new Date(now.fetchedAt));
       setError(null);
     } else if (fetchError) {
+      if (fetchError === 'QUOTA_EXHAUSTED') setQuotaExhausted();
       setError(fetchError);
     }
 
@@ -151,6 +169,13 @@ export function useOddsApi(): UseOddsApiResult {
 
     const apiKey = import.meta.env.VITE_ODDS_API_KEY as string | undefined;
     if (!apiKey) return;
+
+    // If quota is known to be exhausted, surface the error immediately without
+    // making any API calls (saves credits when user revisits the page).
+    if (isQuotaExhausted()) {
+      setError('QUOTA_EXHAUSTED');
+      return () => { isMounted.current = false; };
+    }
 
     const cached = _sessionCache ?? loadFromStorage();
 
@@ -181,8 +206,12 @@ export function useOddsApi(): UseOddsApiResult {
     isStale,
     lastUpdatedLabel: getLastUpdatedLabel(fetchedAt),
     refresh:          () => {
+      // Clear quota flag so a manual refresh always retries
+      // (user may have topped up their credits)
+      clearQuotaExhausted();
       _sessionCache = null;
       try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+      setError(null);
       void doFetch(realLeagues.length > 0);
     },
   };

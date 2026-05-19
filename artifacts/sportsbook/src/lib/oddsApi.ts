@@ -92,7 +92,20 @@ export async function fetchSportOdds(
     dateFormat: 'iso',
   });
   const res = await fetch(`${BASE_URL}/sports/${sportKey}/odds?${params}`);
-  if (res.status === 401) throw new Error('Invalid Odds API key');
+
+  if (res.status === 401) {
+    // Parse body to distinguish "invalid key" from "quota exhausted"
+    try {
+      const body = await res.json() as { error_code?: string };
+      if (body.error_code === 'OUT_OF_USAGE_CREDITS') {
+        throw new Error('QUOTA_EXHAUSTED');
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message === 'QUOTA_EXHAUSTED') throw e;
+    }
+    throw new Error('INVALID_KEY');
+  }
+
   if (res.status === 422) return [];           // sport not currently available
   if (res.status === 429) throw new Error('Odds API rate limit reached');
   if (!res.ok) throw new Error(`Odds API HTTP ${res.status}`);
