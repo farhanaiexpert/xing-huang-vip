@@ -10,11 +10,9 @@ import { UpcomingRaces } from './UpcomingRaces';
 import { UpcomingMatchesCarousel } from './UpcomingMatchesCarousel';
 import { WinnersTicker } from './WinnersTicker';
 import { SportQuickNav } from './SportQuickNav';
-import { SoccerHighlights } from './SoccerHighlights';
 import { TennisHighlights } from './TennisHighlights';
 import { NBAHighlights } from './NBAHighlights';
 import { EuropaLeagueFinal } from './EuropaLeagueFinal';
-import { ESoccerHighlights } from './ESoccerHighlights';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { Input } from './ui/input';
@@ -418,6 +416,10 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
 
+              {!search.trim() && selectedSportId === 'tennis' && <TennisHighlights />}
+              {!search.trim() && selectedSportId === 'nba' && <NBAHighlights />}
+              {!search.trim() && selectedSportId === 'ucl-final' && <EuropaLeagueFinal />}
+
               {/* Live heading */}
               {dateFilter === 'today' && liveCount > 0 && (
                 <div className="flex items-center gap-2 mb-3">
@@ -446,33 +448,12 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 </div>
               )}
 
-              {/* ── League match sections (Premier League, La Liga, etc.) ── */}
               <div className="space-y-2.5">
                 {filteredLeagues.length > 0 ? (
                   filteredLeagues.map(league => (
                     <div key={league.id}>
                       {/* Bet Builder appears immediately before MMA / UFC */}
                       {!search.trim() && league.sportId === 'sp_mma' && <BetBuilder />}
-
-                      {/*
-                        ── Highlight sections injected just above French Open - ATP ──
-                        All Sports: Soccer → Tennis → NBA → Europa League → ESoccer
-                        Individual tabs: only that sport's section
-                      */}
-                      {!search.trim() && league.id === 'lg_atp_rome' && showFeatured && (
-                        <>
-                          <SoccerHighlights />
-                          <TennisHighlights />
-                          <NBAHighlights />
-                          <EuropaLeagueFinal />
-                          <ESoccerHighlights />
-                        </>
-                      )}
-                      {!search.trim() && league.id === 'lg_pl'       && selectedSportId === 'soccer'  && <SoccerHighlights />}
-                      {!search.trim() && league.id === 'lg_atp_rome' && selectedSportId === 'tennis'  && <TennisHighlights />}
-                      {!search.trim() && league.id === 'lg_nba'      && selectedSportId === 'nba'     && <NBAHighlights />}
-                      {!search.trim() && league.id === 'lg_cs2'      && selectedSportId === 'esports' && <ESoccerHighlights />}
-
                       <LeagueSection league={league} />
                       {/* Upcoming Races appears immediately after Ligue 1 */}
                       {!search.trim() && league.id === 'lg_ligue1' && <UpcomingRaces />}
@@ -482,9 +463,6 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                   <NoResultsState search={search} onClear={clearSearch} onReset={() => { onSelectSport(null); setDateFilter('all'); setSearch(''); }} />
                 ) : null}
               </div>
-
-              {/* Europa League Final for its dedicated tab (no league rows exist for ucl-final) */}
-              {!search.trim() && selectedSportId === 'ucl-final' && <EuropaLeagueFinal />}
             </>
           )}
         </div>
