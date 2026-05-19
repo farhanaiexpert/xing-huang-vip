@@ -52,9 +52,11 @@ function AccaCardItem({ card }: { card: AccaCard }) {
         <div className="space-y-1.5 mb-4 flex-1">
           {card.selections.map((sel, i) => (
             <div key={i} className="flex items-start gap-2 text-[11px] text-[#94A3B8] leading-snug">
-              <div className="w-3 h-3 rounded-full flex items-center justify-center shrink-0 mt-0.5 border border-[#00DFA9]/25">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#00DFA9]" />
-              </div>
+              <img
+                src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/tennis-balls.png"
+                alt=""
+                className="w-3.5 h-3.5 shrink-0 mt-0.5 object-contain"
+              />
               <span className="line-clamp-2">{sel}</span>
             </div>
           ))}
