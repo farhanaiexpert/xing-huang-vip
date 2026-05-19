@@ -12,21 +12,12 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'soccer',        label: 'Soccer',              icon: '⚽' },
-  { id: 'tennis',        label: 'Tennis',              icon: '🎾' },
-  { id: 'nba',           label: 'NBA',                 icon: '🏀' },
-  { id: 'cricket',       label: 'Cricket',             icon: '🏏' },
-  { id: 'esports',       label: 'Esoccer',             icon: '🎮' },
-  { id: 'horse-racing',  label: 'Racing',              icon: '🏇' },
-  { id: 'formula-1',     label: 'Formula 1',           icon: '🏎️' },
-  { id: 'mma',           label: 'MMA / UFC',           icon: '🥋' },
-  { id: 'boxing',        label: 'Boxing',              icon: '🥊' },
-  { id: 'golf',          label: 'Golf',                icon: '⛳' },
-  { id: 'darts',         label: 'Darts',               icon: '🎯' },
-  { id: 'ice-hockey',    label: 'Ice Hockey',          icon: '🏒' },
-  { id: 'american-football', label: 'NFL',             icon: '🏈' },
-  { id: 'ucl-final',     label: 'UCL Final',           icon: '🏆', featured: true, badge: 'hot' },
-  { id: 'live',          label: 'In-Play',             icon: '🔴', badge: 'live' },
+  { id: 'soccer',       label: 'Soccer',                  icon: '⚽' },
+  { id: 'tennis',       label: 'Tennis',                  icon: '🎾' },
+  { id: 'nba',          label: 'NBA',                     icon: '🏀' },
+  { id: 'ucl-final',   label: 'Europa League Final',      icon: '🏆', featured: true, badge: 'hot' },
+  { id: 'esports',      label: 'Esoccer',                 icon: '🎮' },
+  { id: 'horse-racing', label: 'Upcoming Races - Horses', icon: '🏇' },
 ];
 
 interface Props {
