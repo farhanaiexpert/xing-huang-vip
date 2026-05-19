@@ -421,6 +421,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               {showFeatured && <NBAHighlights />}
               {showFeatured && <EuropaLeagueFinal />}
 
+              {!search.trim() && selectedSportId === 'soccer' && <SoccerHighlights />}
               {!search.trim() && selectedSportId === 'tennis' && <TennisHighlights />}
               {!search.trim() && selectedSportId === 'nba' && <NBAHighlights />}
               {!search.trim() && selectedSportId === 'ucl-final' && <EuropaLeagueFinal />}
