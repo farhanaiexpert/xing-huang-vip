@@ -1,35 +1,13 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronRight, Zap } from 'lucide-react';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { OddsButton } from './OddsButton';
 import { getDailyMatches, buildAccaCards } from '../data/tennisData';
 import type { TennisMatch, AccaCard } from '../data/tennisData';
 
-// ── Bet365 tennis classification SVG icon ─────────────────────────────────────
-const BET365_TENNIS_ICON = 'https://www.bet365.com/sports-assets/sports/ClassificationIconsLib/assets/classification/13.svg';
+// ── Acca Boost card — styled like FeaturedCards ────────────────────────────────
 
-function TennisIcon({ size = 20, className = '' }: { size?: number; className?: string }) {
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  return (
-    <img
-      ref={imgRef}
-      src={BET365_TENNIS_ICON}
-      alt="Tennis"
-      width={size}
-      height={size}
-      className={className}
-      style={{ display: 'inline-block' }}
-      onError={() => {
-        if (imgRef.current) imgRef.current.style.display = 'none';
-      }}
-    />
-  );
-}
-
-// ── Acca Boost card ───────────────────────────────────────────────────────────
-
-function AccaCardItem({ card, index }: { card: AccaCard; index: number }) {
+function AccaCardItem({ card }: { card: AccaCard }) {
   const isSpecial = card.isSpecial;
 
   return (
@@ -38,45 +16,26 @@ function AccaCardItem({ card, index }: { card: AccaCard; index: number }) {
       style={{
         background: 'linear-gradient(160deg, #18212B 0%, #121821 100%)',
         border: '1px solid #253241',
-        transition: 'border-color 0.18s, box-shadow 0.18s, transform 0.18s',
-        animation: `tennisCardIn 0.38s cubic-bezier(0.22,1,0.36,1) ${index * 70}ms both`,
+        transition: 'border-color 0.15s, box-shadow 0.15s',
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.borderColor = 'rgba(0,223,169,0.35)';
-        el.style.boxShadow   = '0 0 28px rgba(0,223,169,0.12)';
-        el.style.transform   = 'translateY(-2px)';
+        el.style.boxShadow   = '0 0 24px rgba(0,223,169,0.1)';
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.borderColor = '#253241';
         el.style.boxShadow   = '';
-        el.style.transform   = '';
       }}
     >
-      {/* Animated shimmer stripe at top */}
-      <div
-        className="h-[2px] w-full"
-        style={{
-          background: 'linear-gradient(90deg, transparent, #00DFA9 40%, #38BDF8 60%, transparent)',
-          backgroundSize: '200% 100%',
-          animation: 'tennisStripe 2.8s linear infinite',
-          animationDelay: `${index * 0.4}s`,
-        }}
-      />
+      {/* Top accent stripe */}
+      <div className="h-[2px] w-full" style={{ background: 'linear-gradient(90deg,#00DFA9,transparent)' }} />
 
       <div className="p-4 flex flex-col flex-1">
         {/* Badge row */}
         <div className="flex items-center gap-1.5 mb-3">
-          <div
-            className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
-            style={{
-              background: 'rgba(0,223,169,0.1)',
-              border: '1px solid rgba(0,223,169,0.25)',
-              animation: 'accentPulse 2.4s ease-in-out infinite',
-              animationDelay: `${index * 0.6}s`,
-            }}
-          >
+          <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 bg-[#00DFA9]/10 border border-[#00DFA9]/25">
             <Zap className="h-2.5 w-2.5 text-[#00DFA9]" />
           </div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#00DFA9]">
@@ -138,34 +97,19 @@ function AccaCardItem({ card, index }: { card: AccaCard; index: number }) {
   );
 }
 
-// ── Tennis match row ──────────────────────────────────────────────────────────
+// ── Tennis match row — mirrors MatchRow layout ─────────────────────────────────
 
-function TennisMatchRow({ match, index }: { match: TennisMatch; index: number }) {
+function TennisMatchRow({ match }: { match: TennisMatch }) {
   const sharedProps = {
-    matchId:    match.id,
-    marketId:   `tennis_market_${match.id}`,
-    matchName:  `${match.player1} v ${match.player2}`,
+    matchId:   match.id,
+    marketId:  `tennis_market_${match.id}`,
+    matchName: `${match.player1} v ${match.player2}`,
     leagueName: match.tournament,
     marketName: 'To Win Match',
   };
 
   return (
-    <div
-      className="flex items-center gap-3 px-3 py-2.5 border-b border-[#253241]/50 hover:bg-[#121821]/60 transition-colors group cursor-pointer"
-      style={{
-        animation: `tennisRowIn 0.3s ease-out ${index * 45}ms both`,
-      }}
-    >
-      {/* Player icon + names */}
-      <div className="flex items-center gap-2 shrink-0">
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.15)' }}
-        >
-          <TennisIcon size={15} />
-        </div>
-      </div>
-
+    <div className="flex items-center gap-3 px-3 py-2.5 border-b border-[#253241]/50 hover:bg-[#121821]/60 transition-colors group cursor-pointer">
       {/* Players + time */}
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         <span className="text-[13px] font-medium text-[#F8FAFC] leading-none truncate">{match.player1}</span>
@@ -173,13 +117,25 @@ function TennisMatchRow({ match, index }: { match: TennisMatch; index: number })
         <span className="text-[10px] text-[#94A3B8]/40 font-medium mt-0.5">{match.time}</span>
       </div>
 
-      {/* Market count */}
-      <span className="text-[10px] text-[#94A3B8]/30 font-medium tabular-nums hidden md:block shrink-0">+12</span>
+      {/* Market count placeholder */}
+      <span className="text-[10px] text-[#94A3B8]/30 font-medium tabular-nums hidden md:block shrink-0">
+        +12
+      </span>
 
-      {/* Odds buttons */}
+      {/* Odds buttons — exact same component as the rest of the app */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <OddsButton {...sharedProps} selectionType="1" selectionName={match.player1} odds={match.odds1} />
-        <OddsButton {...sharedProps} selectionType="2" selectionName={match.player2} odds={match.odds2} />
+        <OddsButton
+          {...sharedProps}
+          selectionType="1"
+          selectionName={match.player1}
+          odds={match.odds1}
+        />
+        <OddsButton
+          {...sharedProps}
+          selectionType="2"
+          selectionName={match.player2}
+          odds={match.odds2}
+        />
         <div className="w-3" />
       </div>
     </div>
@@ -189,8 +145,7 @@ function TennisMatchRow({ match, index }: { match: TennisMatch; index: number })
 // ── Main section ──────────────────────────────────────────────────────────────
 
 export function TennisHighlights() {
-  const [showAll, setShowAll]         = useState(false);
-  const [iconSpinning, setIconSpinning] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const matches   = useMemo(() => getDailyMatches(), []);
   const accaCards = useMemo(() => buildAccaCards(matches), [matches]);
@@ -201,63 +156,38 @@ export function TennisHighlights() {
   return (
     <div className="mb-5">
 
-      {/* ── Section header ─────────────────────────────────── */}
+      {/* ── Section header ──────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-3">
-        {/* Animated tennis icon — spins on click/hover */}
-        <button
-          className="relative flex items-center justify-center w-8 h-8 rounded-lg shrink-0 focus:outline-none"
-          style={{
-            background: 'rgba(0,223,169,0.08)',
-            border: '1px solid rgba(0,223,169,0.2)',
-          }}
-          onClick={() => {
-            if (!iconSpinning) {
-              setIconSpinning(true);
-              setTimeout(() => setIconSpinning(false), 700);
-            }
-          }}
-          title="Tennis"
-        >
-          <TennisIcon
-            size={18}
-            className={`transition-none${iconSpinning ? ' spinning' : ' tennis-icon-wrap'}`}
-          />
-          <style>{`
-            .tennis-icon-wrap { animation: tennisIconIdle 3s ease-in-out infinite; }
-            .spinning { animation: tennisSpin 0.65s cubic-bezier(0.22,1,0.36,1) forwards; }
-          `}</style>
-        </button>
-
-        <div className="flex flex-col">
-          <span className="text-[14px] font-bold text-[#F8FAFC] leading-none">Tennis Highlights</span>
-          <span className="text-[10px] text-[#94A3B8]/50 font-medium mt-0.5">{today}</span>
-        </div>
-
-        <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(0,223,169,0.25), transparent)' }} />
-
+        <span className="text-base leading-none">🎾</span>
+        <span className="text-[13px] font-bold text-[#F8FAFC]">Tennis Highlights</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[#253241] to-transparent" />
         <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors shrink-0">
           View All
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* ── Acca boost cards ──────────────────────────────── */}
+      {/* ── Acca boost cards ────────────────────────────────── */}
       <ScrollArea className="w-full mb-4">
         <div className="flex gap-3 pb-1 w-max">
-          {accaCards.map((card, i) => (
-            <AccaCardItem key={card.id} card={card} index={i} />
+          {accaCards.map(card => (
+            <AccaCardItem key={card.id} card={card} />
           ))}
         </div>
         <ScrollBar orientation="horizontal" className="invisible" />
       </ScrollArea>
 
-      {/* ── Match table ───────────────────────────────────── */}
+      {/* ── Match table ─────────────────────────────────────── */}
       <div
         className="rounded-xl overflow-hidden"
-        style={{ background: '#0F1620', border: '1px solid #253241' }}
+        style={{
+          background: '#0F1620',
+          border:     '1px solid #253241',
+        }}
       >
-        {/* Table header */}
+        {/* Table column headers */}
         <div className="flex items-center gap-3 px-3 py-2 border-b border-[#253241]">
+          {/* Left: ACCA BOOST badge + date */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span
               className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded"
@@ -267,6 +197,8 @@ export function TennisHighlights() {
             </span>
             <span className="text-[10px] text-[#94A3B8]/40 font-medium">{today}</span>
           </div>
+
+          {/* Column labels aligned with OddsButton widths */}
           <div className="flex items-center gap-1.5 shrink-0">
             {['1', '2'].map(h => (
               <div key={h} className="w-[52px] text-center text-[10px] font-bold text-[#94A3B8]/50 uppercase tracking-wider">
@@ -278,11 +210,11 @@ export function TennisHighlights() {
         </div>
 
         {/* Match rows */}
-        {visible.map((match, i) => (
-          <TennisMatchRow key={match.id} match={match} index={i} />
+        {visible.map(match => (
+          <TennisMatchRow key={match.id} match={match} />
         ))}
 
-        {/* Show more */}
+        {/* Show more toggle */}
         {matches.length > 5 && (
           <button
             onClick={() => setShowAll(v => !v)}
