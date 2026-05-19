@@ -164,15 +164,13 @@ export function Header() {
 
           {/* Logo */}
           <div className="flex items-center gap-3 shrink-0">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="relative w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105">
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#00DFA9]/30 to-[#00DFA9]/5 border border-[#00DFA9]/35 group-hover:border-[#00DFA9]/70 group-hover:shadow-[0_0_20px_rgba(0,223,169,0.35)] transition-all duration-300" />
-                <BarChart2 className="relative h-4 w-4 text-[#00DFA9]" />
-              </div>
-              <div className="hidden sm:flex flex-col leading-none">
-                <span className="text-[15px] font-black tracking-tight text-[#F8FAFC]">GoBet</span>
-                <span className="text-[9px] text-[#00DFA9]/60 font-semibold tracking-[0.15em] uppercase mt-0.5">Sports Trading</span>
-              </div>
+            <Link href="/" className="flex items-center group">
+              <img
+                src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
+                alt="GoBet"
+                className="h-9 w-auto object-contain transition-all duration-300 group-hover:opacity-90 group-hover:scale-[1.03]"
+                style={{ filter: 'drop-shadow(0 0 8px rgba(0,223,169,0.2))' }}
+              />
             </Link>
           </div>
 

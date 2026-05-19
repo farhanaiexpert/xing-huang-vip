@@ -592,11 +592,13 @@ function SiteFooter() {
 
           {/* Brand */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/10 border border-[#00DFA9]/25 flex items-center justify-center">
-                <BarChart2 className="h-3.5 w-3.5 text-[#00DFA9]" />
-              </div>
-              <span className="font-black text-[#F8FAFC] text-sm tracking-tight">GoBet</span>
+            <div className="flex items-center">
+              <img
+                src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
+                alt="GoBet"
+                className="h-7 w-auto object-contain"
+                style={{ filter: 'drop-shadow(0 0 6px rgba(0,223,169,0.15))' }}
+              />
             </div>
             <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[180px]">
               Live odds, instant settlement, and provably fair sports markets.
