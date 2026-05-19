@@ -33,7 +33,7 @@ const SPORT_THEME: Record<string, SportTheme> = {
   sp_soccer:        { accent: '#00DFA9', glow: 'rgba(0,223,169,0.18)',   icon: '⚽', label: 'Soccer'       },
   soccer:           { accent: '#00DFA9', glow: 'rgba(0,223,169,0.18)',   icon: '⚽', label: 'Soccer'       },
   sp_basketball:    { accent: '#FB923C', glow: 'rgba(251,146,60,0.2)',   icon: '🏀', label: 'Basketball'   },
-  sp_nba:           { accent: '#FB923C', glow: 'rgba(251,146,60,0.2)',   icon: '🏀', label: 'NBA'          },
+  sp_nba:           { accent: '#FB923C', glow: 'rgba(251,146,60,0.2)',   icon: 'https://www.bet365.com/home/images/Home/imgs/V9FlagIcons/USA.svg', label: 'NBA' },
   basketball:       { accent: '#FB923C', glow: 'rgba(251,146,60,0.2)',   icon: '🏀', label: 'Basketball'   },
   sp_tennis:        { accent: '#FACC15', glow: 'rgba(250,204,21,0.18)',  icon: '🎾', label: 'Tennis'       },
   tennis:           { accent: '#FACC15', glow: 'rgba(250,204,21,0.18)',  icon: '🎾', label: 'Tennis'       },
@@ -156,7 +156,9 @@ function MatchCard({ match, league }: MatchCardProps) {
       {/* Header: league + time */}
       <div className="relative flex items-center justify-between px-3.5 pt-3 pb-0 gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[13px] leading-none shrink-0">{theme.icon}</span>
+          {theme.icon.startsWith('http')
+            ? <img src={theme.icon} alt={theme.label} className="h-3.5 w-3.5 object-contain shrink-0" loading="lazy" />
+            : <span className="text-[13px] leading-none shrink-0">{theme.icon}</span>}
           <span className="text-[10px] font-semibold text-[#94A3B8]/70 truncate leading-none">{league.name}</span>
         </div>
 

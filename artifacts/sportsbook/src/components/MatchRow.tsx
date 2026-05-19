@@ -12,7 +12,7 @@ interface MatchRowProps {
 }
 
 const SPORT_ICONS: Record<string, string> = {
-  sp_soccer: '⚽', sp_tennis: '🎾', sp_nba: '🏀', sp_basketball: '🏀',
+  sp_soccer: '⚽', sp_tennis: '🎾', sp_nba: 'https://www.bet365.com/home/images/Home/imgs/V9FlagIcons/USA.svg', sp_basketball: '🏀',
   sp_esports: '🎮', sp_horse_racing: '🏇', sp_cricket: '🏏',
   sp_boxing: '🥊', sp_mma: '🥋', sp_formula_1: '🏎️',
 };

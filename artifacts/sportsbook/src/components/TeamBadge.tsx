@@ -84,21 +84,24 @@ export function TeamBadge({ name, sportIcon, size = 'md', className }: TeamBadge
     );
   }
 
-  // 2. Sport icon — preferred for individuals / esports / sports where initials look wrong
+  // 2. Sport icon — emoji or image URL
   if (sportIcon) {
+    const isImgUrl = sportIcon.startsWith('http');
     return (
       <div
         className={cn(
           cfg.box, cfg.radius,
           'flex items-center justify-center shrink-0 select-none',
           'shadow-[0_2px_8px_rgba(0,0,0,0.3)] ring-1 ring-white/5',
-          cfg.icon,
+          !isImgUrl && cfg.icon,
           className,
         )}
         style={{ background: `linear-gradient(135deg, ${from}cc, ${to}cc)` }}
         title={name}
       >
-        {sportIcon}
+        {isImgUrl
+          ? <img src={sportIcon} alt="" className="w-3/4 h-3/4 object-contain" loading="lazy" />
+          : sportIcon}
       </div>
     );
   }

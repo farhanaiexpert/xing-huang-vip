@@ -40,7 +40,7 @@ const CAROUSEL_SPORTS = [
   { id: 'darts',             name: 'Darts',        icon: '🎯', count: 48   },
   { id: 'ice-hockey',        name: 'Ice Hockey',   icon: '🏒', count: 178  },
   { id: 'mma',               name: 'MMA',          icon: '🥋', count: 35   },
-  { id: 'nba',               name: 'NBA',          icon: '🏀', count: 156  },
+  { id: 'nba',               name: 'NBA',          icon: 'https://www.bet365.com/home/images/Home/imgs/V9FlagIcons/USA.svg', count: 156  },
   { id: 'american-football', name: 'NFL',          icon: '🏈', count: 28   },
 ];
 
@@ -221,7 +221,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                           : 'hover:bg-[#121821]/80'
                       )}
                     >
-                      <span className="text-xl leading-none">{sport.icon}</span>
+                      {sport.icon.startsWith('http')
+                        ? <img src={sport.icon} alt={sport.name} className="w-5 h-5 object-contain" loading="lazy" />
+                        : <span className="text-xl leading-none">{sport.icon}</span>}
                       <span className={cn(
                         'text-[11px] font-medium leading-none transition-colors',
                         isActive ? 'text-[#00DFA9]' : 'text-[#94A3B8] group-hover:text-[#F8FAFC]'
