@@ -105,7 +105,7 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
 
   return (
     <aside className={cn(
-      'w-[220px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-0 hidden lg:flex',
+      'w-[220px] xl:w-[240px] 2xl:w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-0 hidden lg:flex',
       'bg-[#0A0E13] border-r border-[#253241]',
       className
     )}>
@@ -142,7 +142,7 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
                   <button
                     key={m.id}
                     onClick={() => setLocation(`/match/${m.id}`)}
-                    className="group flex w-full items-center gap-2.5 px-4 py-[7px] text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#121821]/80 transition-all duration-150 text-left"
+                    className="group flex w-full items-center gap-2.5 px-4 xl:px-5 py-2 text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#121821]/80 transition-all duration-150 text-left"
                   >
                     <span className="text-sm shrink-0">{m.sportIcon}</span>
                     <div className="min-w-0 flex-1">
@@ -207,11 +207,11 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
             ))}
           </div>
 
-          <div className="px-4 pt-2 pb-5">
+          <div className="px-4 xl:px-5 pt-2 pb-5">
             <button
               onClick={() => setShowAllAZ(!showAllAZ)}
               data-testid="toggle-az-sports"
-              className="w-full text-center text-[11px] font-medium text-[#38BDF8] py-1.5 rounded-md hover:bg-[#38BDF8]/8 transition-colors duration-150"
+              className="w-full text-center text-[11px] font-medium text-[#38BDF8] py-2 rounded-md hover:bg-[#38BDF8]/8 transition-colors duration-150"
             >
               {showAllAZ
                 ? `↑ Show less`
@@ -229,7 +229,7 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
 
 function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="flex items-center gap-1.5 px-4 mb-1">
+    <div className="flex items-center gap-1.5 px-4 xl:px-5 mb-1">
       <span className="text-[#38BDF8]/60">{icon}</span>
       <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#94A3B8]/50">{label}</span>
     </div>
@@ -237,7 +237,7 @@ function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string })
 }
 
 function SectionDivider() {
-  return <div className="h-px bg-gradient-to-r from-transparent via-[#253241] to-transparent mx-4 mb-4" />;
+  return <div className="h-px bg-gradient-to-r from-transparent via-[#253241] to-transparent mx-4 xl:mx-5 mb-4" />;
 }
 
 function TrendingItem({ title, icon, count, onClick }: {
@@ -246,7 +246,7 @@ function TrendingItem({ title, icon, count, onClick }: {
   return (
     <button
       onClick={onClick}
-      className="group flex w-full items-center gap-2.5 px-4 py-[7px] text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#121821]/80 transition-all duration-150 text-left"
+      className="group flex w-full items-center gap-2.5 px-4 xl:px-5 py-2 text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#121821]/80 transition-all duration-150 text-left"
     >
       <span className="text-sm shrink-0">{icon}</span>
       <span className="text-[13px] font-medium truncate flex-1">{title}</span>
@@ -278,7 +278,7 @@ function SidebarItem({ title, icon, isActive, isFavourite, onFavToggle, onClick 
       <button
         onClick={onClick}
         className={cn(
-          'flex flex-1 items-center gap-2.5 px-4 py-[7px] text-left',
+          'flex flex-1 items-center gap-2.5 px-4 xl:px-5 py-2 text-left',
           isActive ? 'text-[#00DFA9] font-semibold' : 'text-[#94A3B8] group-hover:text-[#F8FAFC]'
         )}
       >
@@ -292,7 +292,7 @@ function SidebarItem({ title, icon, isActive, isFavourite, onFavToggle, onClick 
       <button
         onClick={e => { e.stopPropagation(); onFavToggle?.(); }}
         className={cn(
-          'shrink-0 pr-3 transition-all duration-150',
+          'shrink-0 pr-3 xl:pr-4 transition-all duration-150',
           isFavourite ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'
         )}
         title={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
@@ -339,14 +339,14 @@ function AZSidebarItem({ title, iconUrl, isActive, isFavourite, onFavToggle, onC
       <button
         onClick={onClick}
         className={cn(
-          'flex flex-1 items-center gap-2.5 px-4 py-[7px] text-left min-w-0',
+          'flex flex-1 items-center gap-2.5 px-4 xl:px-5 py-2 text-left min-w-0',
           isActive ? 'text-[#00DFA9] font-semibold' : 'text-[#94A3B8] group-hover:text-[#F8FAFC]'
         )}
       >
         {/* Icon container — fixed size so all icons align */}
         <span className={cn(
           'w-5 h-5 flex items-center justify-center shrink-0 rounded',
-          isActive ? 'opacity-100' : 'opacity-60 group-hover:opacity-90'
+          isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'
         )}>
           <SportIconImg src={iconUrl} />
         </span>
@@ -362,7 +362,7 @@ function AZSidebarItem({ title, iconUrl, isActive, isFavourite, onFavToggle, onC
       <button
         onClick={e => { e.stopPropagation(); onFavToggle?.(); }}
         className={cn(
-          'shrink-0 pr-3 transition-all duration-150',
+          'shrink-0 pr-3 xl:pr-4 transition-all duration-150',
           isFavourite ? 'opacity-100' : 'opacity-0 group-hover:opacity-60 hover:!opacity-100'
         )}
         title={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
