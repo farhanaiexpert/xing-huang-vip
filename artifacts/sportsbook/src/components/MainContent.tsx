@@ -157,7 +157,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0B0F14] overflow-hidden">
-      <div id="main-content-scroll" className="flex-1 overflow-y-auto overflow-x-hidden h-[calc(100vh-3.5rem)]" style={{ scrollbarWidth: 'none' }}>
+      <div id="main-content-scroll" className="flex-1 overflow-y-auto overflow-x-hidden h-[calc(100vh-3.5rem)] pb-14 xl:pb-0" style={{ scrollbarWidth: 'none' }}>
 
         {/* ── Sticky controls ─────────────────────────────────────────── */}
         <div className="sticky top-0 z-20 bg-[#0B0F14]/97 backdrop-blur-md border-b border-[#253241]/60">

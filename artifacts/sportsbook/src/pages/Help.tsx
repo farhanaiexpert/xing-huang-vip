@@ -104,7 +104,7 @@ export function Help() {
   const [openFaq,     setOpenFaq]     = useState<number | null>(null);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white animate-in fade-in duration-200">
+    <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white animate-in fade-in duration-200 pb-14 xl:pb-0">
       <Header />
 
       <div className="flex-1 max-w-2xl w-full mx-auto px-4 py-6">

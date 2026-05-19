@@ -210,7 +210,7 @@ export function BetHistory() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white animate-in fade-in duration-200">
+      <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white animate-in fade-in duration-200 pb-14 xl:pb-0">
         <Header />
         <div className="flex-1 flex items-center justify-center px-4">
           <div className="text-center max-w-sm w-full">
@@ -243,7 +243,7 @@ export function BetHistory() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white animate-in fade-in duration-200">
+    <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white animate-in fade-in duration-200 pb-14 xl:pb-0">
       <Header />
 
       <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-6">

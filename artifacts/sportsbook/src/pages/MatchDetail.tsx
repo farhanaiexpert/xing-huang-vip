@@ -189,7 +189,7 @@ function QuickOddsCell({
 
 function MatchNotFound({ onBack }: { onBack: () => void }) {
   return (
-    <div className="min-h-screen bg-[#0B0F14] flex flex-col">
+    <div className="min-h-screen bg-[#0B0F14] flex flex-col pb-14 xl:pb-0">
       <Header />
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center px-6">
@@ -293,7 +293,7 @@ export function MatchDetail() {
       <div className="flex-1 flex overflow-hidden">
         {/* ── Main column ─────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <ScrollArea className="flex-1 h-[calc(100vh-3.5rem)]">
+          <ScrollArea className="flex-1 h-[calc(100vh-3.5rem)] pb-14 xl:pb-0">
 
             {/* Match hero */}
             <MatchHeader match={match} league={league} />

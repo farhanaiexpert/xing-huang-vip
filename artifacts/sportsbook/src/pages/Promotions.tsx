@@ -347,7 +347,7 @@ export function Promotions() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC]">
+    <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-14 xl:pb-0">
       <Header />
 
       <ConnectWalletModal open={walletOpen} onOpenChange={setWalletOpen} />

@@ -20,6 +20,7 @@ import { OddsSimulationProvider } from "@/hooks/useOddsSimulation";
 import { OddsFormatProvider } from "@/hooks/useOddsFormat";
 import { OddsDataProvider } from "@/hooks/useOddsData";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ function App() {
                     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                       <Router />
                     </WouterRouter>
+                    <MobileBottomNav />
                     <OnboardingGuide />
                     <Toaster />
                   </BetSlipProvider>

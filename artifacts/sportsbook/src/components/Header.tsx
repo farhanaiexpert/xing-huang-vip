@@ -217,10 +217,10 @@ export function Header() {
               )}
             </div>
 
-            <div className="h-5 w-px bg-white/[0.07] mx-1.5" />
+            <div className="hidden md:block h-5 w-px bg-white/[0.07] mx-1.5" />
 
-            {/* Odds format */}
-            <div className="flex items-center rounded-lg bg-black/30 border border-white/[0.07] p-0.5 gap-0.5">
+            {/* Odds format — hidden on mobile, shown from md up */}
+            <div className="hidden md:flex items-center rounded-lg bg-black/30 border border-white/[0.07] p-0.5 gap-0.5">
               {(Object.keys(FORMAT_LABELS) as OddsFormat[]).map(f => (
                 <button
                   key={f}
@@ -237,7 +237,7 @@ export function Header() {
               ))}
             </div>
 
-            <div className="h-5 w-px bg-white/[0.07] mx-1.5" />
+            <div className="hidden md:block h-5 w-px bg-white/[0.07] mx-1.5" />
 
             {/* Wallet */}
             {isConnected && shortAddress ? (
