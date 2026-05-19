@@ -48,7 +48,9 @@ export function MobileBottomNav() {
 
   const prevCountRef = useRef(selections.length);
   useEffect(() => {
-    if (selections.length > prevCountRef.current) setBetSlipOpen(true);
+    if (selections.length > prevCountRef.current && window.innerWidth < 1280) {
+      setBetSlipOpen(true);
+    }
     prevCountRef.current = selections.length;
   }, [selections.length]);
 
