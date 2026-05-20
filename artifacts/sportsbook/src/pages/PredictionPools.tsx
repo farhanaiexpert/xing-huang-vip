@@ -5,7 +5,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { cn } from '@/lib/utils';
 import {
   Trophy, Users, Target, Clock, CheckCircle2, Star, Flame,
-  X, ArrowRight, Mail, User, Wallet, Gift, ChevronRight,
+  X, ArrowRight, Mail, User, Wallet, Gift, ShieldCheck,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,7 +25,7 @@ interface UserProfile { name: string; email: string; }
 const POOLS: Pool[] = [
   {
     id: 'ucl-winner', category: 'Football', sport: 'Champions League', sportEmoji: '⭐',
-    question: 'Who wins UEFA Champions League 2025/26?',
+    question: 'Who wins UEFA Champions League 2026/27?',
     options: [
       { id: 'mancity',  label: 'Man City',    votes: 2860 },
       { id: 'real',     label: 'Real Madrid', votes: 2352 },
@@ -38,7 +38,7 @@ const POOLS: Pool[] = [
   },
   {
     id: 'pl-scorer', category: 'Football', sport: 'Premier League', sportEmoji: '⚽',
-    question: 'Premier League Top Scorer 2025/26?',
+    question: 'Premier League Top Scorer 2026/27?',
     options: [
       { id: 'haaland', label: 'Erling Haaland',    votes: 2395 },
       { id: 'palmer',  label: 'Cole Palmer',       votes: 1283 },
@@ -64,8 +64,8 @@ const POOLS: Pool[] = [
     accent: '#FACC15', prizePool: '$10,000', status: 'open',
   },
   {
-    id: 'nba-mvp', category: 'Basketball', sport: 'NBA 2025/26', sportEmoji: '🏀',
-    question: 'NBA MVP Award 2025/26?',
+    id: 'nba-mvp', category: 'Basketball', sport: 'NBA 2026/27', sportEmoji: '🏀',
+    question: 'NBA MVP Award 2026/27?',
     options: [
       { id: 'jokic',   label: 'Nikola Jokić',             votes: 3951 },
       { id: 'luka',    label: 'Luka Dončić',              votes: 3277 },
@@ -88,7 +88,7 @@ const POOLS: Pool[] = [
     accent: '#A78BFA', prizePool: '$1,500', status: 'open',
   },
   {
-    id: 'euros-winner', category: 'Special', sport: 'Euro 2024 — SETTLED', sportEmoji: '🏅',
+    id: 'euros-winner', category: 'Special', sport: 'UEFA Euro 2024 — SETTLED', sportEmoji: '🏅',
     question: 'Who won UEFA Euro 2024?',
     options: [
       { id: 'spain',   label: 'Spain',   votes: 8041 },
@@ -101,8 +101,8 @@ const POOLS: Pool[] = [
     accent: '#00DFA9', prizePool: '$5,000', status: 'settled', winnerOptionId: 'spain',
   },
   {
-    id: 'el-final', category: 'Settled', sport: 'Europa League — SETTLED', sportEmoji: '🥈',
-    question: 'Who won the Europa League Final 2024/25?',
+    id: 'el-final', category: 'Settled', sport: 'Europa League 2026 — SETTLED', sportEmoji: '🥈',
+    question: 'Who won the Europa League Final 2026?',
     options: [
       { id: 'manu',     label: 'Man United', votes: 5201 },
       { id: 'atalanta', label: 'Atalanta',   votes: 4320 },
@@ -154,13 +154,9 @@ function EntryModal({
     setStep('wallet');
   }
 
-  function handleSkipWallet() { onConfirm(); }
-  function handleWalletConnected() { setWalletOpen(false); onConfirm(); }
-
-  // If wallet just got connected while on wallet step, auto-confirm
+  // Auto-confirm once wallet is connected
   useEffect(() => {
     if (step === 'wallet' && isConnected && !walletOpen) {
-      // give a tiny delay so the wallet modal closes cleanly
       const t = setTimeout(onConfirm, 200);
       return () => clearTimeout(t);
     }
@@ -168,134 +164,130 @@ function EntryModal({
 
   return (
     <>
-      <ConnectWalletModal
-        open={walletOpen}
-        onOpenChange={(v) => { setWalletOpen(v); }}
-      />
+      <ConnectWalletModal open={walletOpen} onOpenChange={setWalletOpen} />
 
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+        className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
         onClick={onClose}
       >
         <div
-          className="relative w-full max-w-md bg-[#0D1117] border border-[#253241] rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.8)] overflow-hidden"
+          className="relative w-full max-w-[420px] bg-[#0D1117] border border-[#253241] rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.9)] overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
-          {/* Top accent */}
-          <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${pool.accent}, transparent 70%)` }} />
+          {/* Accent bar */}
+          <div className="h-[3px] w-full" style={{ background: `linear-gradient(90deg, ${pool.accent} 0%, ${pool.accent}40 60%, transparent 100%)` }} />
 
           {/* Close */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#253241]/50 flex items-center justify-center text-[#94A3B8]/60 hover:text-[#F8FAFC] transition-colors"
+            className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#1E2A38] flex items-center justify-center text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors z-10"
           >
             <X className="h-3.5 w-3.5" />
           </button>
 
-          <div className="px-6 pt-6 pb-7">
-            {/* Your pick preview */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#121821] border border-[#253241] mb-6">
-              <span className="text-xl">{pool.sportEmoji}</span>
+          <div className="px-6 pt-5 pb-6 space-y-5">
+
+            {/* Pick preview chip */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#121821] border border-[#253241]">
+              <span className="text-lg shrink-0">{pool.sportEmoji}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-[#94A3B8]/50 uppercase tracking-widest">{pool.sport}</p>
-                <p className="text-[12px] font-semibold text-[#F8FAFC] leading-snug truncate">{pool.question}</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-[#94A3B8]/45 mb-0.5">{pool.sport}</p>
+                <p className="text-[11px] font-semibold text-[#F8FAFC] leading-snug line-clamp-1">{pool.question}</p>
               </div>
               <div
-                className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-black"
-                style={{ background: `${pool.accent}20`, color: pool.accent, border: `1px solid ${pool.accent}40` }}
+                className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap"
+                style={{ background: `${pool.accent}18`, color: pool.accent, border: `1px solid ${pool.accent}35` }}
               >
                 {option?.label}
               </div>
             </div>
 
-            {/* Step indicator */}
-            <div className="flex items-center gap-2 mb-5">
-              {(['details', 'wallet'] as const).map((s, i) => (
-                <div key={s} className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-all',
-                      step === s
-                        ? 'text-[#0B0F14]'
-                        : (s === 'wallet' && step === 'details') ? 'bg-[#253241] text-[#94A3B8]/40' : 'text-[#0B0F14]',
+            {/* Step pills */}
+            <div className="flex items-center gap-0">
+              {(['details', 'wallet'] as const).map((s, i) => {
+                const done = s === 'details' && step === 'wallet';
+                const active = step === s;
+                return (
+                  <div key={s} className="flex items-center gap-0 flex-1">
+                    <div className="flex items-center gap-2 flex-1">
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 transition-all"
+                        style={active || done ? { background: pool.accent, color: '#0B0F14' } : { background: '#1E2A38', color: '#94A3B8' }}
+                      >
+                        {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : i + 1}
+                      </div>
+                      <span className={cn('text-[11px] font-semibold', active ? 'text-[#F8FAFC]' : done ? 'text-[#94A3B8]/50' : 'text-[#94A3B8]/35')}>
+                        {s === 'details' ? 'Your details' : 'Connect wallet'}
+                      </span>
+                    </div>
+                    {i === 0 && (
+                      <div className="w-10 shrink-0 mx-2">
+                        <div className="h-px" style={{ background: step === 'wallet' ? pool.accent : '#253241' }} />
+                      </div>
                     )}
-                    style={step === s || (s === 'details' && step === 'wallet')
-                      ? { background: pool.accent }
-                      : undefined}
-                  >
-                    {s === 'details' && step === 'wallet' ? <CheckCircle2 className="h-3.5 w-3.5" /> : i + 1}
                   </div>
-                  <span className={cn(
-                    'text-[11px] font-semibold',
-                    step === s ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40',
-                  )}>
-                    {s === 'details' ? 'Your details' : 'Connect wallet'}
-                  </span>
-                  {i === 0 && <div className="w-8 h-px bg-[#253241] mx-1" />}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* ── Step 1: Details ─────────────────────────── */}
+            {/* ── Step 1: Details ── */}
             {step === 'details' && (
               <form onSubmit={handleDetailsSubmit} className="space-y-4">
                 <div>
-                  <h2 className="text-lg font-black text-[#F8FAFC]">First, who are you? 👋</h2>
-                  <p className="text-[12px] text-[#94A3B8]/60 mt-1">
-                    We'll email you if your prediction wins and you claim a prize.
+                  <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">Who are you? 👋</h2>
+                  <p className="text-[12px] text-[#94A3B8]/55 mt-1">
+                    We need your name and email to notify you if your pick wins a prize.
                   </p>
                 </div>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-semibold text-[#94A3B8]/60 uppercase tracking-wider block mb-1.5">
-                      Your name
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">
+                      Full name
                     </label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/30" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]/30 pointer-events-none" />
                       <input
                         type="text"
                         value={name}
                         onChange={e => setName(e.target.value)}
                         placeholder="e.g. Alex Johnson"
                         required
-                        className="w-full pl-9 pr-4 py-2.5 bg-[#121821] border border-[#253241] rounded-xl text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/25 outline-none focus:border-[#253241] transition-colors"
-                        style={{ '--focus-ring': pool.accent } as React.CSSProperties}
-                        onFocus={e => (e.target.style.borderColor = `${pool.accent}60`)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-[#121821] border border-[#253241] rounded-xl text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/20 outline-none transition-colors"
+                        onFocus={e => (e.target.style.borderColor = `${pool.accent}55`)}
                         onBlur={e => (e.target.style.borderColor = '#253241')}
                       />
                     </div>
                   </div>
-
                   <div>
-                    <label className="text-[11px] font-semibold text-[#94A3B8]/60 uppercase tracking-wider block mb-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">
                       Email address
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/30" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]/30 pointer-events-none" />
                       <input
                         type="email"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="you@example.com"
                         required
-                        className="w-full pl-9 pr-4 py-2.5 bg-[#121821] border border-[#253241] rounded-xl text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/25 outline-none transition-colors"
-                        onFocus={e => (e.target.style.borderColor = `${pool.accent}60`)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-[#121821] border border-[#253241] rounded-xl text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/20 outline-none transition-colors"
+                        onFocus={e => (e.target.style.borderColor = `${pool.accent}55`)}
                         onBlur={e => (e.target.style.borderColor = '#253241')}
                       />
                     </div>
                   </div>
                 </div>
 
-                <p className="text-[10px] text-[#94A3B8]/30 leading-relaxed">
-                  🔒 We never share your data. Email is only used to notify you of winnings.
-                </p>
+                <div className="flex items-center gap-2 text-[10px] text-[#94A3B8]/30">
+                  <ShieldCheck className="h-3 w-3 shrink-0" />
+                  We never share your data. Email is only used for prize notifications.
+                </div>
 
                 <button
                   type="submit"
                   disabled={!name.trim() || !email.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:opacity-30"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[13px] transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-25 disabled:cursor-not-allowed"
                   style={{ background: pool.accent, color: '#0B0F14' }}
                 >
                   Continue <ArrowRight className="h-4 w-4" />
@@ -303,54 +295,68 @@ function EntryModal({
               </form>
             )}
 
-            {/* ── Step 2: Wallet ──────────────────────────── */}
+            {/* ── Step 2: Wallet (compulsory) ── */}
             {step === 'wallet' && (
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-lg font-black text-[#F8FAFC]">Connect your wallet 💰</h2>
-                  <p className="text-[12px] text-[#94A3B8]/60 mt-1">
-                    Your wallet is how we send you prize money if you win. It's secure and takes 30 seconds.
+                  <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">Connect your wallet 💰</h2>
+                  <p className="text-[12px] text-[#94A3B8]/55 mt-1">
+                    A wallet is required to submit your prediction and receive prizes.
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-[#121821] border border-[#253241] p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#00DFA9]/10 border border-[#00DFA9]/25 flex items-center justify-center shrink-0">
-                      <Gift className="h-4 w-4 text-[#00DFA9]" />
+                {/* Benefit cards */}
+                <div className="space-y-2">
+                  {[
+                    {
+                      icon: <Gift className="h-4 w-4" />,
+                      color: '#00DFA9',
+                      title: 'Prizes sent straight to your wallet',
+                      desc: 'Instant crypto payout — no banks, no delays.',
+                    },
+                    {
+                      icon: <Wallet className="h-4 w-4" />,
+                      color: '#38BDF8',
+                      title: 'Works with MetaMask, Coinbase & more',
+                      desc: 'Any popular Web3 wallet is supported.',
+                    },
+                    {
+                      icon: <ShieldCheck className="h-4 w-4" />,
+                      color: '#A78BFA',
+                      title: 'Secure & non-custodial',
+                      desc: 'We never hold your funds. You stay in control.',
+                    },
+                  ].map(b => (
+                    <div key={b.title} className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-[#121821] border border-[#1E2A38]">
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                        style={{ background: `${b.color}12`, border: `1px solid ${b.color}25`, color: b.color }}
+                      >
+                        {b.icon}
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-bold text-[#F8FAFC]">{b.title}</p>
+                        <p className="text-[11px] text-[#94A3B8]/50 mt-0.5">{b.desc}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[12px] font-bold text-[#F8FAFC]">Your prize goes straight to your wallet</p>
-                      <p className="text-[11px] text-[#94A3B8]/55 mt-0.5">No bank, no waiting — instant crypto payout when results are confirmed.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#38BDF8]/10 border border-[#38BDF8]/25 flex items-center justify-center shrink-0">
-                      <Wallet className="h-4 w-4 text-[#38BDF8]" />
-                    </div>
-                    <div>
-                      <p className="text-[12px] font-bold text-[#F8FAFC]">Works with MetaMask, Coinbase & more</p>
-                      <p className="text-[11px] text-[#94A3B8]/55 mt-0.5">Use any popular wallet — we support all major Web3 wallets.</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 <button
                   onClick={() => setWalletOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm transition-all duration-150 hover:opacity-90 active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[13px] transition-all hover:opacity-90 active:scale-[0.98]"
                   style={{ background: pool.accent, color: '#0B0F14' }}
                 >
                   <Wallet className="h-4 w-4" />
-                  Connect Wallet &amp; Confirm Pick
+                  Connect Wallet &amp; Lock In Pick
                 </button>
 
-                <button
-                  onClick={handleSkipWallet}
-                  className="w-full text-[12px] text-[#94A3B8]/50 hover:text-[#94A3B8]/80 transition-colors py-1"
-                >
-                  Skip for now — I'll connect later
-                </button>
+                <p className="text-center text-[10px] text-[#94A3B8]/30">
+                  A wallet connection is required to enter Prediction Pools.
+                </p>
               </div>
             )}
+
           </div>
         </div>
       </div>
@@ -358,75 +364,75 @@ function EntryModal({
   );
 }
 
-// ─── How to Play Guide ────────────────────────────────────────────────────────
+// ─── How to Play ──────────────────────────────────────────────────────────────
 function HowToPlayGuide() {
   const steps = [
     {
-      emoji: '🎯',
-      title: 'Pick your winner',
-      desc: 'See a question you like? Tap any option — it\'s that simple. Each question has 4–6 choices.',
+      num: '1', emoji: '🎯',
+      title: 'Choose a prediction',
+      desc: 'Browse open pools below. Each card has a question with 4–6 options. Tap the one you think will win.',
       color: '#00DFA9',
-      step: '1',
     },
     {
-      emoji: '📧',
-      title: 'Enter your details',
-      desc: 'Just your name and email. We need these to contact you if your prediction wins. Takes 10 seconds.',
+      num: '2', emoji: '📝',
+      title: 'Enter name & email',
+      desc: 'Quick 10-second form. We use your email to notify you if your prediction wins a prize.',
       color: '#38BDF8',
-      step: '2',
     },
     {
-      emoji: '💼',
+      num: '3', emoji: '💼',
       title: 'Connect your wallet',
-      desc: 'Link a crypto wallet (like MetaMask) so we can send your prize directly. You can skip this and add it later.',
+      desc: 'Link MetaMask, Coinbase, or any Web3 wallet. Required so we can send you winnings instantly.',
       color: '#FACC15',
-      step: '3',
     },
     {
-      emoji: '🏆',
-      title: 'Win your share',
-      desc: 'If you predicted correctly, you automatically share the prize pool with other winners. Paid out within 24 hours.',
+      num: '4', emoji: '🏆',
+      title: 'Win real money',
+      desc: 'If your pick is correct, you automatically share the prize pool with all winners. Paid out within 24 h.',
       color: '#F97316',
-      step: '4',
     },
   ];
 
   return (
-    <div className="mb-8 rounded-2xl bg-[#121821] border border-[#253241] overflow-hidden">
-      <div className="px-6 pt-5 pb-2 border-b border-[#253241]">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-[#00DFA9]/15 flex items-center justify-center">
-            <Star className="h-3.5 w-3.5 text-[#00DFA9]" />
-          </div>
-          <h2 className="text-sm font-black text-[#F8FAFC]">How it works — 4 simple steps</h2>
-          <span className="ml-1 text-[10px] text-[#94A3B8]/40">No betting knowledge needed</span>
+    <div className="mb-8 rounded-2xl overflow-hidden border border-[#253241] bg-[#121821]">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-6 py-4 border-b border-[#253241] bg-[#0D1117]/60">
+        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-[#00DFA9]/15">
+          <Star className="h-3.5 w-3.5 text-[#00DFA9]" />
         </div>
+        <span className="text-sm font-black text-[#F8FAFC]">How it works</span>
+        <span className="text-[10px] text-[#94A3B8]/35 font-medium">— 4 easy steps, completely free</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-[#253241]">
-        {steps.map((s) => (
-          <div key={s.step} className="p-5 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
+
+      {/* Steps grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-[#1E2A38]">
+        {steps.map(s => (
+          <div key={s.num} className="p-5 flex flex-col gap-3 hover:bg-[#0D1117]/40 transition-colors">
+            <div className="flex items-center gap-2.5">
               <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-black shrink-0"
-                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}30` }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0"
+                style={{ background: `${s.color}15`, color: s.color, border: `1px solid ${s.color}28` }}
               >
-                {s.step}
+                {s.num}
               </div>
-              <span className="text-2xl">{s.emoji}</span>
+              <span className="text-xl">{s.emoji}</span>
             </div>
             <div>
-              <p className="text-[13px] font-black text-[#F8FAFC]">{s.title}</p>
-              <p className="text-[11px] text-[#94A3B8]/55 leading-relaxed mt-1">{s.desc}</p>
+              <p className="text-[13px] font-black text-[#F8FAFC] leading-snug">{s.title}</p>
+              <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed mt-1.5">{s.desc}</p>
             </div>
           </div>
         ))}
       </div>
-      <div className="px-6 py-3 bg-[#0B0F14]/40 border-t border-[#253241] flex items-center gap-2">
-        <span className="text-[10px] text-[#94A3B8]/35">✅ Completely free to enter</span>
-        <span className="text-[#253241]">·</span>
-        <span className="text-[10px] text-[#94A3B8]/35">✅ No betting experience needed</span>
-        <span className="text-[#253241]">·</span>
-        <span className="text-[10px] text-[#94A3B8]/35">✅ One pick per question</span>
+
+      {/* Footer strip */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-6 py-3 border-t border-[#1E2A38] bg-[#0D1117]/40">
+        {['Free to enter', 'No experience needed', 'One pick per question', 'Wallet required to win'].map((t, i) => (
+          <span key={t} className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/40">
+            <span style={{ color: ['#00DFA9', '#38BDF8', '#FACC15', '#F97316'][i] }}>✓</span>
+            {t}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -443,42 +449,58 @@ function PoolCard({ pool, userPick, onPickClick }: {
   return (
     <div
       className={cn(
-        'relative flex flex-col rounded-2xl bg-[#121821] border transition-all duration-200 overflow-hidden',
-        pool.status === 'settled' ? 'border-[#253241] opacity-80' : 'border-[#253241]',
+        'group relative flex flex-col rounded-2xl bg-[#121821] border overflow-hidden transition-all duration-200',
+        pool.status === 'open'
+          ? 'border-[#253241] hover:border-[#2D3E50]'
+          : 'border-[#1E2A38] opacity-75',
       )}
-      style={pool.status === 'open' ? { boxShadow: `0 0 0 1px ${pool.accent}10 inset` } : undefined}
     >
-      <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, ${pool.accent}, transparent 70%)` }} />
+      {/* Top colour line */}
+      <div className="h-[2px] w-full shrink-0" style={{ background: `linear-gradient(90deg, ${pool.accent} 0%, ${pool.accent}50 50%, transparent 100%)` }} />
 
       <div className="p-5 flex flex-col flex-1 gap-4">
-        {/* Header */}
+
+        {/* Card header */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-sm">{pool.sportEmoji}</span>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[#94A3B8]/45">{pool.sport}</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#94A3B8]/40">{pool.sport}</span>
               {pool.status === 'settled' && (
-                <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-[#94A3B8]/10 text-[#94A3B8]/50">Settled</span>
+                <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-[2px] rounded bg-[#94A3B8]/10 text-[#94A3B8]/45">
+                  Settled
+                </span>
               )}
               {pool.status === 'open' && !userPick && (
                 <span
-                  className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border"
-                  style={{ background: `${pool.accent}12`, color: pool.accent, borderColor: `${pool.accent}30` }}
+                  className="text-[8px] font-black uppercase tracking-widest px-1.5 py-[2px] rounded border animate-pulse"
+                  style={{ background: `${pool.accent}10`, color: pool.accent, borderColor: `${pool.accent}30` }}
                 >
                   Tap to predict
                 </span>
               )}
+              {pool.status === 'open' && userPick && (
+                <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-[2px] rounded border"
+                  style={{ background: `${pool.accent}10`, color: pool.accent, borderColor: `${pool.accent}30` }}>
+                  Predicted ✓
+                </span>
+              )}
             </div>
-            <h3 className="text-sm font-black text-[#F8FAFC] leading-snug">{pool.question}</h3>
+            <h3 className="text-[13px] font-black text-[#F8FAFC] leading-snug">{pool.question}</h3>
           </div>
-          <div className="shrink-0 text-right">
-            <p className="text-[10px] font-black" style={{ color: pool.accent }}>{pool.prizePool}</p>
-            <p className="text-[9px] text-[#94A3B8]/40">prize pool</p>
+
+          {/* Prize badge */}
+          <div
+            className="shrink-0 flex flex-col items-center px-3 py-2 rounded-xl"
+            style={{ background: `${pool.accent}10`, border: `1px solid ${pool.accent}22` }}
+          >
+            <p className="text-[13px] font-black leading-none" style={{ color: pool.accent }}>{pool.prizePool}</p>
+            <p className="text-[8px] font-semibold uppercase tracking-widest text-[#94A3B8]/40 mt-0.5">prize</p>
           </div>
         </div>
 
         {/* Options */}
-        <div className="space-y-2 flex-1">
+        <div className="space-y-1.5 flex-1">
           {pool.options.map(option => {
             const myVotes = option.votes + (userPick === option.id ? 1 : 0);
             const pct = totalVotes > 0 ? Math.round((myVotes / totalVotes) * 100) : 0;
@@ -492,26 +514,36 @@ function PoolCard({ pool, userPick, onPickClick }: {
                 onClick={() => pool.status === 'open' && onPickClick(pool.id, option.id)}
                 disabled={pool.status === 'settled'}
                 className={cn(
-                  'w-full relative rounded-lg overflow-hidden transition-all duration-200 text-left',
-                  pool.status === 'open' ? 'cursor-pointer hover:brightness-110 active:scale-[0.99]' : 'cursor-default',
+                  'w-full relative rounded-lg overflow-hidden text-left transition-all duration-150',
+                  pool.status === 'open'
+                    ? 'cursor-pointer hover:brightness-110 active:scale-[0.99]'
+                    : 'cursor-default',
                 )}
               >
                 {/* Fill bar */}
                 <div
-                  className="absolute inset-0 rounded-lg transition-all duration-700"
+                  className="absolute inset-0 rounded-lg transition-all duration-700 ease-out"
                   style={{
                     width: `${pct}%`,
-                    background: isWinner ? `${pool.accent}25` : isPicked ? `${pool.accent}18` : 'rgba(37,50,65,0.5)',
+                    background: isWinner
+                      ? `${pool.accent}22`
+                      : isPicked
+                        ? `${pool.accent}15`
+                        : 'rgba(37,50,65,0.45)',
                   }}
                 />
                 <div
                   className={cn(
                     'relative flex items-center justify-between px-3 py-2.5 border rounded-lg',
-                    isWrongPick ? 'opacity-40' : '',
+                    isWrongPick ? 'opacity-35' : '',
                   )}
                   style={{
-                    borderColor: isWinner ? pool.accent : isPicked ? pool.accent : 'transparent',
-                    background: isWinner || isPicked ? 'transparent' : 'rgba(18,24,33,0.8)',
+                    borderColor: isWinner
+                      ? `${pool.accent}70`
+                      : isPicked
+                        ? `${pool.accent}50`
+                        : 'transparent',
+                    background: 'rgba(18,24,33,0.7)',
                   }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
@@ -519,16 +551,16 @@ function PoolCard({ pool, userPick, onPickClick }: {
                       <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: pool.accent }} />
                     )}
                     <span
-                      className={cn('text-[12px] font-semibold truncate', isWinner ? 'font-black' : '')}
-                      style={{ color: isWinner ? pool.accent : isPicked ? pool.accent : '#F8FAFC' }}
+                      className={cn('text-[12px] font-semibold truncate', isWinner && 'font-black')}
+                      style={{ color: isWinner ? pool.accent : isPicked ? pool.accent : '#CBD5E1' }}
                     >
                       {option.label}
-                      {isWinner && <span className="ml-1.5 text-[9px] font-black uppercase tracking-widest opacity-70">Winner ✓</span>}
+                      {isWinner && <span className="ml-1.5 text-[8px] font-black uppercase tracking-widest opacity-60"> Winner</span>}
                     </span>
                   </div>
                   <span
-                    className="text-[11px] font-black tabular-nums shrink-0 ml-2"
-                    style={{ color: isWinner ? pool.accent : isPicked ? pool.accent : '#94A3B8' }}
+                    className="text-[11px] font-black tabular-nums shrink-0 ml-3"
+                    style={{ color: isWinner ? pool.accent : isPicked ? pool.accent : '#64748B' }}
                   >
                     {pct}%
                   </span>
@@ -539,27 +571,28 @@ function PoolCard({ pool, userPick, onPickClick }: {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1 border-t border-[#253241]">
-          <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/40">
+        <div className="flex items-center justify-between pt-2 border-t border-[#1E2A38]/70">
+          <div className="flex items-center gap-1 text-[10px] text-[#64748B]">
             <Users className="h-3 w-3" />
             <span>{pool.totalPicks.toLocaleString()} predictions</span>
           </div>
-          <div className="flex items-center gap-1 text-[10px]" style={{
-            color: pool.closesUrgent ? '#EF4444' : '#94A3B8',
-            opacity: pool.status === 'settled' ? 0.4 : pool.closesUrgent ? 1 : 0.4,
-          }}>
+          <div
+            className="flex items-center gap-1 text-[10px]"
+            style={{ color: pool.closesUrgent ? '#EF4444' : pool.status === 'settled' ? '#475569' : '#475569' }}
+          >
             <Clock className="h-3 w-3" />
             <span>{pool.status === 'settled' ? 'Closed' : `Closes in ${pool.closesLabel}`}</span>
           </div>
         </div>
 
+        {/* Picked confirmation */}
         {userPick && pool.status === 'open' && (
           <div
-            className="rounded-lg px-3 py-2 text-[11px] font-semibold flex items-center gap-1.5"
-            style={{ background: `${pool.accent}12`, color: pool.accent, border: `1px solid ${pool.accent}25` }}
+            className="rounded-xl px-3 py-2.5 text-[11px] font-semibold flex items-center gap-2"
+            style={{ background: `${pool.accent}0E`, color: pool.accent, border: `1px solid ${pool.accent}22` }}
           >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Your prediction is locked in! We'll notify you when results are out.
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            Your prediction is locked in! We'll notify you when results are announced.
           </div>
         )}
       </div>
@@ -578,7 +611,6 @@ export function PredictionPools() {
     try { return JSON.parse(localStorage.getItem(LS_KEY_PROFILE) ?? 'null'); }
     catch { return null; }
   });
-  // Modal state
   const [pendingPick, setPendingPick] = useState<{ poolId: string; optionId: string } | null>(null);
   const { toast } = useToast();
 
@@ -586,31 +618,25 @@ export function PredictionPools() {
   useEffect(() => { if (profile) localStorage.setItem(LS_KEY_PROFILE, JSON.stringify(profile)); }, [profile]);
 
   function handlePickClick(poolId: string, optionId: string) {
-    // If already picked, allow changing — show modal again
     setPendingPick({ poolId, optionId });
-  }
-
-  function handleSaveProfile(p: UserProfile) {
-    setProfile(p);
   }
 
   function handleConfirm() {
     if (!pendingPick) return;
-    const pool = POOLS.find(p => p.id === pendingPick.poolId);
+    const pool   = POOLS.find(p => p.id === pendingPick.poolId);
     const option = pool?.options.find(o => o.id === pendingPick.optionId);
-    const label = option?.label ?? '';
+    const label  = option?.label ?? '';
     setPicks(prev => ({ ...prev, [pendingPick.poolId]: pendingPick.optionId }));
     setPendingPick(null);
-    // defer toast until after state updates settle
     setTimeout(() => {
       toast({ title: '🎯 Prediction locked in!', description: `You picked "${label}" — good luck!` });
     }, 0);
   }
 
-  const totalUserPicks = Object.keys(picks).length;
-  const totalPrizePool = POOLS
+  const totalUserPicks   = Object.keys(picks).length;
+  const totalPrizePool   = POOLS
     .filter(p => p.status === 'open')
-    .reduce((s, p) => s + parseFloat(p.prizePool.replace('$', '').replace(',', '')), 0);
+    .reduce((s, p) => s + parseFloat(p.prizePool.replace(/[$,]/g, '')), 0);
 
   const visible = active === 'All'
     ? POOLS.filter(p => p.status === 'open')
@@ -624,61 +650,84 @@ export function PredictionPools() {
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-14 xl:pb-0">
       <Header />
 
-      {/* Entry modal */}
       {pendingPick && pendingPool && (
         <EntryModal
           pool={pendingPool}
           optionId={pendingPick.optionId}
           profile={profile}
-          onSaveProfile={handleSaveProfile}
+          onSaveProfile={p => setProfile(p)}
           onConfirm={handleConfirm}
           onClose={() => setPendingPick(null)}
         />
       )}
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
 
-        {/* Hero */}
-        <div className="relative rounded-2xl overflow-hidden mb-6 bg-[#121821] border border-[#253241]">
+        {/* ── Hero ──────────────────────────────────────────── */}
+        <div className="relative rounded-2xl overflow-hidden mb-7 bg-[#121821] border border-[#1E2A38]">
           <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse at 75% 40%, #00DFA9 0%, transparent 60%), radial-gradient(ellipse at 15% 80%, #38BDF8 0%, transparent 55%)' }}
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse at 80% 30%, #00DFA920 0%, transparent 55%), radial-gradient(ellipse at 10% 80%, #38BDF815 0%, transparent 50%)' }}
           />
-          <div className="relative px-8 py-8">
+          <div className="relative px-6 sm:px-8 py-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-1.5 bg-[#00DFA9]/15 border border-[#00DFA9]/30 px-3 py-1 rounded-full text-[10px] font-bold text-[#00DFA9] uppercase tracking-widest mb-3">
-                  <Target className="h-3 w-3" /> 100% Free to Play
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 bg-[#00DFA9]/12 border border-[#00DFA9]/25 px-3 py-1 rounded-full">
+                  <Target className="h-3 w-3 text-[#00DFA9]" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#00DFA9]">Free to Play · No Stake Required</span>
                 </div>
-                <h1 className="text-3xl font-black tracking-tight">Predict &amp; Win</h1>
-                <p className="text-[#94A3B8]/70 text-sm mt-1.5 max-w-md">
-                  Think you know sport? Predict the outcome of major events and win real cash — no experience, no stake, no risk.
+                <h1 className="text-[28px] sm:text-3xl font-black tracking-tight text-[#F8FAFC]">Predict &amp; Win</h1>
+                <p className="text-[#94A3B8]/65 text-[13px] max-w-sm leading-relaxed">
+                  Think you know sport? Pick the winner of the biggest events in 2026 and win real cash prizes — completely free.
                 </p>
               </div>
-              <div className="flex gap-6 shrink-0">
-                <div className="text-center">
-                  <p className="text-2xl font-black text-[#00DFA9]">${totalPrizePool.toLocaleString()}</p>
-                  <p className="text-[10px] text-[#94A3B8]/50 uppercase tracking-wider mt-0.5">In prizes</p>
+
+              {/* Stats */}
+              <div className="flex gap-5 sm:gap-7 shrink-0">
+                <div className="text-center space-y-0.5">
+                  <p className="text-[22px] font-black text-[#00DFA9]">${totalPrizePool.toLocaleString()}</p>
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-[#94A3B8]/45">In prizes</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-black text-[#F8FAFC]">{POOLS.filter(p => p.status === 'open').length}</p>
-                  <p className="text-[10px] text-[#94A3B8]/50 uppercase tracking-wider mt-0.5">Open now</p>
+                <div className="w-px bg-[#1E2A38] self-stretch" />
+                <div className="text-center space-y-0.5">
+                  <p className="text-[22px] font-black text-[#F8FAFC]">{POOLS.filter(p => p.status === 'open').length}</p>
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-[#94A3B8]/45">Open now</p>
                 </div>
                 {totalUserPicks > 0 && (
-                  <div className="text-center">
-                    <p className="text-2xl font-black text-[#FACC15]">{totalUserPicks}</p>
-                    <p className="text-[10px] text-[#94A3B8]/50 uppercase tracking-wider mt-0.5">Your picks</p>
-                  </div>
+                  <>
+                    <div className="w-px bg-[#1E2A38] self-stretch" />
+                    <div className="text-center space-y-0.5">
+                      <p className="text-[22px] font-black text-[#FACC15]">{totalUserPicks}</p>
+                      <p className="text-[9px] font-semibold uppercase tracking-wider text-[#94A3B8]/45">Your picks</p>
+                    </div>
+                  </>
                 )}
               </div>
+            </div>
+
+            {/* Stats strip */}
+            <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+              {[
+                { icon: <Users className="h-3.5 w-3.5" />, label: 'Community picks', value: '84,290+', color: '#00DFA9' },
+                { icon: <Trophy className="h-3.5 w-3.5" />, label: 'Winners paid out', value: '1,204', color: '#FACC15' },
+                { icon: <Star className="h-3.5 w-3.5" />, label: 'Best accuracy', value: '78%', color: '#38BDF8' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center gap-2.5 rounded-xl bg-[#0B0F14]/50 border border-[#1E2A38] px-4 py-3">
+                  <span style={{ color: s.color }}>{s.icon}</span>
+                  <div>
+                    <p className="text-[13px] font-black text-[#F8FAFC]">{s.value}</p>
+                    <p className="text-[9px] text-[#94A3B8]/45">{s.label}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* How to play guide */}
+        {/* ── How to Play ──────────────────────────────────── */}
         <HowToPlayGuide />
 
-        {/* Category tabs */}
+        {/* ── Category tabs ────────────────────────────────── */}
         <div className="flex items-center gap-2 flex-wrap mb-5">
           {CATEGORIES.map(cat => (
             <button
@@ -688,7 +737,7 @@ export function PredictionPools() {
                 'px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150',
                 active === cat
                   ? 'bg-[#00DFA9] text-[#0B0F14] border-[#00DFA9]'
-                  : 'bg-[#121821] text-[#94A3B8]/60 border-[#253241] hover:border-[#94A3B8]/30 hover:text-[#94A3B8]',
+                  : 'bg-[#121821] text-[#94A3B8]/55 border-[#1E2A38] hover:border-[#253241] hover:text-[#94A3B8]/80',
               )}
             >
               {cat}
@@ -696,7 +745,7 @@ export function PredictionPools() {
           ))}
         </div>
 
-        {/* Pool grid */}
+        {/* ── Pool grid ────────────────────────────────────── */}
         {visible.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {visible.map(pool => (
@@ -709,25 +758,26 @@ export function PredictionPools() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-12 h-12 rounded-full bg-[#253241]/50 flex items-center justify-center">
-              <Target className="h-6 w-6 text-[#94A3B8]/30" />
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+            <div className="w-12 h-12 rounded-full bg-[#1E2A38]/60 flex items-center justify-center">
+              <Target className="h-6 w-6 text-[#94A3B8]/25" />
             </div>
-            <p className="text-sm text-[#94A3B8]/50">No pools in this category right now</p>
+            <p className="text-sm text-[#94A3B8]/40">No pools in this category right now</p>
           </div>
         )}
 
-        {/* Leaderboard */}
+        {/* ── Leaderboard ──────────────────────────────────── */}
         <section className="mt-12">
           <div className="flex items-center gap-2 mb-5">
             <Flame className="h-4 w-4 text-[#F97316]" />
-            <h2 className="text-base font-black text-[#F8FAFC]">Top Predictors</h2>
-            <span className="text-[10px] text-[#94A3B8]/40 ml-1">· All-time leaderboard</span>
+            <h2 className="text-[15px] font-black text-[#F8FAFC]">Top Predictors</h2>
+            <span className="text-[10px] text-[#94A3B8]/35 ml-1">All-time leaderboard</span>
           </div>
-          <div className="rounded-2xl bg-[#121821] border border-[#253241] overflow-hidden">
-            <div className="grid grid-cols-[40px_1fr_80px_80px_90px] gap-0 px-4 py-2.5 border-b border-[#253241]">
+
+          <div className="rounded-2xl bg-[#121821] border border-[#1E2A38] overflow-hidden">
+            <div className="grid grid-cols-[36px_1fr_72px_72px_88px] px-5 py-2.5 border-b border-[#1E2A38]">
               {['#', 'Player', 'Correct', 'Total', 'Winnings'].map(h => (
-                <span key={h} className="text-[9px] font-bold uppercase tracking-widest text-[#94A3B8]/35">{h}</span>
+                <span key={h} className="text-[9px] font-bold uppercase tracking-widest text-[#94A3B8]/30">{h}</span>
               ))}
             </div>
             {LEADERBOARD.map((entry, i) => {
@@ -736,21 +786,21 @@ export function PredictionPools() {
                 <div
                   key={entry.rank}
                   className={cn(
-                    'grid grid-cols-[40px_1fr_80px_80px_90px] items-center gap-0 px-4 py-3 transition-colors',
-                    i < LEADERBOARD.length - 1 ? 'border-b border-[#253241]/50' : '',
-                    i < 3 ? 'bg-[#00DFA9]/[0.02]' : 'hover:bg-[#253241]/20',
+                    'grid grid-cols-[36px_1fr_72px_72px_88px] items-center px-5 py-3 transition-colors',
+                    i < LEADERBOARD.length - 1 ? 'border-b border-[#1E2A38]/60' : '',
+                    i < 3 ? 'bg-[#00DFA9]/[0.025]' : 'hover:bg-[#1E2A38]/30',
                   )}
                 >
                   <span className="text-sm font-black">
-                    {entry.badge ?? <span className="text-[12px] font-bold text-[#94A3B8]/50">{entry.rank}</span>}
+                    {entry.badge ?? <span className="text-[12px] font-bold text-[#94A3B8]/40">{entry.rank}</span>}
                   </span>
-                  <span className="text-sm font-semibold text-[#F8FAFC] truncate pr-2">{entry.name}</span>
-                  <span className="text-sm font-bold text-[#00DFA9]">{entry.correct}</span>
-                  <div>
-                    <span className="text-sm font-semibold text-[#94A3B8]/70">{entry.total}</span>
-                    <span className="ml-1.5 text-[10px] text-[#94A3B8]/35">{accuracy}%</span>
+                  <span className="text-[13px] font-semibold text-[#F8FAFC] truncate pr-2">{entry.name}</span>
+                  <span className="text-[13px] font-black text-[#00DFA9]">{entry.correct}</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[13px] font-semibold text-[#94A3B8]/60">{entry.total}</span>
+                    <span className="text-[9px] text-[#94A3B8]/30">{accuracy}%</span>
                   </div>
-                  <span className="text-sm font-black text-[#FACC15]">{entry.winnings}</span>
+                  <span className="text-[13px] font-black text-[#FACC15]">{entry.winnings}</span>
                 </div>
               );
             })}
