@@ -251,9 +251,6 @@ export function Header() {
                 <span className="text-base leading-none">
                   {LANGUAGES.find(l => l.code === currentLang)?.flag ?? '🇬🇧'}
                 </span>
-                <span className="text-[11px] font-bold uppercase tracking-wide text-[#94A3B8] hidden sm:block">
-                  {currentLang.toUpperCase()}
-                </span>
                 <ChevronDown className={cn('h-3 w-3 text-[#94A3B8]/50 transition-transform duration-200', showLang && 'rotate-180')} />
               </button>
 
