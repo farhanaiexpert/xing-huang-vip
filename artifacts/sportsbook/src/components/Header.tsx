@@ -8,15 +8,15 @@ import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 
 const LANGUAGES = [
-  { code: 'en', label: 'English',    flag: '🇬🇧' },
-  { code: 'es', label: 'Español',    flag: '🇪🇸' },
-  { code: 'ru', label: 'Русский',    flag: '🇷🇺' },
-  { code: 'de', label: 'Deutsch',    flag: '🇩🇪' },
-  { code: 'fr', label: 'Français',   flag: '🇫🇷' },
-  { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
-  { code: 'ko', label: '한국어',      flag: '🇰🇷' },
-  { code: 'ja', label: '日本語',      flag: '🇯🇵' },
-  { code: 'hi', label: 'हिन्दी',     flag: '🇮🇳' },
+  { code: 'en', label: 'English',    flag: '🇬🇧', short: 'EN' },
+  { code: 'es', label: 'Spanish',    flag: '🇪🇸', short: 'ES' },
+  { code: 'ru', label: 'Russian',    flag: '🇷🇺', short: 'RU' },
+  { code: 'de', label: 'German',     flag: '🇩🇪', short: 'DE' },
+  { code: 'fr', label: 'French',     flag: '🇫🇷', short: 'FR' },
+  { code: 'vi', label: 'Vietnamese', flag: '🇻🇳', short: 'VI' },
+  { code: 'ko', label: 'Korean',     flag: '🇰🇷', short: 'KO' },
+  { code: 'ja', label: 'Japanese',   flag: '🇯🇵', short: 'JP' },
+  { code: 'hi', label: 'Hindi',      flag: '🇮🇳', short: 'HI' },
 ];
 
 function triggerTranslate(langCode: string) {
@@ -261,8 +261,9 @@ export function Header() {
                       >
                         <span className="text-base leading-none w-5 shrink-0">{lang.flag}</span>
                         <span className="text-[12px] font-medium leading-none flex-1 text-left">{lang.label}</span>
+                        <span className="text-[10px] font-bold tracking-wider opacity-40 shrink-0">{lang.short}</span>
                         {currentLang === lang.code && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] shrink-0 ml-1" />
                         )}
                       </button>
                     ))}
