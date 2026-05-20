@@ -15,6 +15,8 @@ import { SoccerHighlights } from "./SoccerHighlights";
 import { NBAHighlights } from "./NBAHighlights";
 import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { FlashOdds } from "./FlashOdds";
+import { JackpotPool } from "./JackpotPool";
+import { LiveBetFeed } from "./LiveBetFeed";
 import { SportDetailPage, SPORT_DETAIL_IDS } from "./SportDetailPage";
 import { cn } from "../lib/utils";
 import {
@@ -622,7 +624,9 @@ export function MainContent({
           ) : (
             <>
               {showFeatured && <USDTDepositBanner />}
+              {showFeatured && <JackpotPool />}
               {showFeatured && <FlashOdds />}
+              {showFeatured && <LiveBetFeed />}
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
               {showFeatured && <SoccerHighlights />}
