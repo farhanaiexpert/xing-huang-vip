@@ -260,7 +260,8 @@ export function Header() {
                         )}
                       >
                         <span className="text-base leading-none w-5 shrink-0">{lang.flag}</span>
-                        <span className="text-[12px] font-semibold leading-none flex-1 text-left">{lang.short}</span>
+                        <span className="text-[10px] font-bold tracking-wider opacity-50 shrink-0 w-6">{lang.short}</span>
+                        <span className="text-[12px] font-medium leading-none flex-1 text-left">{lang.label}</span>
                         {currentLang === lang.code && (
                           <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] shrink-0" />
                         )}
