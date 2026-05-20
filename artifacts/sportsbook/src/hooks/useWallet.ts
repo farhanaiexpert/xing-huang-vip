@@ -28,7 +28,7 @@ const MOCK_ADDRESSES: Record<string, string> = {
   'Phantom':         '0x6a8D3F2C1e9B4f7A0d5E3c11',
 };
 
-const STARTING_BALANCE = 1000;
+const STARTING_BALANCE = 0;
 
 function shorten(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;

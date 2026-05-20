@@ -1,0 +1,54 @@
+Update the wallet/balance betting logic.
+
+Current issue:
+When a user connects wallet, the app automatically gives a fake $1,000 starting balance. We do NOT want to give users any fake balance.
+
+Goal:
+Connected wallet users should start with $0 balance by default, and they should not be able to place bets until they top up.
+
+Requirements:
+
+1. Remove Fake Starting Balance
+- Do not grant $1,000 when wallet connects.
+- Default connected wallet balance should be 0.
+- Remove any logic that automatically assigns demo/fake funds on wallet connection.
+
+2. Balance Display
+- If wallet is connected, show balance as:
+  $0.00
+- Show a clear “Top Up” or “Top Up Account” button near the balance.
+- Do not show fake available funds.
+
+3. Place Bet Validation
+- Users cannot place bets if balance is 0.
+- Users cannot place bets if stake is greater than balance.
+- Place Bet button should be disabled when balance is 0.
+- Show clear inline message:
+  “Insufficient balance. Please top up your account before placing a bet.”
+
+4. Top Up UX
+- Add a Top Up button/CTA.
+- For now, Top Up button should open a placeholder modal or show a toast:
+  “Top up coming soon.”
+- Do not implement real payments yet.
+- Do not add real wallet transactions yet.
+
+5. Bet History
+- Bet history should still remain empty until a successful bet is placed.
+- Since balance is 0 by default, no bet should be added unless balance is later available.
+- Keep the useBetHistory/localStorage logic, but only add bets after valid successful placement.
+
+6. Mock Balance Logic
+- Keep balance state available for future top-up integration.
+- Do not auto-fill it.
+- If needed for testing, create a developer-only/manual test function, but do not expose fake balance to normal users.
+
+Important:
+- Frontend-only for now.
+- No backend/database.
+- No real wallet payments yet.
+- No fake $1,000 balance.
+- User must see insufficient balance and be asked to top up account.
+
+Final result:
+After wallet connection, user balance remains $0.00, Place Bet is disabled, and the user sees a clear message asking them to top up the account.

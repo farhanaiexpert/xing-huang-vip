@@ -7,10 +7,11 @@ import { formatOdds } from '../lib/oddsFormat';
 import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { cn } from '../lib/utils';
-import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Selection } from '../types';
+import { useToast } from '../hooks/use-toast';
 
 export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }: { className?: string; forceExpanded?: boolean; isScrolled?: boolean }) {
   const {
@@ -23,6 +24,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   const { isConnected, balance, deductBalance } = useWallet();
   const { addBet } = useBetHistory();
+  const { toast } = useToast();
   const [isWalletOpen,   setIsWalletOpen]   = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
   const isScrolled = !forceExpanded && !!isScrolledProp;
@@ -198,11 +200,20 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {isConnected && (
-            <span className="text-[10px] font-semibold text-[#00DFA9] bg-[#00DFA9]/10 border border-[#00DFA9]/20 px-2 py-0.5 rounded-full tabular-nums leading-none">
-              ${balance.toFixed(2)}
-            </span>
+            <>
+              <span className="text-[10px] font-semibold text-[#F8FAFC] tabular-nums leading-none">
+                ${balance.toFixed(2)}
+              </span>
+              <button
+                onClick={() => toast({ title: 'Top up coming soon', description: 'Payment integration is on the way!' })}
+                className="flex items-center gap-0.5 text-[9px] font-bold bg-[#00DFA9]/10 border border-[#00DFA9]/25 text-[#00DFA9] px-1.5 py-0.5 rounded-full hover:bg-[#00DFA9]/20 transition-all leading-none"
+              >
+                <Plus className="h-2.5 w-2.5" />
+                Top Up
+              </button>
+            </>
           )}
           {hasSelections && (
             <button
@@ -366,13 +377,13 @@ function SingleView({
           </div>
         </div>
         {isConnected && totalSingleStaked > 0 && balance === 0 && (
-          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center">
-            Insufficient balance. Please add funds before placing a bet.
+          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center leading-snug">
+            Insufficient balance. Please top up your account before placing a bet.
           </p>
         )}
         {isConnected && totalSingleStaked > balance && balance > 0 && (
-          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center">
-            Stake exceeds available balance (${balance.toFixed(2)}).
+          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center leading-snug">
+            Stake exceeds available balance (${balance.toFixed(2)}). Please top up.
           </p>
         )}
         <ActionButton
@@ -477,13 +488,13 @@ function AccaView({
         </div>
 
         {isConnected && stakeNum > 0 && balance === 0 && (
-          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center">
-            Insufficient balance. Please add funds before placing a bet.
+          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center leading-snug">
+            Insufficient balance. Please top up your account before placing a bet.
           </p>
         )}
         {isConnected && stakeNum > balance && balance > 0 && (
-          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center">
-            Stake exceeds available balance (${balance.toFixed(2)}).
+          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center leading-snug">
+            Stake exceeds available balance (${balance.toFixed(2)}). Please top up.
           </p>
         )}
         <ActionButton
