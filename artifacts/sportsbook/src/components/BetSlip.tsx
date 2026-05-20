@@ -202,18 +202,26 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
         </div>
         <div className="flex items-center gap-1.5">
           {isConnected && (
-            <>
-              <span className="text-[10px] font-semibold text-[#F8FAFC] tabular-nums leading-none">
-                ${balance.toFixed(2)}
-              </span>
+            <div className="flex items-center gap-1.5">
+              <div className={cn(
+                'flex items-center gap-1 px-2 py-1 rounded-lg border',
+                balance > 0
+                  ? 'bg-[#00DFA9]/10 border-[#00DFA9]/25 text-[#00DFA9]'
+                  : 'bg-[#FACC15]/8 border-[#FACC15]/25 text-[#FACC15]'
+              )}>
+                <Wallet className="h-3 w-3 shrink-0" />
+                <span className="text-[11px] font-bold tabular-nums leading-none">
+                  ${balance.toFixed(2)}
+                </span>
+              </div>
               <button
                 onClick={() => toast({ title: 'Top up coming soon', description: 'Payment integration is on the way!' })}
-                className="flex items-center gap-0.5 text-[9px] font-bold bg-[#00DFA9]/10 border border-[#00DFA9]/25 text-[#00DFA9] px-1.5 py-0.5 rounded-full hover:bg-[#00DFA9]/20 transition-all leading-none"
+                className="flex items-center gap-0.5 text-[9px] font-bold bg-[#00DFA9]/10 border border-[#00DFA9]/25 text-[#00DFA9] px-1.5 py-1 rounded-lg hover:bg-[#00DFA9]/20 transition-all leading-none"
               >
                 <Plus className="h-2.5 w-2.5" />
                 Top Up
               </button>
-            </>
+            </div>
           )}
           {hasSelections && (
             <button

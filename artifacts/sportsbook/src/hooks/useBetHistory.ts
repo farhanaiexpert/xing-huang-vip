@@ -21,7 +21,7 @@ interface BetHistoryState {
 
 const BetHistoryContext = createContext<BetHistoryState | null>(null);
 
-const STORAGE_KEY = 'gobet_bet_history';
+const STORAGE_KEY = 'gobet_bet_history_v2';
 
 function loadBets(): PlacedBet[] {
   try {
