@@ -237,22 +237,9 @@ export function Header() {
 
             {/* Language picker */}
             <div className="relative" ref={langRef}>
-              <button
-                aria-label="Language"
-                onClick={() => setShowLang(v => !v)}
-                className={cn(
-                  'flex items-center gap-1.5 h-9 px-2.5 rounded-xl border text-sm font-semibold transition-all duration-200',
-                  showLang
-                    ? 'bg-[#18212B] border-[#00DFA9]/50 text-[#F8FAFC]'
-                    : 'bg-white/[0.04] border-white/[0.10] text-[#F8FAFC] hover:bg-white/[0.07] hover:border-[#00DFA9]/30'
-                )}
-              >
-                <Globe className="h-3.5 w-3.5 text-[#00DFA9]" />
-                <span className="text-base leading-none">
-                  {LANGUAGES.find(l => l.code === currentLang)?.flag ?? '🇬🇧'}
-                </span>
-                <ChevronDown className={cn('h-3 w-3 text-[#94A3B8]/50 transition-transform duration-200', showLang && 'rotate-180')} />
-              </button>
+              <HeaderIconBtn aria-label="Language" onClick={() => setShowLang(v => !v)}>
+                <Globe className="h-4 w-4" style={{ color: '#00D9A6' }} />
+              </HeaderIconBtn>
 
               {showLang && (
                 <div className="absolute right-0 top-[calc(100%+8px)] w-48 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_24px_60px_rgba(0,0,0,0.75)] overflow-hidden z-50">
