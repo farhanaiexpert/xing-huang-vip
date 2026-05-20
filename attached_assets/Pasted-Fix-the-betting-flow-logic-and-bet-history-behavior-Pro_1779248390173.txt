@@ -1,0 +1,58 @@
+Fix the betting flow logic and bet history behavior.
+
+Problems to solve:
+1. Betting history is appearing before the user places any bet.
+2. Users can place bets even when their wallet/balance is zero.
+
+Goal:
+Make the betting flow realistic and correct.
+
+Requirements:
+
+1. Bet History Visibility
+- Bet history should be empty by default.
+- Do not show fake/pre-filled bet history before the user places a bet.
+- Show a clean empty state instead:
+  “No bets placed yet”
+  “Your placed bets will appear here.”
+- Only add a bet to history after the user successfully places a bet.
+- Store placed bets only in frontend state/localStorage for now.
+- If there are no placed bets, hide any mock betting history data.
+
+2. Balance Validation
+- User should NOT be able to place a bet with zero balance.
+- If balance is 0, disable the Place Bet button.
+- Show a clear message:
+  “Insufficient balance. Please add funds before placing a bet.”
+- Validate balance before confirming the bet.
+- Stake amount must be greater than 0.
+- Stake amount cannot exceed available balance.
+- If stake exceeds balance, show:
+  “Stake exceeds available balance.”
+
+3. Place Bet Button Logic
+The Place Bet button should only be enabled when:
+- wallet is connected
+- at least one selection is in Bet Slip
+- stake amount is greater than 0
+- balance is greater than 0
+- stake amount is less than or equal to available balance
+
+4. After Successful Bet
+- Deduct the stake from the frontend mock balance.
+- Add the placed bet to Bet History.
+- Show success modal/toast with:
+  bet ID
+  stake
+  combined odds
+  potential return
+- Clear the Bet Slip after successful placement.
+
+5. Frontend-Only
+- Do not add backend/database.
+- Do not add real payments.
+- Do not add real wallet transactions.
+- Use existing mock wallet/balance state only.
+
+Final result:
+Users should see no bet history until they place bets, and users with zero or insufficient balance should not be able to place bets.

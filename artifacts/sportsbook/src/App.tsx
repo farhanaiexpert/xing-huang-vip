@@ -14,6 +14,7 @@ import { AMLPolicy } from "@/pages/AMLPolicy";
 import { WinSpinPage } from "@/pages/WinSpinPage";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
+import { BetHistoryProvider } from "@/hooks/useBetHistory";
 import { FavoritesProvider } from "@/hooks/useFavorites";
 import { OddsSimulationProvider } from "@/hooks/useOddsSimulation";
 import { OddsFormatProvider } from "@/hooks/useOddsFormat";
@@ -49,6 +50,7 @@ function App() {
             <OddsDataProvider>
               <FavoritesProvider>
                 <WalletProvider>
+                  <BetHistoryProvider>
                   <BetSlipProvider>
                     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                       <Router />
@@ -57,6 +59,7 @@ function App() {
                     <OnboardingGuide />
                     <Toaster />
                   </BetSlipProvider>
+                  </BetHistoryProvider>
                 </WalletProvider>
               </FavoritesProvider>
             </OddsDataProvider>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
+import { useBetHistory } from '../hooks/useBetHistory';
 import { formatOdds } from '../lib/oddsFormat';
 import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
@@ -20,7 +21,8 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     totalOdds, accaReturn, totalSingleReturn, totalSingleStaked,
   } = useBetSlip();
 
-  const { isConnected } = useWallet();
+  const { isConnected, balance, deductBalance } = useWallet();
+  const { addBet } = useBetHistory();
   const [isWalletOpen,   setIsWalletOpen]   = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
   const isScrolled = !forceExpanded && !!isScrolledProp;
@@ -36,9 +38,9 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     const payout     = betType === 'acca' ? accaReturn : totalSingleReturn;
     const odds       = betType === 'acca' ? totalOdds  : (stakeNum > 0 ? payout / stakeNum : 1);
 
-    if (stakeNum <= 0) return;
+    if (stakeNum <= 0 || balance <= 0 || stakeNum > balance) return;
 
-    setConfirmation({
+    const placed = {
       betId:           `#BET-${Math.floor(Math.random() * 90000 + 10000)}`,
       betType,
       selections:      [...selections],
@@ -46,7 +48,11 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
       totalOdds:       odds,
       estimatedPayout: payout,
       placedAt:        new Date(),
-    });
+    };
+
+    deductBalance(stakeNum);
+    addBet(placed);
+    setConfirmation(placed);
   }
 
   function handleConfirmationClose() {
@@ -56,8 +62,8 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   // ── Bet logic ─────────────────────────────────────────────────
   const accaStakeNum     = parseFloat(stake || '0');
-  const canPlaceAcca     = isConnected && betType === 'acca'   && accaStakeNum > 0 && hasSelections;
-  const canPlaceSingle   = isConnected && betType === 'single' && totalSingleStaked > 0 && hasSelections;
+  const canPlaceAcca     = isConnected && betType === 'acca'   && accaStakeNum > 0 && hasSelections && balance > 0 && accaStakeNum <= balance;
+  const canPlaceSingle   = isConnected && betType === 'single' && totalSingleStaked > 0 && hasSelections && balance > 0 && totalSingleStaked <= balance;
   const canPlace         = canPlaceAcca || canPlaceSingle;
   const readyToStake     = hasSelections;
 
@@ -192,15 +198,22 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
             </span>
           )}
         </div>
-        {hasSelections && (
-          <button
-            onClick={clearSlip}
-            data-testid="button-clear-betslip"
-            className="p-1.5 rounded-md text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all duration-150"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isConnected && (
+            <span className="text-[10px] font-semibold text-[#00DFA9] bg-[#00DFA9]/10 border border-[#00DFA9]/20 px-2 py-0.5 rounded-full tabular-nums leading-none">
+              ${balance.toFixed(2)}
+            </span>
+          )}
+          {hasSelections && (
+            <button
+              onClick={clearSlip}
+              data-testid="button-clear-betslip"
+              className="p-1.5 rounded-md text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all duration-150"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Body ───────────────────────────────────────────────── */}
@@ -246,6 +259,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               totalSingleStaked={totalSingleStaked}
               totalSingleReturn={totalSingleReturn}
               isConnected={isConnected}
+              balance={balance}
               canPlace={canPlaceSingle}
               onConnectWallet={() => setIsWalletOpen(true)}
               onPlaceBet={handlePlaceBet}
@@ -259,6 +273,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               setStake={setStake}
               accaReturn={accaReturn}
               isConnected={isConnected}
+              balance={balance}
               canPlace={canPlaceAcca}
               readyToStake={readyToStake}
               onConnectWallet={() => setIsWalletOpen(true)}
@@ -281,7 +296,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 // ────────────────────────────────────────────────────────────────
 function SingleView({
   selections, singleStakes, setSingleStake, removeSelection,
-  totalSingleStaked, totalSingleReturn, isConnected, canPlace,
+  totalSingleStaked, totalSingleReturn, isConnected, balance, canPlace,
   onConnectWallet, onPlaceBet,
 }: {
   selections: Selection[];
@@ -291,6 +306,7 @@ function SingleView({
   totalSingleStaked: number;
   totalSingleReturn: number;
   isConnected: boolean;
+  balance: number;
   canPlace: boolean;
   onConnectWallet: () => void;
   onPlaceBet: () => void;
@@ -349,6 +365,16 @@ function SingleView({
             </span>
           </div>
         </div>
+        {isConnected && totalSingleStaked > 0 && balance === 0 && (
+          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center">
+            Insufficient balance. Please add funds before placing a bet.
+          </p>
+        )}
+        {isConnected && totalSingleStaked > balance && balance > 0 && (
+          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center">
+            Stake exceeds available balance (${balance.toFixed(2)}).
+          </p>
+        )}
         <ActionButton
           isConnected={isConnected}
           canPlace={canPlace}
@@ -366,7 +392,7 @@ function SingleView({
 // ────────────────────────────────────────────────────────────────
 function AccaView({
   selections, removeSelection, totalOdds, stake, setStake,
-  accaReturn, isConnected, canPlace, readyToStake, onConnectWallet, onPlaceBet,
+  accaReturn, isConnected, balance, canPlace, readyToStake, onConnectWallet, onPlaceBet,
 }: {
   selections: Selection[];
   removeSelection: (id: string) => void;
@@ -375,6 +401,7 @@ function AccaView({
   setStake: (v: string) => void;
   accaReturn: number;
   isConnected: boolean;
+  balance: number;
   canPlace: boolean;
   readyToStake: boolean;
   onConnectWallet: () => void;
@@ -449,6 +476,16 @@ function AccaView({
           </div>
         </div>
 
+        {isConnected && stakeNum > 0 && balance === 0 && (
+          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center">
+            Insufficient balance. Please add funds before placing a bet.
+          </p>
+        )}
+        {isConnected && stakeNum > balance && balance > 0 && (
+          <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center">
+            Stake exceeds available balance (${balance.toFixed(2)}).
+          </p>
+        )}
         <ActionButton
           isConnected={isConnected}
           canPlace={canPlace}

@@ -9,13 +9,15 @@ import {
 } from 'react';
 
 interface WalletState {
-  isConnected: boolean;
-  isConnecting: boolean;
-  address: string | null;
-  walletName: string | null;
-  connect: (walletName: string) => Promise<void>;
-  disconnect: () => void;
-  shortAddress: string | null;
+  isConnected:    boolean;
+  isConnecting:   boolean;
+  address:        string | null;
+  walletName:     string | null;
+  balance:        number;
+  connect:        (walletName: string) => Promise<void>;
+  disconnect:     () => void;
+  deductBalance:  (amount: number) => void;
+  shortAddress:   string | null;
 }
 
 // Mock addresses for each wallet type
@@ -25,6 +27,8 @@ const MOCK_ADDRESSES: Record<string, string> = {
   'Coinbase Wallet': '0x2c9F4E1B7a3D6f0C8e5A2b71',
   'Phantom':         '0x6a8D3F2C1e9B4f7A0d5E3c11',
 };
+
+const STARTING_BALANCE = 1000;
 
 function shorten(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -37,14 +41,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [address,      setAddress]      = useState<string | null>(null);
   const [walletName,   setWalletName]   = useState<string | null>(null);
+  const [balance,      setBalance]      = useState(0);
 
   const connect = useCallback(async (name: string) => {
     setIsConnecting(true);
     setWalletName(name);
-    // Simulate network round-trip
     await new Promise<void>(res => setTimeout(res, 1400));
     const addr = MOCK_ADDRESSES[name] ?? '0xDeAdBeEf0000000000000000000000000000DEAD';
     setAddress(addr);
+    setBalance(STARTING_BALANCE);
     setIsConnected(true);
     setIsConnecting(false);
   }, []);
@@ -54,12 +59,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setIsConnecting(false);
     setAddress(null);
     setWalletName(null);
+    setBalance(0);
+  }, []);
+
+  const deductBalance = useCallback((amount: number) => {
+    setBalance(prev => Math.max(0, prev - amount));
   }, []);
 
   const shortAddress = address ? shorten(address) : null;
 
   return createElement(WalletContext.Provider, {
-    value: { isConnected, isConnecting, address, walletName, connect, disconnect, shortAddress },
+    value: { isConnected, isConnecting, address, walletName, balance, connect, disconnect, deductBalance, shortAddress },
     children,
   });
 }
