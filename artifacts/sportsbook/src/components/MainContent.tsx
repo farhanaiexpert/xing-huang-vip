@@ -61,102 +61,66 @@ const PROMO_PILLS = [
 
 function USDTDepositBanner() {
   return (
-    /* Gradient border wrapper */
     <div
-      className="relative mb-5 rounded-2xl p-px"
-      style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #FACC15 50%, #00DFA9 100%)' }}
+      className="relative mb-5 rounded-xl p-px"
+      style={{ background: 'linear-gradient(105deg, #00DFA9 0%, #1E9E78 40%, #FACC15 100%)' }}
     >
-      {/* Inner card */}
       <div
-        className="relative rounded-2xl overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #0C1A16 0%, #0B0F14 45%, #0F1520 100%)' }}
+        className="relative rounded-xl overflow-hidden flex items-center gap-4 px-4 py-3"
+        style={{ background: 'linear-gradient(105deg, #091812 0%, #0B0F14 55%, #10140E 100%)' }}
       >
-        {/* Ambient glow blobs */}
-        <div className="absolute -top-8 -left-8 w-40 h-40 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: '#00DFA9' }} />
-        <div className="absolute -bottom-8 -right-4 w-32 h-32 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: '#FACC15' }} />
+        {/* Teal glow — left */}
+        <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-28 h-28 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(0,223,169,0.18)' }} />
+        {/* Gold glow — right */}
+        <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-24 h-24 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(250,204,21,0.12)' }} />
 
-        {/* Subtle grid texture */}
-        <div
-          className="absolute inset-0 opacity-[0.04] pointer-events-none"
-          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)', backgroundSize: '32px 32px' }}
-        />
+        {/* ── Live badge ── */}
+        <div className="relative shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg" style={{ background: 'rgba(0,223,169,0.1)', border: '1px solid rgba(0,223,169,0.2)' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
+          <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#00DFA9] whitespace-nowrap">Live Offer</span>
+        </div>
 
-        <div className="relative px-5 py-5 flex items-center justify-between gap-5">
-          {/* ── Left column ──────────────────────── */}
-          <div className="flex flex-col gap-2.5 min-w-0">
-            {/* Badge row */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border" style={{ background: '#00DFA9/10', borderColor: '#00DFA920', backgroundColor: 'rgba(0,223,169,0.08)' }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse" />
-                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#00DFA9]">Live Offer</span>
-              </div>
-              <span className="text-[9px] font-semibold text-[#94A3B8]/40 uppercase tracking-widest">Crypto · Zero Fees</span>
-            </div>
-
-            {/* Headline */}
-            <div>
-              <h2 className="text-[20px] font-black leading-tight tracking-tight text-[#F8FAFC]">
-                Deposit <span style={{ background: 'linear-gradient(90deg, #00DFA9, #FACC15)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>USDT</span>
-              </h2>
-              <p className="text-[17px] font-black leading-tight tracking-tight text-[#F8FAFC]/80 -mt-0.5">
-                &amp; Start Winning Today
-              </p>
-            </div>
-
-            {/* Sub */}
-            <p className="text-[11px] text-[#94A3B8]/70 leading-relaxed max-w-[260px]">
-              100% match bonus on your first deposit. Instant, non-custodial, no limits.
-            </p>
-
-            {/* Perks */}
-            <div className="flex flex-col gap-1">
-              {['TRC-20 & ERC-20 accepted', 'Instant on-chain settlement', 'Zero withdrawal fees ever'].map(perk => (
-                <div key={perk} className="flex items-center gap-2">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <circle cx="6" cy="6" r="5.5" stroke="#00DFA9" strokeOpacity="0.4" />
-                    <path d="M3.5 6l1.8 1.8 3.2-3.6" stroke="#00DFA9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span className="text-[11px] font-medium text-[#94A3B8]/70">{perk}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA */}
-            <button
-              className="mt-1 self-start px-5 py-2 rounded-xl text-[12px] font-black uppercase tracking-wide text-[#0B0F14] transition-all duration-150 hover:scale-105 active:scale-95 hover:shadow-[0_0_28px_rgba(0,223,169,0.55)]"
-              style={{ background: 'linear-gradient(90deg, #00DFA9, #00C98A)' }}
-            >
-              Deposit USDT Now →
-            </button>
-          </div>
-
-          {/* ── Right column — bonus callout ─────── */}
-          <div className="shrink-0 flex flex-col items-center justify-center gap-0">
-            {/* Outer glow ring */}
-            <div
-              className="relative flex flex-col items-center justify-center rounded-2xl px-5 py-4"
-              style={{ background: 'linear-gradient(145deg, rgba(250,204,21,0.08), rgba(0,223,169,0.06))', border: '1px solid rgba(250,204,21,0.2)' }}
-            >
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#94A3B8]/50 mb-1">Welcome Bonus</p>
-              <div className="flex items-start leading-none">
-                <span className="text-[13px] font-black text-[#FACC15]/70 mt-1 mr-0.5">+</span>
-                <span
-                  className="text-[44px] font-black tabular-nums leading-none"
-                  style={{ background: 'linear-gradient(180deg, #FACC15 0%, #F59E0B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-                >
-                  500
-                </span>
-              </div>
-              <p
-                className="text-[15px] font-black tracking-wider -mt-1"
-                style={{ background: 'linear-gradient(90deg, #00DFA9, #FACC15)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-              >
-                USDT
-              </p>
-              <p className="text-[9px] text-[#94A3B8]/40 mt-1.5 text-center leading-snug">100% match<br />on first deposit</p>
-            </div>
+        {/* ── Main text ── */}
+        <div className="relative flex-1 min-w-0">
+          <p className="text-[14px] font-black leading-tight text-white tracking-tight">
+            Deposit{' '}
+            <span style={{ background: 'linear-gradient(90deg, #00DFA9 0%, #FACC15 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              USDT
+            </span>
+            {' '}&amp; Start Winning
+          </p>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            {['Zero fees', 'Instant settlement', 'TRC-20 · ERC-20'].map((t, i) => (
+              <span key={t} className="flex items-center gap-1">
+                {i > 0 && <span className="text-[#253241] text-[10px]">·</span>}
+                <span className="text-[10px] text-[#6EE7C7] font-medium">{t}</span>
+              </span>
+            ))}
           </div>
         </div>
+
+        {/* ── Divider ── */}
+        <div className="relative shrink-0 w-px h-9 rounded-full" style={{ background: 'linear-gradient(180deg, transparent, rgba(0,223,169,0.25), transparent)' }} />
+
+        {/* ── Bonus callout ── */}
+        <div className="relative shrink-0 text-center">
+          <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#94A3B8]/50 leading-none">Bonus up to</p>
+          <p
+            className="text-[22px] font-black tabular-nums leading-none mt-0.5"
+            style={{ background: 'linear-gradient(135deg, #FACC15 20%, #FDE68A 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+          >
+            500 <span className="text-[13px]">USDT</span>
+          </p>
+          <p className="text-[8px] text-[#94A3B8]/40 leading-none mt-0.5">100% first deposit match</p>
+        </div>
+
+        {/* ── CTA ── */}
+        <button
+          className="relative shrink-0 px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 hover:brightness-110 hover:scale-105 active:scale-95 hover:shadow-[0_0_20px_rgba(0,223,169,0.5)] whitespace-nowrap"
+          style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C98A 100%)' }}
+        >
+          Deposit Now →
+        </button>
       </div>
     </div>
   );
