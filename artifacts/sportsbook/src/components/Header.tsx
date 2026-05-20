@@ -111,6 +111,7 @@ export function Header() {
     { label: 'All Sports',      href: '/' },
     { label: 'WinSpin',         href: '/winspin' },
     { label: 'Promotions',      href: '/promotions' },
+    { label: 'Predict & Win',   href: '/prediction-pools' },
     { label: 'Bet History',     href: '/bet-history' },
     { label: 'Help & Rules',    href: '/help' },
     { label: 'Soccer',          href: '/' },
@@ -224,12 +225,13 @@ export function Header() {
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-0.5 flex-1">
-            <NavItem href="/"             label="All Sports"  />
-            <NavItem href="/promotions"   label="Promotions"  />
-            <NavItem href="/bet-history"  label="Bet History" />
-            <NavItem href="/help"         label="Help"        />
+            <NavItem href="/"                   label="All Sports"        />
+            <NavItem href="/promotions"         label="Promotions"        />
+            <NavItem href="/prediction-pools"   label="Predict & Win"     />
+            <NavItem href="/bet-history"        label="Bet History"       />
+            <NavItem href="/help"               label="Help"              />
             <WinSpinNavItem />
-            <NavItem href="/"             label="In-Play" disabled soon />
+            <NavItem href="/"                   label="In-Play" disabled soon />
           </nav>
 
           {/* Right */}

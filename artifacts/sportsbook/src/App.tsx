@@ -12,6 +12,7 @@ import { Terms } from "@/pages/Terms";
 import { Privacy } from "@/pages/Privacy";
 import { AMLPolicy } from "@/pages/AMLPolicy";
 import { WinSpinPage } from "@/pages/WinSpinPage";
+import { PredictionPools } from "@/pages/PredictionPools";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
 import { BetHistoryProvider } from "@/hooks/useBetHistory";
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/privacy"              component={Privacy}             />
       <Route path="/aml"                  component={AMLPolicy}           />
       <Route path="/winspin"              component={WinSpinPage}         />
+      <Route path="/prediction-pools"    component={PredictionPools}     />
       <Route component={NotFound} />
     </Switch>
   );

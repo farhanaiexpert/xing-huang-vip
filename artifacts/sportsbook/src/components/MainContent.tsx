@@ -14,6 +14,7 @@ import { TennisHighlights } from './TennisHighlights';
 import { SoccerHighlights } from './SoccerHighlights';
 import { NBAHighlights } from './NBAHighlights';
 import { EuropaLeagueFinal } from './EuropaLeagueFinal';
+import { FlashOdds } from './FlashOdds';
 import { SportDetailPage, SPORT_DETAIL_IDS } from './SportDetailPage';
 import { cn } from '../lib/utils';
 import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
@@ -404,6 +405,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
             </div>
           ) : (
             <>
+              {showFeatured && <FlashOdds />}
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
               {showFeatured && <SoccerHighlights />}
