@@ -1,13 +1,42 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { ConnectWalletModal } from '@/components/ConnectWalletModal';
 import { useWallet } from '@/hooks/useWallet';
 import { cn } from '@/lib/utils';
 import {
   Trophy, Users, Target, Clock, CheckCircle2, Star, Flame,
-  X, ArrowRight, Mail, User, Wallet, Gift, ShieldCheck,
+  X, ArrowRight, Mail, User, Wallet, ShieldCheck, Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// ─── Wallet definitions (mirrored from ConnectWalletModal) ────────────────────
+const WALLETS = [
+  {
+    name: 'MetaMask', color: '#F6851B', description: 'Browser extension', popular: true,
+    logo: <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/meta.svg" alt="MetaMask" className="w-7 h-7 object-contain" />,
+  },
+  {
+    name: 'WalletConnect', color: '#3B99FC', description: 'Scan with mobile', popular: false,
+    logo: (
+      <svg viewBox="0 0 40 40" fill="none" className="w-7 h-7">
+        <circle cx="20" cy="20" r="20" fill="#3B99FC" fillOpacity=".15"/>
+        <path d="M11.3 16.2c4.8-4.7 12.6-4.7 17.4 0l.6.6c.2.2.2.6 0 .8l-2 2c-.1.1-.3.1-.4 0l-.8-.8c-3.3-3.3-8.7-3.3-12 0l-.9.9c-.1.1-.3.1-.4 0l-2-2c-.2-.2-.2-.6 0-.8l1.5-1.7zm21.5 4l1.8 1.8c.2.2.2.6 0 .8L27 30.4c-.2.2-.6.2-.8 0l-4.5-4.5c-.1-.1-.2-.1-.2 0l-4.5 4.5c-.2.2-.6.2-.8 0l-7.6-7.6c-.2-.2-.2-.6 0-.8l1.8-1.8c.2-.2.6-.2.8 0l4.5 4.5c.1.1.2.1.2 0l4.5-4.5c.2-.2.6-.2.8 0l4.5 4.5c.1.1.2.1.2 0l4.5-4.5c.2-.2.6-.2.8 0z" fill="#3B99FC"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'Coinbase Wallet', color: '#0052FF', description: 'Coinbase Wallet app', popular: false,
+    logo: (
+      <svg viewBox="0 0 40 40" fill="none" className="w-7 h-7">
+        <rect width="40" height="40" rx="10" fill="#0052FF" fillOpacity=".15"/>
+        <path fillRule="evenodd" clipRule="evenodd" d="M20 7C12.8 7 7 12.8 7 20s5.8 13 13 13 13-5.8 13-13S27.2 7 20 7zm-4 9.5h8c.3 0 .5.2.5.5v6c0 .3-.2.5-.5.5h-8c-.3 0-.5-.2-.5-.5v-6c0-.3.2-.5.5-.5z" fill="#0052FF"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'Phantom', color: '#AB9FF2', description: 'Solana & multi-chain', popular: false,
+    logo: <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/4850.sp3ow1.192x192.webp" alt="Phantom" className="w-7 h-7 object-contain rounded-lg" />,
+  },
+];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PoolOption { id: string; label: string; votes: number; }
@@ -140,11 +169,11 @@ function EntryModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
-  const { isConnected } = useWallet();
+  const { connect, isConnecting, isConnected, walletName: connectedWalletName } = useWallet();
   const [step, setStep] = useState<'details' | 'wallet'>(profile ? 'wallet' : 'details');
   const [name,  setName]  = useState(profile?.name  ?? '');
   const [email, setEmail] = useState(profile?.email ?? '');
-  const [walletOpen, setWalletOpen] = useState(false);
+  const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
   const option = pool.options.find(o => o.id === optionId);
 
   function handleDetailsSubmit(e: React.FormEvent) {
@@ -154,213 +183,206 @@ function EntryModal({
     setStep('wallet');
   }
 
-  // Auto-confirm once wallet is connected
+  async function handleWalletSelect(wName: string) {
+    setConnectingWallet(wName);
+    await connect(wName);
+    setConnectingWallet(null);
+    setTimeout(onConfirm, 120);
+  }
+
+  // If wallet was already connected when arriving on step 2, confirm straight away
   useEffect(() => {
-    if (step === 'wallet' && isConnected && !walletOpen) {
+    if (step === 'wallet' && isConnected && !connectingWallet) {
       const t = setTimeout(onConfirm, 200);
       return () => clearTimeout(t);
     }
-  }, [isConnected, step, walletOpen]);
+  }, [isConnected, step]);
 
   return (
-    <>
-      <ConnectWalletModal open={walletOpen} onOpenChange={setWalletOpen} />
-
+    <div
+      className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       <div
-        className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
-        onClick={onClose}
+        className="relative w-full max-w-[440px] bg-[#0D1117] border border-[#253241] rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.9)] overflow-hidden"
+        onClick={e => e.stopPropagation()}
       >
-        <div
-          className="relative w-full max-w-[420px] bg-[#0D1117] border border-[#253241] rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.9)] overflow-hidden"
-          onClick={e => e.stopPropagation()}
+        {/* Accent bar */}
+        <div className="h-[3px] w-full" style={{ background: `linear-gradient(90deg, ${pool.accent} 0%, ${pool.accent}40 60%, transparent 100%)` }} />
+
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#1E2A38] flex items-center justify-center text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors z-10"
         >
-          {/* Accent bar */}
-          <div className="h-[3px] w-full" style={{ background: `linear-gradient(90deg, ${pool.accent} 0%, ${pool.accent}40 60%, transparent 100%)` }} />
+          <X className="h-3.5 w-3.5" />
+        </button>
 
-          {/* Close */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#1E2A38] flex items-center justify-center text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors z-10"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+        <div className="px-6 pt-5 pb-6 space-y-5">
 
-          <div className="px-6 pt-5 pb-6 space-y-5">
-
-            {/* Pick preview chip */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#121821] border border-[#253241]">
-              <span className="text-lg shrink-0">{pool.sportEmoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-[#94A3B8]/45 mb-0.5">{pool.sport}</p>
-                <p className="text-[11px] font-semibold text-[#F8FAFC] leading-snug line-clamp-1">{pool.question}</p>
-              </div>
-              <div
-                className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap"
-                style={{ background: `${pool.accent}18`, color: pool.accent, border: `1px solid ${pool.accent}35` }}
-              >
-                {option?.label}
-              </div>
+          {/* Pick preview chip */}
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-[#121821] border border-[#1E2A38]">
+            <span className="text-lg shrink-0">{pool.sportEmoji}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#94A3B8]/40 mb-0.5">{pool.sport}</p>
+              <p className="text-[11px] font-semibold text-[#F8FAFC] leading-snug line-clamp-1">{pool.question}</p>
             </div>
-
-            {/* Step pills */}
-            <div className="flex items-center gap-0">
-              {(['details', 'wallet'] as const).map((s, i) => {
-                const done = s === 'details' && step === 'wallet';
-                const active = step === s;
-                return (
-                  <div key={s} className="flex items-center gap-0 flex-1">
-                    <div className="flex items-center gap-2 flex-1">
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 transition-all"
-                        style={active || done ? { background: pool.accent, color: '#0B0F14' } : { background: '#1E2A38', color: '#94A3B8' }}
-                      >
-                        {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : i + 1}
-                      </div>
-                      <span className={cn('text-[11px] font-semibold', active ? 'text-[#F8FAFC]' : done ? 'text-[#94A3B8]/50' : 'text-[#94A3B8]/35')}>
-                        {s === 'details' ? 'Your details' : 'Connect wallet'}
-                      </span>
-                    </div>
-                    {i === 0 && (
-                      <div className="w-10 shrink-0 mx-2">
-                        <div className="h-px" style={{ background: step === 'wallet' ? pool.accent : '#253241' }} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            <div
+              className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-black whitespace-nowrap"
+              style={{ background: `${pool.accent}18`, color: pool.accent, border: `1px solid ${pool.accent}35` }}
+            >
+              {option?.label}
             </div>
+          </div>
 
-            {/* ── Step 1: Details ── */}
-            {step === 'details' && (
-              <form onSubmit={handleDetailsSubmit} className="space-y-4">
-                <div>
-                  <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">Who are you? 👋</h2>
-                  <p className="text-[12px] text-[#94A3B8]/55 mt-1">
-                    We need your name and email to notify you if your pick wins a prize.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">
-                      Full name
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]/30 pointer-events-none" />
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        placeholder="e.g. Alex Johnson"
-                        required
-                        className="w-full pl-9 pr-4 py-2.5 bg-[#121821] border border-[#253241] rounded-xl text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/20 outline-none transition-colors"
-                        onFocus={e => (e.target.style.borderColor = `${pool.accent}55`)}
-                        onBlur={e => (e.target.style.borderColor = '#253241')}
-                      />
+          {/* Step indicator */}
+          <div className="flex items-center">
+            {(['details', 'wallet'] as const).map((s, i) => {
+              const done   = s === 'details' && step === 'wallet';
+              const active = step === s;
+              return (
+                <div key={s} className="flex items-center flex-1">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 transition-all"
+                      style={active || done ? { background: pool.accent, color: '#0B0F14' } : { background: '#1E2A38', color: '#475569' }}
+                    >
+                      {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : i + 1}
                     </div>
+                    <span className={cn('text-[11px] font-semibold', active ? 'text-[#F8FAFC]' : done ? 'text-[#94A3B8]/45' : 'text-[#94A3B8]/30')}>
+                      {s === 'details' ? 'Your details' : 'Connect wallet'}
+                    </span>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">
-                      Email address
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]/30 pointer-events-none" />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        required
-                        className="w-full pl-9 pr-4 py-2.5 bg-[#121821] border border-[#253241] rounded-xl text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/20 outline-none transition-colors"
-                        onFocus={e => (e.target.style.borderColor = `${pool.accent}55`)}
-                        onBlur={e => (e.target.style.borderColor = '#253241')}
-                      />
-                    </div>
-                  </div>
+                  {i === 0 && (
+                    <div className="flex-1 mx-3 h-px" style={{ background: step === 'wallet' ? `${pool.accent}60` : '#1E2A38' }} />
+                  )}
                 </div>
+              );
+            })}
+          </div>
 
-                <div className="flex items-center gap-2 text-[10px] text-[#94A3B8]/30">
-                  <ShieldCheck className="h-3 w-3 shrink-0" />
-                  We never share your data. Email is only used for prize notifications.
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!name.trim() || !email.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[13px] transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-25 disabled:cursor-not-allowed"
-                  style={{ background: pool.accent, color: '#0B0F14' }}
-                >
-                  Continue <ArrowRight className="h-4 w-4" />
-                </button>
-              </form>
-            )}
-
-            {/* ── Step 2: Wallet (compulsory) ── */}
-            {step === 'wallet' && (
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">Connect your wallet 💰</h2>
-                  <p className="text-[12px] text-[#94A3B8]/55 mt-1">
-                    A wallet is required to submit your prediction and receive prizes.
-                  </p>
-                </div>
-
-                {/* Benefit cards */}
-                <div className="space-y-2">
-                  {[
-                    {
-                      icon: <Gift className="h-4 w-4" />,
-                      color: '#00DFA9',
-                      title: 'Prizes sent straight to your wallet',
-                      desc: 'Instant crypto payout — no banks, no delays.',
-                    },
-                    {
-                      icon: <Wallet className="h-4 w-4" />,
-                      color: '#38BDF8',
-                      title: 'Works with MetaMask, Coinbase & more',
-                      desc: 'Any popular Web3 wallet is supported.',
-                    },
-                    {
-                      icon: <ShieldCheck className="h-4 w-4" />,
-                      color: '#A78BFA',
-                      title: 'Secure & non-custodial',
-                      desc: 'We never hold your funds. You stay in control.',
-                    },
-                  ].map(b => (
-                    <div key={b.title} className="flex items-start gap-3 px-3.5 py-3 rounded-xl bg-[#121821] border border-[#1E2A38]">
-                      <div
-                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                        style={{ background: `${b.color}12`, border: `1px solid ${b.color}25`, color: b.color }}
-                      >
-                        {b.icon}
-                      </div>
-                      <div>
-                        <p className="text-[12px] font-bold text-[#F8FAFC]">{b.title}</p>
-                        <p className="text-[11px] text-[#94A3B8]/50 mt-0.5">{b.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => setWalletOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[13px] transition-all hover:opacity-90 active:scale-[0.98]"
-                  style={{ background: pool.accent, color: '#0B0F14' }}
-                >
-                  <Wallet className="h-4 w-4" />
-                  Connect Wallet &amp; Lock In Pick
-                </button>
-
-                <p className="text-center text-[10px] text-[#94A3B8]/30">
-                  A wallet connection is required to enter Prediction Pools.
+          {/* ── Step 1: Details ── */}
+          {step === 'details' && (
+            <form onSubmit={handleDetailsSubmit} className="space-y-4">
+              <div>
+                <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">Who are you? 👋</h2>
+                <p className="text-[12px] text-[#94A3B8]/55 mt-1">
+                  We need your name and email to notify you if your pick wins a prize.
                 </p>
               </div>
-            )}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">Full name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]/30 pointer-events-none" />
+                    <input
+                      type="text" value={name} onChange={e => setName(e.target.value)}
+                      placeholder="e.g. Alex Johnson" required
+                      className="w-full pl-9 pr-4 py-2.5 bg-[#121821] border border-[#253241] rounded-xl text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/20 outline-none transition-colors"
+                      onFocus={e => (e.target.style.borderColor = `${pool.accent}55`)}
+                      onBlur={e => (e.target.style.borderColor = '#253241')}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">Email address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]/30 pointer-events-none" />
+                    <input
+                      type="email" value={email} onChange={e => setEmail(e.target.value)}
+                      placeholder="you@example.com" required
+                      className="w-full pl-9 pr-4 py-2.5 bg-[#121821] border border-[#253241] rounded-xl text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/20 outline-none transition-colors"
+                      onFocus={e => (e.target.style.borderColor = `${pool.accent}55`)}
+                      onBlur={e => (e.target.style.borderColor = '#253241')}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-[#94A3B8]/30">
+                <ShieldCheck className="h-3 w-3 shrink-0" />
+                We never share your data. Email is only used for prize notifications.
+              </div>
+              <button
+                type="submit"
+                disabled={!name.trim() || !email.trim()}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[13px] transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-25 disabled:cursor-not-allowed"
+                style={{ background: pool.accent, color: '#0B0F14' }}
+              >
+                Continue <ArrowRight className="h-4 w-4" />
+              </button>
+            </form>
+          )}
 
-          </div>
+          {/* ── Step 2: Wallet grid (inline, all wallets visible) ── */}
+          {step === 'wallet' && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">Choose your wallet 💰</h2>
+                <p className="text-[12px] text-[#94A3B8]/55 mt-1">
+                  Select a wallet below to lock in your prediction and receive prizes.
+                </p>
+              </div>
+
+              {/* Wallet grid — all 4 visible at once */}
+              <div className="grid grid-cols-2 gap-2.5">
+                {WALLETS.map(w => {
+                  const isThisConnecting = connectingWallet === w.name;
+                  const disabled = !!connectingWallet;
+                  return (
+                    <button
+                      key={w.name}
+                      onClick={() => !disabled && handleWalletSelect(w.name)}
+                      disabled={disabled}
+                      className={cn(
+                        'relative flex flex-col items-center gap-2.5 px-3 py-4 rounded-xl border text-center transition-all duration-200 group',
+                        isThisConnecting
+                          ? 'border-opacity-60 shadow-lg'
+                          : disabled
+                            ? 'bg-[#121821] border-[#1E2A38] opacity-30 cursor-not-allowed'
+                            : 'bg-[#121821] border-[#1E2A38] hover:bg-[#18212B] hover:border-[#2E3D50] hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer',
+                      )}
+                      style={isThisConnecting ? { background: `${w.color}08`, borderColor: `${w.color}55` } : undefined}
+                    >
+                      {/* Popular badge */}
+                      {w.popular && !connectingWallet && (
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-wider bg-[#00DFA9] text-[#0B0F14] px-2 py-[2px] rounded-full whitespace-nowrap">
+                          Popular
+                        </span>
+                      )}
+
+                      {/* Logo */}
+                      <div
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
+                        style={{ background: `${w.color}12`, border: `1.5px solid ${w.color}28` }}
+                      >
+                        {isThisConnecting
+                          ? <Loader2 className="h-6 w-6 animate-spin" style={{ color: w.color }} />
+                          : w.logo}
+                      </div>
+
+                      {/* Name + description */}
+                      <div className="min-w-0 w-full">
+                        <p className="text-[13px] font-bold text-[#F8FAFC] truncate">{w.name}</p>
+                        <p className="text-[10px] text-[#94A3B8]/55 mt-0.5 truncate">
+                          {isThisConnecting ? 'Connecting…' : w.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#94A3B8]/30 pt-1">
+                <ShieldCheck className="h-3 w-3 shrink-0 text-[#00DFA9]/40" />
+                Non-custodial &amp; encrypted — we never hold your funds
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
