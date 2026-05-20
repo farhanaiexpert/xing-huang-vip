@@ -61,50 +61,101 @@ const PROMO_PILLS = [
 
 function USDTDepositBanner() {
   return (
-    <div className="relative mb-5 rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #0091FF 50%, #7C3AED 100%)' }}>
-      {/* Shimmer overlay */}
-      <div className="absolute inset-0 opacity-20" style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.08) 10px, rgba(255,255,255,0.08) 20px)' }} />
-      {/* Dark vignette on right */}
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, transparent 30%, rgba(0,0,0,0.35) 100%)' }} />
+    /* Gradient border wrapper */
+    <div
+      className="relative mb-5 rounded-2xl p-px"
+      style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #FACC15 50%, #00DFA9 100%)' }}
+    >
+      {/* Inner card */}
+      <div
+        className="relative rounded-2xl overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #0C1A16 0%, #0B0F14 45%, #0F1520 100%)' }}
+      >
+        {/* Ambient glow blobs */}
+        <div className="absolute -top-8 -left-8 w-40 h-40 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: '#00DFA9' }} />
+        <div className="absolute -bottom-8 -right-4 w-32 h-32 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: '#FACC15' }} />
 
-      <div className="relative px-5 py-4 flex items-center justify-between gap-4">
-        {/* Left — text */}
-        <div className="flex flex-col gap-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">GoBet · Crypto Sportsbook</span>
-          </div>
-          <h2 className="text-[22px] font-black text-white leading-tight tracking-tight">
-            Deposit <span className="text-[#FAFF00]">USDT</span> &amp; Start Winning
-          </h2>
-          <p className="text-[12px] text-white/75 font-medium leading-snug max-w-[280px]">
-            Instant deposits · No fees · 100% match bonus on your first deposit. Bet with crypto, win big.
-          </p>
-          <div className="flex items-center gap-3 mt-1 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FAFF00]" />
-              <span className="text-[11px] font-bold text-white/80">TRC-20 &amp; ERC-20</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FAFF00]" />
-              <span className="text-[11px] font-bold text-white/80">Instant settlement</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FAFF00]" />
-              <span className="text-[11px] font-bold text-white/80">Zero withdrawal fees</span>
-            </div>
-          </div>
-        </div>
+        {/* Subtle grid texture */}
+        <div
+          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)', backgroundSize: '32px 32px' }}
+        />
 
-        {/* Right — CTA */}
-        <div className="shrink-0 flex flex-col items-center gap-2">
-          <div className="text-center">
-            <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Bonus up to</p>
-            <p className="text-[28px] font-black text-[#FAFF00] leading-none tabular-nums">500</p>
-            <p className="text-[13px] font-black text-white leading-none mt-0.5">USDT</p>
+        <div className="relative px-5 py-5 flex items-center justify-between gap-5">
+          {/* ── Left column ──────────────────────── */}
+          <div className="flex flex-col gap-2.5 min-w-0">
+            {/* Badge row */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md border" style={{ background: '#00DFA9/10', borderColor: '#00DFA920', backgroundColor: 'rgba(0,223,169,0.08)' }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse" />
+                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#00DFA9]">Live Offer</span>
+              </div>
+              <span className="text-[9px] font-semibold text-[#94A3B8]/40 uppercase tracking-widest">Crypto · Zero Fees</span>
+            </div>
+
+            {/* Headline */}
+            <div>
+              <h2 className="text-[20px] font-black leading-tight tracking-tight text-[#F8FAFC]">
+                Deposit <span style={{ background: 'linear-gradient(90deg, #00DFA9, #FACC15)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>USDT</span>
+              </h2>
+              <p className="text-[17px] font-black leading-tight tracking-tight text-[#F8FAFC]/80 -mt-0.5">
+                &amp; Start Winning Today
+              </p>
+            </div>
+
+            {/* Sub */}
+            <p className="text-[11px] text-[#94A3B8]/70 leading-relaxed max-w-[260px]">
+              100% match bonus on your first deposit. Instant, non-custodial, no limits.
+            </p>
+
+            {/* Perks */}
+            <div className="flex flex-col gap-1">
+              {['TRC-20 & ERC-20 accepted', 'Instant on-chain settlement', 'Zero withdrawal fees ever'].map(perk => (
+                <div key={perk} className="flex items-center gap-2">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <circle cx="6" cy="6" r="5.5" stroke="#00DFA9" strokeOpacity="0.4" />
+                    <path d="M3.5 6l1.8 1.8 3.2-3.6" stroke="#00DFA9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[11px] font-medium text-[#94A3B8]/70">{perk}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <button
+              className="mt-1 self-start px-5 py-2 rounded-xl text-[12px] font-black uppercase tracking-wide text-[#0B0F14] transition-all duration-150 hover:scale-105 active:scale-95 hover:shadow-[0_0_28px_rgba(0,223,169,0.55)]"
+              style={{ background: 'linear-gradient(90deg, #00DFA9, #00C98A)' }}
+            >
+              Deposit USDT Now →
+            </button>
           </div>
-          <button className="px-4 py-2 rounded-xl bg-white text-[#0B0F14] text-[12px] font-black uppercase tracking-wide hover:bg-[#FAFF00] hover:scale-105 active:scale-95 transition-all duration-150 shadow-lg whitespace-nowrap">
-            Deposit Now →
-          </button>
+
+          {/* ── Right column — bonus callout ─────── */}
+          <div className="shrink-0 flex flex-col items-center justify-center gap-0">
+            {/* Outer glow ring */}
+            <div
+              className="relative flex flex-col items-center justify-center rounded-2xl px-5 py-4"
+              style={{ background: 'linear-gradient(145deg, rgba(250,204,21,0.08), rgba(0,223,169,0.06))', border: '1px solid rgba(250,204,21,0.2)' }}
+            >
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#94A3B8]/50 mb-1">Welcome Bonus</p>
+              <div className="flex items-start leading-none">
+                <span className="text-[13px] font-black text-[#FACC15]/70 mt-1 mr-0.5">+</span>
+                <span
+                  className="text-[44px] font-black tabular-nums leading-none"
+                  style={{ background: 'linear-gradient(180deg, #FACC15 0%, #F59E0B 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+                >
+                  500
+                </span>
+              </div>
+              <p
+                className="text-[15px] font-black tracking-wider -mt-1"
+                style={{ background: 'linear-gradient(90deg, #00DFA9, #FACC15)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+              >
+                USDT
+              </p>
+              <p className="text-[9px] text-[#94A3B8]/40 mt-1.5 text-center leading-snug">100% match<br />on first deposit</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
