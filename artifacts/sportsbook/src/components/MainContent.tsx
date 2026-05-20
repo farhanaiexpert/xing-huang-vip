@@ -841,8 +841,8 @@ function SiteFooter() {
         <div className="flex items-start justify-between gap-4 mb-5 sm:hidden">
           <div className="min-w-0">
             <img
-              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
-              alt="GoBet"
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
+              alt="CupBett"
               className="h-7 w-auto object-contain mb-1.5"
               style={{ filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
             />
@@ -898,8 +898,8 @@ function SiteFooter() {
         <div className="hidden sm:grid sm:grid-cols-4 gap-8 pb-8">
           <div className="space-y-3">
             <img
-              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
-              alt="GoBet"
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
+              alt="CupBett"
               className="h-7 w-auto object-contain"
               style={{ filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
             />
@@ -948,7 +948,7 @@ function SiteFooter() {
         {/* ── Bottom bar ────────────────────────────────────────────────── */}
         <div className="pt-4 sm:border-t sm:border-[#253241]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p className="text-[10px] text-[#94A3B8]/30 leading-snug">
-            © 2021–2026 GoBet Ltd. All rights reserved.
+            © 2021–2026 CupBett Ltd. All rights reserved.
             <span className="hidden sm:inline">
               {" "}
               · 18+ · Gamble responsibly.
@@ -1055,7 +1055,7 @@ function TrustFooter() {
         ))}
         <div className="flex-1" />
         <p className="text-[9px] text-[#94A3B8]/25 leading-none whitespace-nowrap">
-          GoBet · For entertainment purposes
+          CupBett · For entertainment purposes
         </p>
       </div>
     </div>

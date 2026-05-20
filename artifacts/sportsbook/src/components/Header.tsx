@@ -213,8 +213,8 @@ export function Header() {
           <div className="flex items-center gap-3 shrink-0">
             <Link href="/" className="flex items-center group">
               <img
-                src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
-                alt="GoBet"
+                src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
+                alt="CupBett"
                 className="h-9 w-auto object-contain transition-all duration-300 group-hover:opacity-90 group-hover:scale-[1.03]"
                 style={{ filter: 'drop-shadow(0 0 8px rgba(0,223,169,0.2))' }}
               />

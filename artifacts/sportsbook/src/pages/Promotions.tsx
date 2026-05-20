@@ -367,7 +367,7 @@ export function Promotions() {
               </div>
               <h1 className="text-3xl font-black tracking-tight leading-tight">100% Match Bonus</h1>
               <p className="text-[#94A3B8]/70 text-sm mt-1.5 max-w-sm">
-                New to GoBet? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">$500</span> in bonus funds.
+                New to CupBett? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">$500</span> in bonus funds.
               </p>
               <p className="text-[10px] text-[#94A3B8]/35 mt-3">18+ · T&Cs apply · 5× wagering req. · Min. $20 deposit</p>
             </div>
@@ -423,7 +423,7 @@ export function Promotions() {
         <div className="mt-10 flex items-start gap-2 p-4 rounded-xl bg-[#121821] border border-[#253241]">
           <Info className="h-3.5 w-3.5 text-[#94A3B8]/40 mt-0.5 shrink-0" />
           <p className="text-[10px] text-[#94A3B8]/35 leading-relaxed">
-            All promotions are subject to GoBet's general{' '}
+            All promotions are subject to CupBett's general{' '}
             <Link href="/terms" className="underline hover:text-[#94A3B8]/60 transition-colors">Terms & Conditions</Link>
             {' '}and individual promotion terms. Bonus funds cannot be withdrawn until wagering requirements are met.
           </p>
