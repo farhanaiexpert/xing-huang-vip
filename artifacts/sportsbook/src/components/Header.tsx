@@ -238,7 +238,9 @@ export function Header() {
             {/* Language picker */}
             <div className="relative" ref={langRef}>
               <HeaderIconBtn aria-label="Language" onClick={() => setShowLang(v => !v)}>
-                <Globe className="h-4 w-4" />
+                <span className="text-base leading-none" role="img" aria-label="language">
+                  {LANGUAGES.find(l => l.code === currentLang)?.flag ?? '🌐'}
+                </span>
               </HeaderIconBtn>
               {showLang && (
                 <div className="absolute right-0 top-[calc(100%+8px)] w-44 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_24px_60px_rgba(0,0,0,0.7)] overflow-hidden z-50 py-1">
