@@ -40,19 +40,15 @@ export function JackpotPool() {
   const [flash, setFlash] = useState(false);
   const [lastAdd, setLastAdd] = useState(0);
 
-  // Pot grows: varied increments — sometimes tiny, sometimes massive
+  // Pot jumps to a completely new random total each tick
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
     function tick() {
-      const roll = Math.random();
-      let add: number;
-      if (roll < 0.55)      add = parseFloat((Math.random() * 12 + 0.5).toFixed(2));   // small: 0.5–12
-      else if (roll < 0.80) add = parseFloat((Math.random() * 80 + 15).toFixed(2));    // medium: 15–95
-      else if (roll < 0.93) add = parseFloat((Math.random() * 400 + 100).toFixed(2));  // large: 100–500
-      else                  add = parseFloat((Math.random() * 1500 + 500).toFixed(2)); // whale: 500–2000
-
-      setPot(p => p + add);
-      setLastAdd(add);
+      const newPot = parseFloat((10_000 + Math.random() * 40_000).toFixed(2));
+      setPot(prev => {
+        setLastAdd(parseFloat((newPot - prev).toFixed(2)));
+        return newPot;
+      });
       setFlash(true);
       setTimeout(() => setFlash(false), 700);
       if (Math.random() < 0.20) setUsers(u => u + Math.floor(Math.random() * 3 + 1));
