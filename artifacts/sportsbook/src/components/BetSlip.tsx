@@ -188,51 +188,55 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     )}>
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#253241] bg-gradient-to-b from-[#121821] to-[#0D1117] shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center overflow-hidden bg-[#00DFA9]/10">
-            <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/soccer.png" alt="" className="w-5 h-5 object-contain" />
-          </div>
-          <span className="text-sm font-semibold text-[#F8FAFC]">Bet Slip</span>
-          {hasSelections && (
-            <span className="text-[10px] font-bold bg-[#00DFA9] text-[#0B0F14] px-1.5 py-0.5 rounded-full leading-none">
-              {selections.length}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          {isConnected && (
-            <div className="flex items-center gap-1.5">
-              <div className={cn(
-                'flex items-center gap-1 px-2 py-1 rounded-lg border',
-                balance > 0
-                  ? 'bg-[#00DFA9]/10 border-[#00DFA9]/25 text-[#00DFA9]'
-                  : 'bg-[#FACC15]/8 border-[#FACC15]/25 text-[#FACC15]'
-              )}>
-                <Wallet className="h-3 w-3 shrink-0" />
-                <span className="text-[11px] font-bold tabular-nums leading-none">
-                  ${balance.toFixed(2)}
-                </span>
-              </div>
-              <button
-                onClick={() => toast({ title: 'Top up coming soon', description: 'Payment integration is on the way!' })}
-                className="flex items-center gap-0.5 text-[9px] font-bold bg-[#00DFA9]/10 border border-[#00DFA9]/25 text-[#00DFA9] px-1.5 py-1 rounded-lg hover:bg-[#00DFA9]/20 transition-all leading-none"
-              >
-                <Plus className="h-2.5 w-2.5" />
-                Top Up
-              </button>
+      <div className="px-3 pt-3 pb-0 border-b border-[#253241] bg-gradient-to-b from-[#121821] to-[#0D1117] shrink-0">
+
+        {/* Row 1: title + trash */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 shrink-0 rounded-md flex items-center justify-center overflow-hidden bg-[#00DFA9]/10">
+              <img src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/soccer.png" alt="" className="w-5 h-5 object-contain" />
             </div>
-          )}
+            <span className="text-sm font-semibold text-[#F8FAFC] leading-none">Bet Slip</span>
+            {hasSelections && (
+              <span className="text-[10px] font-bold bg-[#00DFA9] text-[#0B0F14] px-1.5 py-0.5 rounded-full leading-none shrink-0">
+                {selections.length}
+              </span>
+            )}
+          </div>
           {hasSelections && (
             <button
               onClick={clearSlip}
               data-testid="button-clear-betslip"
-              className="p-1.5 rounded-md text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all duration-150"
+              className="shrink-0 p-1.5 rounded-md text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all duration-150"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
+
+        {/* Row 2: balance + top-up (only when connected) */}
+        {isConnected && (
+          <div className="flex items-center gap-2 pb-2.5">
+            <div className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border flex-1 min-w-0',
+              balance > 0
+                ? 'bg-[#00DFA9]/8 border-[#00DFA9]/20 text-[#00DFA9]'
+                : 'bg-[#FACC15]/6 border-[#FACC15]/20 text-[#FACC15]'
+            )}>
+              <Wallet className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-[12px] font-bold tabular-nums leading-none truncate">
+                ${balance.toFixed(2)}
+              </span>
+            </div>
+            <button
+              onClick={() => toast({ title: 'Top up coming soon', description: 'Payment integration is on the way!' })}
+              className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-[#00DFA9] text-[#0B0F14] px-3 py-1.5 rounded-lg hover:brightness-110 active:scale-95 transition-all leading-none"
+            >
+              <Plus className="h-3 w-3" />
+              Top Up
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Body ───────────────────────────────────────────────── */}
