@@ -16,9 +16,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Google Translate: suppress toolbar banner & force body position -->
+    <style>
+      .goog-te-banner-frame, .goog-te-banner-frame.skiptranslate { display: none !important; }
+      body { top: 0 !important; }
+      #google_translate_element { display: none !important; }
+      .goog-te-gadget { display: none !important; }
+      .goog-logo-link { display: none !important; }
+      /* Keep translated text selectable */
+      font[color] { color: inherit !important; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Hidden Google Translate mount point -->
+    <div id="google_translate_element" aria-hidden="true"></div>
+
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Google Translate init (must be global, non-module) -->
+    <script>
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+          { pageLanguage: 'en', autoDisplay: false },
+          'google_translate_element'
+        );
+      }
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
   </body>
 </html>

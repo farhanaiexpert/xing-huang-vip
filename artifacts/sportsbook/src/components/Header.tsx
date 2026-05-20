@@ -1,11 +1,48 @@
 import { Link, useLocation } from 'wouter';
-import { Search, Wallet, BarChart2, Bell, LogOut, Copy, ChevronDown, X } from 'lucide-react';
+import { Search, Wallet, BarChart2, Bell, LogOut, Copy, ChevronDown, X, Globe } from 'lucide-react';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { useWallet } from '../hooks/useWallet';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
+
+const LANGUAGES = [
+  { code: 'en', label: 'English',    flag: '🇬🇧' },
+  { code: 'es', label: 'Español',    flag: '🇪🇸' },
+  { code: 'ru', label: 'Русский',    flag: '🇷🇺' },
+  { code: 'de', label: 'Deutsch',    flag: '🇩🇪' },
+  { code: 'fr', label: 'Français',   flag: '🇫🇷' },
+  { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'ko', label: '한국어',      flag: '🇰🇷' },
+  { code: 'ja', label: '日本語',      flag: '🇯🇵' },
+  { code: 'hi', label: 'हिन्दी',     flag: '🇮🇳' },
+];
+
+function triggerTranslate(langCode: string) {
+  if (langCode === 'en') {
+    // Restore original language
+    const restore = document.querySelector<HTMLAnchorElement>('.goog-te-banner-frame') ??
+      document.querySelector<HTMLAnchorElement>('a.VIpgJd-ZVi9od-ORHb-OEVmcd');
+    const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
+    if (select) { select.value = langCode; select.dispatchEvent(new Event('change')); }
+    // Also try the cookie method for resetting
+    document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    window.location.reload();
+    return;
+  }
+  const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
+  if (select) {
+    select.value = langCode;
+    select.dispatchEvent(new Event('change'));
+  } else {
+    // Widget not ready yet — set cookie and reload so Google picks it up
+    document.cookie = `googtrans=/en/${langCode}; path=/`;
+    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${location.hostname}`;
+    window.location.reload();
+  }
+}
 
 
 export function Header() {
@@ -15,18 +52,27 @@ export function Header() {
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
   const [showSearch,       setShowSearch]       = useState(false);
   const [showNotifs,       setShowNotifs]       = useState(false);
+  const [showLang,         setShowLang]         = useState(false);
+  const [currentLang,      setCurrentLang]      = useState('en');
   const [searchQuery,      setSearchQuery]      = useState('');
   const [copied,           setCopied]           = useState(false);
   const menuRef   = useRef<HTMLDivElement>(null);
   const notifsRef = useRef<HTMLDivElement>(null);
+  const langRef   = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  function handleSelectLanguage(code: string) {
+    setCurrentLang(code);
+    setShowLang(false);
+    triggerTranslate(code);
+  }
 
   // Close dropdowns on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (menuRef.current   && !menuRef.current.contains(e.target as Node))   setShowAddressMenu(false);
       if (notifsRef.current && !notifsRef.current.contains(e.target as Node)) setShowNotifs(false);
+      if (langRef.current   && !langRef.current.contains(e.target as Node))   setShowLang(false);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -188,6 +234,36 @@ export function Header() {
 
           {/* Right */}
           <div className="ml-auto flex items-center gap-1">
+
+            {/* Language picker */}
+            <div className="relative" ref={langRef}>
+              <HeaderIconBtn aria-label="Language" onClick={() => setShowLang(v => !v)}>
+                <Globe className="h-4 w-4" />
+              </HeaderIconBtn>
+              {showLang && (
+                <div className="absolute right-0 top-[calc(100%+8px)] w-44 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_24px_60px_rgba(0,0,0,0.7)] overflow-hidden z-50 py-1">
+                  <p className="px-3 pt-1.5 pb-1 text-[9px] font-bold text-[#94A3B8]/40 uppercase tracking-widest">Language</p>
+                  {LANGUAGES.map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => handleSelectLanguage(lang.code)}
+                      className={cn(
+                        'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
+                        currentLang === lang.code
+                          ? 'text-[#00DFA9] bg-[#00DFA9]/6'
+                          : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#253241]/40'
+                      )}
+                    >
+                      <span className="text-base leading-none">{lang.flag}</span>
+                      <span className="text-[12px] font-medium leading-none">{lang.label}</span>
+                      {currentLang === lang.code && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#00DFA9] shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Search */}
             <HeaderIconBtn aria-label="Search" onClick={() => setShowSearch(true)}>
