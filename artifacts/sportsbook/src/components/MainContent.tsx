@@ -1,123 +1,192 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'wouter';
-import { ScrollArea, ScrollBar } from './ui/scroll-area';
-import { LeagueSection } from './LeagueSection';
-import { FeaturedCards } from './FeaturedCards';
-import { BetBuilder } from './BetBuilder';
-import { PopularBets } from './PopularBets';
-import { SkeletonLeague } from './SkeletonLeague';
-import { UpcomingRaces } from './UpcomingRaces';
-import { UpcomingMatchesCarousel } from './UpcomingMatchesCarousel';
-import { WinnersTicker } from './WinnersTicker';
-import { SportQuickNav } from './SportQuickNav';
-import { TennisHighlights } from './TennisHighlights';
-import { SoccerHighlights } from './SoccerHighlights';
-import { NBAHighlights } from './NBAHighlights';
-import { EuropaLeagueFinal } from './EuropaLeagueFinal';
-import { FlashOdds } from './FlashOdds';
-import { SportDetailPage, SPORT_DETAIL_IDS } from './SportDetailPage';
-import { cn } from '../lib/utils';
-import { Search, X, TrendingUp, ChevronRight, ShieldCheck, Lock, Zap, Users, BarChart2, Award, Twitter, Github, Instagram, Wifi, WifiOff, RefreshCw } from 'lucide-react';
-import { Input } from './ui/input';
-import { useOddsData } from '../hooks/useOddsData';
-import type { League } from '../types';
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { Link } from "wouter";
+import { ScrollArea, ScrollBar } from "./ui/scroll-area";
+import { LeagueSection } from "./LeagueSection";
+import { FeaturedCards } from "./FeaturedCards";
+import { BetBuilder } from "./BetBuilder";
+import { PopularBets } from "./PopularBets";
+import { SkeletonLeague } from "./SkeletonLeague";
+import { UpcomingRaces } from "./UpcomingRaces";
+import { UpcomingMatchesCarousel } from "./UpcomingMatchesCarousel";
+import { WinnersTicker } from "./WinnersTicker";
+import { SportQuickNav } from "./SportQuickNav";
+import { TennisHighlights } from "./TennisHighlights";
+import { SoccerHighlights } from "./SoccerHighlights";
+import { NBAHighlights } from "./NBAHighlights";
+import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
+import { FlashOdds } from "./FlashOdds";
+import { SportDetailPage, SPORT_DETAIL_IDS } from "./SportDetailPage";
+import { cn } from "../lib/utils";
+import {
+  Search,
+  X,
+  TrendingUp,
+  ChevronRight,
+  ShieldCheck,
+  Lock,
+  Zap,
+  Users,
+  BarChart2,
+  Award,
+  Twitter,
+  Github,
+  Instagram,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+} from "lucide-react";
+import { Input } from "./ui/input";
+import { useOddsData } from "../hooks/useOddsData";
+import type { League } from "../types";
 
 interface MainContentProps {
   selectedSportId: string | null;
   onSelectSport: (id: string | null) => void;
 }
 
-type DateFilter = 'all' | 'today' | 'tomorrow' | 'upcoming';
+type DateFilter = "all" | "today" | "tomorrow" | "upcoming";
 
 const CAROUSEL_SPORTS = [
-  { id: 'soccer',            name: 'Soccer',       icon: '⚽', count: 1247 },
-  { id: 'tennis',            name: 'Tennis',       icon: '🎾', count: 486  },
-  { id: 'basketball',        name: 'Basketball',   icon: '🏀', count: 318  },
-  { id: 'cricket',           name: 'Cricket',      icon: '🏏', count: 124  },
-  { id: 'esports',           name: 'Esports',      icon: '🎮', count: 203  },
-  { id: 'horse-racing',      name: 'Horse Racing', icon: '🏇', count: 847  },
-  { id: 'formula-1',         name: 'Formula 1',    icon: '🏎️', count: 38   },
-  { id: 'boxing',            name: 'Boxing',       icon: '🥊', count: 24   },
-  { id: 'golf',              name: 'Golf',         icon: '⛳', count: 96   },
-  { id: 'darts',             name: 'Darts',        icon: '🎯', count: 48   },
-  { id: 'ice-hockey',        name: 'Ice Hockey',   icon: '🏒', count: 178  },
-  { id: 'mma',               name: 'MMA',          icon: '🥋', count: 35   },
-  { id: 'nba',               name: 'NBA',          icon: 'https://www.bet365.com/home/images/Home/imgs/V9FlagIcons/USA.svg', count: 156  },
-  { id: 'american-football', name: 'NFL',          icon: '🏈', count: 28   },
+  { id: "soccer", name: "Soccer", icon: "⚽", count: 1247 },
+  { id: "tennis", name: "Tennis", icon: "🎾", count: 486 },
+  { id: "basketball", name: "Basketball", icon: "🏀", count: 318 },
+  { id: "cricket", name: "Cricket", icon: "🏏", count: 124 },
+  { id: "esports", name: "Esports", icon: "🎮", count: 203 },
+  { id: "horse-racing", name: "Horse Racing", icon: "🏇", count: 847 },
+  { id: "formula-1", name: "Formula 1", icon: "🏎️", count: 38 },
+  { id: "boxing", name: "Boxing", icon: "🥊", count: 24 },
+  { id: "golf", name: "Golf", icon: "⛳", count: 96 },
+  { id: "darts", name: "Darts", icon: "🎯", count: 48 },
+  { id: "ice-hockey", name: "Ice Hockey", icon: "🏒", count: 178 },
+  { id: "mma", name: "MMA", icon: "🥋", count: 35 },
+  {
+    id: "nba",
+    name: "NBA",
+    icon: "https://www.bet365.com/home/images/Home/imgs/V9FlagIcons/USA.svg",
+    count: 156,
+  },
+  { id: "american-football", name: "NFL", icon: "🏈", count: 28 },
 ];
 
 const DATE_FILTERS: { id: DateFilter; label: string }[] = [
-  { id: 'all',      label: 'All' },
-  { id: 'today',    label: 'Today' },
-  { id: 'tomorrow', label: 'Tomorrow' },
-  { id: 'upcoming', label: 'Upcoming' },
+  { id: "all", label: "All" },
+  { id: "today", label: "Today" },
+  { id: "tomorrow", label: "Tomorrow" },
+  { id: "upcoming", label: "Upcoming" },
 ];
 
 const PROMO_PILLS = [
-  { id: 'early-payout', label: 'Early Payout', color: '#38BDF8' },
-  { id: 'acca-boost',   label: 'Acca Boost',   color: '#00DFA9' },
+  { id: "early-payout", label: "Early Payout", color: "#38BDF8" },
+  { id: "acca-boost", label: "Acca Boost", color: "#00DFA9" },
 ];
-
 
 function USDTDepositBanner() {
   return (
     <div
       className="relative mb-5 rounded-xl p-px"
-      style={{ background: 'linear-gradient(105deg, #00DFA9 0%, #1E9E78 40%, #FACC15 100%)' }}
+      style={{
+        background:
+          "linear-gradient(105deg, #00DFA9 0%, #1E9E78 40%, #FACC15 100%)",
+      }}
     >
       <div
         className="relative rounded-xl overflow-hidden flex items-center gap-4 px-4 py-3"
-        style={{ background: 'linear-gradient(105deg, #091812 0%, #0B0F14 55%, #10140E 100%)' }}
+        style={{
+          background:
+            "linear-gradient(105deg, #091812 0%, #0B0F14 55%, #10140E 100%)",
+        }}
       >
         {/* Teal glow — left */}
-        <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-28 h-28 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(0,223,169,0.18)' }} />
+        <div
+          className="absolute -left-6 top-1/2 -translate-y-1/2 w-28 h-28 rounded-full blur-3xl pointer-events-none"
+          style={{ background: "rgba(0,223,169,0.18)" }}
+        />
         {/* Gold glow — right */}
-        <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-24 h-24 rounded-full blur-3xl pointer-events-none" style={{ background: 'rgba(250,204,21,0.12)' }} />
+        <div
+          className="absolute -right-6 top-1/2 -translate-y-1/2 w-24 h-24 rounded-full blur-3xl pointer-events-none"
+          style={{ background: "rgba(250,204,21,0.12)" }}
+        />
 
         {/* ── Live badge ── */}
-        <div className="relative shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg" style={{ background: 'rgba(0,223,169,0.1)', border: '1px solid rgba(0,223,169,0.2)' }}>
+        <div
+          className="relative shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+          style={{
+            background: "rgba(0,223,169,0.1)",
+            border: "1px solid rgba(0,223,169,0.2)",
+          }}
+        >
           <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
-          <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#00DFA9] whitespace-nowrap">Live Offer</span>
+          <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#00DFA9] whitespace-nowrap">
+            Live Offer
+          </span>
         </div>
 
         {/* ── Main text ── */}
         <div className="relative flex-1 min-w-0">
           <p className="text-[14px] font-black leading-tight text-white tracking-tight">
-            Deposit{' '}
-            <span style={{ background: 'linear-gradient(90deg, #00DFA9 0%, #FACC15 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Deposit{" "}
+            <span
+              style={{
+                background: "linear-gradient(90deg, #00DFA9 0%, #FACC15 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
               USDT
-            </span>
-            {' '}&amp; Start Winning
+            </span>{" "}
+            &amp; Start Gambling
           </p>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
-            {['Zero fees', 'Instant settlement', 'TRC-20 · ERC-20'].map((t, i) => (
-              <span key={t} className="flex items-center gap-1">
-                {i > 0 && <span className="text-[#253241] text-[10px]">·</span>}
-                <span className="text-[10px] text-[#6EE7C7] font-medium">{t}</span>
-              </span>
-            ))}
+            {["Zero fees", "Instant settlement", "TRC-20 · ERC-20"].map(
+              (t, i) => (
+                <span key={t} className="flex items-center gap-1">
+                  {i > 0 && (
+                    <span className="text-[#253241] text-[10px]">·</span>
+                  )}
+                  <span className="text-[10px] text-[#6EE7C7] font-medium">
+                    {t}
+                  </span>
+                </span>
+              ),
+            )}
           </div>
         </div>
 
         {/* ── Divider ── */}
-        <div className="relative shrink-0 w-px h-9 rounded-full" style={{ background: 'linear-gradient(180deg, transparent, rgba(0,223,169,0.25), transparent)' }} />
+        <div
+          className="relative shrink-0 w-px h-9 rounded-full"
+          style={{
+            background:
+              "linear-gradient(180deg, transparent, rgba(0,223,169,0.25), transparent)",
+          }}
+        />
 
         {/* ── Bonus callout ── */}
         <div className="relative shrink-0 text-center">
-          <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#94A3B8]/50 leading-none">Bonus up to</p>
+          <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#94A3B8]/50 leading-none">
+            Bonus up to
+          </p>
           <p
             className="text-[22px] font-black tabular-nums leading-none mt-0.5"
-            style={{ background: 'linear-gradient(135deg, #FACC15 20%, #FDE68A 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+            style={{
+              background: "linear-gradient(135deg, #FACC15 20%, #FDE68A 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
           >
             500 <span className="text-[13px]">USDT</span>
           </p>
-          <p className="text-[8px] text-[#94A3B8]/40 leading-none mt-0.5">100% first deposit match</p>
+          <p className="text-[8px] text-[#94A3B8]/40 leading-none mt-0.5">
+            100% first deposit match
+          </p>
         </div>
 
         {/* ── CTA ── */}
         <button
           className="relative shrink-0 px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 hover:brightness-110 hover:scale-105 active:scale-95 hover:shadow-[0_0_20px_rgba(0,223,169,0.5)] whitespace-nowrap"
-          style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C98A 100%)' }}
+          style={{
+            background: "linear-gradient(135deg, #00DFA9 0%, #00C98A 100%)",
+          }}
         >
           Deposit Now →
         </button>
@@ -126,17 +195,25 @@ function USDTDepositBanner() {
   );
 }
 
-export function MainContent({ selectedSportId, onSelectSport }: MainContentProps) {
-  const [dateFilter,  setDateFilter] = useState<DateFilter>('all');
-  const [search,      setSearch]     = useState('');
-  const [isLoading,   setIsLoading]  = useState(true);
+export function MainContent({
+  selectedSportId,
+  onSelectSport,
+}: MainContentProps) {
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Real + mock leagues from global context (also powers MatchDetail page)
   const {
-    allLeagues, loading: oddsLoading, refreshing: oddsRefreshing,
-    error: oddsError, hasRealData,
-    isStale, lastUpdatedLabel, refresh: refreshOdds,
+    allLeagues,
+    loading: oddsLoading,
+    refreshing: oddsRefreshing,
+    error: oddsError,
+    hasRealData,
+    isStale,
+    lastUpdatedLabel,
+    refresh: refreshOdds,
   } = useOddsData();
 
   // Simulate initial data load
@@ -148,62 +225,69 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
   // ⌘K / Ctrl+K → focus search
   useEffect(() => {
     function handler(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         searchRef.current?.focus();
         searchRef.current?.select();
       }
-      if (e.key === 'Escape' && document.activeElement === searchRef.current) {
-        setSearch('');
+      if (e.key === "Escape" && document.activeElement === searchRef.current) {
+        setSearch("");
         searchRef.current?.blur();
       }
     }
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
   const clearSearch = useCallback(() => {
-    setSearch('');
+    setSearch("");
     searchRef.current?.focus();
   }, []);
 
   // Count live matches
   const liveCount = useMemo(
-    () => allLeagues.flatMap(l => l.matches).filter(m => m.isLive).length,
-    [allLeagues]
+    () => allLeagues.flatMap((l) => l.matches).filter((m) => m.isLive).length,
+    [allLeagues],
   );
 
   // Filtered leagues
   const filteredLeagues = useMemo<League[]>(() => {
     let leagues = allLeagues;
 
-    if (selectedSportId && !['all', 'early-payout', 'acca-boost'].includes(selectedSportId)) {
-      leagues = leagues.filter(l =>
-        l.sportId === selectedSportId ||
-        l.sportId === `sp_${selectedSportId.replace('-', '_')}`
+    if (
+      selectedSportId &&
+      !["all", "early-payout", "acca-boost"].includes(selectedSportId)
+    ) {
+      leagues = leagues.filter(
+        (l) =>
+          l.sportId === selectedSportId ||
+          l.sportId === `sp_${selectedSportId.replace("-", "_")}`,
       );
     }
 
-    if (dateFilter !== 'all') {
+    if (dateFilter !== "all") {
       leagues = leagues
-        .map(l => ({ ...l, matches: l.matches.filter(m => m.dateTag === dateFilter) }))
-        .filter(l => l.matches.length > 0);
+        .map((l) => ({
+          ...l,
+          matches: l.matches.filter((m) => m.dateTag === dateFilter),
+        }))
+        .filter((l) => l.matches.length > 0);
     }
 
     if (search.trim()) {
       const q = search.toLowerCase();
       leagues = leagues
-        .map(l => ({
+        .map((l) => ({
           ...l,
           matches: l.matches.filter(
-            m =>
+            (m) =>
               m.team1.toLowerCase().includes(q) ||
               (m.team2 && m.team2.toLowerCase().includes(q)) ||
               l.name.toLowerCase().includes(q) ||
-              (m.team1 + ' vs ' + m.team2).toLowerCase().includes(q)
+              (m.team1 + " vs " + m.team2).toLowerCase().includes(q),
           ),
         }))
-        .filter(l => l.matches.length > 0);
+        .filter((l) => l.matches.length > 0);
     }
 
     return leagues;
@@ -211,24 +295,32 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
   const totalMatchCount = useMemo(
     () => filteredLeagues.reduce((acc, l) => acc + l.matches.length, 0),
-    [filteredLeagues]
+    [filteredLeagues],
   );
 
   const showFeatured =
     !isLoading &&
     !search.trim() &&
-    (!selectedSportId || selectedSportId === 'all' || selectedSportId === 'early-payout' || selectedSportId === 'acca-boost') &&
-    dateFilter === 'all';
+    (!selectedSportId ||
+      selectedSportId === "all" ||
+      selectedSportId === "early-payout" ||
+      selectedSportId === "acca-boost") &&
+    dateFilter === "all";
 
-  const hasActiveFilter = !!search.trim() || (!!selectedSportId && selectedSportId !== 'all') || dateFilter !== 'all';
+  const hasActiveFilter =
+    !!search.trim() ||
+    (!!selectedSportId && selectedSportId !== "all") ||
+    dateFilter !== "all";
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-[#0B0F14] overflow-hidden">
-      <div id="main-content-scroll" className="flex-1 overflow-y-auto overflow-x-hidden h-[calc(100vh-3.5rem)] pb-14 xl:pb-0" style={{ scrollbarWidth: 'none' }}>
-
+      <div
+        id="main-content-scroll"
+        className="flex-1 overflow-y-auto overflow-x-hidden h-[calc(100vh-3.5rem)] pb-14 xl:pb-0"
+        style={{ scrollbarWidth: "none" }}
+      >
         {/* ── Sticky controls ─────────────────────────────────────────── */}
         <div className="sticky top-0 z-20 bg-[#0B0F14]/97 backdrop-blur-md border-b border-[#253241]/60">
-
           {/* Winners ticker */}
           <WinnersTicker />
 
@@ -248,7 +340,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 className="w-full pl-9 pr-20 h-10 rounded-xl text-sm bg-[#121821] border border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-2 focus-visible:ring-[#00DFA9]/25 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
                 placeholder="Search events, teams or leagues…"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 data-testid="input-search"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -274,33 +366,54 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           <div className="px-4 pb-2">
             <ScrollArea className="w-full">
               <div className="flex gap-1 w-max pb-1">
-                {CAROUSEL_SPORTS.map(sport => {
+                {CAROUSEL_SPORTS.map((sport) => {
                   const isActive = selectedSportId === sport.id;
                   return (
                     <button
                       key={sport.id}
-                      onClick={() => onSelectSport(sport.id === selectedSportId ? null : sport.id)}
+                      onClick={() =>
+                        onSelectSport(
+                          sport.id === selectedSportId ? null : sport.id,
+                        )
+                      }
                       data-testid={`sport-tab-${sport.id}`}
                       className={cn(
-                        'group flex flex-col items-center gap-1 py-2 px-2.5 rounded-xl min-w-[68px] transition-all duration-200 select-none',
+                        "group flex flex-col items-center gap-1 py-2 px-2.5 rounded-xl min-w-[68px] transition-all duration-200 select-none",
                         isActive
-                          ? 'bg-[#18212B] ring-1 ring-[#00DFA9]/40 shadow-[0_0_16px_rgba(0,223,169,0.1)]'
-                          : 'hover:bg-[#121821]/80'
+                          ? "bg-[#18212B] ring-1 ring-[#00DFA9]/40 shadow-[0_0_16px_rgba(0,223,169,0.1)]"
+                          : "hover:bg-[#121821]/80",
                       )}
                     >
-                      {sport.icon.startsWith('http')
-                        ? <img src={sport.icon} alt={sport.name} className="w-5 h-5 object-contain" loading="lazy" />
-                        : <span className="text-xl leading-none">{sport.icon}</span>}
-                      <span className={cn(
-                        'text-[11px] font-medium leading-none transition-colors',
-                        isActive ? 'text-[#00DFA9]' : 'text-[#94A3B8] group-hover:text-[#F8FAFC]'
-                      )}>
+                      {sport.icon.startsWith("http") ? (
+                        <img
+                          src={sport.icon}
+                          alt={sport.name}
+                          className="w-5 h-5 object-contain"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="text-xl leading-none">
+                          {sport.icon}
+                        </span>
+                      )}
+                      <span
+                        className={cn(
+                          "text-[11px] font-medium leading-none transition-colors",
+                          isActive
+                            ? "text-[#00DFA9]"
+                            : "text-[#94A3B8] group-hover:text-[#F8FAFC]",
+                        )}
+                      >
                         {sport.name}
                       </span>
-                      <span className={cn(
-                        'text-[9px] font-semibold leading-none tabular-nums transition-colors',
-                        isActive ? 'text-[#00DFA9]/60' : 'text-[#94A3B8]/35 group-hover:text-[#94A3B8]/60'
-                      )}>
+                      <span
+                        className={cn(
+                          "text-[9px] font-semibold leading-none tabular-nums transition-colors",
+                          isActive
+                            ? "text-[#00DFA9]/60"
+                            : "text-[#94A3B8]/35 group-hover:text-[#94A3B8]/60",
+                        )}
+                      >
                         {sport.count}
                       </span>
                     </button>
@@ -314,20 +427,20 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
           {/* Filter bar */}
           <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
             <div className="flex items-center bg-[#121821] rounded-lg p-0.5 border border-[#253241] gap-0.5">
-              {DATE_FILTERS.map(f => (
+              {DATE_FILTERS.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => setDateFilter(f.id)}
                   data-testid={`filter-${f.id}`}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150',
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
                     dateFilter === f.id
-                      ? 'bg-[#253241] text-[#F8FAFC] shadow-sm'
-                      : 'text-[#94A3B8]/60 hover:text-[#F8FAFC]'
+                      ? "bg-[#253241] text-[#F8FAFC] shadow-sm"
+                      : "text-[#94A3B8]/60 hover:text-[#F8FAFC]",
                   )}
                 >
                   {f.label}
-                  {f.id === 'today' && liveCount > 0 && (
+                  {f.id === "today" && liveCount > 0 && (
                     <span className="flex items-center gap-0.5 text-[9px] font-bold text-[#EF4444]">
                       <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
                       {liveCount}
@@ -339,16 +452,25 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
             <div className="h-4 w-px bg-[#253241] hidden sm:block" />
 
-            {PROMO_PILLS.map(pill => {
+            {PROMO_PILLS.map((pill) => {
               const isActive = selectedSportId === pill.id;
               return (
                 <button
                   key={pill.id}
                   onClick={() => onSelectSport(isActive ? null : pill.id)}
-                  style={isActive ? { borderColor: `${pill.color}40`, color: pill.color, backgroundColor: `${pill.color}10` } : {}}
+                  style={
+                    isActive
+                      ? {
+                          borderColor: `${pill.color}40`,
+                          color: pill.color,
+                          backgroundColor: `${pill.color}10`,
+                        }
+                      : {}
+                  }
                   className={cn(
-                    'hidden sm:flex px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150',
-                    !isActive && 'bg-transparent text-[#94A3B8] border-[#253241] hover:bg-[#121821] hover:text-[#F8FAFC] hover:border-[#2E3D50]'
+                    "hidden sm:flex px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150",
+                    !isActive &&
+                      "bg-transparent text-[#94A3B8] border-[#253241] hover:bg-[#121821] hover:text-[#F8FAFC] hover:border-[#2E3D50]",
                   )}
                 >
                   {pill.label}
@@ -357,12 +479,16 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
             })}
 
             <button
-              onClick={() => { onSelectSport(null); setDateFilter('all'); setSearch(''); }}
+              onClick={() => {
+                onSelectSport(null);
+                setDateFilter("all");
+                setSearch("");
+              }}
               className={cn(
-                'hidden sm:flex px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150',
-                (!selectedSportId || selectedSportId === 'all')
-                  ? 'bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/25'
-                  : 'bg-transparent text-[#94A3B8] border-[#253241] hover:bg-[#121821] hover:text-[#F8FAFC]'
+                "hidden sm:flex px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150",
+                !selectedSportId || selectedSportId === "all"
+                  ? "bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/25"
+                  : "bg-transparent text-[#94A3B8] border-[#253241] hover:bg-[#121821] hover:text-[#F8FAFC]",
               )}
             >
               All Sports
@@ -374,10 +500,15 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 {/* Results count when filtered */}
                 {hasActiveFilter && filteredLeagues.length > 0 && (
                   <span className="flex items-center gap-1.5 text-[11px] text-[#94A3B8]/60 font-medium select-none">
-                    <span className="text-[#F8FAFC]/80 font-bold">{totalMatchCount}</span>
-                    <span>event{totalMatchCount !== 1 ? 's' : ''}</span>
+                    <span className="text-[#F8FAFC]/80 font-bold">
+                      {totalMatchCount}
+                    </span>
+                    <span>event{totalMatchCount !== 1 ? "s" : ""}</span>
                     <span className="text-[#253241]">·</span>
-                    <span>{filteredLeagues.length} league{filteredLeagues.length !== 1 ? 's' : ''}</span>
+                    <span>
+                      {filteredLeagues.length} league
+                      {filteredLeagues.length !== 1 ? "s" : ""}
+                    </span>
                   </span>
                 )}
 
@@ -385,22 +516,31 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 {(oddsLoading || oddsRefreshing) && (
                   <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/40 font-medium">
                     <RefreshCw className="h-3 w-3 animate-spin" />
-                    {oddsRefreshing ? 'Refreshing…' : 'Fetching odds…'}
+                    {oddsRefreshing ? "Refreshing…" : "Fetching odds…"}
                   </span>
                 )}
                 {!oddsLoading && !oddsRefreshing && hasRealData && (
-                  <span className="flex items-center gap-1.5 text-[10px] font-semibold"
-                    style={{ color: isStale ? 'rgba(250,204,21,0.7)' : 'rgba(0,223,169,0.7)' }}>
+                  <span
+                    className="flex items-center gap-1.5 text-[10px] font-semibold"
+                    style={{
+                      color: isStale
+                        ? "rgba(250,204,21,0.7)"
+                        : "rgba(0,223,169,0.7)",
+                    }}
+                  >
                     <Wifi className="h-3 w-3" />
-                    {lastUpdatedLabel || 'Live odds'}
+                    {lastUpdatedLabel || "Live odds"}
                   </span>
                 )}
-                {!oddsLoading && !oddsRefreshing && oddsError && !hasRealData && (
-                  <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/35 font-medium">
-                    <WifiOff className="h-3 w-3" />
-                    Using cached data
-                  </span>
-                )}
+                {!oddsLoading &&
+                  !oddsRefreshing &&
+                  oddsError &&
+                  !hasRealData && (
+                    <span className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/35 font-medium">
+                      <WifiOff className="h-3 w-3" />
+                      Using cached data
+                    </span>
+                  )}
 
                 {/* Always-visible Refresh button */}
                 <button
@@ -409,14 +549,15 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                   title="Refresh odds now"
                   className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold border border-[#253241] text-[#94A3B8]/60 hover:text-[#F8FAFC] hover:border-[#253241]/80 hover:bg-[#121821] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
                 >
-                  <RefreshCw className={`h-2.5 w-2.5 ${oddsRefreshing ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`h-2.5 w-2.5 ${oddsRefreshing ? "animate-spin" : ""}`}
+                  />
                   Refresh
                 </button>
               </div>
             )}
           </div>
         </div>
-
 
         {/* ── Stale data banner ───────────────────────────────────────── */}
         {!isLoading && isStale && hasRealData && !oddsError && (
@@ -429,7 +570,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               disabled={oddsRefreshing}
               className="flex items-center gap-1.5 text-[11px] font-semibold text-[#FACC15]/80 hover:text-[#FACC15] disabled:opacity-40 transition-colors"
             >
-              <RefreshCw className={`h-3 w-3 ${oddsRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-3 w-3 ${oddsRefreshing ? "animate-spin" : ""}`}
+              />
               Refresh now
             </button>
           </div>
@@ -437,7 +580,6 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
         {/* ── Content ─────────────────────────────────────────────────── */}
         <div className="px-4 pt-4 pb-2">
-
           {isLoading ? (
             /* ── Skeleton state ─────────────────────────────────── */
             <div className="space-y-3">
@@ -450,7 +592,11 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                 </div>
                 <div className="flex gap-3">
                   {[290, 290, 290].map((w, i) => (
-                    <div key={i} className="rounded-xl bg-[#18212B] border border-[#253241]/60 animate-pulse" style={{ width: w, height: 160, flexShrink: 0 }} />
+                    <div
+                      key={i}
+                      className="rounded-xl bg-[#18212B] border border-[#253241]/60 animate-pulse"
+                      style={{ width: w, height: 160, flexShrink: 0 }}
+                    />
                   ))}
                 </div>
               </div>
@@ -464,7 +610,10 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               <SportDetailPage
                 sportId={selectedSportId}
                 leagues={filteredLeagues}
-                onBack={() => { onSelectSport(null); setDateFilter('all'); }}
+                onBack={() => {
+                  onSelectSport(null);
+                  setDateFilter("all");
+                }}
                 lastUpdatedLabel={lastUpdatedLabel}
                 onRefresh={refreshOdds}
                 isRefreshing={oddsRefreshing}
@@ -481,13 +630,19 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
               {showFeatured && <NBAHighlights />}
               {showFeatured && <EuropaLeagueFinal />}
 
-              {!search.trim() && selectedSportId === 'soccer' && <SoccerHighlights />}
-              {!search.trim() && selectedSportId === 'tennis' && <TennisHighlights />}
-              {!search.trim() && selectedSportId === 'nba' && <NBAHighlights />}
-              {!search.trim() && selectedSportId === 'ucl-final' && <EuropaLeagueFinal />}
+              {!search.trim() && selectedSportId === "soccer" && (
+                <SoccerHighlights />
+              )}
+              {!search.trim() && selectedSportId === "tennis" && (
+                <TennisHighlights />
+              )}
+              {!search.trim() && selectedSportId === "nba" && <NBAHighlights />}
+              {!search.trim() && selectedSportId === "ucl-final" && (
+                <EuropaLeagueFinal />
+              )}
 
               {/* Live heading */}
-              {dateFilter === 'today' && liveCount > 0 && (
+              {dateFilter === "today" && liveCount > 0 && (
                 <div className="flex items-center gap-2 mb-3">
                   <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#EF4444]">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
@@ -503,7 +658,9 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
                   <span className="text-[11px] font-semibold text-[#94A3B8]/60 uppercase tracking-widest">
                     Results for
                   </span>
-                  <span className="text-[11px] font-bold text-[#F8FAFC] bg-[#253241] px-2 py-0.5 rounded">&ldquo;{search}&rdquo;</span>
+                  <span className="text-[11px] font-bold text-[#F8FAFC] bg-[#253241] px-2 py-0.5 rounded">
+                    &ldquo;{search}&rdquo;
+                  </span>
                   <div className="flex-1 h-px bg-[#253241]/50" />
                   <button
                     onClick={clearSearch}
@@ -516,17 +673,29 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
               <div className="space-y-2.5">
                 {filteredLeagues.length > 0 ? (
-                  filteredLeagues.map(league => (
+                  filteredLeagues.map((league) => (
                     <div key={league.id}>
                       {/* Bet Builder appears immediately before MMA / UFC */}
-                      {!search.trim() && league.sportId === 'sp_mma' && <BetBuilder />}
+                      {!search.trim() && league.sportId === "sp_mma" && (
+                        <BetBuilder />
+                      )}
                       <LeagueSection league={league} />
                       {/* Upcoming Races appears immediately after Ligue 1 */}
-                      {!search.trim() && league.id === 'lg_ligue1' && <UpcomingRaces />}
+                      {!search.trim() && league.id === "lg_ligue1" && (
+                        <UpcomingRaces />
+                      )}
                     </div>
                   ))
-                ) : selectedSportId !== 'ucl-final' ? (
-                  <NoResultsState search={search} onClear={clearSearch} onReset={() => { onSelectSport(null); setDateFilter('all'); setSearch(''); }} />
+                ) : selectedSportId !== "ucl-final" ? (
+                  <NoResultsState
+                    search={search}
+                    onClear={clearSearch}
+                    onReset={() => {
+                      onSelectSport(null);
+                      setDateFilter("all");
+                      setSearch("");
+                    }}
+                  />
                 ) : null}
               </div>
             </>
@@ -556,7 +725,6 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 
         {/* ── Site footer ─────────────────────────────────────────────── */}
         {!isLoading && <SiteFooter />}
-
       </div>
     </div>
   );
@@ -566,8 +734,14 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
 // NO RESULTS STATE
 // ────────────────────────────────────────────────────────────────────────────
 function NoResultsState({
-  search, onClear, onReset,
-}: { search: string; onClear: () => void; onReset: () => void }) {
+  search,
+  onClear,
+  onReset,
+}: {
+  search: string;
+  onClear: () => void;
+  onReset: () => void;
+}) {
   return (
     <div className="flex flex-col items-center text-center py-16 px-6 bg-[#121821] rounded-xl border border-[#253241]">
       <div className="relative mb-5">
@@ -579,9 +753,15 @@ function NoResultsState({
 
       {search ? (
         <>
-          <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1.5">No matches found</p>
+          <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1.5">
+            No matches found
+          </p>
           <p className="text-sm text-[#94A3B8]/70 mb-5 max-w-xs leading-relaxed">
-            No events matching <span className="text-[#F8FAFC] font-medium">&ldquo;{search}&rdquo;</span>. Try a different team, league, or sport name.
+            No events matching{" "}
+            <span className="text-[#F8FAFC] font-medium">
+              &ldquo;{search}&rdquo;
+            </span>
+            . Try a different team, league, or sport name.
           </p>
           <button
             onClick={onClear}
@@ -594,9 +774,12 @@ function NoResultsState({
         </>
       ) : (
         <>
-          <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1.5">No events available</p>
+          <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1.5">
+            No events available
+          </p>
           <p className="text-sm text-[#94A3B8]/70 mb-5 max-w-xs leading-relaxed">
-            There are no events matching your current filters. Try a different date or sport.
+            There are no events matching your current filters. Try a different
+            date or sport.
           </p>
           <button
             onClick={onReset}
@@ -616,48 +799,47 @@ function NoResultsState({
 // ────────────────────────────────────────────────────────────────────────────
 const FOOTER_NAV = [
   {
-    heading: 'Sports',
+    heading: "Sports",
     links: [
-      { label: 'Soccer',       href: '/' },
-      { label: 'Tennis',       href: '/' },
-      { label: 'Basketball',   href: '/' },
-      { label: 'Esports',      href: '/' },
-      { label: 'Horse Racing', href: '/' },
-      { label: 'Formula 1',   href: '/' },
-      { label: 'Boxing',       href: '/' },
-      { label: 'Cricket',      href: '/' },
+      { label: "Soccer", href: "/" },
+      { label: "Tennis", href: "/" },
+      { label: "Basketball", href: "/" },
+      { label: "Esports", href: "/" },
+      { label: "Horse Racing", href: "/" },
+      { label: "Formula 1", href: "/" },
+      { label: "Boxing", href: "/" },
+      { label: "Cricket", href: "/" },
     ],
   },
   {
-    heading: 'Platform',
+    heading: "Platform",
     links: [
-      { label: 'All Sports',   href: '/' },
-      { label: 'Promotions',   href: '/promotions' },
-      { label: 'Bet History',  href: '/bet-history' },
-      { label: 'Help & Rules', href: '/help' },
+      { label: "All Sports", href: "/" },
+      { label: "Promotions", href: "/promotions" },
+      { label: "Bet History", href: "/bet-history" },
+      { label: "Help & Rules", href: "/help" },
     ],
   },
   {
-    heading: 'Legal',
+    heading: "Legal",
     links: [
-      { label: 'Terms & Conditions',   href: '/terms' },
-      { label: 'Privacy Policy',       href: '/privacy' },
-      { label: 'AML Policy',           href: '/aml' },
+      { label: "Terms & Conditions", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "AML Policy", href: "/aml" },
     ],
   },
 ];
 
 const SOCIAL_LINKS = [
-  { icon: <Twitter   className="h-3.5 w-3.5" />, label: 'Twitter'   },
-  { icon: <Instagram className="h-3.5 w-3.5" />, label: 'Instagram' },
-  { icon: <Github    className="h-3.5 w-3.5" />, label: 'GitHub'    },
+  { icon: <Twitter className="h-3.5 w-3.5" />, label: "Twitter" },
+  { icon: <Instagram className="h-3.5 w-3.5" />, label: "Instagram" },
+  { icon: <Github className="h-3.5 w-3.5" />, label: "GitHub" },
 ] as const;
 
 function SiteFooter() {
   return (
     <footer className="border-t border-[#253241]/70 bg-[#0B0F14] mt-2">
       <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-4">
-
         {/* ── MOBILE brand strip (hidden on sm+) ────────────────────────── */}
         <div className="flex items-start justify-between gap-4 mb-5 sm:hidden">
           <div className="min-w-0">
@@ -665,7 +847,7 @@ function SiteFooter() {
               src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
               alt="GoBet"
               className="h-7 w-auto object-contain mb-1.5"
-              style={{ filter: 'drop-shadow(0 0 6px rgba(0,223,169,0.15))' }}
+              style={{ filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
             />
             <p className="text-[11px] text-[#94A3B8]/50 leading-snug">
               Live odds · instant settlement · provably fair
@@ -673,8 +855,11 @@ function SiteFooter() {
           </div>
           <div className="flex gap-1.5 shrink-0 pt-0.5">
             {SOCIAL_LINKS.map((s) => (
-              <button key={s.label} aria-label={s.label}
-                className="w-8 h-8 rounded-lg border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150">
+              <button
+                key={s.label}
+                aria-label={s.label}
+                className="w-8 h-8 rounded-lg border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150"
+              >
                 {s.icon}
               </button>
             ))}
@@ -699,8 +884,10 @@ function SiteFooter() {
               <ul className="space-y-1.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <Link href={link.href}
-                      className="text-[11px] text-[#94A3B8]/55 hover:text-[#F8FAFC] transition-colors duration-150 leading-snug block">
+                    <Link
+                      href={link.href}
+                      className="text-[11px] text-[#94A3B8]/55 hover:text-[#F8FAFC] transition-colors duration-150 leading-snug block"
+                    >
                       {link.label}
                     </Link>
                   </li>
@@ -717,7 +904,7 @@ function SiteFooter() {
               src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/GoBet-logo.webp"
               alt="GoBet"
               className="h-7 w-auto object-contain"
-              style={{ filter: 'drop-shadow(0 0 6px rgba(0,223,169,0.15))' }}
+              style={{ filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
             />
             <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[180px]">
               Live odds, instant settlement, and provably fair sports markets.
@@ -730,8 +917,11 @@ function SiteFooter() {
             </div>
             <div className="flex gap-1.5 pt-1">
               {SOCIAL_LINKS.map((s) => (
-                <button key={s.label} aria-label={s.label}
-                  className="w-7 h-7 rounded-md border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150">
+                <button
+                  key={s.label}
+                  aria-label={s.label}
+                  className="w-7 h-7 rounded-md border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150"
+                >
                   {s.icon}
                 </button>
               ))}
@@ -745,8 +935,10 @@ function SiteFooter() {
               <ul className="space-y-2">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <Link href={link.href}
-                      className="text-[11px] text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors duration-150">
+                    <Link
+                      href={link.href}
+                      className="text-[11px] text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors duration-150"
+                    >
                       {link.label}
                     </Link>
                   </li>
@@ -760,12 +952,22 @@ function SiteFooter() {
         <div className="pt-4 sm:border-t sm:border-[#253241]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p className="text-[10px] text-[#94A3B8]/30 leading-snug">
             © 2021–2026 GoBet Ltd. All rights reserved.
-            <span className="hidden sm:inline"> · 18+ · Gamble responsibly.</span>
+            <span className="hidden sm:inline">
+              {" "}
+              · 18+ · Gamble responsibly.
+            </span>
           </p>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {['18+', 'BeGambleAware', 'GamCare', 'Gamble Responsibly'].map((b) => (
-              <span key={b} className="text-[9px] font-semibold text-[#94A3B8]/25">{b}</span>
-            ))}
+            {["18+", "BeGambleAware", "GamCare", "Gamble Responsibly"].map(
+              (b) => (
+                <span
+                  key={b}
+                  className="text-[9px] font-semibold text-[#94A3B8]/25"
+                >
+                  {b}
+                </span>
+              ),
+            )}
           </div>
         </div>
       </div>
@@ -777,17 +979,41 @@ function SiteFooter() {
 // TRUST FOOTER
 // ────────────────────────────────────────────────────────────────────────────
 const TRUST_STATS = [
-  { icon: <BarChart2   className="h-4 w-4" />, value: '$2.4B+',    label: 'Volume Wagered',  color: 'text-[#00DFA9]', glow: 'rgba(0,223,169,0.10)' },
-  { icon: <Users       className="h-4 w-4" />, value: '142,000+',  label: 'Active Users',    color: 'text-[#38BDF8]', glow: 'rgba(56,189,248,0.10)' },
-  { icon: <Zap         className="h-4 w-4" />, value: '< 0.3s',    label: 'Avg Settlement',  color: 'text-[#FACC15]', glow: 'rgba(250,204,21,0.10)' },
-  { icon: <Award       className="h-4 w-4" />, value: 'Est. 2021', label: '5 Yrs Operating', color: 'text-[#A78BFA]', glow: 'rgba(167,139,250,0.10)' },
+  {
+    icon: <BarChart2 className="h-4 w-4" />,
+    value: "$2.4B+",
+    label: "Volume Wagered",
+    color: "text-[#00DFA9]",
+    glow: "rgba(0,223,169,0.10)",
+  },
+  {
+    icon: <Users className="h-4 w-4" />,
+    value: "142,000+",
+    label: "Active Users",
+    color: "text-[#38BDF8]",
+    glow: "rgba(56,189,248,0.10)",
+  },
+  {
+    icon: <Zap className="h-4 w-4" />,
+    value: "< 0.3s",
+    label: "Avg Settlement",
+    color: "text-[#FACC15]",
+    glow: "rgba(250,204,21,0.10)",
+  },
+  {
+    icon: <Award className="h-4 w-4" />,
+    value: "Est. 2021",
+    label: "5 Yrs Operating",
+    color: "text-[#A78BFA]",
+    glow: "rgba(167,139,250,0.10)",
+  },
 ];
 
 const TRUST_BADGES = [
-  { icon: <Lock        className="h-3 w-3" />, label: 'SSL 256-bit' },
-  { icon: <ShieldCheck className="h-3 w-3" />, label: 'Provably Fair' },
-  { icon: <ShieldCheck className="h-3 w-3" />, label: 'KYC Verified' },
-  { icon: <Zap         className="h-3 w-3" />, label: 'Instant Payouts' },
+  { icon: <Lock className="h-3 w-3" />, label: "SSL 256-bit" },
+  { icon: <ShieldCheck className="h-3 w-3" />, label: "Provably Fair" },
+  { icon: <ShieldCheck className="h-3 w-3" />, label: "KYC Verified" },
+  { icon: <Zap className="h-3 w-3" />, label: "Instant Payouts" },
 ];
 
 function TrustFooter() {
@@ -801,10 +1027,19 @@ function TrustFooter() {
             className="flex items-center gap-2.5 rounded-xl bg-[#121821] border border-[#253241] px-3 py-3 hover:border-[#2E3D50] transition-colors duration-200"
             style={{ boxShadow: `inset 0 0 20px ${stat.glow}` }}
           >
-            <div className={cn('shrink-0', stat.color)}>{stat.icon}</div>
+            <div className={cn("shrink-0", stat.color)}>{stat.icon}</div>
             <div className="min-w-0">
-              <p className={cn('text-sm font-black leading-none tabular-nums', stat.color)}>{stat.value}</p>
-              <p className="text-[10px] text-[#94A3B8]/50 mt-1.5 leading-none truncate">{stat.label}</p>
+              <p
+                className={cn(
+                  "text-sm font-black leading-none tabular-nums",
+                  stat.color,
+                )}
+              >
+                {stat.value}
+              </p>
+              <p className="text-[10px] text-[#94A3B8]/50 mt-1.5 leading-none truncate">
+                {stat.label}
+              </p>
             </div>
           </div>
         ))}
@@ -834,38 +1069,71 @@ function TrustFooter() {
 // STATUS BAR
 // ────────────────────────────────────────────────────────────────────────────
 function StatusBar({
-  matchCount, leagueCount, isLive, lastUpdatedLabel, isStale,
+  matchCount,
+  leagueCount,
+  isLive,
+  lastUpdatedLabel,
+  isStale,
 }: {
-  matchCount: number; leagueCount: number;
-  isLive?: boolean; lastUpdatedLabel?: string; isStale?: boolean;
+  matchCount: number;
+  leagueCount: number;
+  isLive?: boolean;
+  lastUpdatedLabel?: string;
+  isStale?: boolean;
 }) {
-  const dotColor  = isStale ? '#FACC15' : isLive ? '#00DFA9' : '#94A3B8';
+  const dotColor = isStale ? "#FACC15" : isLive ? "#00DFA9" : "#94A3B8";
   const textColor = isStale
-    ? 'rgba(250,204,21,0.6)'
+    ? "rgba(250,204,21,0.6)"
     : isLive
-      ? 'rgba(0,223,169,0.6)'
-      : 'rgba(148,163,184,0.4)';
+      ? "rgba(0,223,169,0.6)"
+      : "rgba(148,163,184,0.4)";
 
   return (
     <div className="mx-4 mb-6 mt-4 flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl bg-[#0A0E13] border border-[#253241]/40">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="flex items-center gap-1.5 text-[10px] shrink-0" style={{ color: textColor }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{
-            background: dotColor,
-            boxShadow:  isLive && !isStale ? '0 0 4px rgba(0,223,169,0.7)' : 'none',
-            animation:  isLive && !isStale ? 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' : 'none',
-          }} />
-          {isStale ? 'Odds may be outdated' : isLive ? 'Real-time odds' : 'Simulated'}
+        <span
+          className="flex items-center gap-1.5 text-[10px] shrink-0"
+          style={{ color: textColor }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: dotColor,
+              boxShadow:
+                isLive && !isStale ? "0 0 4px rgba(0,223,169,0.7)" : "none",
+              animation:
+                isLive && !isStale
+                  ? "pulse 2s cubic-bezier(0.4,0,0.6,1) infinite"
+                  : "none",
+            }}
+          />
+          {isStale
+            ? "Odds may be outdated"
+            : isLive
+              ? "Real-time odds"
+              : "Simulated"}
         </span>
         <span className="text-[10px] text-[#253241]">|</span>
         <span className="text-[10px] text-[#94A3B8]/40 tabular-nums">
-          <span className="text-[#94A3B8]/70 font-semibold">{matchCount}</span> event{matchCount !== 1 ? 's' : ''}
-          {leagueCount > 0 && <> · <span className="text-[#94A3B8]/70 font-semibold">{leagueCount}</span> league{leagueCount !== 1 ? 's' : ''}</>}
+          <span className="text-[#94A3B8]/70 font-semibold">{matchCount}</span>{" "}
+          event{matchCount !== 1 ? "s" : ""}
+          {leagueCount > 0 && (
+            <>
+              {" "}
+              ·{" "}
+              <span className="text-[#94A3B8]/70 font-semibold">
+                {leagueCount}
+              </span>{" "}
+              league{leagueCount !== 1 ? "s" : ""}
+            </>
+          )}
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {lastUpdatedLabel && (
-          <span className="text-[10px] text-[#94A3B8]/30">{lastUpdatedLabel}</span>
+          <span className="text-[10px] text-[#94A3B8]/30">
+            {lastUpdatedLabel}
+          </span>
         )}
         <span className="text-[10px] text-[#253241]">·</span>
         <span className="text-[10px] text-[#94A3B8]/30">All times local</span>
