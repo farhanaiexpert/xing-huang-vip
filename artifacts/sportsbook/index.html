@@ -19,12 +19,14 @@
 
     <!-- Google Translate: suppress toolbar banner & force body position -->
     <style>
-      .goog-te-banner-frame, .goog-te-banner-frame.skiptranslate { display: none !important; }
-      body { top: 0 !important; }
+      .goog-te-banner-frame,
+      .goog-te-banner-frame.skiptranslate,
+      .skiptranslate > iframe { display: none !important; visibility: hidden !important; }
+      body { top: 0px !important; }
       #google_translate_element { display: none !important; }
       .goog-te-gadget { display: none !important; }
       .goog-logo-link { display: none !important; }
-      /* Keep translated text selectable */
+      #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
       font[color] { color: inherit !important; }
     </style>
   </head>
@@ -44,6 +46,27 @@
           'google_translate_element'
         );
       }
+
+      // MutationObserver: continuously fight Google's dynamic body.style.top offset
+      // and ensure the banner iframe stays hidden after translation kicks in.
+      (function () {
+        function suppressGoogleBar() {
+          // Force body back to top:0 whenever Google sets it
+          if (document.body && document.body.style.top !== '0px') {
+            document.body.style.setProperty('top', '0px', 'important');
+          }
+          // Hide banner frame iframes
+          document.querySelectorAll('.goog-te-banner-frame, .skiptranslate > iframe').forEach(function (el) {
+            el.style.setProperty('display', 'none', 'important');
+          });
+        }
+
+        var obs = new MutationObserver(suppressGoogleBar);
+        document.addEventListener('DOMContentLoaded', function () {
+          suppressGoogleBar();
+          obs.observe(document.body, { attributes: true, attributeFilter: ['style'], childList: true, subtree: true });
+        });
+      })();
     </script>
     <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
   </body>
