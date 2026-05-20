@@ -242,7 +242,7 @@ export function Header() {
               </HeaderIconBtn>
 
               {showLang && (
-                <div className="absolute right-0 top-[calc(100%+8px)] w-48 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_24px_60px_rgba(0,0,0,0.75)] overflow-hidden z-50">
+                <div translate="no" className="absolute right-0 top-[calc(100%+8px)] w-48 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_24px_60px_rgba(0,0,0,0.75)] overflow-hidden z-50">
                   <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#253241]">
                     <Globe className="h-3.5 w-3.5 text-[#00DFA9]" />
                     <p className="text-[11px] font-bold text-[#F8FAFC]/70 uppercase tracking-widest">Language</p>
@@ -260,10 +260,10 @@ export function Header() {
                         )}
                       >
                         <span className="text-base leading-none w-5 shrink-0">{lang.flag}</span>
+                        <span className="text-[10px] font-bold tracking-wider opacity-50 shrink-0 w-6">{lang.short}</span>
                         <span className="text-[12px] font-medium leading-none flex-1 text-left">{lang.label}</span>
-                        <span className="text-[10px] font-bold tracking-wider opacity-40 shrink-0">{lang.short}</span>
                         {currentLang === lang.code && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] shrink-0 ml-1" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] shrink-0" />
                         )}
                       </button>
                     ))}
