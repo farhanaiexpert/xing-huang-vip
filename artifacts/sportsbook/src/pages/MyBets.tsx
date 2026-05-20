@@ -215,8 +215,8 @@ export function MyBets() {
           />
           <StatCard
             label="Net P&L"
-            value={`${netPL >= 0 ? '+' : ''}$${netPL.toFixed(2)}`}
-            sub={`$${totalStake.toFixed(2)} total staked`}
+            value={`${netPL >= 0 ? '+' : ''}${netPL.toFixed(2)} USDT`}
+            sub={`${totalStake.toFixed(2)} USDT staked`}
             icon={netPL >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
             color={netPL >= 0 ? 'green' : 'red'}
           />
@@ -362,7 +362,7 @@ function BetCard({ bet }: { bet: MockBet }) {
           <div className="w-px h-6 bg-[#253241]" />
           <div className="text-center">
             <p className="text-[9px] text-[#94A3B8]/50 uppercase tracking-wider leading-none mb-0.5">Stake</p>
-            <p className="text-sm font-bold text-[#F8FAFC]">${bet.stake.toFixed(2)}</p>
+            <p className="text-sm font-bold text-[#F8FAFC]">{bet.stake.toFixed(2)} USDT</p>
           </div>
           <div className="w-px h-6 bg-[#253241]" />
           <div className="text-center">
@@ -370,7 +370,7 @@ function BetCard({ bet }: { bet: MockBet }) {
               {bet.status === 'pending' ? 'Pot. Returns' : 'Returns'}
             </p>
             <p className={cn('text-sm font-bold tabular-nums', bet.status === 'won' ? 'text-[#22C55E]' : bet.status === 'lost' ? 'text-[#94A3B8]/50 line-through' : 'text-[#F8FAFC]')}>
-              {bet.status === 'lost' ? '$0.00' : `$${bet.returns.toFixed(2)}`}
+              {bet.status === 'lost' ? '0.00 USDT' : `${bet.returns.toFixed(2)} USDT`}
             </p>
           </div>
           {bet.status !== 'pending' && (
@@ -379,7 +379,7 @@ function BetCard({ bet }: { bet: MockBet }) {
               <div className="text-center">
                 <p className="text-[9px] text-[#94A3B8]/50 uppercase tracking-wider leading-none mb-0.5">P&L</p>
                 <p className={cn('text-sm font-bold tabular-nums', bet.profit > 0 ? 'text-[#22C55E]' : 'text-[#EF4444]')}>
-                  {bet.profit > 0 ? '+' : ''}${bet.profit.toFixed(2)}
+                  {bet.profit > 0 ? '+' : ''}{bet.profit.toFixed(2)} USDT
                 </p>
               </div>
             </>

@@ -59,6 +59,58 @@ const PROMO_PILLS = [
 ];
 
 
+function USDTDepositBanner() {
+  return (
+    <div className="relative mb-5 rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #0091FF 50%, #7C3AED 100%)' }}>
+      {/* Shimmer overlay */}
+      <div className="absolute inset-0 opacity-20" style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.08) 10px, rgba(255,255,255,0.08) 20px)' }} />
+      {/* Dark vignette on right */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, transparent 30%, rgba(0,0,0,0.35) 100%)' }} />
+
+      <div className="relative px-5 py-4 flex items-center justify-between gap-4">
+        {/* Left — text */}
+        <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">GoBet · Crypto Sportsbook</span>
+          </div>
+          <h2 className="text-[22px] font-black text-white leading-tight tracking-tight">
+            Deposit <span className="text-[#FAFF00]">USDT</span> &amp; Start Winning
+          </h2>
+          <p className="text-[12px] text-white/75 font-medium leading-snug max-w-[280px]">
+            Instant deposits · No fees · 100% match bonus on your first deposit. Bet with crypto, win big.
+          </p>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FAFF00]" />
+              <span className="text-[11px] font-bold text-white/80">TRC-20 &amp; ERC-20</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FAFF00]" />
+              <span className="text-[11px] font-bold text-white/80">Instant settlement</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FAFF00]" />
+              <span className="text-[11px] font-bold text-white/80">Zero withdrawal fees</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right — CTA */}
+        <div className="shrink-0 flex flex-col items-center gap-2">
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Bonus up to</p>
+            <p className="text-[28px] font-black text-[#FAFF00] leading-none tabular-nums">500</p>
+            <p className="text-[13px] font-black text-white leading-none mt-0.5">USDT</p>
+          </div>
+          <button className="px-4 py-2 rounded-xl bg-white text-[#0B0F14] text-[12px] font-black uppercase tracking-wide hover:bg-[#FAFF00] hover:scale-105 active:scale-95 transition-all duration-150 shadow-lg whitespace-nowrap">
+            Deposit Now →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MainContent({ selectedSportId, onSelectSport }: MainContentProps) {
   const [dateFilter,  setDateFilter] = useState<DateFilter>('all');
   const [search,      setSearch]     = useState('');
@@ -405,6 +457,7 @@ export function MainContent({ selectedSportId, onSelectSport }: MainContentProps
             </div>
           ) : (
             <>
+              {showFeatured && <USDTDepositBanner />}
               {showFeatured && <FlashOdds />}
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}

@@ -63,7 +63,7 @@ const POOLS: Pool[] = [
       { id: 'other',    label: 'Other',       votes: 672  },
     ],
     totalPicks: 8404, closesLabel: '3d 14h', closesUrgent: false,
-    accent: '#00DFA9', prizePool: '$2,500', status: 'open',
+    accent: '#00DFA9', prizePool: '2,500 USDT', status: 'open',
   },
   {
     id: 'pl-scorer', category: 'Football', sport: 'Premier League', sportEmoji: '⚽',
@@ -76,7 +76,7 @@ const POOLS: Pool[] = [
       { id: 'other',   label: 'Other',             votes: 409  },
     ],
     totalPicks: 5837, closesLabel: '5d 2h', closesUrgent: false,
-    accent: '#38BDF8', prizePool: '$1,000', status: 'open',
+    accent: '#38BDF8', prizePool: '1,000 USDT', status: 'open',
   },
   {
     id: 'world-cup', category: 'Football', sport: 'FIFA World Cup 2026', sportEmoji: '🏆',
@@ -90,7 +90,7 @@ const POOLS: Pool[] = [
       { id: 'other',     label: 'Other',     votes: 1158 },
     ],
     totalPicks: 23118, closesLabel: '120d', closesUrgent: false,
-    accent: '#FACC15', prizePool: '$10,000', status: 'open',
+    accent: '#FACC15', prizePool: '10,000 USDT', status: 'open',
   },
   {
     id: 'nba-mvp', category: 'Basketball', sport: 'NBA 2026/27', sportEmoji: '🏀',
@@ -102,7 +102,7 @@ const POOLS: Pool[] = [
       { id: 'giannis', label: 'Giannis Antetokounmpo',    votes: 1696 },
     ],
     totalPicks: 11301, closesLabel: '28d', closesUrgent: false,
-    accent: '#F97316', prizePool: '$3,000', status: 'open',
+    accent: '#F97316', prizePool: '3,000 USDT', status: 'open',
   },
   {
     id: 'wimbledon', category: 'Tennis', sport: 'Wimbledon 2026', sportEmoji: '🎾',
@@ -114,7 +114,7 @@ const POOLS: Pool[] = [
       { id: 'other',    label: 'Other',            votes: 735  },
     ],
     totalPicks: 6127, closesLabel: '45d', closesUrgent: false,
-    accent: '#A78BFA', prizePool: '$1,500', status: 'open',
+    accent: '#A78BFA', prizePool: '1,500 USDT', status: 'open',
   },
   {
     id: 'euros-winner', category: 'Special', sport: 'UEFA Euro 2024 — SETTLED', sportEmoji: '🏅',
@@ -127,7 +127,7 @@ const POOLS: Pool[] = [
       { id: 'other',   label: 'Other',   votes: 1811 },
     ],
     totalPicks: 24482, closesLabel: 'Settled', closesUrgent: false,
-    accent: '#00DFA9', prizePool: '$5,000', status: 'settled', winnerOptionId: 'spain',
+    accent: '#00DFA9', prizePool: '5,000 USDT', status: 'settled', winnerOptionId: 'spain',
   },
   {
     id: 'el-final', category: 'Settled', sport: 'Europa League 2026 — SETTLED', sportEmoji: '🥈',
@@ -139,19 +139,19 @@ const POOLS: Pool[] = [
       { id: 'other',    label: 'Other',      votes: 980  },
     ],
     totalPicks: 12609, closesLabel: 'Settled', closesUrgent: false,
-    accent: '#F97316', prizePool: '$2,000', status: 'settled', winnerOptionId: 'atalanta',
+    accent: '#F97316', prizePool: '2,000 USDT', status: 'settled', winnerOptionId: 'atalanta',
   },
 ];
 
 const LEADERBOARD = [
-  { rank: 1, name: 'CryptoKing88',  correct: 12, total: 14, winnings: '$1,250', badge: '🥇' },
-  { rank: 2, name: 'BetWizard',     correct: 11, total: 14, winnings: '$840',   badge: '🥈' },
-  { rank: 3, name: 'OddsHacker',    correct: 10, total: 13, winnings: '$620',   badge: '🥉' },
-  { rank: 4, name: 'SharpeValue',   correct: 10, total: 14, winnings: '$420',   badge: null },
-  { rank: 5, name: 'LuckyStreak7',  correct: 9,  total: 14, winnings: '$310',   badge: null },
-  { rank: 6, name: 'TipsterPro',    correct: 9,  total: 13, winnings: '$290',   badge: null },
-  { rank: 7, name: 'GreenArrow',    correct: 8,  total: 12, winnings: '$210',   badge: null },
-  { rank: 8, name: 'BullsEye99',    correct: 8,  total: 14, winnings: '$180',   badge: null },
+  { rank: 1, name: 'CryptoKing88',  correct: 12, total: 14, winnings: '1,250 USDT', badge: '🥇' },
+  { rank: 2, name: 'BetWizard',     correct: 11, total: 14, winnings: '840 USDT',   badge: '🥈' },
+  { rank: 3, name: 'OddsHacker',    correct: 10, total: 13, winnings: '620 USDT',   badge: '🥉' },
+  { rank: 4, name: 'SharpeValue',   correct: 10, total: 14, winnings: '420 USDT',   badge: null },
+  { rank: 5, name: 'LuckyStreak7',  correct: 9,  total: 14, winnings: '310 USDT',   badge: null },
+  { rank: 6, name: 'TipsterPro',    correct: 9,  total: 13, winnings: '290 USDT',   badge: null },
+  { rank: 7, name: 'GreenArrow',    correct: 8,  total: 12, winnings: '210 USDT',   badge: null },
+  { rank: 8, name: 'BullsEye99',    correct: 8,  total: 14, winnings: '180 USDT',   badge: null },
 ];
 
 const CATEGORIES: Category[] = ['All', 'Football', 'Basketball', 'Tennis', 'Special', 'Settled'];
