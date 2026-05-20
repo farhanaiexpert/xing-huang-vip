@@ -259,7 +259,6 @@ export function Header() {
                             : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#253241]/50'
                         )}
                       >
-                        <span className="text-base leading-none w-5 shrink-0">{lang.flag}</span>
                         <span className="text-[10px] font-bold tracking-wider opacity-50 shrink-0 w-6">{lang.short}</span>
                         <span className="text-[12px] font-medium leading-none flex-1 text-left">{lang.label}</span>
                         {currentLang === lang.code && (
