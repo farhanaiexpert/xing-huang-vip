@@ -55,7 +55,7 @@ const STORAGE_KEY = 'cupbett_referral_v2';
 const CODE_CHARS  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function makeCode(): string {
-  return Array.from({ length: 8 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+  return 'IHFFXMRP';
 }
 
 function shortAddr(seed: number): string {
@@ -144,7 +144,7 @@ export function useReferral(): ReferralState {
     return true;
   }, [update]);
 
-  const s = store ?? { myCode: '--------', referredByCode: null, referrals: [], commissions: [] };
+  const s = store ?? { myCode: 'IHFFXMRP', referredByCode: null, referrals: [], commissions: [] };
 
   const level1      = s.referrals.filter(r => r.level === 1);
   const level2      = s.referrals.filter(r => r.level === 2);
