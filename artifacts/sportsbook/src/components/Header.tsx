@@ -113,6 +113,7 @@ export function Header() {
     { label: 'Promotions',      href: '/promotions' },
     { label: 'Predict & Win',   href: '/prediction-pools' },
     { label: 'Bet History',     href: '/bet-history' },
+    { label: 'Affiliate',       href: '/affiliate' },
     { label: 'Help & Rules',    href: '/help' },
     { label: 'Soccer',          href: '/' },
     { label: 'Tennis',          href: '/' },
