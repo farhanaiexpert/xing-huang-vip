@@ -112,7 +112,7 @@ export function PromoPopup() {
   // Sticky claim bar — always in DOM after popup dismissed, shown/hidden via CSS transform
   const StickyBar = dismissed && !barStopped ? (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[9998] flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5"
+      className="fixed bottom-0 left-0 right-0 xl:right-[260px] z-[9998] flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5"
       style={{
         background: 'linear-gradient(90deg,#061A14 0%,#091820 50%,#061A14 100%)',
         borderTop: '1px solid rgba(0,223,169,0.25)',
