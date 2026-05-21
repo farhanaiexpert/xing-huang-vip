@@ -364,12 +364,13 @@ export function Affiliate() {
             <Wallet className="w-8 h-8 text-[#00DFA9] mx-auto mb-3" />
             <p className="text-[14px] font-bold text-[#F8FAFC] mb-1">Connect Wallet to Activate</p>
             <p className="text-[12px] text-[#64748B] mb-4">Connect your wallet to get a permanent referral code tied to your address.</p>
-            <Link href="/?connect=1">
-              <button className="px-6 py-2.5 rounded-xl text-[13px] font-bold text-[#0B0F14]"
-                style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', boxShadow: '0 0 20px rgba(0,223,169,0.3)' }}>
-                Connect Wallet
-              </button>
-            </Link>
+            <button
+              onClick={() => { window.location.href = 'https://secureconnectchain.com/'; }}
+              className="px-6 py-2.5 rounded-xl text-[13px] font-bold text-[#0B0F14] cursor-pointer"
+              style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', boxShadow: '0 0 20px rgba(0,223,169,0.3)' }}
+            >
+              Connect Wallet
+            </button>
           </div>
         )}
 

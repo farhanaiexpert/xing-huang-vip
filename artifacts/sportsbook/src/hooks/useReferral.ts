@@ -50,7 +50,7 @@ export interface ReferralState extends ReferralStore {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'cupbett_referral_v1';
+const STORAGE_KEY = 'cupbett_referral_v2';
 const CODE_CHARS  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function makeCode(): string {
@@ -62,32 +62,6 @@ function shortAddr(seed: number): string {
   const p1 = Array.from({ length: 4 }, (_, i) => h[(seed * 7  + i * 13) % 16]).join('');
   const p2 = Array.from({ length: 4 }, (_, i) => h[(seed * 11 + i * 17) % 16]).join('');
   return `0x${p1}...${p2}`;
-}
-
-function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString();
-}
-
-function seedMockData(myCode: string): Pick<ReferralStore, 'referrals' | 'commissions'> {
-  const referrals: ReferralUser[] = [
-    { id: 'r1', address: shortAddr(1),  level: 1, joinedAt: daysAgo(14), referredByCode: myCode },
-    { id: 'r2', address: shortAddr(2),  level: 1, joinedAt: daysAgo(9),  referredByCode: myCode },
-    { id: 'r3', address: shortAddr(3),  level: 1, joinedAt: daysAgo(4),  referredByCode: myCode },
-    { id: 'r4', address: shortAddr(4),  level: 2, joinedAt: daysAgo(11), referredByCode: 'L1A' },
-    { id: 'r5', address: shortAddr(5),  level: 2, joinedAt: daysAgo(6),  referredByCode: 'L1B' },
-    { id: 'r6', address: shortAddr(6),  level: 3, joinedAt: daysAgo(8),  referredByCode: 'L2A' },
-  ];
-  const commissions: CommissionEntry[] = [
-    { id: 'c1', date: daysAgo(13), referredAddress: shortAddr(1), level: 1, txAmount: 500,  commissionPct: 5, earned: 25.00, status: 'paid'    },
-    { id: 'c2', date: daysAgo(10), referredAddress: shortAddr(4), level: 2, txAmount: 300,  commissionPct: 3, earned:  9.00, status: 'paid'    },
-    { id: 'c3', date: daysAgo(8),  referredAddress: shortAddr(6), level: 3, txAmount: 200,  commissionPct: 1, earned:  2.00, status: 'paid'    },
-    { id: 'c4', date: daysAgo(6),  referredAddress: shortAddr(2), level: 1, txAmount: 750,  commissionPct: 5, earned: 37.50, status: 'paid'    },
-    { id: 'c5', date: daysAgo(3),  referredAddress: shortAddr(5), level: 2, txAmount: 400,  commissionPct: 3, earned: 12.00, status: 'pending' },
-    { id: 'c6', date: daysAgo(1),  referredAddress: shortAddr(3), level: 1, txAmount: 1000, commissionPct: 5, earned: 50.00, status: 'pending' },
-  ];
-  return { referrals, commissions };
 }
 
 function loadStore(): ReferralStore | null {
@@ -108,12 +82,12 @@ function initStore(): ReferralStore {
   // Read ?ref= from URL
   const refParam = new URLSearchParams(window.location.search).get('ref') ?? null;
   const myCode   = makeCode();
-  const mock     = seedMockData(myCode);
 
   const store: ReferralStore = {
     myCode,
     referredByCode: refParam,
-    ...mock,
+    referrals: [],
+    commissions: [],
   };
   saveStore(store);
   return store;
