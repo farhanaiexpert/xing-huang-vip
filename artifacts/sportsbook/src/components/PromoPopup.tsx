@@ -35,7 +35,7 @@ const IMG_BASE: React.CSSProperties = {
   display: 'block',
   transform: 'scale(1.14)',
   transformOrigin: 'bottom center',
-  transition: 'opacity 0.7s ease',
+  transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
 
 export function PromoPopup() {
@@ -54,7 +54,7 @@ export function PromoPopup() {
   // Auto-cycle images every 4 s when not hovered
   useEffect(() => {
     if (!visible || hovered) return;
-    const t = setInterval(() => setShowAlt(v => !v), 4000);
+    const t = setInterval(() => setShowAlt(v => !v), 5000);
     return () => clearInterval(t);
   }, [visible, hovered]);
 
