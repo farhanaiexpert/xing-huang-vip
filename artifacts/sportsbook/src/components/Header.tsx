@@ -8,15 +8,19 @@ import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 
 const LANGUAGES = [
-  { code: 'en', label: 'English',    flag: '🇬🇧', short: 'EN' },
-  { code: 'es', label: 'Spanish',    flag: '🇪🇸', short: 'ES' },
-  { code: 'ru', label: 'Russian',    flag: '🇷🇺', short: 'RU' },
-  { code: 'de', label: 'German',     flag: '🇩🇪', short: 'DE' },
-  { code: 'fr', label: 'French',     flag: '🇫🇷', short: 'FR' },
-  { code: 'vi', label: 'Vietnamese', flag: '🇻🇳', short: 'VI' },
-  { code: 'ko', label: 'Korean',     flag: '🇰🇷', short: 'KO' },
-  { code: 'ja', label: 'Japanese',   flag: '🇯🇵', short: 'JP' },
-  { code: 'hi', label: 'Hindi',      flag: '🇮🇳', short: 'HI' },
+  { code: 'en',    label: 'English',    flag: '🇬🇧', short: 'EN' },
+  { code: 'zh-CN', label: 'Chinese',    flag: '🇨🇳', short: 'ZH' },
+  { code: 'th',    label: 'Thai',       flag: '🇹🇭', short: 'TH' },
+  { code: 'pt',    label: 'Portuguese', flag: '🇧🇷', short: 'PT' },
+  { code: 'ar',    label: 'Arabic',     flag: '🇸🇦', short: 'AR' },
+  { code: 'es',    label: 'Spanish',    flag: '🇪🇸', short: 'ES' },
+  { code: 'ru',    label: 'Russian',    flag: '🇷🇺', short: 'RU' },
+  { code: 'de',    label: 'German',     flag: '🇩🇪', short: 'DE' },
+  { code: 'fr',    label: 'French',     flag: '🇫🇷', short: 'FR' },
+  { code: 'vi',    label: 'Vietnamese', flag: '🇻🇳', short: 'VI' },
+  { code: 'ko',    label: 'Korean',     flag: '🇰🇷', short: 'KO' },
+  { code: 'ja',    label: 'Japanese',   flag: '🇯🇵', short: 'JP' },
+  { code: 'hi',    label: 'Hindi',      flag: '🇮🇳', short: 'HI' },
 ];
 
 function triggerTranslate(langCode: string) {
