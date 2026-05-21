@@ -116,7 +116,7 @@ export function PromoPopup() {
                   objectFit: 'contain',
                   objectPosition: 'bottom center',
                   display: 'block',
-                  transform: 'scale(0.95)',
+                  transform: 'scale(1.14)',
                   transformOrigin: 'bottom center',
                 }}
               />
