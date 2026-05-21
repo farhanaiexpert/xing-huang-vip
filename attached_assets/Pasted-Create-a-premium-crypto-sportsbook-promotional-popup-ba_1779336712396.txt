@@ -1,0 +1,95 @@
+Create a premium crypto sportsbook promotional popup banner/modal that appears automatically 8 seconds after a user lands on the homepage.
+
+Main Goal:
+Increase wallet connections and create a high-converting marketing experience.
+
+Popup Requirements:
+
+1. Main Headline
+   “Connect Your Wallet & Claim FREE 99.99 USDT”
+
+Subheadline:
+“Join thousands of winning players on CupBett Sports Trading.”
+
+2. Celebrity Marketing Style
+   Use the provided celebrity promotional image inside the popup banner:
+   https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp
+
+Important:
+
+* make celebrities feel premium and trustworthy
+* high-end sportsbook marketing aesthetic
+* modern crypto betting atmosphere
+* realistic glow and lighting
+* should feel like a top-tier international sportsbook campaign
+
+3. Popup Design Style
+
+* ultra modern sportsbook UI
+* premium dark mode design
+* glassmorphism effect
+* subtle neon glow
+* smooth gradients
+* luxury fintech aesthetic
+* responsive desktop + mobile
+* professional spacing/alignment
+* very visually attractive
+* should feel trustworthy and exciting
+
+4. CTA Buttons
+   Primary CTA:
+   “Connect Wallet”
+
+Secondary CTA:
+“Maybe Later”
+
+5. Wallet UX
+   When user clicks Connect Wallet:
+
+* trigger existing wallet connection flow
+* smooth loading animation
+* premium success feedback animation
+
+6. Popup Animation
+   Popup should:
+
+* appear automatically after 8 seconds
+* fade + scale animation
+* smooth backdrop blur
+* animated entrance
+* animated floating glow elements
+* smooth close animation
+
+7. Engagement Effects
+   Add:
+
+* subtle floating particles
+* animated USDT glow
+* small live activity indicators
+* pulse animation on CTA button
+* premium hover effects
+
+8. Trust Elements
+   Show small trust indicators:
+
+* “50,000+ Active Players”
+* “Instant Crypto Withdrawals”
+* “Provably Fair Experience”
+
+9. Mobile Optimization
+
+* popup should remain fully responsive
+* optimized spacing for mobile
+* buttons stacked properly on mobile
+* no overflow issues
+
+10. Important
+
+* keep everything frontend-only
+* do not add backend yet
+* keep current sportsbook theme/design consistency
+* maintain premium crypto sportsbook branding
+* popup should feel realistic, modern, and production-quality
+
+Goal:
+Make users instantly excited to connect their wallet while making CupBett feel like a large trusted crypto sportsbook platform.

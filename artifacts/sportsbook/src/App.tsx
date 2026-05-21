@@ -22,6 +22,7 @@ import { OddsFormatProvider } from "@/hooks/useOddsFormat";
 import { OddsDataProvider } from "@/hooks/useOddsData";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { PromoPopup } from "@/components/PromoPopup";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ function App() {
                     </WouterRouter>
                     <MobileBottomNav />
                     <OnboardingGuide />
+                    <PromoPopup />
                     <Toaster />
                   </BetSlipProvider>
                   </BetHistoryProvider>
