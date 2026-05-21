@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Zap, Shield, Users, TrendingUp, Star } from 'lucide-react';
 
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp';
@@ -41,12 +41,15 @@ const IMG_BASE: React.CSSProperties = {
 export function PromoPopup() {
   const [visible,   setVisible]   = useState(false);
   const [closing,   setClosing]   = useState(false);
-  const [hovered,   setHovered]   = useState(false);
-  const [showAlt,   setShowAlt]   = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  const [barHiding, setBarHiding] = useState(false);
+  const [hovered,    setHovered]    = useState(false);
+  const [showAlt,    setShowAlt]    = useState(false);
+  const [dismissed,  setDismissed]  = useState(false); // popup was closed → start bar loop
+  const [barVisible, setBarVisible] = useState(false); // controls slide in/out
+  const [barStopped, setBarStopped] = useState(false); // user manually X'd the bar
+  const initRef  = useRef<ReturnType<typeof setTimeout>  | null>(null);
+  const loopRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Show popup after 3 s on every page load
+  // Show popup after 3 s
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 3000);
     return () => clearTimeout(t);
@@ -58,6 +61,23 @@ export function PromoPopup() {
     const t = setInterval(() => setShowAlt(v => !v), 5000);
     return () => clearInterval(t);
   }, [visible, hovered]);
+
+  // Sticky bar loop: show 30 s → hide 30 s → repeat (starts 30 s after popup close)
+  useEffect(() => {
+    if (!dismissed || barStopped) return;
+    // First appearance after 30 s
+    initRef.current = setTimeout(() => {
+      setBarVisible(true);
+      // Toggle every 30 s
+      loopRef.current = setInterval(() => {
+        setBarVisible(v => !v);
+      }, 30000);
+    }, 30000);
+    return () => {
+      if (initRef.current)  clearTimeout(initRef.current);
+      if (loopRef.current)  clearInterval(loopRef.current);
+    };
+  }, [dismissed, barStopped]);
 
   function close() {
     setClosing(true);
@@ -73,68 +93,75 @@ export function PromoPopup() {
   }
 
   function dismissBar() {
-    setBarHiding(true);
-    setTimeout(() => setDismissed(false), 300);
+    // Stop loop and slide bar out permanently
+    setBarStopped(true);
+    setBarVisible(false);
+    if (initRef.current)  clearTimeout(initRef.current);
+    if (loopRef.current)  clearInterval(loopRef.current);
   }
 
   const altVisible = hovered || showAlt;
 
-  // Sticky claim bar — shown after popup is dismissed
-  if (dismissed) {
-    return (
-      <div
-        className="fixed bottom-0 left-0 right-0 z-[9998] flex items-center justify-between gap-3 px-4 sm:px-6 py-3"
-        style={{
-          background: 'linear-gradient(90deg, #061A14 0%, #091820 50%, #061A14 100%)',
-          borderTop: '1px solid rgba(0,223,169,0.25)',
-          boxShadow: '0 -4px 32px rgba(0,223,169,0.12)',
-          animation: barHiding ? 'pBdOut .3s ease forwards' : 'pBarIn .4s cubic-bezier(.16,1,.3,1) forwards',
-        }}
-      >
-        <style>{`
-          @keyframes pBarIn { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
-          @keyframes pBdOut { from{opacity:1} to{opacity:0} }
-          @keyframes pCTAPulse { 0%,100%{box-shadow:0 0 18px rgba(0,223,169,.35)} 50%{box-shadow:0 0 30px rgba(0,223,169,.6)} }
-          @keyframes pShimmer { from{transform:translateX(-120%)} to{transform:translateX(120%)} }
-        `}</style>
+  // Sticky claim bar — always in DOM after popup dismissed, shown/hidden via CSS transform
+  const StickyBar = dismissed && !barStopped ? (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-[9998] flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5"
+      style={{
+        background: 'linear-gradient(90deg,#061A14 0%,#091820 50%,#061A14 100%)',
+        borderTop: '1px solid rgba(0,223,169,0.25)',
+        boxShadow: '0 -6px 36px rgba(0,223,169,0.14)',
+        transform: barVisible ? 'translateY(0)' : 'translateY(110%)',
+        opacity: barVisible ? 1 : 0,
+        transition: 'transform 0.55s cubic-bezier(.16,1,.3,1), opacity 0.45s ease',
+        pointerEvents: barVisible ? 'all' : 'none',
+      }}
+    >
+      <style>{`
+        @keyframes pCTAPulse { 0%,100%{box-shadow:0 0 18px rgba(0,223,169,.35)} 50%{box-shadow:0 0 30px rgba(0,223,169,.6)} }
+        @keyframes pShimmer  { from{transform:translateX(-120%)} to{transform:translateX(120%)} }
+      `}</style>
 
-        {/* Left: pulse dot + text */}
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="w-2 h-2 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
-          <div className="min-w-0">
-            <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
-              Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 99.99 USDT</span>
-            </p>
-            <p className="text-[10px] text-[#64748B] hidden sm:block">Join 50,000+ players on CupBett Sports Trading</p>
-          </div>
-        </div>
-
-        {/* Right: CTA + close */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleConnect}
-            className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] sm:text-[13px] font-bold text-[#0B0F14] overflow-hidden transition-transform hover:scale-[1.03] active:scale-[0.97] cursor-pointer"
-            style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', animation: 'pCTAPulse 2.4s ease-in-out infinite' }}
-          >
-            <Zap className="w-3.5 h-3.5 shrink-0" />
-            Connect Wallet
-            <div className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.2) 50%,transparent 62%)', animation: 'pShimmer 2.8s ease-in-out infinite' }} />
-          </button>
-          <button
-            onClick={dismissBar}
-            className="w-7 h-7 flex items-center justify-center rounded-full text-[#64748B] hover:text-[#F8FAFC] hover:bg-white/5 transition-all cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+      {/* Left: pulse dot + text */}
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="w-2.5 h-2.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
+        <div className="min-w-0">
+          <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
+            Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 99.99 USDT</span>
+          </p>
+          <p className="text-[10px] text-[#64748B] hidden sm:block">Join 50,000+ players on CupBett Sports Trading</p>
         </div>
       </div>
-    );
-  }
 
-  if (!visible) return null;
+      {/* Right: CTA + close */}
+      <div className="flex items-center gap-3 shrink-0">
+        <button
+          onClick={handleConnect}
+          className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] sm:text-[13px] font-bold text-[#0B0F14] overflow-hidden transition-transform hover:scale-[1.03] active:scale-[0.97] cursor-pointer"
+          style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', animation: 'pCTAPulse 2.4s ease-in-out infinite' }}
+        >
+          <Zap className="w-3.5 h-3.5 shrink-0" />
+          Connect Wallet
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.2) 50%,transparent 62%)', animation: 'pShimmer 2.8s ease-in-out infinite' }} />
+        </button>
+
+        {/* Prominent close button */}
+        <button
+          onClick={dismissBar}
+          title="Dismiss"
+          className="flex items-center justify-center w-9 h-9 rounded-xl border border-[#253241] bg-[#0D1520] text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1E2A38] hover:border-[#2E3D50] transition-all duration-150 cursor-pointer shrink-0"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  if (!visible) return <>{StickyBar}</>;
 
   return (
+    <>
+    {StickyBar}
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"
       style={{ animation: closing ? 'pBdOut .36s ease forwards' : 'pBdIn .38s ease forwards' }}
@@ -346,5 +373,6 @@ export function PromoPopup() {
         </div>
       </div>
     </div>
+    </>
   );
 }
