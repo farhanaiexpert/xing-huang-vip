@@ -114,6 +114,37 @@ export function Affiliate() {
 
   return (
     <div className="min-h-screen bg-[#0B0F14]">
+
+      {/* ── Coming Soon overlay (non-closeable) ── */}
+      <div className="fixed inset-0 z-[999] flex items-center justify-center"
+        style={{ background: 'rgba(7,11,16,0.88)', backdropFilter: 'blur(12px)' }}>
+        <div className="relative max-w-sm w-full mx-4 rounded-3xl overflow-hidden text-center"
+          style={{ background: 'linear-gradient(145deg,#0C1A28 0%,#091215 100%)', border: '1px solid rgba(0,223,169,0.2)', boxShadow: '0 0 80px rgba(0,223,169,0.12),0 32px 64px rgba(0,0,0,0.6)' }}>
+          <div className="h-[2.5px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15]" />
+          <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32"
+            style={{ background: 'radial-gradient(ellipse at 50% 0%,rgba(0,223,169,0.18) 0%,transparent 70%)' }} />
+          <div className="px-8 py-10 relative">
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6"
+              style={{ background: 'rgba(0,223,169,0.1)', border: '1px solid rgba(0,223,169,0.25)', boxShadow: '0 0 32px rgba(0,223,169,0.2)' }}>
+              <Zap className="w-9 h-9 text-[#00DFA9]" style={{ filter: 'drop-shadow(0 0 10px rgba(0,223,169,0.6))' }} />
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 text-[10px] font-bold uppercase tracking-widest"
+              style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: '#38BDF8' }}>
+              <Clock className="w-3 h-3" /> Under Development
+            </div>
+            <h2 className="text-[28px] font-black text-[#F8FAFC] leading-tight mb-3">Coming Soon</h2>
+            <p className="text-[13px] text-[#64748B] leading-relaxed mb-7">
+              Our referral &amp; affiliate system is currently under development. Something exciting is on the way — stay tuned!
+            </p>
+            <div className="w-full h-1.5 rounded-full bg-[#1E2A38] overflow-hidden mb-2">
+              <div className="h-full rounded-full w-[62%] transition-all"
+                style={{ background: 'linear-gradient(90deg,#00DFA9,#38BDF8)', boxShadow: '0 0 10px rgba(0,223,169,0.5)' }} />
+            </div>
+            <p className="text-[10px] text-[#475569] font-medium">62% complete</p>
+          </div>
+        </div>
+      </div>
+
       <Header />
 
       <main className="max-w-5xl mx-auto px-4 pb-32">
