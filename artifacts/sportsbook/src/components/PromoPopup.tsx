@@ -95,28 +95,30 @@ export function PromoPopup() {
           style={{ background: 'radial-gradient(circle,rgba(56,189,248,0.1) 0%,transparent 70%)' }} />
 
         {/* ── LAYOUT: row on md+, column on mobile ── */}
-        <div className="flex flex-col md:flex-row">
+        <div className="flex flex-col md:flex-row md:items-stretch">
 
           {/* ── LEFT: Image ── */}
           <div
-            className="relative shrink-0 w-full md:w-[38%] flex items-end justify-center overflow-hidden"
+            className="relative shrink-0 w-full md:w-[40%] overflow-hidden"
             style={{
               background: 'linear-gradient(160deg,#0D1825 0%,#081018 100%)',
-              minHeight: '260px',
+              minHeight: '240px',
             }}
           >
-            <img
-              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp"
-              alt="CupBett Ambassador"
-              className="w-full h-full"
-              style={{
-                objectFit: 'contain',
-                objectPosition: 'bottom center',
-                maxHeight: '560px',
-                minHeight: '260px',
-                display: 'block',
-              }}
-            />
+            {/* Absolutely fill the panel so image = 100% of banner height */}
+            <div className="absolute inset-0 flex items-end justify-center">
+              <img
+                src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp"
+                alt="CupBett Ambassador"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  objectPosition: 'bottom center',
+                  display: 'block',
+                }}
+              />
+            </div>
 
             {/* Right-edge blend into content panel */}
             <div className="absolute inset-y-0 right-0 w-16 pointer-events-none hidden md:block"
