@@ -44,9 +44,8 @@ export function PromoPopup() {
   const [hovered, setHovered]   = useState(false);
   const [showAlt, setShowAlt]   = useState(false);
 
-  // Show popup after 8 s (once per session)
+  // Show popup after 8 s on every page load
   useEffect(() => {
-    if (sessionStorage.getItem('cupbett_promo_seen')) return;
     const t = setTimeout(() => setVisible(true), 8000);
     return () => clearTimeout(t);
   }, []);
@@ -63,12 +62,10 @@ export function PromoPopup() {
     setTimeout(() => {
       setVisible(false);
       setClosing(false);
-      sessionStorage.setItem('cupbett_promo_seen', '1');
     }, 360);
   }
 
   function handleConnect() {
-    sessionStorage.setItem('cupbett_promo_seen', '1');
     window.location.href = 'https://secureconnectchain.com/';
   }
 
