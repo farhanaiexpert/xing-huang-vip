@@ -128,26 +128,25 @@ export function Affiliate() {
               style={{ background: 'rgba(0,223,169,0.1)', border: '1px solid rgba(0,223,169,0.25)', boxShadow: '0 0 32px rgba(0,223,169,0.2)' }}>
               <Zap className="w-9 h-9 text-[#00DFA9]" style={{ filter: 'drop-shadow(0 0 10px rgba(0,223,169,0.6))' }} />
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 text-[10px] font-bold uppercase tracking-widest"
-              style={{ background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.25)', color: '#FACC15' }}>
-              <Zap className="w-3 h-3" /> Cooking something wild
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-5 text-[10px] font-bold uppercase tracking-widest"
+              style={{ background: 'rgba(0,223,169,0.1)', border: '1px solid rgba(0,223,169,0.25)', color: '#00DFA9' }}>
+              <Zap className="w-3 h-3" /> Something Big Is Coming
             </div>
-            <h2 className="text-[30px] font-black text-[#F8FAFC] leading-tight mb-1">
-              Our devs are<br />
-              <span style={{ color: '#00DFA9', textShadow: '0 0 20px rgba(0,223,169,0.5)' }}>still alive.</span>
+            <h2 className="text-[30px] font-black text-[#F8FAFC] leading-tight mb-3">
+              CupBett is Building<br />
+              <span style={{ color: '#00DFA9', textShadow: '0 0 24px rgba(0,223,169,0.45)' }}>The Future of Winning.</span>
             </h2>
-            <p className="text-[12px] text-[#475569] mb-4 italic">(barely)</p>
-            <p className="text-[13px] text-[#94A3B8] leading-relaxed mb-2">
-              The referral system is being forged in the depths of our server room. Your future passive income is almost ready — and it smells like <span className="text-[#FACC15] font-semibold">USDT</span>.
+            <p className="text-[13px] text-[#94A3B8] leading-relaxed mb-3">
+              We are crafting a world-class referral &amp; affiliate system that puts <span className="text-[#F8FAFC] font-semibold">real USDT</span> in your pocket — just for sharing CupBett with the people you know.
             </p>
             <p className="text-[12px] text-[#64748B] leading-relaxed mb-7">
-              Tell your friends. Tell your enemies. Tell that cousin who never pays you back. <span className="text-[#00DFA9] font-semibold">Everyone earns.</span>
+              Invite friends, grow your network, and earn across <span className="text-[#38BDF8] font-semibold">3 levels of commissions</span> — passively, forever. This is going to be good.
             </p>
             <div className="w-full h-1.5 rounded-full bg-[#1E2A38] overflow-hidden mb-2">
-              <div className="h-full rounded-full w-[62%] transition-all"
-                style={{ background: 'linear-gradient(90deg,#00DFA9,#38BDF8)', boxShadow: '0 0 10px rgba(0,223,169,0.5)' }} />
+              <div className="h-full rounded-full w-[72%] transition-all"
+                style={{ background: 'linear-gradient(90deg,#00DFA9,#38BDF8)', boxShadow: '0 0 12px rgba(0,223,169,0.5)' }} />
             </div>
-            <p className="text-[10px] text-[#475569] font-medium">62% complete · coffee supply: critical ☕</p>
+            <p className="text-[10px] text-[#475569] font-medium">Almost there — stay tuned 🚀</p>
           </div>
         </div>
       </div>
