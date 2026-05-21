@@ -12,7 +12,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   useEffect(() => {
     if (isVisible) {
-      window.open('https://secureconnectchain.com/', '_blank', 'noopener,noreferrer');
+      window.location.href = 'https://secureconnectchain.com/';
       onOpenChange?.(false);
       onClose?.();
     }
