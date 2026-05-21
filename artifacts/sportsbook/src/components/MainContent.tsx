@@ -843,8 +843,8 @@ function SiteFooter() {
             <img
               src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
               alt="CupBett"
-              className="h-7 w-auto object-contain mb-1.5"
-              style={{ filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
+              className="w-auto object-contain mb-1.5"
+              style={{ height: '33.6px', filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
             />
             <p className="text-[11px] text-[#94A3B8]/50 leading-snug">
               Live odds · instant settlement · provably fair
@@ -900,8 +900,8 @@ function SiteFooter() {
             <img
               src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
               alt="CupBett"
-              className="h-7 w-auto object-contain"
-              style={{ filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
+              className="w-auto object-contain"
+              style={{ height: '33.6px', filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
             />
             <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[180px]">
               Live odds, instant settlement, and provably fair sports markets.
