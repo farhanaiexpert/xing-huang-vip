@@ -102,7 +102,7 @@ export function PromoPopup() {
             className="relative shrink-0 w-full md:w-[38%] flex items-end justify-center overflow-hidden"
             style={{
               background: 'linear-gradient(160deg,#0D1825 0%,#081018 100%)',
-              minHeight: '200px',
+              minHeight: '260px',
             }}
           >
             <img
@@ -112,8 +112,8 @@ export function PromoPopup() {
               style={{
                 objectFit: 'contain',
                 objectPosition: 'bottom center',
-                maxHeight: '420px',
-                minHeight: '200px',
+                maxHeight: '560px',
+                minHeight: '260px',
                 display: 'block',
               }}
             />
