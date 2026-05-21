@@ -47,6 +47,7 @@ export interface ReferralState extends ReferralStore {
   registerReferrer: (refCode: string) => void;
   addCommission:   (entry: Omit<CommissionEntry, 'id'>) => void;
   claimPending:    () => void;
+  updateCode:      (newCode: string) => boolean; // returns false if invalid
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -135,6 +136,14 @@ export function useReferral(): ReferralState {
     }));
   }, [update]);
 
+  // Returns true on success, false if code is invalid or taken
+  const updateCode = useCallback((newCode: string): boolean => {
+    const clean = newCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (clean.length < 4 || clean.length > 16) return false;
+    update(s => ({ ...s, myCode: clean }));
+    return true;
+  }, [update]);
+
   const s = store ?? { myCode: '--------', referredByCode: null, referrals: [], commissions: [] };
 
   const level1      = s.referrals.filter(r => r.level === 1);
@@ -151,6 +160,6 @@ export function useReferral(): ReferralState {
     myLink,
     level1, level2, level3,
     totalEarned, pendingEarned, paidEarned,
-    registerReferrer, addCommission, claimPending,
+    registerReferrer, addCommission, claimPending, updateCode,
   };
 }
