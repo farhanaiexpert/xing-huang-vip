@@ -99,7 +99,7 @@ export function PromoPopup() {
 
           {/* ── LEFT: Image ── */}
           <div
-            className="relative shrink-0 w-full md:w-[44%] overflow-hidden"
+            className="relative shrink-0 w-full md:w-[40%] overflow-hidden"
             style={{
               background: 'linear-gradient(160deg,#0D1825 0%,#081018 100%)',
               minHeight: '240px',
