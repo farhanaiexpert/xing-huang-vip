@@ -62,20 +62,27 @@ export function PromoPopup() {
     return () => clearInterval(t);
   }, [visible, hovered]);
 
-  // Sticky bar loop: show 30 s → hide 30 s → repeat (starts 30 s after popup close)
+  // Sticky bar loop: appears 600ms after popup close, visible 30s, hidden 15s, repeats
   useEffect(() => {
     if (!dismissed || barStopped) return;
-    // First appearance quickly after popup close, then loop every 30 s
+
+    // Recursive scheduler — 30s while visible, 15s while hidden
+    const schedule = (nextVisible: boolean, delay: number) => {
+      loopRef.current = setTimeout(() => {
+        setBarVisible(nextVisible);
+        schedule(!nextVisible, nextVisible ? 30000 : 15000);
+      }, delay);
+    };
+
+    // Show quickly after popup close
     initRef.current = setTimeout(() => {
       setBarVisible(true);
-      // Toggle every 30 s
-      loopRef.current = setInterval(() => {
-        setBarVisible(v => !v);
-      }, 30000);
+      schedule(false, 30000); // after 30s visible, hide for 15s, repeat
     }, 600);
+
     return () => {
-      if (initRef.current)  clearTimeout(initRef.current);
-      if (loopRef.current)  clearInterval(loopRef.current);
+      if (initRef.current) clearTimeout(initRef.current);
+      if (loopRef.current) clearTimeout(loopRef.current);
     };
   }, [dismissed, barStopped]);
 
