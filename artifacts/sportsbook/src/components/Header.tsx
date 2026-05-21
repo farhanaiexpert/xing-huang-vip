@@ -113,6 +113,7 @@ export function Header() {
     { label: 'Promotions',      href: '/promotions' },
     { label: 'Predict & Win',   href: '/prediction-pools' },
     { label: 'Bet History',     href: '/bet-history' },
+    { label: 'Affiliate',       href: '/affiliate' },
     { label: 'Help & Rules',    href: '/help' },
     { label: 'Soccer',          href: '/' },
     { label: 'Tennis',          href: '/' },
@@ -230,6 +231,7 @@ export function Header() {
             <NavItem href="/prediction-pools"   label="Predict & Win"     />
             <NavItem href="/bet-history"        label="Bet History"       />
             <NavItem href="/help"               label="Help"              />
+            <NavItem href="/affiliate"          label="Affiliate"         />
             <WinSpinNavItem />
             <NavItem href="/"                   label="In-Play" disabled soon />
           </nav>
