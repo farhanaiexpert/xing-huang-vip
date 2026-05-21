@@ -99,35 +99,17 @@ export function PromoPopup() {
         ))}
       </div>
 
-      {/* ── Spinning border wrapper ── */}
+      {/* ── Modal card ── */}
       <div
-        className="relative w-full max-w-[860px]"
+        className="relative w-full max-w-[860px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
         style={{
-          borderRadius: '18px',
-          padding: '2px',
+          borderRadius: '16px',
+          background: 'linear-gradient(140deg,#0A0F16 0%,#0D1520 55%,#0A0F16 100%)',
+          border: '1px solid rgba(0,223,169,0.2)',
           animation: closing ? 'pMOut .36s cubic-bezier(.4,0,1,1) forwards' : 'pMIn .44s cubic-bezier(.16,1,.3,1) forwards',
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Rotating conic-gradient border ring */}
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            inset: 0,
-            borderRadius: '18px',
-            background: 'conic-gradient(from 0deg, #00DFA9, #38BDF8, #FACC15, #AB9FF2, #F6851B, #00DFA9)',
-            animation: 'pBorderSpin 3s linear infinite',
-          }}
-        />
-
-        {/* Inner modal card */}
-        <div
-          className="relative overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
-          style={{
-            borderRadius: '16px',
-            background: 'linear-gradient(140deg,#0A0F16 0%,#0D1520 55%,#0A0F16 100%)',
-          }}
-        >
           {/* Top accent bar */}
           <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15]" />
 
@@ -296,7 +278,6 @@ export function PromoPopup() {
               </div>
             </div>
           </div>
-        </div>
       </div>
     </div>
   );
