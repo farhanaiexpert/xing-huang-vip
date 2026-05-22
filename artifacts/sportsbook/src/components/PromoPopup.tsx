@@ -231,9 +231,18 @@ export function PromoPopup() {
         <div className="flex flex-col md:flex-row md:items-stretch">
 
           {/* ── LEFT: Celebrity images (crossfade) ── */}
+          <style>{`
+            @media (max-width: 767px) {
+              .popup-celeb-img {
+                object-fit: cover !important;
+                object-position: top center !important;
+                transform: scale(1) !important;
+              }
+            }
+          `}</style>
           <div
             className="relative shrink-0 w-full md:w-[40%] overflow-hidden"
-            style={{ background: DOT_BG, minHeight: '240px' }}
+            style={{ background: DOT_BG, minHeight: '320px' }}
             onMouseEnter={() => { setHovered(true); setShowAlt(true); }}
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
           >
@@ -241,12 +250,14 @@ export function PromoPopup() {
             <img
               src={IMG_ORIGINAL}
               alt="CupBett Ambassador"
+              className="popup-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 0 : 1 }}
             />
             {/* Alt image (ronaldo) — shown on hover or auto-cycle */}
             <img
               src={IMG_ALT}
               alt="CupBett Ambassador"
+              className="popup-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 1 : 0 }}
             />
 
