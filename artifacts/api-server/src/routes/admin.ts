@@ -7,7 +7,7 @@ import {
   commissionSettingsTable, userBalancesTable, platformSettingsTable,
   SETTING_DEFAULTS,
 } from "@workspace/db";
-import { eq, desc, or } from "drizzle-orm";
+import { eq, desc, or, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { requireAdmin } from "../middleware/auth";
 import { settleBet, runAutoSettlement } from "../services/settlement";
@@ -199,40 +199,58 @@ router.post("/users/:id/balance/adjust", async (req, res) => {
     const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, id));
     if (!user) { res.status(404).json({ error: "not_found", message: "User not found" }); return; }
 
-    const [balanceRow] = await db.select().from(userBalancesTable).where(eq(userBalancesTable.userId, id));
-    const current = parseFloat(balanceRow?.available ?? "0");
-    const newBalance = current + amount;
+    // Atomic read-modify-write inside a serializable transaction
+    let previous = "0";
+    let newAvailable = "0";
 
-    if (newBalance < 0) {
-      res.status(400).json({ error: "validation", message: "Adjustment would result in negative balance" });
-      return;
-    }
+    await db.transaction(async tx => {
+      // FOR UPDATE locks the row so concurrent adjustments queue instead of racing
+      const rows = await tx.execute(
+        sql`SELECT available FROM user_balances WHERE user_id = ${id} FOR UPDATE`
+      ) as { rows: { available: string }[] };
 
-    await db.insert(userBalancesTable)
-      .values({ userId: id, available: newBalance.toFixed(8), currency: "USDT" })
-      .onConflictDoUpdate({
-        target: userBalancesTable.userId,
-        set: { available: newBalance.toFixed(8), updatedAt: new Date() },
+      const current = parseFloat(rows.rows[0]?.available ?? "0");
+      const next = current + amount;
+
+      if (next < 0) {
+        throw Object.assign(new Error("Adjustment would result in negative balance"), { code: "NEG_BALANCE" });
+      }
+
+      previous     = current.toFixed(8);
+      newAvailable = next.toFixed(8);
+
+      if (rows.rows.length === 0) {
+        await tx.insert(userBalancesTable).values({ userId: id, available: newAvailable, currency: "USDT" });
+      } else {
+        await tx.update(userBalancesTable)
+          .set({ available: newAvailable, updatedAt: new Date() })
+          .where(eq(userBalancesTable.userId, id));
+      }
+
+      // Direction recorded in description; amount is always the absolute value per schema
+      await tx.insert(transactionsTable).values({
+        id:          randomUUID(),
+        userId:      id,
+        type:        "adjustment",
+        amount:      Math.abs(amount).toFixed(8),
+        currency:    "USDT",
+        status:      "completed",
+        description: `Admin ${amount > 0 ? "credit" : "debit"}: ${reason}`,
       });
-
-    await db.insert(transactionsTable).values({
-      id:          randomUUID(),
-      userId:      id,
-      type:        "adjustment",
-      amount:      Math.abs(amount).toFixed(8),
-      currency:    "USDT",
-      status:      "completed",
-      description: `Admin adjustment: ${reason}`,
     });
 
     res.json({
       userId:    id,
-      previous:  current.toFixed(8),
+      previous,
       adjusted:  amount.toFixed(8),
-      available: newBalance.toFixed(8),
+      available: newAvailable,
       currency:  "USDT",
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.code === "NEG_BALANCE") {
+      res.status(400).json({ error: "validation", message: "Adjustment would result in negative balance" });
+      return;
+    }
     req.log.error({ err }, "admin balance adjust error");
     res.status(500).json({ error: "internal", message: "Failed to adjust balance" });
   }

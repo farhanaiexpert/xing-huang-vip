@@ -180,7 +180,7 @@ export default function Settings() {
       <SectionCard title="API Integrations" description="Third-party service connections">
         <div className="space-y-3">
           {[
-            { name: "The Odds API",     status: process.env.ODDS_API_KEY ? "connected" : "not_set", desc: "Live sports odds data provider" },
+            { name: "The Odds API",     status: "not_set", desc: "Live sports odds data provider" },
             { name: "Blockchain RPC",   status: "not_set", desc: "On-chain transaction verification" },
             { name: "Webhook Endpoint", status: "not_set", desc: "Event notifications for external systems" },
           ].map(item => (
