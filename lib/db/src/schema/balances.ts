@@ -18,13 +18,6 @@ export const transactionStatusEnum = pgEnum("transaction_status", [
   "cancelled",
 ]);
 
-export const withdrawalStatusEnum = pgEnum("withdrawal_status", [
-  "pending",
-  "approved",
-  "rejected",
-  "processed",
-]);
-
 export const userBalancesTable = pgTable("user_balances", {
   userId:    text("user_id").primaryKey().references(() => usersTable.id),
   available: numeric("available", { precision: 18, scale: 8 }).notNull().default("0"),
@@ -45,22 +38,6 @@ export const transactionsTable = pgTable("transactions", {
   createdAt:   timestamp("created_at").notNull().defaultNow(),
 });
 
-export const withdrawalRequestsTable = pgTable("withdrawal_requests", {
-  id:            text("id").primaryKey(),
-  userId:        text("user_id").notNull().references(() => usersTable.id),
-  amount:        numeric("amount", { precision: 18, scale: 8 }).notNull(),
-  walletAddress: text("wallet_address").notNull(),
-  currency:      text("currency").notNull().default("USDT"),
-  status:        withdrawalStatusEnum("status").notNull().default("pending"),
-  note:          text("note"),
-  reviewedBy:    text("reviewed_by").references(() => usersTable.id),
-  reviewedAt:    timestamp("reviewed_at"),
-  transactionId: text("transaction_id").references(() => transactionsTable.id),
-  createdAt:     timestamp("created_at").notNull().defaultNow(),
-});
-
-export type UserBalance         = typeof userBalancesTable.$inferSelect;
-export type Transaction         = typeof transactionsTable.$inferSelect;
-export type InsertTransaction   = typeof transactionsTable.$inferInsert;
-export type WithdrawalRequest   = typeof withdrawalRequestsTable.$inferSelect;
-export type InsertWithdrawalRequest = typeof withdrawalRequestsTable.$inferInsert;
+export type UserBalance  = typeof userBalancesTable.$inferSelect;
+export type Transaction  = typeof transactionsTable.$inferSelect;
+export type InsertTransaction = typeof transactionsTable.$inferInsert;
