@@ -205,50 +205,6 @@ export const AdminUpdateUserStatusResponse = zod.object({
 
 
 /**
- * @summary Manually settle a bet (admin)
- */
-export const AdminSettleBetParams = zod.object({
-  "id": zod.coerce.string()
-})
-
-export const AdminSettleBetBody = zod.object({
-  "status": zod.enum(['won', 'lost', 'void'])
-})
-
-export const AdminSettleBetResponse = zod.object({
-  "id": zod.string(),
-  "stake": zod.string(),
-  "totalOdds": zod.string(),
-  "potentialReturn": zod.string(),
-  "status": zod.string(),
-  "currency": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "selections": zod.array(zod.object({
-
-}).passthrough()).optional()
-})
-
-
-/**
- * @summary List all transactions (admin)
- */
-export const AdminGetTransactionsResponse = zod.object({
-  "transactions": zod.array(zod.object({
-  "id": zod.string(),
-  "userId": zod.string(),
-  "type": zod.string(),
-  "amount": zod.string(),
-  "currency": zod.string(),
-  "status": zod.string(),
-  "reference": zod.string().optional(),
-  "description": zod.string().optional(),
-  "createdAt": zod.coerce.date()
-})),
-  "total": zod.number()
-})
-
-
-/**
  * @summary Get commission settings (admin)
  */
 export const AdminGetCommissionSettingsResponse = zod.object({

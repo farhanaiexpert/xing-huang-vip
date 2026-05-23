@@ -21,7 +21,6 @@ import type {
 
 import type {
   AdminBetsResponse,
-  AdminTransactionsResponse,
   AdminUsersResponse,
   AuthResponse,
   BalanceResponse,
@@ -34,7 +33,6 @@ import type {
   LoginRequest,
   MessageResponse,
   RegisterRequest,
-  SettleBetRequest,
   UpdateCommissionSettingsRequest,
   UpdateStatusRequest,
   UpdateWalletRequest,
@@ -940,155 +938,6 @@ export const useAdminUpdateUserStatus = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getAdminUpdateUserStatusMutationOptions(options));
     }
-
-export const getAdminSettleBetUrl = (id: string,) => {
-
-
-
-
-  return `/api/admin/bets/${id}/settle`
-}
-
-/**
- * @summary Manually settle a bet (admin)
- */
-export const adminSettleBet = async (id: string,
-    settleBetRequest: SettleBetRequest, options?: RequestInit): Promise<BetResponse> => {
-
-  return customFetch<BetResponse>(getAdminSettleBetUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      settleBetRequest,)
-  }
-);}
-
-
-
-
-export const getAdminSettleBetMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSettleBet>>, TError,{id: string;data: BodyType<SettleBetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof adminSettleBet>>, TError,{id: string;data: BodyType<SettleBetRequest>}, TContext> => {
-
-const mutationKey = ['adminSettleBet'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSettleBet>>, {id: string;data: BodyType<SettleBetRequest>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  adminSettleBet(id,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AdminSettleBetMutationResult = NonNullable<Awaited<ReturnType<typeof adminSettleBet>>>
-    export type AdminSettleBetMutationBody = BodyType<SettleBetRequest>
-    export type AdminSettleBetMutationError = ErrorType<ErrorResponse>
-
-    /**
- * @summary Manually settle a bet (admin)
- */
-export const useAdminSettleBet = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSettleBet>>, TError,{id: string;data: BodyType<SettleBetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof adminSettleBet>>,
-        TError,
-        {id: string;data: BodyType<SettleBetRequest>},
-        TContext
-      > => {
-      return useMutation(getAdminSettleBetMutationOptions(options));
-    }
-
-export const getAdminGetTransactionsUrl = () => {
-
-
-
-
-  return `/api/admin/transactions`
-}
-
-/**
- * @summary List all transactions (admin)
- */
-export const adminGetTransactions = async ( options?: RequestInit): Promise<AdminTransactionsResponse> => {
-
-  return customFetch<AdminTransactionsResponse>(getAdminGetTransactionsUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getAdminGetTransactionsQueryKey = () => {
-    return [
-    `/api/admin/transactions`
-    ] as const;
-    }
-
-
-export const getAdminGetTransactionsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetTransactions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetTransactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAdminGetTransactionsQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetTransactions>>> = ({ signal }) => adminGetTransactions({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetTransactions>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type AdminGetTransactionsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetTransactions>>>
-export type AdminGetTransactionsQueryError = ErrorType<unknown>
-
-
-/**
- * @summary List all transactions (admin)
- */
-
-export function useAdminGetTransactions<TData = Awaited<ReturnType<typeof adminGetTransactions>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetTransactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getAdminGetTransactionsQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
 
 export const getAdminGetCommissionSettingsUrl = () => {
 

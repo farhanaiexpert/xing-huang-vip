@@ -23,7 +23,7 @@ export interface WalletState {
   disconnect:     () => void;
   deductBalance:  (amount: number) => void;
   shortAddress:   string | null;
-  openLoginModal: (tab?: 'signin' | 'register') => void;
+  openLoginModal: () => void;
 }
 
 function shorten(s: string): string {
@@ -37,7 +37,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const auth         = useAuth();
   const queryClient  = useQueryClient();
   const [loginOpen,  setLoginOpen]  = useState(false);
-  const [loginTab,   setLoginTab]   = useState<'signin' | 'register'>('signin');
   const [localBal,   setLocalBal]   = useState(0);
 
   const balanceQuery = useGetBalance({
@@ -85,13 +84,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     disconnect,
     deductBalance,
     shortAddress,
-    openLoginModal: (tab?: 'signin' | 'register') => { setLoginTab(tab ?? 'signin'); setLoginOpen(true); },
+    openLoginModal: () => setLoginOpen(true),
   };
 
   return createElement(WalletContext.Provider, { value },
     createElement(Fragment, null,
       children,
-      createElement(LoginModal, { open: loginOpen, onOpenChange: setLoginOpen, defaultTab: loginTab }),
+      createElement(LoginModal, { open: loginOpen, onOpenChange: setLoginOpen }),
     )
   );
 }
