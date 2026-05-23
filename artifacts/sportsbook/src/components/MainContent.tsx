@@ -349,7 +349,7 @@ export function MainContent({
                     <X className="h-3.5 w-3.5" />
                   </button>
                 ) : (
-                  <kbd className="text-[9px] text-[#94A3B8]/40 bg-[#1E2A38] border border-[#253241] px-1.5 py-0.5 rounded font-mono pointer-events-none select-none">
+                  <kbd className="hidden sm:inline text-[9px] text-[#94A3B8]/40 bg-[#1E2A38] border border-[#253241] px-1.5 py-0.5 rounded font-mono pointer-events-none select-none">
                     ⌘K
                   </kbd>
                 )}

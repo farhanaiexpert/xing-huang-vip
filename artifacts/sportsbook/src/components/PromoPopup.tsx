@@ -16,12 +16,12 @@ const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
 }));
 
 const AVATARS = [
-  'https://randomuser.me/api/portraits/women/44.jpg',
-  'https://randomuser.me/api/portraits/men/32.jpg',
-  'https://randomuser.me/api/portraits/women/68.jpg',
-  'https://randomuser.me/api/portraits/men/76.jpg',
-  'https://randomuser.me/api/portraits/women/25.jpg',
-  'https://randomuser.me/api/portraits/men/55.jpg',
+  { src: 'https://i.pravatar.cc/64?img=47', color: '#00DFA9', initial: 'A' },
+  { src: 'https://i.pravatar.cc/64?img=12', color: '#38BDF8', initial: 'M' },
+  { src: 'https://i.pravatar.cc/64?img=32', color: '#FACC15', initial: 'K' },
+  { src: 'https://i.pravatar.cc/64?img=9',  color: '#F472B6', initial: 'S' },
+  { src: 'https://i.pravatar.cc/64?img=68', color: '#A78BFA', initial: 'D' },
+  { src: 'https://i.pravatar.cc/64?img=55', color: '#34D399', initial: 'R' },
 ];
 
 const DOT_BG = `radial-gradient(ellipse at 55% 85%, rgba(0,223,169,0.15) 0%, transparent 50%), radial-gradient(ellipse at 20% 20%, rgba(56,189,248,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 10%, rgba(250,204,21,0.08) 0%, transparent 40%), linear-gradient(160deg, #0D1825 0%, #081018 100%)`;
@@ -34,7 +34,7 @@ const IMG_BASE: React.CSSProperties = {
   objectFit: 'contain',
   objectPosition: 'bottom center',
   display: 'block',
-  transform: 'scale(0.91)',
+  transform: 'scale(0.73)',
   transformOrigin: 'bottom center',
   transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
@@ -113,7 +113,7 @@ export function PromoPopup() {
   // Sticky claim bar — always in DOM after popup dismissed, shown/hidden via CSS transform
   const StickyBar = dismissed && !barStopped ? (
     <div
-      className="fixed bottom-0 left-0 right-0 xl:right-[260px] z-[9998] flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5"
+      className="fixed bottom-14 sm:bottom-0 left-0 right-0 xl:right-[260px] z-[9998] flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5"
       style={{
         background: 'linear-gradient(90deg,#061A14 0%,#091820 50%,#061A14 100%)',
         borderTop: '1px solid rgba(0,223,169,0.25)',
@@ -211,7 +211,7 @@ export function PromoPopup() {
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-[860px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
+        className="relative w-full max-w-[860px] overflow-y-auto max-h-[92vh] shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
         style={{
           borderRadius: '16px',
           background: 'linear-gradient(140deg,#0A0F16 0%,#0D1520 55%,#0A0F16 100%)',
@@ -243,7 +243,7 @@ export function PromoPopup() {
           `}</style>
           <div
             className="relative shrink-0 w-full md:w-[40%] overflow-hidden"
-            style={{ background: DOT_BG, minHeight: '320px' }}
+            style={{ background: DOT_BG, minHeight: 'clamp(180px, 35vw, 320px)' }}
             onMouseEnter={() => { setHovered(true); setShowAlt(true); }}
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
           >
@@ -331,15 +331,25 @@ export function PromoPopup() {
               style={{ background: 'rgba(18,24,32,0.7)' }}
             >
               <div className="flex -space-x-2.5 shrink-0">
-                {AVATARS.map((src, i) => (
-                  <img
+                {AVATARS.map((av, i) => (
+                  <div
                     key={i}
-                    src={src}
-                    alt="Player"
-                    className="w-8 h-8 rounded-full border-2 border-[#0A0F16] object-cover"
+                    className="relative w-8 h-8 rounded-full border-2 border-[#0A0F16] overflow-hidden shrink-0"
                     style={{ zIndex: AVATARS.length - i }}
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                  />
+                  >
+                    <div
+                      className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-[#0A0F16]"
+                      style={{ background: av.color }}
+                    >
+                      {av.initial}
+                    </div>
+                    <img
+                      src={av.src}
+                      alt="Player"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
                 ))}
               </div>
               <div className="min-w-0">
