@@ -211,7 +211,7 @@ export function PromoPopup() {
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-[860px] overflow-y-auto max-h-[92vh] shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
+        className="relative w-full max-w-[860px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
         style={{
           borderRadius: '16px',
           background: 'linear-gradient(140deg,#0A0F16 0%,#0D1520 55%,#0A0F16 100%)',
