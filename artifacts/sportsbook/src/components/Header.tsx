@@ -50,7 +50,7 @@ function triggerTranslate(langCode: string) {
 
 
 export function Header() {
-  const { isConnected, shortAddress, walletName, disconnect, role } = useWallet();
+  const { isConnected, shortAddress, walletName, disconnect, role, openLoginModal } = useWallet();
   const { format, setFormat } = useOddsFormat();
   const [isWalletOpen,     setIsWalletOpen]     = useState(false);
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
@@ -362,18 +362,26 @@ export function Header() {
                 )}
               </div>
             ) : (
-              <button
-                data-testid="button-connect-wallet-header"
-                onClick={() => setIsWalletOpen(true)}
-                className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
-                style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
-              >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
-                <Wallet className="relative h-3.5 w-3.5 shrink-0" />
-                <span className="relative hidden sm:inline whitespace-nowrap">Connect Wallet</span>
-                <span className="relative sm:hidden">Connect</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => openLoginModal('signin')}
+                  className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl text-[#94A3B8] text-xs font-semibold border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] hover:text-[#F8FAFC] hover:border-white/[0.14] transition-all duration-200 whitespace-nowrap cursor-pointer"
+                >
+                  Sign In
+                </button>
+                <button
+                  data-testid="button-connect-wallet-header"
+                  onClick={() => setIsWalletOpen(true)}
+                  className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
+                  style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
+                  <Wallet className="relative h-3.5 w-3.5 shrink-0" />
+                  <span className="relative hidden sm:inline whitespace-nowrap">Connect Wallet</span>
+                  <span className="relative sm:hidden">Connect</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

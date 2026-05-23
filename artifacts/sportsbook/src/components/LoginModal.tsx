@@ -9,11 +9,12 @@ interface LoginModalProps {
   open:         boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?:   () => void;
+  defaultTab?:  'signin' | 'register';
 }
 
-export function LoginModal({ open, onOpenChange, onSuccess }: LoginModalProps) {
+export function LoginModal({ open, onOpenChange, onSuccess, defaultTab = 'signin' }: LoginModalProps) {
   const { login, register } = useAuth();
-  const [tab,          setTab]          = useState<'signin' | 'register'>('signin');
+  const [tab,          setTab]          = useState<'signin' | 'register'>(defaultTab);
   const [username,     setUsername]     = useState('');
   const [email,        setEmail]        = useState('');
   const [password,     setPassword]     = useState('');
