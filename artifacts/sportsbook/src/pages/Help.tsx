@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { Header } from '@/components/Header';
 import { cn } from '@/lib/utils';
+import { clearAllCache } from '@/lib/clearCache';
 import {
   ArrowLeft, TrendingUp, MousePointerClick, Receipt, Layers,
   Wallet, ChevronDown, ChevronUp, BookOpen, Zap, Shield,
-  DollarSign, BarChart2, CheckCircle2,
+  DollarSign, BarChart2, CheckCircle2, Trash2,
 } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────
@@ -244,11 +245,52 @@ export function Help() {
           </Link>
         </div>
 
+        {/* ── Clear Cache ───────────────────────────────────────────── */}
+        <ClearCachePanel />
+
         <div className="mt-8 text-center">
           <p className="text-[10px] text-[#94A3B8]/30">
             CupBett · All odds subject to change · 18+
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ClearCachePanel() {
+  const [done, setDone] = useState(false);
+
+  function handleClear() {
+    clearAllCache();
+    setDone(true);
+    setTimeout(() => setDone(false), 3000);
+  }
+
+  return (
+    <div className="rounded-xl border border-[#253241] bg-[#121821] p-5">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FACC15]/10">
+          <Trash2 className="h-4 w-4 text-[#FACC15]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-[#F8FAFC] mb-0.5">Clear App Cache</p>
+          <p className="text-xs text-[#94A3B8]">
+            Removes all locally stored data — odds cache, favourites, bet history, predictions, and settings. The page will reload.
+          </p>
+        </div>
+        <button
+          onClick={handleClear}
+          disabled={done}
+          className={cn(
+            'shrink-0 h-9 px-4 rounded-lg text-xs font-bold transition-all duration-200',
+            done
+              ? 'bg-[#00DFA9]/20 text-[#00DFA9] cursor-default'
+              : 'bg-[#FACC15]/10 text-[#FACC15] border border-[#FACC15]/30 hover:bg-[#FACC15]/20 active:scale-95',
+          )}
+        >
+          {done ? '✓ Cleared' : 'Clear Cache'}
+        </button>
       </div>
     </div>
   );
