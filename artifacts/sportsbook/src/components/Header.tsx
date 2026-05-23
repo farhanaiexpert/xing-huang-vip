@@ -50,7 +50,7 @@ function triggerTranslate(langCode: string) {
 
 
 export function Header() {
-  const { isConnected, shortAddress, walletName, disconnect, role } = useWallet();
+  const { isConnected, shortAddress, walletName, disconnect } = useWallet();
   const { format, setFormat } = useOddsFormat();
   const [isWalletOpen,     setIsWalletOpen]     = useState(false);
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
@@ -238,7 +238,6 @@ export function Header() {
             <NavItem href="/affiliate"          label="Affiliate"         />
             <WinSpinNavItem />
             <NavItem href="/"                   label="In-Play" disabled soon />
-            {role === 'admin' && <NavItem href="/admin" label="Admin" />}
           </nav>
 
           {/* Right */}

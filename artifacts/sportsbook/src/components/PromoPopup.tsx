@@ -16,12 +16,11 @@ const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
 }));
 
 const AVATARS = [
-  'https://randomuser.me/api/portraits/women/44.jpg',
-  'https://randomuser.me/api/portraits/men/32.jpg',
-  'https://randomuser.me/api/portraits/women/68.jpg',
-  'https://randomuser.me/api/portraits/men/76.jpg',
-  'https://randomuser.me/api/portraits/women/25.jpg',
-  'https://randomuser.me/api/portraits/men/55.jpg',
+  'https://i.pravatar.cc/40?img=3',
+  'https://i.pravatar.cc/40?img=12',
+  'https://i.pravatar.cc/40?img=25',
+  'https://i.pravatar.cc/40?img=47',
+  'https://i.pravatar.cc/40?img=68',
 ];
 
 const DOT_BG = `radial-gradient(ellipse at 55% 85%, rgba(0,223,169,0.15) 0%, transparent 50%), radial-gradient(ellipse at 20% 20%, rgba(56,189,248,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 10%, rgba(250,204,21,0.08) 0%, transparent 40%), linear-gradient(160deg, #0D1825 0%, #081018 100%)`;
@@ -34,7 +33,7 @@ const IMG_BASE: React.CSSProperties = {
   objectFit: 'contain',
   objectPosition: 'bottom center',
   display: 'block',
-  transform: 'scale(0.91)',
+  transform: 'scale(1.14)',
   transformOrigin: 'bottom center',
   transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
@@ -232,18 +231,9 @@ export function PromoPopup() {
         <div className="flex flex-col md:flex-row md:items-stretch">
 
           {/* ── LEFT: Celebrity images (crossfade) ── */}
-          <style>{`
-            @media (max-width: 767px) {
-              .popup-celeb-img {
-                object-fit: cover !important;
-                object-position: top center !important;
-                transform: scale(1) !important;
-              }
-            }
-          `}</style>
           <div
             className="relative shrink-0 w-full md:w-[40%] overflow-hidden"
-            style={{ background: DOT_BG, minHeight: '320px' }}
+            style={{ background: DOT_BG, minHeight: '240px' }}
             onMouseEnter={() => { setHovered(true); setShowAlt(true); }}
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
           >
@@ -251,14 +241,12 @@ export function PromoPopup() {
             <img
               src={IMG_ORIGINAL}
               alt="CupBett Ambassador"
-              className="popup-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 0 : 1 }}
             />
             {/* Alt image (ronaldo) — shown on hover or auto-cycle */}
             <img
               src={IMG_ALT}
               alt="CupBett Ambassador"
-              className="popup-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 1 : 0 }}
             />
 
@@ -330,13 +318,13 @@ export function PromoPopup() {
               className="flex items-center gap-2.5 mb-5 p-2.5 rounded-xl border border-[#1E2A38]"
               style={{ background: 'rgba(18,24,32,0.7)' }}
             >
-              <div className="flex -space-x-2.5 shrink-0">
+              <div className="flex -space-x-2 shrink-0">
                 {AVATARS.map((src, i) => (
                   <img
                     key={i}
                     src={src}
                     alt="Player"
-                    className="w-8 h-8 rounded-full border-2 border-[#0A0F16] object-cover"
+                    className="w-7 h-7 rounded-full border-2 border-[#0A0F16] object-cover"
                     style={{ zIndex: AVATARS.length - i }}
                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                   />
@@ -344,12 +332,9 @@ export function PromoPopup() {
               </div>
               <div className="min-w-0">
                 <div className="text-[12px] font-semibold text-[#F8FAFC]">
-                  <span className="text-[#00DFA9] font-bold">+127 players</span> joined in the last hour
+                  <span className="text-[#00DFA9]">+127 players</span> joined in the last hour
                 </div>
-                <div className="text-[10px] text-[#94A3B8]">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse mr-1 align-middle" />
-                  50,000+ active worldwide right now
-                </div>
+                <div className="text-[10px] text-[#94A3B8]">50,000+ active worldwide right now</div>
               </div>
             </div>
 

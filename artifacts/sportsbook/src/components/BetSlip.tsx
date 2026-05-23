@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
-import { useCreateBet, getGetUserBetsQueryKey } from '@workspace/api-client-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useBetHistory } from '../hooks/useBetHistory';
 import { formatOdds } from '../lib/oddsFormat';
 import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
@@ -24,69 +23,38 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
   } = useBetSlip();
 
   const { isConnected, balance, deductBalance } = useWallet();
+  const { addBet } = useBetHistory();
   const { toast } = useToast();
-  const createBetMutation = useCreateBet();
-  const queryClient = useQueryClient();
   const [isWalletOpen,   setIsWalletOpen]   = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
-  const [isPlacingBet,   setIsPlacingBet]   = useState(false);
   const isScrolled = !forceExpanded && !!isScrolledProp;
   const [compactExpanded, setCompactExpanded] = useState(false);
 
   const hasSelections = selections.length > 0;
 
   // ── Place bet ──────────────────────────────────────────────────
-  async function handlePlaceBet() {
+  function handlePlaceBet() {
     if (!isConnected) { setIsWalletOpen(true); return; }
 
-    const stakeNum = betType === 'acca' ? parseFloat(stake || '0') : totalSingleStaked;
-    const payout   = betType === 'acca' ? accaReturn : totalSingleReturn;
-    const odds     = betType === 'acca' ? totalOdds  : (stakeNum > 0 ? payout / stakeNum : 1);
+    const stakeNum   = betType === 'acca' ? parseFloat(stake || '0') : totalSingleStaked;
+    const payout     = betType === 'acca' ? accaReturn : totalSingleReturn;
+    const odds       = betType === 'acca' ? totalOdds  : (stakeNum > 0 ? payout / stakeNum : 1);
 
     if (stakeNum <= 0 || balance <= 0 || stakeNum > balance) return;
 
-    setIsPlacingBet(true);
-    try {
-      const result = await createBetMutation.mutateAsync({
-        data: {
-          stake: stakeNum,
-          selections: selections.map(sel => {
-            const parts = sel.matchName.split(' vs ');
-            return {
-              matchId:   sel.matchId,
-              sport:     sel.leagueName || 'sports',
-              homeTeam:  parts[0]?.trim() ?? sel.matchName,
-              awayTeam:  parts[1]?.trim() ?? '',
-              market:    sel.marketName || sel.marketId,
-              selection: sel.selectionName || sel.selectionType,
-              odds:      sel.odds,
-            };
-          }),
-        },
-      });
+    const placed = {
+      betId:           `#BET-${Math.floor(Math.random() * 90000 + 10000)}`,
+      betType,
+      selections:      [...selections],
+      stake:           stakeNum,
+      totalOdds:       odds,
+      estimatedPayout: payout,
+      placedAt:        new Date(),
+    };
 
-      const placed = {
-        betId:           `#BET-${result.id.slice(0, 8).toUpperCase()}`,
-        betType,
-        selections:      [...selections],
-        stake:           stakeNum,
-        totalOdds:       odds,
-        estimatedPayout: payout,
-        placedAt:        new Date(result.createdAt),
-      };
-
-      deductBalance(stakeNum);
-      setConfirmation(placed);
-      queryClient.invalidateQueries({ queryKey: getGetUserBetsQueryKey() });
-    } catch (err) {
-      toast({
-        title: 'Bet failed',
-        description: (err as Error).message || 'Please try again',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsPlacingBet(false);
-    }
+    deductBalance(stakeNum);
+    addBet(placed);
+    setConfirmation(placed);
   }
 
   function handleConfirmationClose() {
@@ -96,8 +64,8 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   // ── Bet logic ─────────────────────────────────────────────────
   const accaStakeNum     = parseFloat(stake || '0');
-  const canPlaceAcca     = isConnected && betType === 'acca'   && accaStakeNum > 0 && hasSelections && balance > 0 && accaStakeNum <= balance && !isPlacingBet;
-  const canPlaceSingle   = isConnected && betType === 'single' && totalSingleStaked > 0 && hasSelections && balance > 0 && totalSingleStaked <= balance && !isPlacingBet;
+  const canPlaceAcca     = isConnected && betType === 'acca'   && accaStakeNum > 0 && hasSelections && balance > 0 && accaStakeNum <= balance;
+  const canPlaceSingle   = isConnected && betType === 'single' && totalSingleStaked > 0 && hasSelections && balance > 0 && totalSingleStaked <= balance;
   const canPlace         = canPlaceAcca || canPlaceSingle;
   const readyToStake     = hasSelections;
 
