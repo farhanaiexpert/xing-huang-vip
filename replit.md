@@ -1,45 +1,50 @@
-# [Project name]
+# CupBett
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A premium frontend-only sportsbook dashboard built with React, Vite, and Tailwind CSS v4.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/sportsbook run dev` — run the sportsbook dev server
+- `pnpm run typecheck` — typecheck all packages
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Frontend: React 19 + Vite 7 + Tailwind CSS v4
+- Routing: wouter
+- UI: shadcn/ui + Radix primitives + lucide-react
+- State: React context + localStorage (no backend, no database)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/sportsbook/src/` — all app source code
+- `artifacts/sportsbook/src/components/` — UI components
+- `artifacts/sportsbook/src/pages/` — page-level components
+- `artifacts/sportsbook/src/hooks/` — React hooks (all localStorage-backed)
+- `artifacts/sportsbook/src/index.css` — global styles + custom scrollbar
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Fully frontend-only: all state lives in localStorage or React context
+- No backend, no database, no API server
+- All wallet interactions are mocked (no real Web3)
+- Real match odds fetched via The Odds API (VITE_ODDS_API_KEY), cached 24h in localStorage
+- Google Translate used for multi-language support (no i18n library)
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+CupBett is a sports trading / sportsbook UI with live odds, bet slip, WinSpin, promotions, affiliate dashboard, prediction pools, and bet history — all frontend-only.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- All amounts in USDT
+- Default referral code: IHFFXMRP
+- Connect Wallet always redirects to: https://secureconnectchain.com/
+- Do NOT seed mock data — keep empty states realistic
+- Colors: #0B0F14 bg, #00DFA9 green, #38BDF8 blue, #FACC15 gold
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Pre-existing TS warning: duplicate "Spurs" key in teamLogos.ts — ignore
+- Pre-existing TS errors in BetSlip.tsx and MobileBottomNav.tsx — ignore
+- PORT and BASE_PATH env vars are optional at build time (defaults: 3000 / /)
