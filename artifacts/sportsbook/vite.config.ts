@@ -43,29 +43,6 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    // Raise warning threshold — we're now splitting deliberately
-    chunkSizeWarningLimit: 600,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          // Heavy animation library — split so it only loads when needed
-          if (id.includes("framer-motion")) return "vendor-motion";
-          // Charting stack (recharts + d3)
-          if (id.includes("recharts") || id.includes("/d3-") || id.includes("d3/")) return "vendor-charts";
-          // Radix UI primitives
-          if (id.includes("@radix-ui")) return "vendor-radix";
-          // Icon library
-          if (id.includes("lucide-react")) return "vendor-icons";
-          // React core — cache-busts only when React itself updates
-          if (id.includes("react-dom") || id.includes("/react/") || id.includes("/react-is/")) return "vendor-react";
-          // React Query
-          if (id.includes("@tanstack")) return "vendor-query";
-          // Everything else (wouter, zod, clsx, etc.)
-          return "vendor-misc";
-        },
-      },
-    },
   },
   server: {
     port,
