@@ -12,29 +12,32 @@ type Status = "active" | "suspended" | "banned";
 
 function TableSkeleton() {
   return (
-    <div className="bg-card border border-card-border rounded-xl overflow-hidden">
+    <div className="bg-[#0D1117] border border-white/[0.06] rounded-xl overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border">
-            {["User", "Wallet", "Role", "Status", "Joined", "Actions"].map((h) => (
-              <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {h}
-              </th>
+          <tr className="border-b border-white/[0.06]">
+            {["User", "Wallet", "Role", "Status", "Joined", "Actions"].map(h => (
+              <th key={h} className="text-left px-4 py-3 text-[10px] font-semibold text-[#4A5568] uppercase tracking-wider">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <tr key={i} className="border-b border-border last:border-0">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <tr key={i} className="border-b border-white/[0.04] last:border-0">
               <td className="px-4 py-3">
-                <div className="h-4 w-28 rounded bg-muted animate-pulse" />
-                <div className="h-3 w-36 rounded bg-muted animate-pulse mt-1.5" />
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-white/5 animate-pulse shrink-0" />
+                  <div className="space-y-1.5">
+                    <div className="h-3 w-24 rounded bg-white/5 animate-pulse" />
+                    <div className="h-2.5 w-32 rounded bg-white/5 animate-pulse" />
+                  </div>
+                </div>
               </td>
-              <td className="px-4 py-3"><div className="h-4 w-24 rounded bg-muted animate-pulse" /></td>
-              <td className="px-4 py-3"><div className="h-5 w-12 rounded-full bg-muted animate-pulse" /></td>
-              <td className="px-4 py-3"><div className="h-5 w-16 rounded-full bg-muted animate-pulse" /></td>
-              <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
-              <td className="px-4 py-3"><div className="h-7 w-48 rounded bg-muted animate-pulse ml-auto" /></td>
+              <td className="px-4 py-3"><div className="h-3 w-20 rounded bg-white/5 animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-5 w-10 rounded-full bg-white/5 animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-5 w-14 rounded-full bg-white/5 animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-3 w-16 rounded bg-white/5 animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-7 w-44 rounded bg-white/5 animate-pulse ml-auto" /></td>
             </tr>
           ))}
         </tbody>
@@ -43,26 +46,14 @@ function TableSkeleton() {
   );
 }
 
-function EmptyIllustration({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-      <svg className="w-16 h-16 opacity-20" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 64 64">
-        <circle cx="32" cy="24" r="10" />
-        <path d="M10 52c0-12.15 9.85-22 22-22s22 9.85 22 22" strokeLinecap="round" />
-      </svg>
-      <p className="text-sm font-medium">{message}</p>
-    </div>
-  );
-}
-
 export default function Users() {
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useAdminGetUsers();
   const updateStatus = useAdminUpdateUserStatus();
-  const [search, setSearch] = useState("");
+  const [search, setSearch]     = useState("");
   const [updating, setUpdating] = useState<string | null>(null);
 
-  const users = (data?.users ?? []).filter((u) => {
+  const users = (data?.users ?? []).filter(u => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -77,7 +68,7 @@ export default function Users() {
     try {
       await updateStatus.mutateAsync({ id, data: { status } });
       queryClient.invalidateQueries({ queryKey: getAdminGetUsersQueryKey() });
-      toast.success("Status updated", { description: `User has been set to ${status}.` });
+      toast.success("Status updated", { description: `User set to ${status}.` });
     } catch {
       toast.error("Update failed", { description: "Could not change user status." });
     } finally {
@@ -85,103 +76,100 @@ export default function Users() {
     }
   }
 
+  const statusButtons: { status: Status; label: string; activeCls: string }[] = [
+    { status: "active",    label: "Active",    activeCls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+    { status: "suspended", label: "Suspend",   activeCls: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+    { status: "banned",    label: "Ban",       activeCls: "bg-red-500/20 text-red-400 border-red-500/30" },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Users</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {data?.total ?? 0} total registered
-          </p>
+          <h1 className="text-lg font-bold text-foreground">Users</h1>
+          <p className="text-xs text-[#4A5568] mt-0.5">{data?.total ?? 0} registered accounts</p>
         </div>
         <input
           type="search"
-          placeholder="Search by username, email or wallet…"
+          placeholder="Search username, email, wallet…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary w-72 transition-colors"
+          onChange={e => setSearch(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-[#0D1117] border border-white/[0.08] text-sm text-foreground placeholder:text-[#4A5568] focus:outline-none focus:border-primary/50 w-72 transition-colors"
         />
       </div>
 
-      {isLoading ? (
-        <TableSkeleton />
-      ) : error ? (
-        <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 px-4 py-3 rounded-lg">
-          Failed to load users
-        </div>
+      {isLoading ? <TableSkeleton /> : error ? (
+        <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-lg">Failed to load users</div>
       ) : users.length === 0 ? (
-        <div className="bg-card border border-card-border rounded-xl">
-          <EmptyIllustration
-            message={search ? "No users match your search" : "No users registered yet"}
-          />
+        <div className="bg-[#0D1117] border border-white/[0.06] rounded-xl flex flex-col items-center justify-center py-20 text-[#4A5568] gap-3">
+          <svg className="w-12 h-12 opacity-20" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 64 64">
+            <circle cx="32" cy="24" r="10" /><path d="M10 52c0-12.15 9.85-22 22-22s22 9.85 22 22" strokeLinecap="round" />
+          </svg>
+          <p className="text-sm font-medium">{search ? "No users match your search" : "No users registered yet"}</p>
         </div>
       ) : (
-        <div className="bg-card border border-card-border rounded-xl overflow-hidden">
+        <div className="bg-[#0D1117] border border-white/[0.06] rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Wallet</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Joined</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                <tr className="border-b border-white/[0.06]">
+                  {["User", "Wallet", "Role", "Status", "Joined", "Actions"].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-[10px] font-semibold text-[#4A5568] uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => {
+                {users.map(u => {
                   const busy = updating === u.id;
                   const isAdmin = u.role === "admin";
                   return (
-                    <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                    <tr key={u.id} className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3">
-                        <div className="font-medium text-foreground">{u.username}</div>
-                        {u.email && <div className="text-xs text-muted-foreground">{u.email}</div>}
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-bold text-primary">{u.username[0].toUpperCase()}</span>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-foreground">{u.username}</div>
+                            {u.email && <div className="text-[10px] text-[#4A5568] truncate max-w-[160px]">{u.email}</div>}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         {u.walletAddress ? (
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {u.walletAddress.slice(0, 8)}…{u.walletAddress.slice(-6)}
+                          <span className="font-mono text-[11px] text-[#4A5568]">
+                            {u.walletAddress.slice(0, 6)}…{u.walletAddress.slice(-4)}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground italic">none</span>
+                          <span className="text-[11px] text-[#2D3748] italic">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${isAdmin ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" : "bg-muted text-muted-foreground border-border"}`}>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${isAdmin ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-white/5 text-[#4A5568] border-white/10"}`}>
                           {u.role}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={u.status} />
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                      <td className="px-4 py-3"><StatusBadge status={u.status} /></td>
+                      <td className="px-4 py-3 text-[11px] text-[#4A5568] whitespace-nowrap">
                         {new Date(u.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3">
                         {!isAdmin && (
-                          <div className="flex items-center justify-end gap-1.5">
-                            {(["active", "suspended", "banned"] as Status[]).map((s) => (
+                          <div className="flex items-center justify-end gap-1">
+                            {statusButtons.map(({ status, label, activeCls }) => (
                               <button
-                                key={s}
-                                disabled={busy || u.status === s}
-                                onClick={() => handleStatusChange(u.id, s)}
-                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:cursor-not-allowed ${
-                                  u.status === s
-                                    ? s === "active"
-                                      ? "bg-primary/20 text-primary border border-primary/30"
-                                      : s === "suspended"
-                                        ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                                        : "bg-destructive/20 text-destructive border border-destructive/30"
-                                    : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border disabled:opacity-40"
+                                key={status}
+                                disabled={busy || u.status === status}
+                                onClick={() => handleStatusChange(u.id, status)}
+                                className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition-all disabled:cursor-not-allowed ${
+                                  u.status === status
+                                    ? activeCls
+                                    : "bg-white/[0.03] text-[#4A5568] border-white/[0.06] hover:bg-white/[0.07] hover:text-[#8A9BB3] disabled:opacity-40"
                                 }`}
                               >
-                                {busy && u.status !== s ? (
+                                {busy && u.status !== status ? (
                                   <span className="inline-block w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                  s.charAt(0).toUpperCase() + s.slice(1)
-                                )}
+                                ) : label}
                               </button>
                             ))}
                           </div>

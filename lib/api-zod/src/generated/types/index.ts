@@ -7,6 +7,7 @@
  */
 
 export * from './adminBetsResponse';
+export * from './adminTransactionsResponse';
 export * from './adminUsersResponse';
 export * from './authResponse';
 export * from './balanceResponse';
@@ -22,6 +23,9 @@ export * from './healthStatus';
 export * from './loginRequest';
 export * from './messageResponse';
 export * from './registerRequest';
+export * from './settleBetRequest';
+export * from './settleBetRequestStatus';
+export * from './transactionItem';
 export * from './updateCommissionSettingsRequest';
 export * from './updateStatusRequest';
 export * from './updateStatusRequestStatus';

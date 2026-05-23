@@ -86,6 +86,32 @@ router.get("/transactions", async (req, res) => {
   }
 });
 
+router.patch("/bets/:id/settle", async (req, res) => {
+  const schema = z.object({ status: z.enum(["won", "lost", "void"]) });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation", message: "Status must be won, lost, or void" });
+    return;
+  }
+  const { id } = req.params;
+  try {
+    const [updated] = await db
+      .update(betsTable)
+      .set({ status: parsed.data.status, settledAt: new Date() })
+      .where(eq(betsTable.id, id))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "not_found", message: "Bet not found" });
+      return;
+    }
+    const selections = await db.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, id));
+    res.json({ ...updated, selections });
+  } catch (err) {
+    req.log.error({ err }, "admin settle bet error");
+    res.status(500).json({ error: "internal", message: "Failed to settle bet" });
+  }
+});
+
 router.get("/commission-settings", async (req, res) => {
   try {
     const settings = await db.select().from(commissionSettingsTable);

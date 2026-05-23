@@ -147,3 +147,33 @@ export interface UpdateCommissionSettingsRequest {
   settings: CommissionSettingItem[];
 }
 
+export type SettleBetRequestStatus = typeof SettleBetRequestStatus[keyof typeof SettleBetRequestStatus];
+
+
+export const SettleBetRequestStatus = {
+  won: 'won',
+  lost: 'lost',
+  void: 'void',
+} as const;
+
+export interface SettleBetRequest {
+  status: SettleBetRequestStatus;
+}
+
+export interface TransactionItem {
+  id: string;
+  userId: string;
+  type: string;
+  amount: string;
+  currency: string;
+  status: string;
+  reference?: string;
+  description?: string;
+  createdAt: string;
+}
+
+export interface AdminTransactionsResponse {
+  transactions: TransactionItem[];
+  total: number;
+}
+

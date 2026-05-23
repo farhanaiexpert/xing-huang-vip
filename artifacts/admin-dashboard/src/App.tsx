@@ -6,7 +6,9 @@ import Login from "./pages/Login";
 import Overview from "./pages/Overview";
 import Users from "./pages/Users";
 import Bets from "./pages/Bets";
+import Transactions from "./pages/Transactions";
 import Commission from "./pages/Commission";
+import Settings from "./pages/Settings";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -23,10 +25,13 @@ export default function App() {
                   <Route path="/" component={Overview} />
                   <Route path="/users" component={Users} />
                   <Route path="/bets" component={Bets} />
+                  <Route path="/transactions" component={Transactions} />
                   <Route path="/commission" component={Commission} />
+                  <Route path="/settings" component={Settings} />
                   <Route>
-                    <div className="text-center py-20 text-muted-foreground">
-                      Page not found
+                    <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
+                      <span className="text-6xl mb-4 opacity-20">404</span>
+                      <p className="text-sm">Page not found</p>
                     </div>
                   </Route>
                 </Switch>
@@ -34,16 +39,7 @@ export default function App() {
             </RequireAdmin>
           </Route>
         </Switch>
-        <Toaster
-          theme="dark"
-          position="bottom-right"
-          toastOptions={{
-            classNames: {
-              toast: "bg-card border border-card-border text-foreground",
-              description: "text-muted-foreground",
-            },
-          }}
-        />
+        <Toaster theme="dark" position="bottom-right" richColors />
       </AdminAuthProvider>
     </Router>
   );
