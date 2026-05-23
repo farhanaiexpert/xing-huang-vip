@@ -1,0 +1,21 @@
+kind = "web"
+previewPath = "/api"
+title = "CupBett API"
+version = "1.0.0"
+id = "artifacts/api-server"
+router = "path"
+
+[[services]]
+name = "api"
+paths = ["/api"]
+localPort = 5000
+
+[services.development]
+run = "pnpm --filter @workspace/api-server run dev"
+
+[services.production]
+run = "pnpm --filter @workspace/api-server run start"
+
+[services.env]
+PORT = "5000"
+NODE_ENV = "development"
