@@ -249,6 +249,35 @@ export const AdminGetTransactionsResponse = zod.object({
 
 
 /**
+ * @summary Trigger auto-settlement run (admin)
+ */
+export const AdminRunSettlementResponse = zod.object({
+  "checked": zod.number(),
+  "settled": zod.number(),
+  "won": zod.number(),
+  "lost": zod.number(),
+  "void": zod.number(),
+  "skipped": zod.number(),
+  "totalPaidOut": zod.number()
+})
+
+
+/**
+ * @summary Get settlement statistics (admin)
+ */
+export const AdminGetSettlementStatsResponse = zod.object({
+  "total": zod.number(),
+  "pending": zod.number(),
+  "won": zod.number(),
+  "lost": zod.number(),
+  "void": zod.number(),
+  "totalWagered": zod.string(),
+  "totalPaidOut": zod.string(),
+  "houseEdge": zod.string()
+})
+
+
+/**
  * @summary Get commission settings (admin)
  */
 export const AdminGetCommissionSettingsResponse = zod.object({

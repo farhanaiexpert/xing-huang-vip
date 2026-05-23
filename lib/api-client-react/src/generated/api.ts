@@ -35,6 +35,8 @@ import type {
   MessageResponse,
   RegisterRequest,
   SettleBetRequest,
+  SettlementRunResult,
+  SettlementStatsResponse,
   UpdateCommissionSettingsRequest,
   UpdateStatusRequest,
   UpdateWalletRequest,
@@ -1078,6 +1080,153 @@ export function useAdminGetTransactions<TData = Awaited<ReturnType<typeof adminG
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getAdminGetTransactionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAdminRunSettlementUrl = () => {
+
+
+
+
+  return `/api/admin/settlement/run`
+}
+
+/**
+ * @summary Trigger auto-settlement run (admin)
+ */
+export const adminRunSettlement = async ( options?: RequestInit): Promise<SettlementRunResult> => {
+
+  return customFetch<SettlementRunResult>(getAdminRunSettlementUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAdminRunSettlementMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRunSettlement>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRunSettlement>>, TError,void, TContext> => {
+
+const mutationKey = ['adminRunSettlement'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRunSettlement>>, void> = () => {
+
+
+          return  adminRunSettlement(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRunSettlementMutationResult = NonNullable<Awaited<ReturnType<typeof adminRunSettlement>>>
+
+    export type AdminRunSettlementMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Trigger auto-settlement run (admin)
+ */
+export const useAdminRunSettlement = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRunSettlement>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRunSettlement>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAdminRunSettlementMutationOptions(options));
+    }
+
+export const getAdminGetSettlementStatsUrl = () => {
+
+
+
+
+  return `/api/admin/settlement/stats`
+}
+
+/**
+ * @summary Get settlement statistics (admin)
+ */
+export const adminGetSettlementStats = async ( options?: RequestInit): Promise<SettlementStatsResponse> => {
+
+  return customFetch<SettlementStatsResponse>(getAdminGetSettlementStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetSettlementStatsQueryKey = () => {
+    return [
+    `/api/admin/settlement/stats`
+    ] as const;
+    }
+
+
+export const getAdminGetSettlementStatsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetSettlementStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetSettlementStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetSettlementStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetSettlementStats>>> = ({ signal }) => adminGetSettlementStats({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetSettlementStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetSettlementStatsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetSettlementStats>>>
+export type AdminGetSettlementStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get settlement statistics (admin)
+ */
+
+export function useAdminGetSettlementStats<TData = Awaited<ReturnType<typeof adminGetSettlementStats>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetSettlementStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetSettlementStatsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

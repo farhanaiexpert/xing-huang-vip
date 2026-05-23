@@ -25,6 +25,8 @@ export * from './messageResponse';
 export * from './registerRequest';
 export * from './settleBetRequest';
 export * from './settleBetRequestStatus';
+export * from './settlementRunResult';
+export * from './settlementStatsResponse';
 export * from './transactionItem';
 export * from './updateCommissionSettingsRequest';
 export * from './updateStatusRequest';

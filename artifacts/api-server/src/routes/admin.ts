@@ -3,12 +3,14 @@ import { z } from "zod";
 import { db } from "@workspace/db";
 import { usersTable, betsTable, betSelectionsTable, transactionsTable,
          commissionSettingsTable } from "@workspace/db";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { requireAdmin } from "../middleware/auth";
+import { settleBet, runAutoSettlement } from "../services/settlement";
 
 const router = Router();
 router.use(requireAdmin);
 
+/* ── Users ──────────────────────────────────────────────────── */
 router.get("/users", async (req, res) => {
   try {
     const users = await db
@@ -58,6 +60,7 @@ router.patch("/users/:id/status", async (req, res) => {
   }
 });
 
+/* ── Bets ───────────────────────────────────────────────────── */
 router.get("/bets", async (req, res) => {
   try {
     const bets = await db.select().from(betsTable).orderBy(desc(betsTable.createdAt)).limit(500);
@@ -76,6 +79,85 @@ router.get("/bets", async (req, res) => {
   }
 });
 
+/* ── Settle a bet (manual) — NOW credits/refunds the balance ── */
+router.patch("/bets/:id/settle", async (req, res) => {
+  const schema = z.object({ status: z.enum(["won", "lost", "void"]) });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation", message: "Status must be won, lost, or void" });
+    return;
+  }
+
+  const { id } = req.params;
+  try {
+    const result = await settleBet(id, parsed.data.status);
+
+    if (!result.settled && result.reason === "Bet not found") {
+      res.status(404).json({ error: "not_found", message: "Bet not found" });
+      return;
+    }
+
+    if (!result.settled) {
+      res.status(409).json({ error: "conflict", message: result.reason ?? "Cannot settle bet" });
+      return;
+    }
+
+    const [updated] = await db.select().from(betsTable).where(eq(betsTable.id, id));
+    const selections = await db.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, id));
+
+    res.json({ ...updated, selections, payout: result.payout });
+  } catch (err) {
+    req.log.error({ err }, "admin settle bet error");
+    res.status(500).json({ error: "internal", message: "Failed to settle bet" });
+  }
+});
+
+/* ── Trigger auto-settlement run manually ───────────────────── */
+router.post("/settlement/run", async (req, res) => {
+  try {
+    const result = await runAutoSettlement();
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "admin settlement run error");
+    res.status(500).json({ error: "internal", message: "Settlement run failed" });
+  }
+});
+
+/* ── Settlement stats ───────────────────────────────────────── */
+router.get("/settlement/stats", async (req, res) => {
+  try {
+    const allBets = await db.select({
+      status: betsTable.status,
+      stake: betsTable.stake,
+      potentialReturn: betsTable.potentialReturn,
+    }).from(betsTable);
+
+    const pending = allBets.filter(b => b.status === "pending");
+    const won     = allBets.filter(b => b.status === "won");
+    const lost    = allBets.filter(b => b.status === "lost");
+    const voidB   = allBets.filter(b => b.status === "void");
+
+    const totalWagered  = allBets.reduce((s, b) => s + parseFloat(b.stake), 0);
+    const totalPaidOut  = won.reduce((s, b) => s + parseFloat(b.potentialReturn), 0);
+    const houseEdge     = totalWagered - totalPaidOut;
+
+    res.json({
+      total:        allBets.length,
+      pending:      pending.length,
+      won:          won.length,
+      lost:         lost.length,
+      void:         voidB.length,
+      totalWagered: totalWagered.toFixed(2),
+      totalPaidOut: totalPaidOut.toFixed(2),
+      houseEdge:    houseEdge.toFixed(2),
+    });
+  } catch (err) {
+    req.log.error({ err }, "admin settlement stats error");
+    res.status(500).json({ error: "internal", message: "Failed to fetch stats" });
+  }
+});
+
+/* ── Transactions ───────────────────────────────────────────── */
 router.get("/transactions", async (req, res) => {
   try {
     const txns = await db.select().from(transactionsTable).orderBy(desc(transactionsTable.createdAt)).limit(500);
@@ -86,32 +168,7 @@ router.get("/transactions", async (req, res) => {
   }
 });
 
-router.patch("/bets/:id/settle", async (req, res) => {
-  const schema = z.object({ status: z.enum(["won", "lost", "void"]) });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "validation", message: "Status must be won, lost, or void" });
-    return;
-  }
-  const { id } = req.params;
-  try {
-    const [updated] = await db
-      .update(betsTable)
-      .set({ status: parsed.data.status, settledAt: new Date() })
-      .where(eq(betsTable.id, id))
-      .returning();
-    if (!updated) {
-      res.status(404).json({ error: "not_found", message: "Bet not found" });
-      return;
-    }
-    const selections = await db.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, id));
-    res.json({ ...updated, selections });
-  } catch (err) {
-    req.log.error({ err }, "admin settle bet error");
-    res.status(500).json({ error: "internal", message: "Failed to settle bet" });
-  }
-});
-
+/* ── Commission settings ────────────────────────────────────── */
 router.get("/commission-settings", async (req, res) => {
   try {
     const settings = await db.select().from(commissionSettingsTable);

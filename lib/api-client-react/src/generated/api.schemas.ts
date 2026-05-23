@@ -147,6 +147,27 @@ export interface UpdateCommissionSettingsRequest {
   settings: CommissionSettingItem[];
 }
 
+export interface SettlementRunResult {
+  checked: number;
+  settled: number;
+  won: number;
+  lost: number;
+  void: number;
+  skipped: number;
+  totalPaidOut: number;
+}
+
+export interface SettlementStatsResponse {
+  total: number;
+  pending: number;
+  won: number;
+  lost: number;
+  void: number;
+  totalWagered: string;
+  totalPaidOut: string;
+  houseEdge: string;
+}
+
 export type SettleBetRequestStatus = typeof SettleBetRequestStatus[keyof typeof SettleBetRequestStatus];
 
 
