@@ -404,35 +404,3 @@ export const AdminUpdateSettingsResponse = zod.object({
 })
 
 
-/**
- * @summary Get commission settings (admin)
- */
-export const AdminGetCommissionSettingsResponse = zod.object({
-  "settings": zod.array(zod.object({
-  "level": zod.number(),
-  "rate": zod.string()
-}))
-})
-
-
-/**
- * @summary Update commission settings (admin)
- */
-
-
-
-export const AdminUpdateCommissionSettingsBody = zod.object({
-  "settings": zod.array(zod.object({
-  "level": zod.number(),
-  "rate": zod.string()
-})).min(1)
-})
-
-export const AdminUpdateCommissionSettingsResponse = zod.object({
-  "settings": zod.array(zod.object({
-  "level": zod.number(),
-  "rate": zod.string()
-}))
-})
-
-

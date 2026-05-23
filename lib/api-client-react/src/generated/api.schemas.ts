@@ -133,20 +133,6 @@ export interface UpdateStatusRequest {
   status: UpdateStatusRequestStatus;
 }
 
-export interface CommissionSettingItem {
-  level: number;
-  rate: string;
-}
-
-export interface CommissionSettingsResponse {
-  settings: CommissionSettingItem[];
-}
-
-export interface UpdateCommissionSettingsRequest {
-  /** @minItems 1 */
-  settings: CommissionSettingItem[];
-}
-
 export interface SettlementRunResult {
   checked: number;
   settled: number;

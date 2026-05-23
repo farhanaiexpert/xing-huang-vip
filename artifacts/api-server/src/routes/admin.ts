@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import {
   usersTable, betsTable, betSelectionsTable, transactionsTable,
-  commissionSettingsTable, userBalancesTable, platformSettingsTable,
+  userBalancesTable, platformSettingsTable,
   SETTING_DEFAULTS,
 } from "@workspace/db";
 import { eq, desc, or, sql } from "drizzle-orm";
@@ -340,44 +340,6 @@ router.get("/transactions", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "admin get transactions error");
     res.status(500).json({ error: "internal", message: "Failed to fetch transactions" });
-  }
-});
-
-/* ── Commission settings ────────────────────────────────────── */
-router.get("/commission-settings", async (req, res) => {
-  try {
-    const settings = await db.select().from(commissionSettingsTable);
-    if (settings.length === 0) {
-      res.json({ settings: [{ level: 1, rate: "0.05" }, { level: 2, rate: "0.03" }, { level: 3, rate: "0.01" }] });
-      return;
-    }
-    res.json({ settings });
-  } catch (err) {
-    req.log.error({ err }, "admin get commission settings error");
-    res.status(500).json({ error: "internal", message: "Failed to fetch commission settings" });
-  }
-});
-
-router.put("/commission-settings", async (req, res) => {
-  const schema = z.object({
-    settings: z.array(z.object({ level: z.number().int().min(1).max(3), rate: z.string() })).min(1),
-  });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "validation", message: "Invalid settings format" }); return;
-  }
-  const adminId = (req as any).user.userId;
-  try {
-    for (const s of parsed.data.settings) {
-      await db.insert(commissionSettingsTable)
-        .values({ level: s.level, rate: s.rate, updatedBy: adminId, updatedAt: new Date() })
-        .onConflictDoUpdate({ target: commissionSettingsTable.level, set: { rate: s.rate, updatedAt: new Date(), updatedBy: adminId } });
-    }
-    const settings = await db.select().from(commissionSettingsTable);
-    res.json({ settings });
-  } catch (err) {
-    req.log.error({ err }, "admin update commission settings error");
-    res.status(500).json({ error: "internal", message: "Failed to update commission settings" });
   }
 });
 

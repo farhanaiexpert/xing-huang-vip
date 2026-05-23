@@ -31,7 +31,6 @@ import type {
   BalanceResponse,
   BetResponse,
   BetsListResponse,
-  CommissionSettingsResponse,
   CreateBetRequest,
   ErrorResponse,
   HealthStatus,
@@ -42,7 +41,6 @@ import type {
   SettleBetRequest,
   SettlementRunResult,
   SettlementStatsResponse,
-  UpdateCommissionSettingsRequest,
   UpdatePlatformSettingsRequest,
   UpdateStatusRequest,
   UpdateWalletRequest,
@@ -1612,153 +1610,5 @@ export const useAdminUpdateSettings = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAdminUpdateSettingsMutationOptions(options));
-    }
-
-export const getAdminGetCommissionSettingsUrl = () => {
-
-
-
-
-  return `/api/admin/commission-settings`
-}
-
-/**
- * @summary Get commission settings (admin)
- */
-export const adminGetCommissionSettings = async ( options?: RequestInit): Promise<CommissionSettingsResponse> => {
-
-  return customFetch<CommissionSettingsResponse>(getAdminGetCommissionSettingsUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getAdminGetCommissionSettingsQueryKey = () => {
-    return [
-    `/api/admin/commission-settings`
-    ] as const;
-    }
-
-
-export const getAdminGetCommissionSettingsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAdminGetCommissionSettingsQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetCommissionSettings>>> = ({ signal }) => adminGetCommissionSettings({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type AdminGetCommissionSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetCommissionSettings>>>
-export type AdminGetCommissionSettingsQueryError = ErrorType<unknown>
-
-
-/**
- * @summary Get commission settings (admin)
- */
-
-export function useAdminGetCommissionSettings<TData = Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getAdminGetCommissionSettingsQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
-
-export const getAdminUpdateCommissionSettingsUrl = () => {
-
-
-
-
-  return `/api/admin/commission-settings`
-}
-
-/**
- * @summary Update commission settings (admin)
- */
-export const adminUpdateCommissionSettings = async (updateCommissionSettingsRequest: UpdateCommissionSettingsRequest, options?: RequestInit): Promise<CommissionSettingsResponse> => {
-
-  return customFetch<CommissionSettingsResponse>(getAdminUpdateCommissionSettingsUrl(),
-  {
-    ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      updateCommissionSettingsRequest,)
-  }
-);}
-
-
-
-
-export const getAdminUpdateCommissionSettingsMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>, TError,{data: BodyType<UpdateCommissionSettingsRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>, TError,{data: BodyType<UpdateCommissionSettingsRequest>}, TContext> => {
-
-const mutationKey = ['adminUpdateCommissionSettings'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>, {data: BodyType<UpdateCommissionSettingsRequest>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  adminUpdateCommissionSettings(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AdminUpdateCommissionSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>>
-    export type AdminUpdateCommissionSettingsMutationBody = BodyType<UpdateCommissionSettingsRequest>
-    export type AdminUpdateCommissionSettingsMutationError = ErrorType<unknown>
-
-    /**
- * @summary Update commission settings (admin)
- */
-export const useAdminUpdateCommissionSettings = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>, TError,{data: BodyType<UpdateCommissionSettingsRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof adminUpdateCommissionSettings>>,
-        TError,
-        {data: BodyType<UpdateCommissionSettingsRequest>},
-        TContext
-      > => {
-      return useMutation(getAdminUpdateCommissionSettingsMutationOptions(options));
     }
 

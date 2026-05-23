@@ -5,23 +5,20 @@ import { useWallet } from '@/hooks/useWallet';
 import {
   useAdminGetUsers,
   useAdminGetBets,
-  useAdminGetCommissionSettings,
   useAdminUpdateUserStatus,
-  useAdminUpdateCommissionSettings,
   getAdminGetUsersQueryKey,
-  getAdminGetCommissionSettingsQueryKey,
 } from '@workspace/api-client-react';
 import type { UpdateStatusRequestStatus } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import {
-  Users, BarChart2, Settings, ArrowLeft, Shield,
+  Users, BarChart2, ArrowLeft, Shield,
   CheckCircle2, XCircle, AlertTriangle, RefreshCw,
   ChevronDown, ChevronUp, Clock,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-type AdminTab = 'users' | 'bets' | 'commission';
+type AdminTab = 'users' | 'bets';
 
 const STATUS_COLORS: Record<string, string> = {
   active:    'text-[#22C55E] bg-[#22C55E]/8 border-[#22C55E]/20',
@@ -79,15 +76,14 @@ export function Admin() {
               <Shield className="h-5 w-5 text-[#00DFA9]" />
               Admin Panel
             </h1>
-            <p className="text-xs text-[#94A3B8] mt-0.5">Manage users, bets and commission settings</p>
+            <p className="text-xs text-[#94A3B8] mt-0.5">Manage users and bets</p>
           </div>
         </div>
 
         <div className="flex gap-1 bg-[#121821] border border-[#253241] rounded-xl p-1 mb-6 w-full sm:w-fit overflow-x-auto">
           {([
-            { key: 'users',      label: 'Users',      icon: <Users className="h-3.5 w-3.5" /> },
-            { key: 'bets',       label: 'All Bets',   icon: <BarChart2 className="h-3.5 w-3.5" /> },
-            { key: 'commission', label: 'Commission', icon: <Settings className="h-3.5 w-3.5" /> },
+            { key: 'users', label: 'Users',    icon: <Users className="h-3.5 w-3.5" /> },
+            { key: 'bets',  label: 'All Bets', icon: <BarChart2 className="h-3.5 w-3.5" /> },
           ] as const).map(t => (
             <button
               key={t.key}
@@ -104,9 +100,8 @@ export function Admin() {
           ))}
         </div>
 
-        {tab === 'users'      && <UsersTab />}
-        {tab === 'bets'       && <BetsTab />}
-        {tab === 'commission' && <CommissionTab />}
+        {tab === 'users' && <UsersTab />}
+        {tab === 'bets'  && <BetsTab />}
 
       </div>
     </div>
@@ -280,121 +275,6 @@ function BetsTab() {
   );
 }
 
-function CommissionTab() {
-  const { data, isLoading } = useAdminGetCommissionSettings();
-  const updateSettings = useAdminUpdateCommissionSettings();
-  const queryClient    = useQueryClient();
-  const { toast }      = useToast();
-
-  const [rates, setRates] = useState<Record<number, string>>({});
-  const [dirty, setDirty] = useState(false);
-
-  const settings = data?.settings ?? [];
-
-  function handleChange(level: number, val: string) {
-    setRates(prev => ({ ...prev, [level]: val }));
-    setDirty(true);
-  }
-
-  function getRate(level: number): string {
-    if (rates[level] !== undefined) return rates[level];
-    const found = settings.find(s => s.level === level);
-    return found ? String(parseFloat(found.rate) * 100) : '';
-  }
-
-  async function handleSave() {
-    const payload = [1, 2, 3].map(level => ({
-      level,
-      rate: String(parseFloat(getRate(level) || '0') / 100),
-    }));
-    try {
-      await updateSettings.mutateAsync({ data: { settings: payload } });
-      queryClient.invalidateQueries({ queryKey: getAdminGetCommissionSettingsQueryKey() });
-      setRates({});
-      setDirty(false);
-      toast({ title: 'Saved', description: 'Commission rates updated successfully' });
-    } catch {
-      toast({ title: 'Failed', description: 'Could not save commission settings', variant: 'destructive' });
-    }
-  }
-
-  if (isLoading) return <LoadingState />;
-
-  return (
-    <div className="max-w-md space-y-6">
-      <div className="rounded-xl border border-[#253241] bg-[#121821] overflow-hidden">
-        <div className="px-4 py-3 border-b border-[#253241] bg-[#0D1117]">
-          <h3 className="text-sm font-bold text-[#F8FAFC]">Referral Commission Rates</h3>
-          <p className="text-xs text-[#94A3B8]/60 mt-0.5">Set the commission % earned per referral level</p>
-        </div>
-
-        <div className="divide-y divide-[#253241]">
-          {[1, 2, 3].map(level => {
-            const colors = ['text-[#00DFA9]', 'text-[#38BDF8]', 'text-[#A78BFA]'];
-            return (
-              <div key={level} className="flex items-center gap-4 px-4 py-3.5">
-                <div className={cn(
-                  'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-base',
-                  level === 1 ? 'bg-[#00DFA9]/10 border border-[#00DFA9]/20 text-[#00DFA9]' :
-                  level === 2 ? 'bg-[#38BDF8]/10 border border-[#38BDF8]/20 text-[#38BDF8]' :
-                  'bg-[#A78BFA]/10 border border-[#A78BFA]/20 text-[#A78BFA]'
-                )}>
-                  L{level}
-                </div>
-                <div className="flex-1">
-                  <p className={cn('text-sm font-semibold', colors[level - 1])}>
-                    Level {level} Referral
-                  </p>
-                  <p className="text-[10px] text-[#94A3B8]/50">
-                    {level === 1 ? 'Direct referrals' : level === 2 ? '2nd-degree referrals' : '3rd-degree referrals'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={getRate(level)}
-                    onChange={e => handleChange(level, e.target.value)}
-                    className="w-20 h-9 text-center rounded-lg bg-[#0B0F14] border border-[#253241] text-[#F8FAFC] text-sm font-bold focus:outline-none focus:border-[#00DFA9]/50 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all"
-                  />
-                  <span className="text-sm text-[#94A3B8] font-medium">%</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="px-4 py-3 border-t border-[#253241] flex items-center justify-between">
-          <p className="text-[11px] text-[#94A3B8]/40">Changes take effect immediately</p>
-          <button
-            onClick={handleSave}
-            disabled={!dirty || updateSettings.isPending}
-            className="h-9 px-4 rounded-lg text-sm font-bold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
-          >
-            {updateSettings.isPending && <RefreshCw className="h-3.5 w-3.5 animate-spin" />}
-            Save Changes
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-[#253241] bg-[#121821] px-4 py-3.5 space-y-2">
-        <p className="text-[11px] font-semibold text-[#94A3B8]/60 uppercase tracking-wider">Current Rates</p>
-        {settings.length === 0 ? (
-          <p className="text-xs text-[#94A3B8]/40">No settings stored yet</p>
-        ) : settings.map(s => (
-          <div key={s.level} className="flex justify-between items-center text-sm">
-            <span className="text-[#94A3B8]">Level {s.level}</span>
-            <span className="font-bold text-[#F8FAFC] tabular-nums">
-              {(parseFloat(s.rate) * 100).toFixed(1)}%
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function LoadingState() {
   return (
