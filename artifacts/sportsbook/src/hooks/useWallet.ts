@@ -1,77 +1,98 @@
 /**
  * WALLET CONTEXT
- * Mock wallet state — no real Web3 integration.
- * API_HOOK: Replace connect() body with wagmi / ethers.js wallet connect call.
+ * Wraps real JWT auth (useAuth) + live balance from API.
+ * The "Connect Wallet" flow opens the login/register modal.
  */
 import {
   createContext, useContext, useState, useCallback,
-  ReactNode, createElement,
+  ReactNode, createElement, useEffect, Fragment,
 } from 'react';
+import { useAuth } from './useAuth';
+import { useGetBalance, getGetBalanceQueryKey } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { LoginModal } from '../components/LoginModal';
 
-interface WalletState {
+export interface WalletState {
   isConnected:    boolean;
   isConnecting:   boolean;
   address:        string | null;
   walletName:     string | null;
   balance:        number;
-  connect:        (walletName: string) => Promise<void>;
+  role:           'user' | 'admin' | null;
+  connect:        (_walletName?: string) => void;
   disconnect:     () => void;
   deductBalance:  (amount: number) => void;
   shortAddress:   string | null;
+  openLoginModal: () => void;
 }
 
-// Mock addresses for each wallet type
-const MOCK_ADDRESSES: Record<string, string> = {
-  'MetaMask':        '0x8f3aE2C1d4Bd9F0E3a7cD291',
-  'WalletConnect':   '0x4d1B7F9C3e2A5f8D0b6E3a91',
-  'Coinbase Wallet': '0x2c9F4E1B7a3D6f0C8e5A2b71',
-  'Phantom':         '0x6a8D3F2C1e9B4f7A0d5E3c11',
-};
-
-const STARTING_BALANCE = 0;
-
-function shorten(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+function shorten(s: string): string {
+  if (s.length <= 14) return s;
+  return `${s.slice(0, 6)}...${s.slice(-4)}`;
 }
 
 const WalletContext = createContext<WalletState | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [isConnected,  setIsConnected]  = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [address,      setAddress]      = useState<string | null>(null);
-  const [walletName,   setWalletName]   = useState<string | null>(null);
-  const [balance,      setBalance]      = useState(0);
+  const auth         = useAuth();
+  const queryClient  = useQueryClient();
+  const [loginOpen,  setLoginOpen]  = useState(false);
+  const [localBal,   setLocalBal]   = useState(0);
 
-  const connect = useCallback(async (name: string) => {
-    setIsConnecting(true);
-    setWalletName(name);
-    await new Promise<void>(res => setTimeout(res, 1400));
-    const addr = MOCK_ADDRESSES[name] ?? '0xDeAdBeEf0000000000000000000000000000DEAD';
-    setAddress(addr);
-    setBalance(STARTING_BALANCE);
-    setIsConnected(true);
-    setIsConnecting(false);
+  const balanceQuery = useGetBalance({
+    query: { enabled: auth.isAuthenticated, queryKey: getGetBalanceQueryKey() },
+  });
+
+  useEffect(() => {
+    if (balanceQuery.data) {
+      setLocalBal(parseFloat(balanceQuery.data.available ?? '0'));
+    }
+  }, [balanceQuery.data]);
+
+  useEffect(() => {
+    if (!auth.isAuthenticated) setLocalBal(0);
+  }, [auth.isAuthenticated]);
+
+  const connect = useCallback((_walletName?: string) => {
+    setLoginOpen(true);
   }, []);
 
   const disconnect = useCallback(() => {
-    setIsConnected(false);
-    setIsConnecting(false);
-    setAddress(null);
-    setWalletName(null);
-    setBalance(0);
-  }, []);
+    auth.logout().then(() => queryClient.clear());
+  }, [auth, queryClient]);
 
   const deductBalance = useCallback((amount: number) => {
-    setBalance(prev => Math.max(0, prev - amount));
-  }, []);
+    setLocalBal(prev => Math.max(0, prev - amount));
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: getGetBalanceQueryKey() });
+    }, 600);
+  }, [queryClient]);
 
+  const user         = auth.user;
+  const isConnected  = auth.isAuthenticated;
+  const address      = user?.walletAddress ?? user?.username ?? null;
   const shortAddress = address ? shorten(address) : null;
 
-  return createElement(WalletContext.Provider, {
-    value: { isConnected, isConnecting, address, walletName, balance, connect, disconnect, deductBalance, shortAddress },
-    children,
-  });
+  const value: WalletState = {
+    isConnected,
+    isConnecting:  auth.isLoading,
+    address,
+    walletName:    user?.username ?? null,
+    balance:       localBal,
+    role:          (user?.role as 'user' | 'admin' | null) ?? null,
+    connect,
+    disconnect,
+    deductBalance,
+    shortAddress,
+    openLoginModal: () => setLoginOpen(true),
+  };
+
+  return createElement(WalletContext.Provider, { value },
+    createElement(Fragment, null,
+      children,
+      createElement(LoginModal, { open: loginOpen, onOpenChange: setLoginOpen }),
+    )
+  );
 }
 
 export function useWallet(): WalletState {
