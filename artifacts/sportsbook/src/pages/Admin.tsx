@@ -83,7 +83,7 @@ export function Admin() {
           </div>
         </div>
 
-        <div className="flex gap-1 bg-[#121821] border border-[#253241] rounded-xl p-1 mb-6 w-fit">
+        <div className="flex gap-1 bg-[#121821] border border-[#253241] rounded-xl p-1 mb-6 w-full sm:w-fit overflow-x-auto">
           {([
             { key: 'users',      label: 'Users',      icon: <Users className="h-3.5 w-3.5" /> },
             { key: 'bets',       label: 'All Bets',   icon: <BarChart2 className="h-3.5 w-3.5" /> },
@@ -93,7 +93,7 @@ export function Admin() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap',
+                'flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap',
                 tab === t.key
                   ? 'bg-[#18212B] text-[#F8FAFC] shadow-sm'
                   : 'text-[#94A3B8]/60 hover:text-[#94A3B8]'
