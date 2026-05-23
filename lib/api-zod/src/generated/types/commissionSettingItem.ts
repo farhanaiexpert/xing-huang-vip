@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdatePlatformSettingsRequestSettings = {[key: string]: string};
+export interface CommissionSettingItem {
+  level: number;
+  rate: string;
+}

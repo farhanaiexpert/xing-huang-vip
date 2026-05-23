@@ -1,6 +1,5 @@
 import { createContext, useContext, useState } from 'react';
 import type { OddsFormat } from '../lib/oddsFormat';
-import { safeGet, safeSet } from '../lib/safeStorage';
 
 interface OddsFormatContextValue {
   format: OddsFormat;
@@ -14,12 +13,12 @@ const OddsFormatContext = createContext<OddsFormatContextValue>({
 
 export function OddsFormatProvider({ children }: { children: React.ReactNode }) {
   const [format, setFormat] = useState<OddsFormat>(() => {
-    return (safeGet('oddsFormat') as OddsFormat) ?? 'decimal';
+    return (localStorage.getItem('oddsFormat') as OddsFormat) ?? 'decimal';
   });
 
   function handleSetFormat(f: OddsFormat) {
     setFormat(f);
-    safeSet('oddsFormat', f);
+    localStorage.setItem('oddsFormat', f);
   }
 
   return (

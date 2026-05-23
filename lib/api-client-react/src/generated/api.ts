@@ -21,27 +21,21 @@ import type {
 
 import type {
   AdminBetsResponse,
-  AdminEditUserRequest,
   AdminTransactionsResponse,
-  AdminUserDetailResponse,
   AdminUsersResponse,
   AuthResponse,
-  BalanceAdjustRequest,
-  BalanceAdjustResponse,
   BalanceResponse,
   BetResponse,
   BetsListResponse,
+  CommissionSettingsResponse,
   CreateBetRequest,
   ErrorResponse,
   HealthStatus,
   LoginRequest,
   MessageResponse,
-  PlatformSettingsResponse,
   RegisterRequest,
   SettleBetRequest,
-  SettlementRunResult,
-  SettlementStatsResponse,
-  UpdatePlatformSettingsRequest,
+  UpdateCommissionSettingsRequest,
   UpdateStatusRequest,
   UpdateWalletRequest,
   UserResponse
@@ -875,227 +869,6 @@ export function useAdminGetBets<TData = Awaited<ReturnType<typeof adminGetBets>>
 
 
 
-export const getAdminEditUserUrl = (id: string,) => {
-
-
-
-
-  return `/api/admin/users/${id}`
-}
-
-/**
- * @summary Edit user profile (admin)
- */
-export const adminEditUser = async (id: string,
-    adminEditUserRequest: AdminEditUserRequest, options?: RequestInit): Promise<UserResponse> => {
-
-  return customFetch<UserResponse>(getAdminEditUserUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      adminEditUserRequest,)
-  }
-);}
-
-
-
-
-export const getAdminEditUserMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminEditUser>>, TError,{id: string;data: BodyType<AdminEditUserRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof adminEditUser>>, TError,{id: string;data: BodyType<AdminEditUserRequest>}, TContext> => {
-
-const mutationKey = ['adminEditUser'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminEditUser>>, {id: string;data: BodyType<AdminEditUserRequest>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  adminEditUser(id,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AdminEditUserMutationResult = NonNullable<Awaited<ReturnType<typeof adminEditUser>>>
-    export type AdminEditUserMutationBody = BodyType<AdminEditUserRequest>
-    export type AdminEditUserMutationError = ErrorType<ErrorResponse>
-
-    /**
- * @summary Edit user profile (admin)
- */
-export const useAdminEditUser = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminEditUser>>, TError,{id: string;data: BodyType<AdminEditUserRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof adminEditUser>>,
-        TError,
-        {id: string;data: BodyType<AdminEditUserRequest>},
-        TContext
-      > => {
-      return useMutation(getAdminEditUserMutationOptions(options));
-    }
-
-export const getAdminGetUserDetailUrl = (id: string,) => {
-
-
-
-
-  return `/api/admin/users/${id}/detail`
-}
-
-/**
- * @summary Get full user detail — profile, balance, bets, transactions (admin)
- */
-export const adminGetUserDetail = async (id: string, options?: RequestInit): Promise<AdminUserDetailResponse> => {
-
-  return customFetch<AdminUserDetailResponse>(getAdminGetUserDetailUrl(id),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getAdminGetUserDetailQueryKey = (id: string,) => {
-    return [
-    `/api/admin/users/${id}/detail`
-    ] as const;
-    }
-
-
-export const getAdminGetUserDetailQueryOptions = <TData = Awaited<ReturnType<typeof adminGetUserDetail>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetUserDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAdminGetUserDetailQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetUserDetail>>> = ({ signal }) => adminGetUserDetail(id, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetUserDetail>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type AdminGetUserDetailQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetUserDetail>>>
-export type AdminGetUserDetailQueryError = ErrorType<ErrorResponse>
-
-
-/**
- * @summary Get full user detail — profile, balance, bets, transactions (admin)
- */
-
-export function useAdminGetUserDetail<TData = Awaited<ReturnType<typeof adminGetUserDetail>>, TError = ErrorType<ErrorResponse>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetUserDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getAdminGetUserDetailQueryOptions(id,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
-
-export const getAdminAdjustUserBalanceUrl = (id: string,) => {
-
-
-
-
-  return `/api/admin/users/${id}/balance/adjust`
-}
-
-/**
- * @summary Credit or debit a user's balance (admin)
- */
-export const adminAdjustUserBalance = async (id: string,
-    balanceAdjustRequest: BalanceAdjustRequest, options?: RequestInit): Promise<BalanceAdjustResponse> => {
-
-  return customFetch<BalanceAdjustResponse>(getAdminAdjustUserBalanceUrl(id),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      balanceAdjustRequest,)
-  }
-);}
-
-
-
-
-export const getAdminAdjustUserBalanceMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAdjustUserBalance>>, TError,{id: string;data: BodyType<BalanceAdjustRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof adminAdjustUserBalance>>, TError,{id: string;data: BodyType<BalanceAdjustRequest>}, TContext> => {
-
-const mutationKey = ['adminAdjustUserBalance'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminAdjustUserBalance>>, {id: string;data: BodyType<BalanceAdjustRequest>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  adminAdjustUserBalance(id,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AdminAdjustUserBalanceMutationResult = NonNullable<Awaited<ReturnType<typeof adminAdjustUserBalance>>>
-    export type AdminAdjustUserBalanceMutationBody = BodyType<BalanceAdjustRequest>
-    export type AdminAdjustUserBalanceMutationError = ErrorType<ErrorResponse>
-
-    /**
- * @summary Credit or debit a user's balance (admin)
- */
-export const useAdminAdjustUserBalance = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAdjustUserBalance>>, TError,{id: string;data: BodyType<BalanceAdjustRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof adminAdjustUserBalance>>,
-        TError,
-        {id: string;data: BodyType<BalanceAdjustRequest>},
-        TContext
-      > => {
-      return useMutation(getAdminAdjustUserBalanceMutationOptions(options));
-    }
-
 export const getAdminUpdateUserStatusUrl = (id: string,) => {
 
 
@@ -1317,90 +1090,20 @@ export function useAdminGetTransactions<TData = Awaited<ReturnType<typeof adminG
 
 
 
-export const getAdminRunSettlementUrl = () => {
+export const getAdminGetCommissionSettingsUrl = () => {
 
 
 
 
-  return `/api/admin/settlement/run`
+  return `/api/admin/commission-settings`
 }
 
 /**
- * @summary Trigger auto-settlement run (admin)
+ * @summary Get commission settings (admin)
  */
-export const adminRunSettlement = async ( options?: RequestInit): Promise<SettlementRunResult> => {
+export const adminGetCommissionSettings = async ( options?: RequestInit): Promise<CommissionSettingsResponse> => {
 
-  return customFetch<SettlementRunResult>(getAdminRunSettlementUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-export const getAdminRunSettlementMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRunSettlement>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof adminRunSettlement>>, TError,void, TContext> => {
-
-const mutationKey = ['adminRunSettlement'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRunSettlement>>, void> = () => {
-
-
-          return  adminRunSettlement(requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AdminRunSettlementMutationResult = NonNullable<Awaited<ReturnType<typeof adminRunSettlement>>>
-
-    export type AdminRunSettlementMutationError = ErrorType<unknown>
-
-    /**
- * @summary Trigger auto-settlement run (admin)
- */
-export const useAdminRunSettlement = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRunSettlement>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof adminRunSettlement>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getAdminRunSettlementMutationOptions(options));
-    }
-
-export const getAdminGetSettlementStatsUrl = () => {
-
-
-
-
-  return `/api/admin/settlement/stats`
-}
-
-/**
- * @summary Get settlement statistics (admin)
- */
-export const adminGetSettlementStats = async ( options?: RequestInit): Promise<SettlementStatsResponse> => {
-
-  return customFetch<SettlementStatsResponse>(getAdminGetSettlementStatsUrl(),
+  return customFetch<CommissionSettingsResponse>(getAdminGetCommissionSettingsUrl(),
   {
     ...options,
     method: 'GET'
@@ -1413,45 +1116,45 @@ export const adminGetSettlementStats = async ( options?: RequestInit): Promise<S
 
 
 
-export const getAdminGetSettlementStatsQueryKey = () => {
+export const getAdminGetCommissionSettingsQueryKey = () => {
     return [
-    `/api/admin/settlement/stats`
+    `/api/admin/commission-settings`
     ] as const;
     }
 
 
-export const getAdminGetSettlementStatsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetSettlementStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetSettlementStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getAdminGetCommissionSettingsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getAdminGetSettlementStatsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetCommissionSettingsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetSettlementStats>>> = ({ signal }) => adminGetSettlementStats({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetCommissionSettings>>> = ({ signal }) => adminGetCommissionSettings({ signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetSettlementStats>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type AdminGetSettlementStatsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetSettlementStats>>>
-export type AdminGetSettlementStatsQueryError = ErrorType<unknown>
+export type AdminGetCommissionSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetCommissionSettings>>>
+export type AdminGetCommissionSettingsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Get settlement statistics (admin)
+ * @summary Get commission settings (admin)
  */
 
-export function useAdminGetSettlementStats<TData = Awaited<ReturnType<typeof adminGetSettlementStats>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetSettlementStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useAdminGetCommissionSettings<TData = Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCommissionSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getAdminGetSettlementStatsQueryOptions(options)
+  const queryOptions = getAdminGetCommissionSettingsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1464,114 +1167,37 @@ export function useAdminGetSettlementStats<TData = Awaited<ReturnType<typeof adm
 
 
 
-export const getAdminGetSettingsUrl = () => {
+export const getAdminUpdateCommissionSettingsUrl = () => {
 
 
 
 
-  return `/api/admin/settings`
+  return `/api/admin/commission-settings`
 }
 
 /**
- * @summary Get platform settings (admin)
+ * @summary Update commission settings (admin)
  */
-export const adminGetSettings = async ( options?: RequestInit): Promise<PlatformSettingsResponse> => {
+export const adminUpdateCommissionSettings = async (updateCommissionSettingsRequest: UpdateCommissionSettingsRequest, options?: RequestInit): Promise<CommissionSettingsResponse> => {
 
-  return customFetch<PlatformSettingsResponse>(getAdminGetSettingsUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getAdminGetSettingsQueryKey = () => {
-    return [
-    `/api/admin/settings`
-    ] as const;
-    }
-
-
-export const getAdminGetSettingsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAdminGetSettingsQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetSettings>>> = ({ signal }) => adminGetSettings({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetSettings>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type AdminGetSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetSettings>>>
-export type AdminGetSettingsQueryError = ErrorType<unknown>
-
-
-/**
- * @summary Get platform settings (admin)
- */
-
-export function useAdminGetSettings<TData = Awaited<ReturnType<typeof adminGetSettings>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getAdminGetSettingsQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
-
-export const getAdminUpdateSettingsUrl = () => {
-
-
-
-
-  return `/api/admin/settings`
-}
-
-/**
- * @summary Update platform settings (admin)
- */
-export const adminUpdateSettings = async (updatePlatformSettingsRequest: UpdatePlatformSettingsRequest, options?: RequestInit): Promise<PlatformSettingsResponse> => {
-
-  return customFetch<PlatformSettingsResponse>(getAdminUpdateSettingsUrl(),
+  return customFetch<CommissionSettingsResponse>(getAdminUpdateCommissionSettingsUrl(),
   {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      updatePlatformSettingsRequest,)
+      updateCommissionSettingsRequest,)
   }
 );}
 
 
 
 
-export const getAdminUpdateSettingsMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateSettings>>, TError,{data: BodyType<UpdatePlatformSettingsRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateSettings>>, TError,{data: BodyType<UpdatePlatformSettingsRequest>}, TContext> => {
+export const getAdminUpdateCommissionSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>, TError,{data: BodyType<UpdateCommissionSettingsRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>, TError,{data: BodyType<UpdateCommissionSettingsRequest>}, TContext> => {
 
-const mutationKey = ['adminUpdateSettings'];
+const mutationKey = ['adminUpdateCommissionSettings'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -1581,10 +1207,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateSettings>>, {data: BodyType<UpdatePlatformSettingsRequest>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>, {data: BodyType<UpdateCommissionSettingsRequest>}> = (props) => {
           const {data} = props ?? {};
 
-          return  adminUpdateSettings(data,requestOptions)
+          return  adminUpdateCommissionSettings(data,requestOptions)
         }
 
 
@@ -1594,21 +1220,21 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type AdminUpdateSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateSettings>>>
-    export type AdminUpdateSettingsMutationBody = BodyType<UpdatePlatformSettingsRequest>
-    export type AdminUpdateSettingsMutationError = ErrorType<unknown>
+    export type AdminUpdateCommissionSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>>
+    export type AdminUpdateCommissionSettingsMutationBody = BodyType<UpdateCommissionSettingsRequest>
+    export type AdminUpdateCommissionSettingsMutationError = ErrorType<unknown>
 
     /**
- * @summary Update platform settings (admin)
+ * @summary Update commission settings (admin)
  */
-export const useAdminUpdateSettings = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateSettings>>, TError,{data: BodyType<UpdatePlatformSettingsRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useAdminUpdateCommissionSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCommissionSettings>>, TError,{data: BodyType<UpdateCommissionSettingsRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof adminUpdateSettings>>,
+        Awaited<ReturnType<typeof adminUpdateCommissionSettings>>,
         TError,
-        {data: BodyType<UpdatePlatformSettingsRequest>},
+        {data: BodyType<UpdateCommissionSettingsRequest>},
         TContext
       > => {
-      return useMutation(getAdminUpdateSettingsMutationOptions(options));
+      return useMutation(getAdminUpdateCommissionSettingsMutationOptions(options));
     }
 

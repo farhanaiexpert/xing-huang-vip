@@ -133,25 +133,18 @@ export interface UpdateStatusRequest {
   status: UpdateStatusRequestStatus;
 }
 
-export interface SettlementRunResult {
-  checked: number;
-  settled: number;
-  won: number;
-  lost: number;
-  void: number;
-  skipped: number;
-  totalPaidOut: number;
+export interface CommissionSettingItem {
+  level: number;
+  rate: string;
 }
 
-export interface SettlementStatsResponse {
-  total: number;
-  pending: number;
-  won: number;
-  lost: number;
-  void: number;
-  totalWagered: string;
-  totalPaidOut: string;
-  houseEdge: string;
+export interface CommissionSettingsResponse {
+  settings: CommissionSettingItem[];
+}
+
+export interface UpdateCommissionSettingsRequest {
+  /** @minItems 1 */
+  settings: CommissionSettingItem[];
 }
 
 export type SettleBetRequestStatus = typeof SettleBetRequestStatus[keyof typeof SettleBetRequestStatus];
@@ -182,73 +175,5 @@ export interface TransactionItem {
 export interface AdminTransactionsResponse {
   transactions: TransactionItem[];
   total: number;
-}
-
-export type AdminEditUserRequestRole = typeof AdminEditUserRequestRole[keyof typeof AdminEditUserRequestRole];
-
-
-export const AdminEditUserRequestRole = {
-  user: 'user',
-  admin: 'admin',
-} as const;
-
-export type AdminEditUserRequestStatus = typeof AdminEditUserRequestStatus[keyof typeof AdminEditUserRequestStatus];
-
-
-export const AdminEditUserRequestStatus = {
-  active: 'active',
-  suspended: 'suspended',
-  banned: 'banned',
-} as const;
-
-export interface AdminEditUserRequest {
-  /**
-     * @minLength 3
-     * @maxLength 32
-     */
-  username?: string;
-  email?: string | null;
-  walletAddress?: string | null;
-  role?: AdminEditUserRequestRole;
-  status?: AdminEditUserRequestStatus;
-  /** @minLength 8 */
-  newPassword?: string;
-}
-
-export interface AdminUserDetailResponse {
-  user: UserResponse;
-  balance: BalanceResponse;
-  recentBets: BetResponse[];
-  recentTransactions: TransactionItem[];
-}
-
-export interface BalanceAdjustRequest {
-  /** Positive to credit, negative to debit */
-  amount: number;
-  /**
-     * @minLength 1
-     * @maxLength 255
-     */
-  reason: string;
-}
-
-export interface BalanceAdjustResponse {
-  userId: string;
-  previous: string;
-  adjusted: string;
-  available: string;
-  currency: string;
-}
-
-export type PlatformSettingsResponseSettings = {[key: string]: string};
-
-export interface PlatformSettingsResponse {
-  settings: PlatformSettingsResponseSettings;
-}
-
-export type UpdatePlatformSettingsRequestSettings = {[key: string]: string};
-
-export interface UpdatePlatformSettingsRequest {
-  settings: UpdatePlatformSettingsRequestSettings;
 }
 
