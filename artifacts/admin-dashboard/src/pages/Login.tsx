@@ -30,13 +30,13 @@ export default function Login() {
         return;
       }
       if (data.user?.role !== "admin") {
-        setError("Access denied — admin only");
+        navigate("/");
         return;
       }
       login(data.token, data.user);
       navigate("/");
     } catch {
-      setError("Network error");
+      setError("Network error — please try again");
     } finally {
       setLoading(false);
     }
@@ -80,6 +80,7 @@ export default function Login() {
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm transition-colors"

@@ -10,6 +10,39 @@ import { toast } from "sonner";
 
 type Status = "active" | "suspended" | "banned";
 
+function TableSkeleton() {
+  return (
+    <div className="bg-card border border-card-border rounded-xl overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            {["User", "Wallet", "Role", "Status", "Joined", "Actions"].map((h) => (
+              <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <tr key={i} className="border-b border-border last:border-0">
+              <td className="px-4 py-3">
+                <div className="h-4 w-28 rounded bg-muted animate-pulse" />
+                <div className="h-3 w-36 rounded bg-muted animate-pulse mt-1.5" />
+              </td>
+              <td className="px-4 py-3"><div className="h-4 w-24 rounded bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-5 w-12 rounded-full bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-5 w-16 rounded-full bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-7 w-48 rounded bg-muted animate-pulse ml-auto" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function EmptyIllustration({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
@@ -71,9 +104,7 @@ export default function Users() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+        <TableSkeleton />
       ) : error ? (
         <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 px-4 py-3 rounded-lg">
           Failed to load users
@@ -99,73 +130,71 @@ export default function Users() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div>
+                {users.map((u) => {
+                  const busy = updating === u.id;
+                  const isAdmin = u.role === "admin";
+                  return (
+                    <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
                         <div className="font-medium text-foreground">{u.username}</div>
                         {u.email && <div className="text-xs text-muted-foreground">{u.email}</div>}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {u.walletAddress ? (
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {u.walletAddress.slice(0, 8)}…{u.walletAddress.slice(-6)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.walletAddress ? (
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {u.walletAddress.slice(0, 8)}…{u.walletAddress.slice(-6)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">none</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${isAdmin ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" : "bg-muted text-muted-foreground border-border"}`}>
+                          {u.role}
                         </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">none</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${u.role === "admin" ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" : "bg-muted text-muted-foreground border-border"}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={u.status} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {new Date(u.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {u.role !== "admin" && (
-                        <StatusSelect
-                          current={u.status as Status}
-                          disabled={updating === u.id}
-                          onChange={(s) => handleStatusChange(u.id, s)}
-                        />
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={u.status} />
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {new Date(u.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        {!isAdmin && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            {(["active", "suspended", "banned"] as Status[]).map((s) => (
+                              <button
+                                key={s}
+                                disabled={busy || u.status === s}
+                                onClick={() => handleStatusChange(u.id, s)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:cursor-not-allowed ${
+                                  u.status === s
+                                    ? s === "active"
+                                      ? "bg-primary/20 text-primary border border-primary/30"
+                                      : s === "suspended"
+                                        ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                                        : "bg-destructive/20 text-destructive border border-destructive/30"
+                                    : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border disabled:opacity-40"
+                                }`}
+                              >
+                                {busy && u.status !== s ? (
+                                  <span className="inline-block w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  s.charAt(0).toUpperCase() + s.slice(1)
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-function StatusSelect({
-  current,
-  disabled,
-  onChange,
-}: {
-  current: Status;
-  disabled: boolean;
-  onChange: (s: Status) => void;
-}) {
-  return (
-    <select
-      value={current}
-      disabled={disabled}
-      onChange={(e) => onChange(e.target.value as Status)}
-      className="text-xs bg-background border border-border text-foreground rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 cursor-pointer"
-    >
-      <option value="active">Active</option>
-      <option value="suspended">Suspend</option>
-      <option value="banned">Ban</option>
-    </select>
   );
 }

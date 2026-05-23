@@ -14,6 +14,36 @@ type BetWithExtras = {
   userId?: string;
 };
 
+function TableSkeleton() {
+  return (
+    <div className="bg-card border border-card-border rounded-xl overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            {["Bet ID", "User", "Match", "Status", "Stake", "Potential Return"].map((h) => (
+              <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <tr key={i} className="border-b border-border last:border-0">
+              <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-4 w-36 rounded bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-5 w-16 rounded-full bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
+              <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function EmptyIllustration({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
@@ -80,9 +110,7 @@ export default function Bets() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
+        <TableSkeleton />
       ) : error ? (
         <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 px-4 py-3 rounded-lg">
           Failed to load bets
@@ -109,14 +137,13 @@ export default function Bets() {
               </thead>
               <tbody>
                 {bets.map((b) => {
-                  const sels = b.selections as Array<{ homeTeam: string; awayTeam: string; sport?: string }> | null;
+                  const sels = b.selections as Array<{ homeTeam: string; awayTeam: string }> | null;
                   const firstSel = Array.isArray(sels) ? sels[0] : null;
                   const matchLabel = firstSel
                     ? `${firstSel.homeTeam} v ${firstSel.awayTeam}`
                     : "—";
-                  const extraLegs = Array.isArray(sels) && sels.length > 1
-                    ? `+${sels.length - 1} more`
-                    : null;
+                  const extraLegs =
+                    Array.isArray(sels) && sels.length > 1 ? `+${sels.length - 1} more` : null;
 
                   return (
                     <tr key={b.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
