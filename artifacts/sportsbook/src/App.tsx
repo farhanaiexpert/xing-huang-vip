@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, Component } from "react";
+import type { ReactNode, ErrorInfo } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,6 +14,31 @@ import { OddsDataProvider } from "@/hooks/useOddsData";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
+
+// ErrorBoundary catches render errors and shows them instead of a blank screen
+interface EBState { error: Error | null }
+class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
+  state: EBState = { error: null };
+  static getDerivedStateFromError(error: Error): EBState { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[CupBett] Render error:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ background: "#0B0F14", color: "#F8FAFC", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem", fontFamily: "Inter, sans-serif" }}>
+          <div style={{ color: "#00DFA9", fontSize: "2rem", marginBottom: "1rem" }}>⚠</div>
+          <h1 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.5rem" }}>Something went wrong</h1>
+          <p style={{ color: "#94A3B8", fontSize: "0.875rem", marginBottom: "1.5rem", textAlign: "center", maxWidth: 480 }}>{this.state.error.message}</p>
+          <button onClick={() => window.location.reload()} style={{ background: "#00DFA9", color: "#0B0F14", border: "none", borderRadius: "0.5rem", padding: "0.625rem 1.5rem", fontWeight: 600, cursor: "pointer" }}>
+            Reload page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Home loads eagerly — it's the landing page
 import Home from "@/pages/Home";
@@ -72,31 +98,33 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <OddsFormatProvider>
-          <OddsSimulationProvider>
-            <OddsDataProvider>
-              <FavoritesProvider>
-                <WalletProvider>
-                  <BetHistoryProvider>
-                    <BetSlipProvider>
-                      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                        <Router />
-                      </WouterRouter>
-                      <MobileBottomNav />
-                      <OnboardingGuide />
-                      <PromoPopup />
-                      <Toaster />
-                    </BetSlipProvider>
-                  </BetHistoryProvider>
-                </WalletProvider>
-              </FavoritesProvider>
-            </OddsDataProvider>
-          </OddsSimulationProvider>
-        </OddsFormatProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <OddsFormatProvider>
+            <OddsSimulationProvider>
+              <OddsDataProvider>
+                <FavoritesProvider>
+                  <WalletProvider>
+                    <BetHistoryProvider>
+                      <BetSlipProvider>
+                        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                          <Router />
+                        </WouterRouter>
+                        <MobileBottomNav />
+                        <OnboardingGuide />
+                        <PromoPopup />
+                        <Toaster />
+                      </BetSlipProvider>
+                    </BetHistoryProvider>
+                  </WalletProvider>
+                </FavoritesProvider>
+              </OddsDataProvider>
+            </OddsSimulationProvider>
+          </OddsFormatProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
