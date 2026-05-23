@@ -7,9 +7,15 @@
  */
 
 export * from './adminBetsResponse';
+export * from './adminEditUserRequest';
+export * from './adminEditUserRequestRole';
+export * from './adminEditUserRequestStatus';
 export * from './adminTransactionsResponse';
+export * from './adminUserDetailResponse';
 export * from './adminUsersResponse';
 export * from './authResponse';
+export * from './balanceAdjustRequest';
+export * from './balanceAdjustResponse';
 export * from './balanceResponse';
 export * from './betResponse';
 export * from './betResponseSelectionsItem';
@@ -22,6 +28,8 @@ export * from './errorResponse';
 export * from './healthStatus';
 export * from './loginRequest';
 export * from './messageResponse';
+export * from './platformSettingsResponse';
+export * from './platformSettingsResponseSettings';
 export * from './registerRequest';
 export * from './settleBetRequest';
 export * from './settleBetRequestStatus';
@@ -29,6 +37,8 @@ export * from './settlementRunResult';
 export * from './settlementStatsResponse';
 export * from './transactionItem';
 export * from './updateCommissionSettingsRequest';
+export * from './updatePlatformSettingsRequest';
+export * from './updatePlatformSettingsRequestSettings';
 export * from './updateStatusRequest';
 export * from './updateStatusRequestStatus';
 export * from './updateWalletRequest';

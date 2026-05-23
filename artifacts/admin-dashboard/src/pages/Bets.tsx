@@ -199,7 +199,7 @@ export default function Bets() {
   async function handleRunSettlement() {
     setRunning(true);
     try {
-      const result = await runSettlementMut.mutateAsync({});
+      const result = await runSettlementMut.mutateAsync();
       queryClient.invalidateQueries({ queryKey: getAdminGetBetsQueryKey() });
       queryClient.invalidateQueries({ queryKey: getAdminGetSettlementStatsQueryKey() });
       if (result.settled > 0) {

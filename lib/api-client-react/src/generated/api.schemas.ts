@@ -198,3 +198,71 @@ export interface AdminTransactionsResponse {
   total: number;
 }
 
+export type AdminEditUserRequestRole = typeof AdminEditUserRequestRole[keyof typeof AdminEditUserRequestRole];
+
+
+export const AdminEditUserRequestRole = {
+  user: 'user',
+  admin: 'admin',
+} as const;
+
+export type AdminEditUserRequestStatus = typeof AdminEditUserRequestStatus[keyof typeof AdminEditUserRequestStatus];
+
+
+export const AdminEditUserRequestStatus = {
+  active: 'active',
+  suspended: 'suspended',
+  banned: 'banned',
+} as const;
+
+export interface AdminEditUserRequest {
+  /**
+     * @minLength 3
+     * @maxLength 32
+     */
+  username?: string;
+  email?: string | null;
+  walletAddress?: string | null;
+  role?: AdminEditUserRequestRole;
+  status?: AdminEditUserRequestStatus;
+  /** @minLength 8 */
+  newPassword?: string;
+}
+
+export interface AdminUserDetailResponse {
+  user: UserResponse;
+  balance: BalanceResponse;
+  recentBets: BetResponse[];
+  recentTransactions: TransactionItem[];
+}
+
+export interface BalanceAdjustRequest {
+  /** Positive to credit, negative to debit */
+  amount: number;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  reason: string;
+}
+
+export interface BalanceAdjustResponse {
+  userId: string;
+  previous: string;
+  adjusted: string;
+  available: string;
+  currency: string;
+}
+
+export type PlatformSettingsResponseSettings = {[key: string]: string};
+
+export interface PlatformSettingsResponse {
+  settings: PlatformSettingsResponseSettings;
+}
+
+export type UpdatePlatformSettingsRequestSettings = {[key: string]: string};
+
+export interface UpdatePlatformSettingsRequest {
+  settings: UpdatePlatformSettingsRequestSettings;
+}
+
