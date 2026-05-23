@@ -9,11 +9,13 @@ import type { BetResponseSelectionsItem } from './betResponseSelectionsItem';
 
 export interface BetResponse {
   id: string;
+  userId?: string;
   stake: string;
   totalOdds: string;
   potentialReturn: string;
   status: string;
   currency: string;
   createdAt: Date;
+  settledAt?: Date;
   selections?: BetResponseSelectionsItem[];
 }

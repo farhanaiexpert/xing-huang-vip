@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adjustBalanceRequest';
 export * from './adminBetsResponse';
+export * from './adminStatsResponse';
+export * from './adminTransactionsResponse';
 export * from './adminUsersResponse';
 export * from './authResponse';
 export * from './balanceResponse';
@@ -22,7 +25,12 @@ export * from './healthStatus';
 export * from './loginRequest';
 export * from './messageResponse';
 export * from './registerRequest';
+export * from './settleBetRequest';
+export * from './settleBetRequestStatus';
+export * from './transactionItem';
 export * from './updateCommissionSettingsRequest';
+export * from './updateRoleRequest';
+export * from './updateRoleRequestRole';
 export * from './updateStatusRequest';
 export * from './updateStatusRequestStatus';
 export * from './updateWalletRequest';

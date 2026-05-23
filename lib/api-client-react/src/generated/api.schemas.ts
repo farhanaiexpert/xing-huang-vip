@@ -97,12 +97,14 @@ export type BetResponseSelectionsItem = { [key: string]: unknown };
 
 export interface BetResponse {
   id: string;
+  userId?: string;
   stake: string;
   totalOdds: string;
   potentialReturn: string;
   status: string;
   currency: string;
   createdAt: string;
+  settledAt?: string;
   selections?: BetResponseSelectionsItem[];
 }
 
@@ -140,6 +142,66 @@ export interface CommissionSettingItem {
 
 export interface CommissionSettingsResponse {
   settings: CommissionSettingItem[];
+}
+
+export interface TransactionItem {
+  id: string;
+  userId: string;
+  type: string;
+  amount: string;
+  currency: string;
+  status: string;
+  /** @nullable */
+  reference?: string | null;
+  /** @nullable */
+  description?: string | null;
+  createdAt: string;
+}
+
+export interface AdminTransactionsResponse {
+  transactions: TransactionItem[];
+  total: number;
+}
+
+export interface AdminStatsResponse {
+  totalUsers: number;
+  activeUsers: number;
+  suspendedUsers: number;
+  totalBets: number;
+  pendingBets: number;
+  settledBets: number;
+  totalVolume: string;
+  totalTransactions: number;
+}
+
+export type UpdateRoleRequestRole = typeof UpdateRoleRequestRole[keyof typeof UpdateRoleRequestRole];
+
+
+export const UpdateRoleRequestRole = {
+  user: 'user',
+  admin: 'admin',
+} as const;
+
+export interface UpdateRoleRequest {
+  role: UpdateRoleRequestRole;
+}
+
+export interface AdjustBalanceRequest {
+  amount: string;
+  note?: string;
+}
+
+export type SettleBetRequestStatus = typeof SettleBetRequestStatus[keyof typeof SettleBetRequestStatus];
+
+
+export const SettleBetRequestStatus = {
+  won: 'won',
+  lost: 'lost',
+  void: 'void',
+} as const;
+
+export interface SettleBetRequest {
+  status: SettleBetRequestStatus;
 }
 
 export interface UpdateCommissionSettingsRequest {

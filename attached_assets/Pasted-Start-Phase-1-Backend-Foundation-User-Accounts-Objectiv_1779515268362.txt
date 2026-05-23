@@ -1,0 +1,99 @@
+Start Phase 1: Backend Foundation + User Accounts.
+
+Objective:
+Build the core backend infrastructure because betting, balances, referrals, commissions, settlements, and withdrawals will all depend on this foundation.
+
+Do not redesign the frontend.
+Focus on backend, database, APIs, and user account structure.
+
+Requirements:
+
+1. Real Database Setup
+- Configure a real database
+- Add proper database schema/models
+- Prepare tables for users, wallet users, bets, balances, referrals, sessions, and transactions
+- Add database seed/test data only if needed
+
+2. User Account System
+- Add user registration
+- Add user login
+- Add secure password hashing
+- Add validation for email/username/password
+- Prevent duplicate accounts
+
+3. Wallet User Support
+- Keep wallet-connect system supported
+- Store connected wallet address with user account
+- Allow future wallet-only login support
+- Wallet address should be unique
+
+4. Session / Authentication
+- Add secure session management or token-based authentication
+- Keep user logged in after refresh
+- Add logout
+- Protect private API routes
+
+5. User Data Storage
+Store:
+- user ID
+- username
+- email
+- password hash
+- wallet address
+- created date
+- account status
+- user role: user/admin
+
+6. Betting Data Storage Foundation
+Create backend structure for:
+- bets
+- bet selections
+- stake
+- odds
+- potential return
+- bet status: pending / won / lost / void
+- created date
+- user ID
+
+7. Balance Storage
+Create structure for:
+- user balance
+- available balance
+- locked/pending balance
+- transaction history
+
+8. Basic Admin Structure
+Prepare admin/backend structure for:
+- viewing users
+- viewing bets
+- viewing transactions
+- managing account status
+- future odds/referral/withdrawal controls
+
+9. API Endpoints
+Create initial APIs for:
+- register
+- login
+- logout
+- get current user
+- update wallet address
+- get user balance
+- get user bets
+- create bet record foundation
+
+10. Security
+- Validate all backend inputs
+- Hash passwords securely
+- Do not expose password hashes
+- Protect private routes
+- Add clean error handling
+
+Important:
+This phase is only backend foundation.
+Do not build bet settlement yet.
+Do not build referral commissions yet.
+Do not build withdrawals yet.
+Do not build real payment processing yet.
+
+Goal:
+Create a stable backend and user account foundation that future betting, settlement, referral, balance, and withdrawal systems can build on.

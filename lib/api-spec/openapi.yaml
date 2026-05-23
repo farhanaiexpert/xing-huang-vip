@@ -265,6 +265,117 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserResponse"
 
+  /admin/transactions:
+    get:
+      operationId: adminGetTransactions
+      tags: [admin]
+      summary: List all transactions (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Transactions list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTransactionsResponse"
+
+  /admin/stats:
+    get:
+      operationId: adminGetStats
+      tags: [admin]
+      summary: Get platform overview stats (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStatsResponse"
+
+  /admin/users/{id}/role:
+    patch:
+      operationId: adminUpdateUserRole
+      tags: [admin]
+      summary: Update user role (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoleRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+
+  /admin/users/{id}/balance:
+    patch:
+      operationId: adminAdjustBalance
+      tags: [admin]
+      summary: Adjust user balance (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdjustBalanceRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceResponse"
+
+  /admin/bets/{id}/settle:
+    patch:
+      operationId: adminSettleBet
+      tags: [admin]
+      summary: Settle a bet (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettleBetRequest"
+      responses:
+        "200":
+          description: Settled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BetResponse"
+
   /admin/commission-settings:
     get:
       operationId: adminGetCommissionSettings
@@ -441,6 +552,8 @@ components:
       properties:
         id:
           type: string
+        userId:
+          type: string
         stake:
           type: string
         totalOdds:
@@ -452,6 +565,9 @@ components:
         currency:
           type: string
         createdAt:
+          type: string
+          format: date-time
+        settledAt:
           type: string
           format: date-time
         selections:
@@ -516,6 +632,77 @@ components:
           items:
             $ref: "#/components/schemas/CommissionSettingItem"
       required: [settings]
+
+    TransactionItem:
+      type: object
+      properties:
+        id:          { type: string }
+        userId:      { type: string }
+        type:        { type: string }
+        amount:      { type: string }
+        currency:    { type: string }
+        status:      { type: string }
+        reference:   { type: ["string", "null"] }
+        description: { type: ["string", "null"] }
+        createdAt:   { type: string, format: date-time }
+      required: [id, userId, type, amount, currency, status, createdAt]
+
+    AdminTransactionsResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionItem"
+        total:
+          type: integer
+      required: [transactions, total]
+
+    AdminStatsResponse:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        suspendedUsers:
+          type: integer
+        totalBets:
+          type: integer
+        pendingBets:
+          type: integer
+        settledBets:
+          type: integer
+        totalVolume:
+          type: string
+        totalTransactions:
+          type: integer
+      required: [totalUsers, activeUsers, suspendedUsers, totalBets, pendingBets, settledBets, totalVolume, totalTransactions]
+
+    UpdateRoleRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, admin]
+      required: [role]
+
+    AdjustBalanceRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+        note:
+          type: string
+      required: [amount]
+
+    SettleBetRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [won, lost, void]
+      required: [status]
 
     UpdateCommissionSettingsRequest:
       type: object
