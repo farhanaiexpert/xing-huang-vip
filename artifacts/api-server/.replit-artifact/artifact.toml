@@ -13,9 +13,13 @@ localPort = 5000
 [services.development]
 run = "pnpm --filter @workspace/api-server run dev"
 
+[services.development.env]
+PORT = "5000"
+NODE_ENV = "development"
+
 [services.production]
 run = "pnpm --filter @workspace/api-server run start"
 
-[services.env]
+[services.production.env]
 PORT = "5000"
-NODE_ENV = "development"
+NODE_ENV = "production"
