@@ -111,14 +111,12 @@ export const GetBalanceResponse = zod.object({
 export const GetUserBetsResponse = zod.object({
   "bets": zod.array(zod.object({
   "id": zod.string(),
-  "userId": zod.string().optional(),
   "stake": zod.string(),
   "totalOdds": zod.string(),
   "potentialReturn": zod.string(),
   "status": zod.string(),
   "currency": zod.string(),
   "createdAt": zod.coerce.date(),
-  "settledAt": zod.coerce.date().optional(),
   "selections": zod.array(zod.object({
 
 }).passthrough()).optional()
@@ -170,14 +168,12 @@ export const AdminGetUsersResponse = zod.object({
 export const AdminGetBetsResponse = zod.object({
   "bets": zod.array(zod.object({
   "id": zod.string(),
-  "userId": zod.string().optional(),
   "stake": zod.string(),
   "totalOdds": zod.string(),
   "potentialReturn": zod.string(),
   "status": zod.string(),
   "currency": zod.string(),
   "createdAt": zod.coerce.date(),
-  "settledAt": zod.coerce.date().optional(),
   "selections": zod.array(zod.object({
 
 }).passthrough()).optional()
@@ -205,108 +201,6 @@ export const AdminUpdateUserStatusResponse = zod.object({
   "role": zod.enum(['user', 'admin']),
   "status": zod.enum(['active', 'suspended', 'banned']),
   "createdAt": zod.coerce.date()
-})
-
-
-/**
- * @summary List all transactions (admin)
- */
-export const AdminGetTransactionsResponse = zod.object({
-  "transactions": zod.array(zod.object({
-  "id": zod.string(),
-  "userId": zod.string(),
-  "type": zod.string(),
-  "amount": zod.string(),
-  "currency": zod.string(),
-  "status": zod.string(),
-  "reference": zod.string().nullish(),
-  "description": zod.string().nullish(),
-  "createdAt": zod.coerce.date()
-})),
-  "total": zod.number()
-})
-
-
-/**
- * @summary Get platform overview stats (admin)
- */
-export const AdminGetStatsResponse = zod.object({
-  "totalUsers": zod.number(),
-  "activeUsers": zod.number(),
-  "suspendedUsers": zod.number(),
-  "totalBets": zod.number(),
-  "pendingBets": zod.number(),
-  "settledBets": zod.number(),
-  "totalVolume": zod.string(),
-  "totalTransactions": zod.number()
-})
-
-
-/**
- * @summary Update user role (admin)
- */
-export const AdminUpdateUserRoleParams = zod.object({
-  "id": zod.coerce.string()
-})
-
-export const AdminUpdateUserRoleBody = zod.object({
-  "role": zod.enum(['user', 'admin'])
-})
-
-export const AdminUpdateUserRoleResponse = zod.object({
-  "id": zod.string(),
-  "username": zod.string(),
-  "email": zod.string().optional(),
-  "walletAddress": zod.string().optional(),
-  "role": zod.enum(['user', 'admin']),
-  "status": zod.enum(['active', 'suspended', 'banned']),
-  "createdAt": zod.coerce.date()
-})
-
-
-/**
- * @summary Adjust user balance (admin)
- */
-export const AdminAdjustBalanceParams = zod.object({
-  "id": zod.coerce.string()
-})
-
-export const AdminAdjustBalanceBody = zod.object({
-  "amount": zod.string(),
-  "note": zod.string().optional()
-})
-
-export const AdminAdjustBalanceResponse = zod.object({
-  "available": zod.string(),
-  "locked": zod.string(),
-  "currency": zod.string()
-})
-
-
-/**
- * @summary Settle a bet (admin)
- */
-export const AdminSettleBetParams = zod.object({
-  "id": zod.coerce.string()
-})
-
-export const AdminSettleBetBody = zod.object({
-  "status": zod.enum(['won', 'lost', 'void'])
-})
-
-export const AdminSettleBetResponse = zod.object({
-  "id": zod.string(),
-  "userId": zod.string().optional(),
-  "stake": zod.string(),
-  "totalOdds": zod.string(),
-  "potentialReturn": zod.string(),
-  "status": zod.string(),
-  "currency": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "settledAt": zod.coerce.date().optional(),
-  "selections": zod.array(zod.object({
-
-}).passthrough()).optional()
 })
 
 
