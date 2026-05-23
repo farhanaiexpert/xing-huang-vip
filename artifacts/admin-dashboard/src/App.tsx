@@ -1,4 +1,5 @@
 import { Router, Route, Switch } from "wouter";
+import { Toaster } from "sonner";
 import { AdminAuthProvider, RequireAdmin } from "./hooks/useAdminAuth";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -33,6 +34,16 @@ export default function App() {
             </RequireAdmin>
           </Route>
         </Switch>
+        <Toaster
+          theme="dark"
+          position="bottom-right"
+          toastOptions={{
+            classNames: {
+              toast: "bg-card border border-card-border text-foreground",
+              description: "text-muted-foreground",
+            },
+          }}
+        />
       </AdminAuthProvider>
     </Router>
   );

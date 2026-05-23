@@ -6,8 +6,21 @@ import {
   getAdminGetUsersQueryKey,
 } from "@workspace/api-client-react";
 import { StatusBadge } from "./Overview";
+import { toast } from "sonner";
 
 type Status = "active" | "suspended" | "banned";
+
+function EmptyIllustration({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+      <svg className="w-16 h-16 opacity-20" fill="none" stroke="currentColor" strokeWidth={1} viewBox="0 0 64 64">
+        <circle cx="32" cy="24" r="10" />
+        <path d="M10 52c0-12.15 9.85-22 22-22s22 9.85 22 22" strokeLinecap="round" />
+      </svg>
+      <p className="text-sm font-medium">{message}</p>
+    </div>
+  );
+}
 
 export default function Users() {
   const queryClient = useQueryClient();
@@ -31,6 +44,9 @@ export default function Users() {
     try {
       await updateStatus.mutateAsync({ id, data: { status } });
       queryClient.invalidateQueries({ queryKey: getAdminGetUsersQueryKey() });
+      toast.success("Status updated", { description: `User has been set to ${status}.` });
+    } catch {
+      toast.error("Update failed", { description: "Could not change user status." });
     } finally {
       setUpdating(null);
     }
@@ -63,8 +79,10 @@ export default function Users() {
           Failed to load users
         </div>
       ) : users.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground text-sm">
-          {search ? "No users match your search" : "No users yet"}
+        <div className="bg-card border border-card-border rounded-xl">
+          <EmptyIllustration
+            message={search ? "No users match your search" : "No users registered yet"}
+          />
         </div>
       ) : (
         <div className="bg-card border border-card-border rounded-xl overflow-hidden">
