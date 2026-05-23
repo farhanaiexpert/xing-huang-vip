@@ -5,6 +5,8 @@ import {
 import { setAuthTokenGetter } from '@workspace/api-client-react';
 import type { UserResponse } from '@workspace/api-client-react';
 
+import { safeGet, safeSet, safeRemove } from '../lib/safeStorage';
+
 const TOKEN_KEY = 'cupbett_jwt';
 
 export interface AuthState {
@@ -21,28 +23,28 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,      setUser]      = useState<UserResponse | null>(null);
-  const [token,     setToken]     = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-  const [isLoading, setIsLoading] = useState(!!localStorage.getItem(TOKEN_KEY));
+  const [token,     setToken]     = useState<string | null>(() => safeGet(TOKEN_KEY));
+  const [isLoading, setIsLoading] = useState(!!safeGet(TOKEN_KEY));
 
   useEffect(() => {
-    setAuthTokenGetter(() => localStorage.getItem(TOKEN_KEY));
+    setAuthTokenGetter(() => safeGet(TOKEN_KEY));
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem(TOKEN_KEY);
+    const stored = safeGet(TOKEN_KEY);
     if (!stored) { setIsLoading(false); return; }
     fetch('/api/auth/me', { headers: { Authorization: `Bearer ${stored}` } })
       .then(r => r.ok ? r.json() : null)
       .then((data: UserResponse | null) => {
         if (data) setUser(data);
-        else { localStorage.removeItem(TOKEN_KEY); setToken(null); }
+        else { safeRemove(TOKEN_KEY); setToken(null); }
       })
-      .catch(() => { localStorage.removeItem(TOKEN_KEY); setToken(null); })
+      .catch(() => { safeRemove(TOKEN_KEY); setToken(null); })
       .finally(() => setIsLoading(false));
   }, []);
 
   const saveSession = useCallback((t: string, u: UserResponse) => {
-    localStorage.setItem(TOKEN_KEY, t);
+    safeSet(TOKEN_KEY, t);
     setToken(t);
     setUser(u);
   }, []);
@@ -72,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [saveSession]);
 
   const logout = useCallback(async () => {
-    const t = localStorage.getItem(TOKEN_KEY);
+    const t = safeGet(TOKEN_KEY);
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
@@ -80,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
       });
     } catch {}
-    localStorage.removeItem(TOKEN_KEY);
+    safeRemove(TOKEN_KEY);
     setToken(null);
     setUser(null);
   }, []);

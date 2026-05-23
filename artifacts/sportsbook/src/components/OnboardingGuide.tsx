@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Wallet, MousePointerClick, SlidersHorizontal, Rocket, X, ChevronRight } from 'lucide-react';
 
+import { safeGet, safeSet } from '../lib/safeStorage';
+
 const STORAGE_KEY = 'oddschain_onboarding_seen';
 
 const STEPS = [
@@ -46,7 +48,7 @@ export function OnboardingGuide() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = safeGet(STORAGE_KEY);
     const lastSeen = stored ? parseInt(stored, 10) : 0;
     const hours24 = 24 * 60 * 60 * 1000;
     if (!lastSeen || Date.now() - lastSeen > hours24) {
@@ -57,7 +59,7 @@ export function OnboardingGuide() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem(STORAGE_KEY, String(Date.now()));
+    safeSet(STORAGE_KEY, String(Date.now()));
     setVisible(false);
   }
 
