@@ -9,7 +9,7 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-const NAV_SECTIONS = [
+const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "Main",
     items: [
@@ -67,6 +67,39 @@ const NAV_SECTIONS = [
   },
 ];
 
+/* ─── Crypto diamond avatar SVG ─────────────────────────────── */
+function CryptoAvatar({ size = 32, initial = "A" }: { size?: number; initial?: string }) {
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="avatar-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="rgba(0,223,169,0.25)"/>
+            <stop offset="100%" stopColor="rgba(0,180,255,0.18)"/>
+          </linearGradient>
+          <linearGradient id="diamond-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#00DFA9"/>
+            <stop offset="100%" stopColor="#00B4FF"/>
+          </linearGradient>
+        </defs>
+        {/* Hexagonal background */}
+        <path d="M16 2L28 9V23L16 30L4 23V9L16 2Z" fill="url(#avatar-grad)" stroke="rgba(0,223,169,0.35)" strokeWidth="1"/>
+        {/* Diamond gem shape */}
+        <path d="M16 8L22 13L16 24L10 13L16 8Z" fill="url(#diamond-grad)" opacity="0.9"/>
+        <path d="M10 13L16 8L22 13H10Z" fill="url(#diamond-grad)" opacity="0.5"/>
+        <line x1="16" y1="8" x2="16" y2="24" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+        <line x1="10" y1="13" x2="22" y2="13" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span style={{ fontSize: size * 0.28, fontWeight: 800, color: "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.6)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+          {initial}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Nav links ──────────────────────────────────────────────── */
 function NavLinks({ collapsed, onNav }: { collapsed: boolean; onNav?: () => void }) {
   const [location] = useLocation();
   return (
@@ -78,8 +111,9 @@ function NavLinks({ collapsed, onNav }: { collapsed: boolean; onNav?: () => void
               {section.label}
             </p>
           )}
+          {collapsed && <div className="mb-1 h-px mx-2" style={{ background: "rgba(255,255,255,0.04)" }}/>}
           <div className="space-y-[2px]">
-            {section.items.map((item: NavItem) => {
+            {section.items.map((item) => {
               const active = item.path === "/" ? location === "/" : location === item.path || location.startsWith(item.path + "/");
               return (
                 <Link
@@ -87,10 +121,12 @@ function NavLinks({ collapsed, onNav }: { collapsed: boolean; onNav?: () => void
                   href={item.path}
                   onClick={onNav}
                   title={collapsed ? item.label : undefined}
-                  className={`flex items-center gap-3 py-2 rounded-xl text-[12.5px] font-medium transition-all duration-150 cursor-pointer group relative ${collapsed ? "px-[13px] justify-center" : "pl-3 pr-3"} ${active ? "nav-item-active" : "nav-item-default"}`}
+                  className={`flex items-center rounded-xl text-[12.5px] font-medium transition-all duration-150 cursor-pointer group relative ${
+                    collapsed ? "justify-center px-0 py-2.5 mx-1" : "gap-3 pl-3 pr-3 py-2.5"
+                  } ${active ? "nav-item-active" : "nav-item-default"}`}
                 >
-                  <span className="shrink-0">{item.icon}</span>
-                  {!collapsed && <span className="truncate">{item.label}</span>}
+                  <span className="shrink-0 flex items-center justify-center">{item.icon}</span>
+                  {!collapsed && <span className="truncate flex-1">{item.label}</span>}
                   {!collapsed && item.badge && (
                     <span className="ml-auto text-[9.5px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
                       style={{ background: "rgba(0,223,169,0.15)", color: "#00DFA9" }}>
@@ -98,11 +134,12 @@ function NavLinks({ collapsed, onNav }: { collapsed: boolean; onNav?: () => void
                     </span>
                   )}
                   {collapsed && item.badge && (
-                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ background: "#00DFA9" }} />
+                    <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ background: "#00DFA9" }}/>
                   )}
+                  {/* Tooltip for collapsed state */}
                   {collapsed && (
                     <span className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[11.5px] font-medium whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50"
-                      style={{ background: "hsl(222,40%,11%)", color: "#F1F5F9", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}>
+                      style={{ background: "hsl(222,40%,12%)", color: "#F1F5F9", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 16px rgba(0,0,0,0.5)" }}>
                       {item.label}
                     </span>
                   )}
@@ -116,53 +153,49 @@ function NavLinks({ collapsed, onNav }: { collapsed: boolean; onNav?: () => void
   );
 }
 
+/* ─── Sidebar ────────────────────────────────────────────────── */
 function SidebarContent({ collapsed, onNav }: { collapsed: boolean; onNav?: () => void }) {
   const { user, logout } = useAdminAuth();
+  const initial = user?.username?.[0]?.toUpperCase() ?? "A";
+
   return (
-    <>
-      <div className={`py-4 flex items-center gap-3 ${collapsed ? "px-[14px] justify-center" : "px-4"}`}>
-        <div className="relative shrink-0">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, rgba(0,223,169,0.22) 0%, rgba(0,180,255,0.16) 100%)", border: "1px solid rgba(0,223,169,0.28)" }}>
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8s2.91 6.5 6.5 6.5S14.5 11.59 14.5 8 11.59 1.5 8 1.5z" fill="rgba(0,223,169,0.2)" stroke="#00DFA9" strokeWidth="1"/>
-              <path d="M6 5.5h1.5v5H6V5.5zm2.5 0H10L8 8.5l2 2.5H8.5L7 8.5 8.5 5.5z" fill="#00DFA9"/>
-            </svg>
-          </div>
-        </div>
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <div className={`flex items-center py-4 ${collapsed ? "justify-center px-0" : "gap-3 px-4"}`} style={{ minHeight: 64 }}>
+        <img
+          src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
+          alt="CupBett"
+          className="shrink-0 object-contain"
+          style={{ height: collapsed ? 24 : 28, width: "auto", maxWidth: collapsed ? 36 : 100 }}
+        />
         {!collapsed && (
-          <div>
-            <div className="text-[13px] font-bold text-white tracking-tight leading-none">Cup<span className="text-gradient-teal">Bett</span></div>
-            <div className="text-[9.5px] mt-0.5" style={{ color: "#334155" }}>Administration</div>
+          <div className="min-w-0">
+            <div className="text-[9.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#334155" }}>Administration</div>
           </div>
         )}
       </div>
 
-      <div className="h-px mx-3 mb-3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)" }}/>
+      <div className="h-px mx-3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)" }}/>
 
-      <div className="flex-1 overflow-y-auto px-2.5 pb-2 overflow-x-hidden">
+      {/* Nav */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-1.5">
         <NavLinks collapsed={collapsed} onNav={onNav}/>
       </div>
 
-      <div className="h-px mx-3 mt-1" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)" }}/>
+      <div className="h-px mx-3" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)" }}/>
 
-      <div className={`py-3 ${collapsed ? "px-2" : "px-3"}`}>
+      {/* Footer */}
+      <div className={`py-3 ${collapsed ? "px-1.5" : "px-3"}`}>
         {!collapsed ? (
           <div className="rounded-xl p-2.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
             <div className="flex items-center gap-2.5">
-              <div className="relative shrink-0">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs"
-                  style={{ background: "linear-gradient(135deg, rgba(0,223,169,0.18) 0%, rgba(0,180,255,0.12) 100%)", border: "1px solid rgba(0,223,169,0.22)", color: "#00DFA9" }}>
-                  {user?.username?.[0]?.toUpperCase() ?? "A"}
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[hsl(222,47%,5%)]"/>
-              </div>
+              <CryptoAvatar size={32} initial={initial}/>
               <div className="flex-1 min-w-0">
                 <div className="text-[12px] font-semibold text-white truncate">{user?.username ?? "Admin"}</div>
                 <div className="text-[10px]" style={{ color: "#334155" }}>Super Administrator</div>
               </div>
               <button onClick={logout} title="Sign out"
-                className="w-6.5 h-6.5 rounded-lg flex items-center justify-center transition-all"
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
                 style={{ color: "#334155" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#F87171"; (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.08)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "#334155"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
@@ -173,7 +206,8 @@ function SidebarContent({ collapsed, onNav }: { collapsed: boolean; onNav?: () =
             </div>
           </div>
         ) : (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <CryptoAvatar size={32} initial={initial}/>
             <button onClick={logout} title="Sign out"
               className="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
               style={{ color: "#334155", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
@@ -186,12 +220,15 @@ function SidebarContent({ collapsed, onNav }: { collapsed: boolean; onNav?: () =
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
+/* ─── Topbar ─────────────────────────────────────────────────── */
 function Topbar({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSidebar: () => void }) {
   const { user } = useAdminAuth();
+  const initial = user?.username?.[0]?.toUpperCase() ?? "A";
+
   return (
     <header className="fixed top-0 right-0 z-20 h-[54px] flex items-center px-5 gap-4"
       style={{
@@ -200,8 +237,9 @@ function Topbar({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSi
         borderBottom: "1px solid rgba(255,255,255,0.05)",
         transition: "left 0.22s cubic-bezier(0.4,0,0.2,1)",
       }}>
+      {/* Hamburger */}
       <button onClick={onToggleSidebar}
-        className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors shrink-0"
+        className="w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0"
         style={{ color: "#64748B" }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "#CBD5E1"; }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#64748B"; }}>
@@ -210,6 +248,7 @@ function Topbar({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSi
         </svg>
       </button>
 
+      {/* Search */}
       <div className="flex-1 max-w-[380px]">
         <div className="relative">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" style={{ color: "#334155" }}>
@@ -219,11 +258,7 @@ function Topbar({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSi
             type="text"
             placeholder="Search anything..."
             className="w-full pl-8 pr-16 py-1.5 text-[12.5px] rounded-lg outline-none transition-all"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              color: "#CBD5E1",
-            }}
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#CBD5E1" }}
             onFocus={e => { e.currentTarget.style.borderColor = "rgba(0,223,169,0.3)"; e.currentTarget.style.background = "rgba(0,223,169,0.03)"; }}
             onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
           />
@@ -234,18 +269,21 @@ function Topbar({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSi
         </div>
       </div>
 
+      {/* Right actions */}
       <div className="flex items-center gap-1.5 ml-auto">
-        <button className="relative w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+        {/* Notifications */}
+        <button className="relative w-8 h-8 rounded-lg flex items-center justify-center transition-all"
           style={{ color: "#64748B" }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "#CBD5E1"; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#64748B"; }}>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
           </svg>
-          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ background: "#00DFA9" }}/>
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full" style={{ background: "#00DFA9" }}/>
         </button>
 
-        <button className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+        {/* Refresh */}
+        <button className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
           style={{ color: "#64748B" }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "#CBD5E1"; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#64748B"; }}>
@@ -256,12 +294,10 @@ function Topbar({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSi
 
         <div className="w-px h-5 mx-1" style={{ background: "rgba(255,255,255,0.07)" }}/>
 
+        {/* Admin profile */}
         <div className="flex items-center gap-2.5 pl-1 cursor-pointer group">
           <div className="relative">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-bold transition-all"
-              style={{ background: "linear-gradient(135deg, rgba(0,223,169,0.2) 0%, rgba(0,180,255,0.14) 100%)", border: "1px solid rgba(0,223,169,0.25)", color: "#00DFA9" }}>
-              {user?.username?.[0]?.toUpperCase() ?? "A"}
-            </div>
+            <CryptoAvatar size={32} initial={initial}/>
             <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border-[1.5px]" style={{ borderColor: "hsl(222,47%,5%)" }}/>
           </div>
           <div className="hidden sm:block">
@@ -277,6 +313,7 @@ function Topbar({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSi
   );
 }
 
+/* ─── Layout shell ───────────────────────────────────────────── */
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -284,22 +321,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex" style={{ background: "hsl(222,47%,4%)" }}>
-      {/* Desktop sidebar */}
-      <aside
-        className="hidden md:flex flex-col fixed top-0 bottom-0 left-0 z-30"
+
+      {/* Desktop sidebar — width transitions, content fits inside */}
+      <aside className="hidden md:block fixed top-0 bottom-0 left-0 z-30"
         style={{
-          width: `${sidebarW}px`,
+          width: sidebarW,
           background: "hsl(222,47%,5%)",
           borderRight: "1px solid rgba(255,255,255,0.05)",
           transition: "width 0.22s cubic-bezier(0.4,0,0.2,1)",
           overflow: "hidden",
         }}>
-        <div style={{ width: "228px", minWidth: "228px" }}>
+        {/* This inner div always fills the current sidebar width so content aligns */}
+        <div style={{ width: sidebarW, height: "100%", transition: "width 0.22s cubic-bezier(0.4,0,0.2,1)" }}>
           <SidebarContent collapsed={collapsed}/>
         </div>
       </aside>
 
-      {/* Topbar */}
+      {/* Topbar (desktop) */}
       <div className="hidden md:block">
         <Topbar collapsed={collapsed} onToggleSidebar={() => setCollapsed(c => !c)}/>
       </div>
@@ -308,14 +346,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-[54px] flex items-center px-4 gap-3"
         style={{ background: "rgba(5,8,16,0.92)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="flex items-center gap-2 flex-1">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg, rgba(0,223,169,0.22), rgba(0,180,255,0.16))", border: "1px solid rgba(0,223,169,0.28)" }}>
-            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8s2.91 6.5 6.5 6.5S14.5 11.59 14.5 8 11.59 1.5 8 1.5z" fill="rgba(0,223,169,0.2)" stroke="#00DFA9" strokeWidth="1"/>
-              <path d="M6 5.5h1.5v5H6V5.5zm2.5 0H10L8 8.5l2 2.5H8.5L7 8.5 8.5 5.5z" fill="#00DFA9"/>
-            </svg>
-          </div>
-          <span className="text-sm font-bold text-white">Cup<span className="text-gradient-teal">Bett</span></span>
+          <img
+            src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
+            alt="CupBett"
+            className="object-contain"
+            style={{ height: 22, width: "auto" }}
+          />
         </div>
         <button onClick={() => setMobileOpen(true)}
           className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -330,33 +366,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)}/>
-          <aside className="relative z-50 w-[228px] h-full flex flex-col shadow-2xl overflow-hidden"
-            style={{ background: "hsl(222,47%,5%)", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+          <aside className="relative z-50 h-full shadow-2xl"
+            style={{ width: 228, background: "hsl(222,47%,5%)", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
             <SidebarContent collapsed={false} onNav={() => setMobileOpen(false)}/>
           </aside>
         </div>
       )}
 
-      {/* Main content */}
-      <div
-        className="flex-1 flex flex-col min-w-0"
-        style={{
-          marginLeft: 0,
-          transition: "margin-left 0.22s cubic-bezier(0.4,0,0.2,1)",
-        }}>
-        <div className="hidden md:block" style={{ marginLeft: `${sidebarW}px`, transition: "margin-left 0.22s cubic-bezier(0.4,0,0.2,1)" }}>
-          <main className="pt-[54px] min-h-screen">
-            <div className="p-6 max-w-[1520px] w-full mx-auto">
-              {children}
-            </div>
-          </main>
-        </div>
-        <div className="md:hidden">
-          <main className="pt-[54px] min-h-screen p-4">
+      {/* Main content area shifts with sidebar */}
+      <div className="hidden md:flex flex-col flex-1 min-w-0"
+        style={{ marginLeft: sidebarW, transition: "margin-left 0.22s cubic-bezier(0.4,0,0.2,1)" }}>
+        <main className="pt-[54px] min-h-screen">
+          <div className="p-6 max-w-[1520px] w-full mx-auto">
             {children}
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
+
+      <div className="md:hidden flex flex-col flex-1 min-w-0">
+        <main className="pt-[54px] min-h-screen p-4">
+          {children}
+        </main>
+      </div>
+
     </div>
   );
 }
