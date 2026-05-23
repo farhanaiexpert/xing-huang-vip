@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "@workspace/db";
-import { usersTable, userBalancesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { usersTable, userBalancesTable, betsTable, betSelectionsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
@@ -49,6 +49,34 @@ router.patch("/me/wallet", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "update wallet error");
     res.status(500).json({ error: "internal", message: "Failed to update wallet" });
+  }
+});
+
+router.get("/me/bets", requireAuth, async (req, res) => {
+  const { userId } = (req as any).user;
+
+  try {
+    const bets = await db
+      .select()
+      .from(betsTable)
+      .where(eq(betsTable.userId, userId))
+      .orderBy(desc(betsTable.createdAt))
+      .limit(100);
+
+    const betsWithSelections = await Promise.all(
+      bets.map(async bet => {
+        const selections = await db
+          .select()
+          .from(betSelectionsTable)
+          .where(eq(betSelectionsTable.betId, bet.id));
+        return { ...bet, selections };
+      })
+    );
+
+    res.json({ bets: betsWithSelections });
+  } catch (err) {
+    req.log.error({ err }, "get user bets error");
+    res.status(500).json({ error: "internal", message: "Failed to fetch bets" });
   }
 });
 
