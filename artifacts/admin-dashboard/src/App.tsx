@@ -9,6 +9,10 @@ import Bets from "./pages/Bets";
 import Transactions from "./pages/Transactions";
 import Commission from "./pages/Commission";
 import Settings from "./pages/Settings";
+import Withdrawals from "./pages/Withdrawals";
+import Referrals from "./pages/Referrals";
+import Promotions from "./pages/Promotions";
+import AuditLogs from "./pages/AuditLogs";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -26,10 +30,14 @@ export default function App() {
                   <Route path="/users" component={Users} />
                   <Route path="/bets" component={Bets} />
                   <Route path="/transactions" component={Transactions} />
+                  <Route path="/withdrawals" component={Withdrawals} />
+                  <Route path="/referrals" component={Referrals} />
                   <Route path="/commission" component={Commission} />
+                  <Route path="/promotions" component={Promotions} />
                   <Route path="/settings" component={Settings} />
+                  <Route path="/audit" component={AuditLogs} />
                   <Route>
-                    <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center py-32" style={{ color: "#334155" }}>
                       <span className="text-6xl mb-4 opacity-20">404</span>
                       <p className="text-sm">Page not found</p>
                     </div>
