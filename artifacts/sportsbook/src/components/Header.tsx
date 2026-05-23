@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { Search, Wallet, BarChart2, Bell, LogOut, Copy, ChevronDown, X, Globe, Shield } from 'lucide-react';
+import { Search, Wallet, BarChart2, Bell, LogOut, Copy, ChevronDown, X, Globe, Shield, ArrowDownToLine } from 'lucide-react';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { useWallet } from '../hooks/useWallet';
 import { useState, useRef, useEffect } from 'react';
@@ -365,6 +365,7 @@ export function Header() {
                     </div>
                     <div className="py-1">
                       <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Address'} onClick={handleCopy} />
+                      <MenuLinkAction icon={<ArrowDownToLine className="h-3.5 w-3.5" />} label="Withdraw" href="/withdrawals" onClick={() => setShowAddressMenu(false)} />
                       <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Disconnect" onClick={handleDisconnect} danger />
                     </div>
                   </div>
@@ -429,6 +430,19 @@ function MenuAction({ icon, label, onClick, danger }: { icon: React.ReactNode; l
       {icon}
       {label}
     </button>
+  );
+}
+
+function MenuLinkAction({ icon, label, href, onClick }: { icon: React.ReactNode; label: string; href: string; onClick?: () => void }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/[0.05] transition-colors"
+    >
+      {icon}
+      {label}
+    </Link>
   );
 }
 

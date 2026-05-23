@@ -405,6 +405,87 @@ export const AdminUpdateSettingsResponse = zod.object({
 
 
 /**
+ * @summary Submit a withdrawal request
+ */
+export const CreateWithdrawalBody = zod.object({
+  "amount": zod.number().describe('Amount in USDT to withdraw'),
+  "walletAddress": zod.string().describe('Destination wallet address')
+})
+
+
+/**
+ * @summary Get withdrawal history for the current user
+ */
+export const GetMyWithdrawalsResponse = zod.object({
+  "withdrawals": zod.array(zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "amount": zod.string(),
+  "walletAddress": zod.string(),
+  "currency": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'processed']),
+  "note": zod.string().optional(),
+  "reviewedBy": zod.string().optional(),
+  "reviewedAt": zod.coerce.date().optional(),
+  "transactionId": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary List all withdrawal requests (admin)
+ */
+export const AdminGetWithdrawalsResponse = zod.object({
+  "withdrawals": zod.array(zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "amount": zod.string(),
+  "walletAddress": zod.string(),
+  "currency": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'processed']),
+  "note": zod.string().optional(),
+  "reviewedBy": zod.string().optional(),
+  "reviewedAt": zod.coerce.date().optional(),
+  "transactionId": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Approve, reject or mark a withdrawal as processed (admin)
+ */
+export const AdminReviewWithdrawalParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const adminReviewWithdrawalBodyNoteMax = 500;
+
+
+
+export const AdminReviewWithdrawalBody = zod.object({
+  "action": zod.enum(['approve', 'reject', 'process']),
+  "note": zod.string().max(adminReviewWithdrawalBodyNoteMax).optional()
+})
+
+export const AdminReviewWithdrawalResponse = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "amount": zod.string(),
+  "walletAddress": zod.string(),
+  "currency": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'processed']),
+  "note": zod.string().optional(),
+  "reviewedBy": zod.string().optional(),
+  "reviewedAt": zod.coerce.date().optional(),
+  "transactionId": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Get commission settings (admin)
  */
 export const AdminGetCommissionSettingsResponse = zod.object({

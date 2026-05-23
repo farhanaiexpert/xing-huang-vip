@@ -5,6 +5,7 @@ import { db } from "@workspace/db";
 import {
   usersTable, betsTable, betSelectionsTable, transactionsTable,
   commissionSettingsTable, userBalancesTable, platformSettingsTable,
+  withdrawalRequestsTable,
   SETTING_DEFAULTS,
 } from "@workspace/db";
 import { eq, desc, or, sql } from "drizzle-orm";
@@ -418,6 +419,162 @@ router.put("/settings", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "admin update settings error");
     res.status(500).json({ error: "internal", message: "Failed to update settings" });
+  }
+});
+
+/* ── Withdrawals — list all ──────────────────────────────────── */
+router.get("/withdrawals", async (req, res) => {
+  try {
+    const withdrawals = await db
+      .select()
+      .from(withdrawalRequestsTable)
+      .orderBy(desc(withdrawalRequestsTable.createdAt))
+      .limit(500);
+
+    res.json({ withdrawals, total: withdrawals.length });
+  } catch (err) {
+    req.log.error({ err }, "admin get withdrawals error");
+    res.status(500).json({ error: "internal", message: "Failed to fetch withdrawals" });
+  }
+});
+
+/* ── Withdrawals — review (approve/reject/process) ───────────── */
+router.patch("/withdrawals/:id", async (req, res) => {
+  const schema = z.object({
+    action: z.enum(["approve", "reject", "process"]),
+    note:   z.string().max(500).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "validation", message: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+
+  const { id } = req.params;
+  const { action, note } = parsed.data;
+  const adminId = (req as any).user.userId;
+
+  // All logic runs inside a single serializable transaction.
+  // We lock the withdrawal row first (FOR UPDATE) so concurrent requests on the
+  // same withdrawal queue behind the lock — eliminating double-approve races.
+  let updatedWithdrawal: (typeof withdrawalRequestsTable.$inferSelect) | undefined;
+
+  try {
+    await db.transaction(async tx => {
+      // 1. Lock the withdrawal row — concurrent requests block here
+      const wRows = await tx.execute(
+        sql`SELECT * FROM withdrawal_requests WHERE id = ${id} FOR UPDATE`
+      ) as { rows: Record<string, unknown>[] };
+
+      if (wRows.rows.length === 0) {
+        throw Object.assign(new Error("not_found"), { code: "NOT_FOUND" });
+      }
+
+      const w = wRows.rows[0] as {
+        id: string; user_id: string; amount: string; wallet_address: string;
+        currency: string; status: string; note: string | null;
+        transaction_id: string | null; reviewed_by: string | null; reviewed_at: Date | null;
+        created_at: Date;
+      };
+
+      // 2. Re-validate transition using the locked, current status
+      if (action === "approve" && w.status !== "pending") {
+        throw Object.assign(new Error(`Cannot approve a ${w.status} request`), { code: "CONFLICT" });
+      }
+      if (action === "reject" && !["pending", "approved"].includes(w.status)) {
+        throw Object.assign(new Error(`Cannot reject a ${w.status} request`), { code: "CONFLICT" });
+      }
+      if (action === "process" && w.status !== "approved") {
+        throw Object.assign(new Error("Only approved withdrawals can be marked as processed"), { code: "CONFLICT" });
+      }
+
+      if (action === "approve") {
+        // Lock balance row and deduct atomically
+        const balRows = await tx.execute(
+          sql`SELECT available FROM user_balances WHERE user_id = ${w.user_id} FOR UPDATE`
+        ) as { rows: { available: string }[] };
+
+        if (balRows.rows.length === 0) {
+          throw Object.assign(new Error("Insufficient balance"), { code: "INSUF" });
+        }
+        const current = parseFloat(balRows.rows[0].available ?? "0");
+        const amount  = parseFloat(w.amount);
+        if (current < amount) {
+          throw Object.assign(new Error("Insufficient balance"), { code: "INSUF" });
+        }
+
+        const newAvailable = (current - amount).toFixed(8);
+        await tx.update(userBalancesTable)
+          .set({ available: newAvailable, updatedAt: new Date() })
+          .where(eq(userBalancesTable.userId, w.user_id));
+
+        const txId = randomUUID();
+        await tx.insert(transactionsTable).values({
+          id:          txId,
+          userId:      w.user_id,
+          type:        "withdrawal",
+          amount:      amount.toFixed(8),
+          currency:    "USDT",
+          status:      "pending",
+          reference:   w.id,
+          description: `Withdrawal to ${w.wallet_address}`,
+        });
+
+        await tx.update(withdrawalRequestsTable)
+          .set({ status: "approved", note: note ?? null, reviewedBy: adminId, reviewedAt: new Date(), transactionId: txId })
+          .where(eq(withdrawalRequestsTable.id, id));
+
+      } else if (action === "reject") {
+        // If previously approved, refund the balance and cancel the transaction
+        if (w.status === "approved" && w.transaction_id) {
+          const amount = parseFloat(w.amount);
+          await tx.execute(
+            sql`UPDATE user_balances SET available = available + ${amount.toFixed(8)}, updated_at = NOW() WHERE user_id = ${w.user_id}`
+          );
+          await tx.update(transactionsTable)
+            .set({ status: "cancelled" })
+            .where(eq(transactionsTable.id, w.transaction_id));
+        }
+        await tx.update(withdrawalRequestsTable)
+          .set({ status: "rejected", note: note ?? null, reviewedBy: adminId, reviewedAt: new Date() })
+          .where(eq(withdrawalRequestsTable.id, id));
+
+      } else if (action === "process") {
+        await tx.update(withdrawalRequestsTable)
+          .set({ status: "processed", note: note ?? w.note, reviewedBy: adminId, reviewedAt: new Date() })
+          .where(eq(withdrawalRequestsTable.id, id));
+
+        if (w.transaction_id) {
+          await tx.update(transactionsTable)
+            .set({ status: "completed" })
+            .where(eq(transactionsTable.id, w.transaction_id));
+        }
+      }
+
+      // 3. Read the final state inside the same transaction
+      const [final] = await tx
+        .select()
+        .from(withdrawalRequestsTable)
+        .where(eq(withdrawalRequestsTable.id, id));
+      updatedWithdrawal = final;
+    });
+
+    res.json(updatedWithdrawal);
+  } catch (err: any) {
+    if (err?.code === "NOT_FOUND") {
+      res.status(404).json({ error: "not_found", message: "Withdrawal request not found" });
+      return;
+    }
+    if (err?.code === "CONFLICT") {
+      res.status(409).json({ error: "conflict", message: err.message });
+      return;
+    }
+    if (err?.code === "INSUF") {
+      res.status(409).json({ error: "conflict", message: "User has insufficient balance for this withdrawal" });
+      return;
+    }
+    req.log.error({ err }, "admin review withdrawal error");
+    res.status(500).json({ error: "internal", message: "Failed to review withdrawal" });
   }
 });
 

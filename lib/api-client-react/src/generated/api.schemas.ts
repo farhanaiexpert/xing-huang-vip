@@ -266,3 +266,58 @@ export interface UpdatePlatformSettingsRequest {
   settings: UpdatePlatformSettingsRequestSettings;
 }
 
+export type WithdrawalRequestItemStatus = typeof WithdrawalRequestItemStatus[keyof typeof WithdrawalRequestItemStatus];
+
+
+export const WithdrawalRequestItemStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  processed: 'processed',
+} as const;
+
+export interface WithdrawalRequestItem {
+  id: string;
+  userId: string;
+  amount: string;
+  walletAddress: string;
+  currency: string;
+  status: WithdrawalRequestItemStatus;
+  note?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  transactionId?: string;
+  createdAt: string;
+}
+
+export interface CreateWithdrawalRequest {
+  /** Amount in USDT to withdraw */
+  amount: number;
+  /** Destination wallet address */
+  walletAddress: string;
+}
+
+export interface WithdrawalsListResponse {
+  withdrawals: WithdrawalRequestItem[];
+}
+
+export interface AdminWithdrawalsResponse {
+  withdrawals: WithdrawalRequestItem[];
+  total: number;
+}
+
+export type ReviewWithdrawalRequestAction = typeof ReviewWithdrawalRequestAction[keyof typeof ReviewWithdrawalRequestAction];
+
+
+export const ReviewWithdrawalRequestAction = {
+  approve: 'approve',
+  reject: 'reject',
+  process: 'process',
+} as const;
+
+export interface ReviewWithdrawalRequest {
+  action: ReviewWithdrawalRequestAction;
+  /** @maxLength 500 */
+  note?: string;
+}
+
