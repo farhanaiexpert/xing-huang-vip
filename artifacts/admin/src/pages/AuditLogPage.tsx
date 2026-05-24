@@ -4,6 +4,7 @@ import { api, AuditLog } from "@/lib/api";
 import { fmtDate } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DataTable, ColDef } from "@/components/DataTable";
 
 const PAGE_SIZE = 30;
 
@@ -30,9 +31,13 @@ function ExpandableDetails({ details }: { details: Record<string, unknown> }) {
   const preview = JSON.stringify(details).slice(0, 60);
   return (
     <div>
-      <button onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1 text-[#475569] hover:text-[#94A3B8] transition-colors">
-        <span className="font-mono truncate max-w-[180px]">{preview}{JSON.stringify(details).length > 60 ? "…" : ""}</span>
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
+        className="flex items-center gap-1 text-[#475569] hover:text-[#94A3B8] transition-colors"
+      >
+        <span className="font-mono truncate max-w-[180px]">
+          {preview}{JSON.stringify(details).length > 60 ? "…" : ""}
+        </span>
         <ChevronDown className={cn("w-3 h-3 shrink-0 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
@@ -62,10 +67,56 @@ export default function AuditLogPage() {
 
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  const adminIds = Array.from(new Set((data?.logs ?? []).map(l => ({ id: l.adminId, name: l.adminUsername }))));
+  const adminIds = Array.from(
+    new Map((data?.logs ?? []).map(l => [l.adminId, l.adminUsername])).entries()
+  ).map(([id, name]) => ({ id, name }));
 
   const sel = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors";
+
+  const cols: ColDef<AuditLog>[] = [
+    {
+      key: "admin", label: "Admin",
+      render: log => (
+        <div>
+          <div className="text-white text-sm font-medium">{log.adminUsername ?? "—"}</div>
+          <div className="text-[11px] text-[#475569]">uid:{log.adminId}</div>
+        </div>
+      ),
+    },
+    {
+      key: "action", label: "Action", sortable: true,
+      getValue: log => log.action,
+      render: log => (
+        <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-mono font-medium", actionBadgeClass(log.action))}>
+          {log.action}
+        </span>
+      ),
+    },
+    {
+      key: "entity", label: "Entity",
+      render: log => (
+        log.entityType ? (
+          <span className="text-[#64748B] text-xs font-mono">
+            {log.entityType}
+            {log.entityId ? <span className="text-[#475569]"> #{log.entityId}</span> : ""}
+          </span>
+        ) : <span className="text-[#334155] text-xs">—</span>
+      ),
+    },
+    {
+      key: "details", label: "Details",
+      render: log => (
+        log.details
+          ? <ExpandableDetails details={log.details} />
+          : <span className="text-[#334155] text-xs">—</span>
+      ),
+    },
+    {
+      key: "time", label: "Time", sortable: true,
+      getValue: log => log.createdAt,
+      render: log => <span className="text-[#475569] text-xs whitespace-nowrap">{fmtDate(log.createdAt)}</span>,
+    },
+  ];
 
   return (
     <div className="space-y-5">
@@ -96,71 +147,29 @@ export default function AuditLogPage() {
         </div>
       </div>
 
-      <div className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/8 text-[#475569] text-[11px] uppercase tracking-wider bg-white/2">
-                <th className="text-left px-4 py-3 font-medium">Admin</th>
-                <th className="text-left px-4 py-3 font-medium">Action</th>
-                <th className="text-left px-4 py-3 font-medium">Entity</th>
-                <th className="text-left px-4 py-3 font-medium">Details</th>
-                <th className="text-left px-4 py-3 font-medium">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={i} className="border-b border-white/5">
-                    {Array.from({ length: 5 }).map((__, j) => (
-                      <td key={j} className="px-4 py-3.5">
-                        <div className="h-3.5 bg-white/5 rounded animate-pulse" style={{ width: `${50 + (j * 15) % 45}%` }} />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : data?.logs.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-16 text-[#334155]">No audit entries</td></tr>
-              ) : data?.logs.map(log => (
-                <tr key={log.id} className="border-b border-white/5 hover:bg-white/2 transition-colors">
-                  <td className="px-4 py-3.5">
-                    <div className="text-white text-sm font-medium">{log.adminUsername ?? "—"}</div>
-                    <div className="text-[11px] text-[#475569]">uid:{log.adminId}</div>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-mono font-medium", actionBadgeClass(log.action))}>
-                      {log.action}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-[#64748B] text-xs">
-                    {log.entityType ? (
-                      <span className="font-mono">{log.entityType}{log.entityId ? <span className="text-[#475569]"> #{log.entityId}</span> : ""}</span>
-                    ) : "—"}
-                  </td>
-                  <td className="px-4 py-3.5 text-xs">
-                    {log.details ? <ExpandableDetails details={log.details} /> : <span className="text-[#334155]">—</span>}
-                  </td>
-                  <td className="px-4 py-3.5 text-[#475569] text-xs whitespace-nowrap">{fmtDate(log.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-white/8 text-[#475569]">
-          <span className="text-xs">Page {page} of {pages} · {total.toLocaleString()} entries</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs px-2">{page}</span>
-            <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
+      <DataTable
+        cols={cols}
+        rows={data?.logs}
+        loading={isLoading}
+        rowKey={log => log.id}
+        empty="No audit entries"
+        footer={
+          <div className="flex items-center justify-between">
+            <span className="text-xs">Page {page} of {pages} · {total.toLocaleString()} entries</span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-xs px-2">{page}</span>
+              <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
+                className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 }

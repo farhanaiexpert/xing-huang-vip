@@ -227,7 +227,7 @@ router.post("/admin/users", async (req, res): Promise<void> => {
   }).returning({ id: usersTable.id, username: usersTable.username, email: usersTable.email });
 
   await db.insert(walletsTable).values({ userId: newUser.id });
-  await logAdminAction((req as { user: { id: number } }).user.id, "create_user", "user", newUser.id, { username, role });
+  await logAdminAction(req.user!.userId, "create_user", "user", newUser.id, { username, role });
   res.status(201).json(newUser);
 });
 
@@ -459,6 +459,28 @@ router.patch("/admin/bets/:id", async (req, res): Promise<void> => {
 
   const [updated] = await db.select().from(betsTable).where(eq(betsTable.id, id)).limit(1);
   res.json(updated);
+});
+
+// ─── Transactions pending totals (aggregate — no page cap) ───────────────────
+router.get("/admin/transactions/pending-totals", async (req, res): Promise<void> => {
+  const result = await db.execute(sql`
+    SELECT
+      COALESCE(SUM(amount::numeric) FILTER (WHERE type = 'deposit' AND status = 'pending'), 0)::text AS deposit_total,
+      COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending') AS deposit_count,
+      COALESCE(SUM(amount::numeric) FILTER (WHERE type = 'withdrawal' AND status = 'pending'), 0)::text AS withdrawal_total,
+      COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending') AS withdrawal_count
+    FROM transactions
+  `);
+  const row = result.rows[0] as {
+    deposit_total: string; deposit_count: string;
+    withdrawal_total: string; withdrawal_count: string;
+  };
+  res.json({
+    pendingDepositTotal: row.deposit_total,
+    pendingDepositCount: Number(row.deposit_count),
+    pendingWithdrawalTotal: row.withdrawal_total,
+    pendingWithdrawalCount: Number(row.withdrawal_count),
+  });
 });
 
 // ─── Transactions ─────────────────────────────────────────────────────────────

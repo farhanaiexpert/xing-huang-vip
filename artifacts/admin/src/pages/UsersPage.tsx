@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataTable, ColDef } from "@/components/DataTable";
 
 const PAGE_SIZE = 20;
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
@@ -24,17 +25,6 @@ function kycBadge(kyc: string) {
   return "bg-white/5 text-[#94A3B8] border-white/10";
 }
 
-function SkeletonRow({ cols }: { cols: number }) {
-  return (
-    <tr className="border-b border-white/5">
-      {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="px-4 py-3.5">
-          <div className="h-3.5 bg-white/5 rounded animate-pulse" style={{ width: `${60 + (i * 17) % 40}%` }} />
-        </td>
-      ))}
-    </tr>
-  );
-}
 
 function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const qc = useQueryClient();
@@ -373,92 +363,108 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/8 text-[#475569] text-[11px] uppercase tracking-wider bg-white/2">
-                <th className="text-left px-4 py-3 font-medium">User</th>
-                <th className="text-left px-4 py-3 font-medium">Role</th>
-                <th className="text-left px-4 py-3 font-medium">KYC</th>
-                <th className="text-left px-4 py-3 font-medium">Balance</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-left px-4 py-3 font-medium">Joined</th>
-                <th className="text-left px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={7} />)
-              ) : data?.users.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-16 text-[#334155]">No users found</td></tr>
-              ) : data?.users.map(u => (
-                <tr key={u.id}
-                  className="border-b border-white/5 hover:bg-white/2 transition-colors cursor-pointer"
-                  onClick={() => setSelectedUser(u)}
+      {(() => {
+        const cols: ColDef<AdminUser>[] = [
+          {
+            key: "user", label: "User",
+            render: u => (
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                  <User className="w-3.5 h-3.5 text-[#475569]" />
+                </div>
+                <div>
+                  <div className="font-medium text-white text-sm">{u.username}</div>
+                  <div className="text-[11px] text-[#475569]">{u.email}</div>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: "role", label: "Role", sortable: true,
+            getValue: u => u.role,
+            render: u => (
+              <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", roleBadge(u.role))}>
+                {u.role.replace(/_/g, " ")}
+              </span>
+            ),
+          },
+          {
+            key: "kyc", label: "KYC", sortable: true,
+            getValue: u => u.kycStatus,
+            render: u => (
+              <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", kycBadge(u.kycStatus))}>
+                {u.kycStatus}
+              </span>
+            ),
+          },
+          {
+            key: "balance", label: "Balance", sortable: true,
+            getValue: u => parseFloat(u.balance ?? "0"),
+            render: u => (
+              <span className="text-[#00DFA9] font-mono text-xs font-semibold">
+                {u.balance !== null ? `$${fmt(u.balance)}` : "—"}
+              </span>
+            ),
+          },
+          {
+            key: "status", label: "Status", sortable: true,
+            getValue: u => u.isSuspended ? "suspended" : "active",
+            render: u => (
+              <span className={cn("px-2 py-0.5 rounded-full text-[11px] border", u.isSuspended ? statusBg("rejected") : statusBg("active"))}>
+                {u.isSuspended ? "Suspended" : "Active"}
+              </span>
+            ),
+          },
+          {
+            key: "joined", label: "Joined", sortable: true,
+            getValue: u => u.createdAt,
+            render: u => <span className="text-[#475569] text-xs whitespace-nowrap">{fmtDate(u.createdAt)}</span>,
+          },
+          {
+            key: "actions", label: "Actions",
+            render: u => (
+              <div onClick={e => e.stopPropagation()}>
+                <button
+                  onClick={() => suspendMut.mutate({ id: u.id, suspend: !u.isSuspended })}
+                  title={u.isSuspended ? "Unsuspend" : "Suspend"}
+                  className={cn("p-1.5 rounded-lg transition-colors", u.isSuspended
+                    ? "text-[#00DFA9] hover:bg-[#00DFA9]/10"
+                    : "text-red-400 hover:bg-red-500/10"
+                  )}
                 >
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                        <User className="w-3.5 h-3.5 text-[#475569]" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-white text-sm">{u.username}</div>
-                        <div className="text-[11px] text-[#475569]">{u.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", roleBadge(u.role))}>
-                      {u.role.replace(/_/g, " ")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", kycBadge(u.kycStatus))}>
-                      {u.kycStatus}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-[#00DFA9] font-mono text-xs font-semibold">
-                    {u.balance !== null ? `$${fmt(u.balance)}` : "—"}
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={cn("px-2 py-0.5 rounded-full text-[11px] border", u.isSuspended ? statusBg("rejected") : statusBg("active"))}>
-                      {u.isSuspended ? "Suspended" : "Active"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-[#475569] text-xs">{fmtDate(u.createdAt)}</td>
-                  <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
-                    <button
-                      onClick={() => suspendMut.mutate({ id: u.id, suspend: !u.isSuspended })}
-                      title={u.isSuspended ? "Unsuspend" : "Suspend"}
-                      className={cn("p-1.5 rounded-lg transition-colors", u.isSuspended
-                        ? "text-[#00DFA9] hover:bg-[#00DFA9]/10"
-                        : "text-red-400 hover:bg-red-500/10"
-                      )}
-                    >
-                      {u.isSuspended ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-white/8 text-sm text-[#475569]">
-          <span className="text-xs">Page {page} of {pages} · click a row to view details</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs px-2">{page}</span>
-            <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+                  {u.isSuspended ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                </button>
+              </div>
+            ),
+          },
+        ];
+        return (
+          <DataTable
+            cols={cols}
+            rows={data?.users}
+            loading={isLoading}
+            rowKey={u => u.id}
+            onRowClick={u => setSelectedUser(u)}
+            empty="No users found"
+            footer={
+              <div className="flex items-center justify-between">
+                <span className="text-xs">Page {page} of {pages} · click a row to view details</span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                    className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs px-2">{page}</span>
+                  <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
+                    className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            }
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -166,6 +166,13 @@ export interface AdminPool {
   correctOutcome: string | null;
 }
 
+export interface PendingTotals {
+  pendingDepositTotal: string;
+  pendingDepositCount: number;
+  pendingWithdrawalTotal: string;
+  pendingWithdrawalCount: number;
+}
+
 export interface AuditLog {
   id: number;
   adminId: number;
