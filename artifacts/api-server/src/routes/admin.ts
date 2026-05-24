@@ -832,7 +832,7 @@ router.get("/admin/audit-logs", async (req, res): Promise<void> => {
   const offset = (pageNum - 1) * limitNum;
 
   const conditions = [];
-  if (action) conditions.push(eq(adminLogsTable.action, action));
+  if (action) conditions.push(like(adminLogsTable.action, `${action}%`));
   if (adminId) conditions.push(eq(adminLogsTable.adminId, parseInt(adminId)));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 

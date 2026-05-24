@@ -23,7 +23,9 @@ export function statusBg(status: string): string {
     case "won":
     case "completed":
     case "paid":
-    case "active":     return "bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/20";
+    case "active":
+    case "approved":
+    case "verified":   return "bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/20";
     case "lost":
     case "rejected":   return "bg-red-500/10 text-red-400 border-red-500/20";
     case "void":

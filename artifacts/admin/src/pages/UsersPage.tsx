@@ -19,7 +19,7 @@ function roleBadge(role: string) {
 }
 
 function kycBadge(kyc: string) {
-  if (kyc === "verified") return "bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/20";
+  if (kyc === "verified" || kyc === "approved") return "bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/20";
   if (kyc === "pending") return "bg-[#FACC15]/10 text-[#FACC15] border-[#FACC15]/20";
   if (kyc === "rejected") return "bg-red-500/10 text-red-400 border-red-500/20";
   return "bg-white/5 text-[#94A3B8] border-white/10";
