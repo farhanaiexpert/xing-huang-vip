@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, AdminBet } from "@/lib/api";
+import { api, AdminBet, AdminUser } from "@/lib/api";
 import { fmt, fmtDate, statusBg } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Search, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, AlertTriangle, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const PAGE_SIZE = 20;
 
@@ -20,12 +21,74 @@ function SkeletonRow({ cols }: { cols: number }) {
   );
 }
 
+function UserSheet({ username, onClose }: { username: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery<{ users: AdminUser[]; total: number }>({
+    queryKey: ["bet-user-lookup", username],
+    queryFn: () => api.get(`/admin/users?search=${encodeURIComponent(username)}&limit=1`),
+  });
+
+  const user = data?.users?.[0];
+
+  return (
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-[360px] max-w-full bg-[#0B0F14] border-l border-white/8">
+        <SheetHeader className="pb-4 border-b border-white/8">
+          <SheetTitle className="text-white text-base">User Details</SheetTitle>
+        </SheetHeader>
+        {isLoading ? (
+          <div className="mt-5 space-y-3 animate-pulse">
+            {[80, 60, 70].map((w, i) => (
+              <div key={i} className="h-4 bg-white/5 rounded" style={{ width: `${w}%` }} />
+            ))}
+          </div>
+        ) : !user ? (
+          <div className="mt-8 text-center text-[#475569] text-sm">User not found</div>
+        ) : (
+          <div className="mt-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#38BDF8]/10 flex items-center justify-center">
+                <span className="text-[#38BDF8] font-bold uppercase">{user.username.slice(0, 1)}</span>
+              </div>
+              <div>
+                <div className="text-white font-semibold">{user.username}</div>
+                <div className="text-xs text-[#475569]">{user.email}</div>
+              </div>
+            </div>
+            <div className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">
+              {[
+                ["User ID", `#${user.id}`],
+                ["Role", user.role],
+                ["KYC", user.kycStatus],
+                ["Country", user.country ?? "—"],
+                ["Balance", user.balance !== null ? `$${fmt(user.balance)} USDT` : "—"],
+                ["Joined", fmtDate(user.createdAt)],
+              ].map(([label, value]) => (
+                <div key={label} className="flex justify-between text-sm px-4 py-2.5 border-b border-white/5 last:border-0">
+                  <span className="text-[#64748B]">{label}</span>
+                  <span className="text-white font-mono text-xs">{value}</span>
+                </div>
+              ))}
+              <div className="flex justify-between text-sm px-4 py-2.5">
+                <span className="text-[#64748B]">Status</span>
+                <span className={cn("px-2 py-0.5 rounded-full text-xs border", statusBg(user.isSuspended ? "rejected" : "active"))}>
+                  {user.isSuspended ? "Suspended" : "Active"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export default function BetsPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
+  const [userSheet, setUserSheet] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<{ bets: AdminBet[]; total: number }>({
     queryKey: ["admin-bets", page, status, q],
@@ -56,6 +119,8 @@ export default function BetsPage() {
 
   return (
     <div className="space-y-5">
+      {userSheet && <UserSheet username={userSheet} onClose={() => setUserSheet(null)} />}
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Bets</h1>
@@ -68,6 +133,12 @@ export default function BetsPage() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Username…"
                 className="pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] w-44 transition-colors" />
             </div>
+            {q && (
+              <button type="button" onClick={() => { setQ(""); setSearch(""); setPage(1); }}
+                className="p-2 bg-white/5 text-[#475569] rounded-lg hover:bg-white/10 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            )}
             <button type="submit" className="px-3 py-2 bg-white/8 border border-white/10 text-[#94A3B8] rounded-lg text-sm hover:bg-white/12 transition-colors">Search</button>
           </form>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className={sel}>
@@ -76,7 +147,6 @@ export default function BetsPage() {
             <option value="won">Won</option>
             <option value="lost">Lost</option>
             <option value="void">Void</option>
-            <option value="settled">Settled</option>
           </select>
         </div>
       </div>
@@ -98,6 +168,7 @@ export default function BetsPage() {
               <tr className="border-b border-white/8 text-[#475569] text-[11px] uppercase tracking-wider bg-white/2">
                 <th className="text-left px-4 py-3 font-medium">ID</th>
                 <th className="text-left px-4 py-3 font-medium">User</th>
+                <th className="text-left px-4 py-3 font-medium">Match</th>
                 <th className="text-left px-4 py-3 font-medium">Type</th>
                 <th className="text-left px-4 py-3 font-medium">Stake</th>
                 <th className="text-left px-4 py-3 font-medium">Odds</th>
@@ -109,13 +180,24 @@ export default function BetsPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={9} />)
+                Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={10} />)
               ) : data?.bets.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-16 text-[#334155]">No bets found</td></tr>
+                <tr><td colSpan={10} className="text-center py-16 text-[#334155]">No bets found</td></tr>
               ) : data?.bets.map(b => (
                 <tr key={b.id} className="border-b border-white/5 hover:bg-white/2 transition-colors">
                   <td className="px-4 py-3.5 text-[#475569] font-mono text-xs">#{b.id}</td>
-                  <td className="px-4 py-3.5 text-white text-sm font-medium">{b.username ?? `uid:${b.userId}`}</td>
+                  <td className="px-4 py-3.5">
+                    <button
+                      onClick={() => setUserSheet(b.username ?? null)}
+                      disabled={!b.username}
+                      className="text-[#38BDF8] text-sm font-medium hover:text-white hover:underline transition-colors disabled:text-[#475569] disabled:no-underline"
+                    >
+                      {b.username ?? `uid:${b.userId}`}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3.5 text-[#64748B] text-xs max-w-[160px] truncate" title={b.eventName ?? ""}>
+                    {b.eventName ?? <span className="text-[#334155]">—</span>}
+                  </td>
                   <td className="px-4 py-3.5 text-[#64748B] capitalize text-xs">{b.type}</td>
                   <td className="px-4 py-3.5 text-[#FACC15] font-mono text-xs font-semibold">${fmt(b.stake)}</td>
                   <td className="px-4 py-3.5 text-white font-mono text-xs">{fmt(b.totalOdds, 3)}×</td>

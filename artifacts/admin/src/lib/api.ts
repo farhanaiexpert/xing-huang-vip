@@ -95,6 +95,7 @@ export interface AdminBet {
   status: string;
   settledAt: string | null;
   createdAt: string;
+  eventName: string | null;
 }
 
 export interface AdminTransaction {
@@ -118,6 +119,13 @@ export interface AdminReferral {
   createdAt: string;
 }
 
+export interface TopReferrer {
+  referrerId: number;
+  name: string;
+  commission: number;
+  count: number;
+}
+
 export interface AdminReferralsResponse {
   referrals: AdminReferral[];
   stats: {
@@ -125,6 +133,7 @@ export interface AdminReferralsResponse {
     totalCommissions: string;
     totalPaid: string;
   };
+  topReferrersByCommission: TopReferrer[];
 }
 
 export interface AdminPromotion {
@@ -169,13 +178,6 @@ export interface AuditLog {
 
 export interface BetsChartRow { day: string; count: number; volume: string }
 export interface UsersChartRow { day: string; count: number }
+export interface RevenueChartRow { day: string; stakes: string; payouts: string }
 
-export interface RecentActivityItem {
-  id: number;
-  type: string;
-  category: "bet" | "transaction";
-  username: string | null;
-  amount: string;
-  status: string;
-  createdAt: string;
-}
+export type RecentActivityItem = AuditLog;

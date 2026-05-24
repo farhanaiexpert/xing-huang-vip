@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, AdminReferral, AdminReferralsResponse } from "@/lib/api";
+import { api, AdminReferral, AdminReferralsResponse, TopReferrer } from "@/lib/api";
 import { fmt, fmtDate } from "@/lib/utils";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
@@ -27,12 +27,16 @@ function groupByReferrer(referrals: AdminReferral[]): ReferrerGroup[] {
   return Array.from(map.values()).sort((a, b) => b.referrals.length - a.referrals.length);
 }
 
-const ChartTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
+const ChartTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string }[]; label?: string }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[#0D1117] border border-white/12 rounded-lg p-2.5 text-xs shadow-xl">
-      <div className="text-[#64748B] mb-1">{label}</div>
-      <div className="text-[#38BDF8] font-semibold">{payload[0].value} referrals</div>
+      <div className="text-[#64748B] mb-1.5">{label}</div>
+      {payload.map(p => (
+        <div key={p.name} className="text-[#FACC15] font-semibold">
+          ${p.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT commission
+        </div>
+      ))}
     </div>
   );
 };
@@ -49,11 +53,7 @@ export default function ReferralsPage() {
   const referrals: AdminReferral[] = data?.referrals ?? [];
   const stats = data?.stats;
   const groups = groupByReferrer(referrals);
-
-  const top10 = groups.slice(0, 10).map(g => ({
-    name: g.referrerUsername ?? `uid:${g.referrerId}`,
-    count: g.referrals.length,
-  }));
+  const top10: TopReferrer[] = data?.topReferrersByCommission ?? [];
 
   function toggleExpand(id: number) {
     setExpanded(prev => {
@@ -105,17 +105,20 @@ export default function ReferralsPage() {
 
       {view === "chart" && (
         <div className="bg-[#0D1117] border border-white/8 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-white mb-4">Top 10 Referrers</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-white">Top 10 Referrers by Commission Earned</h2>
+            <span className="text-xs text-[#475569]">USDT</span>
+          </div>
           {top10.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-[#334155] text-sm">No referral data yet</div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={top10} layout="vertical" margin={{ top: 4, right: 16, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: "#334155", fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <XAxis type="number" tick={{ fill: "#334155", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" tick={{ fill: "#64748B", fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                <Bar dataKey="commission" radius={[0, 4, 4, 0]}>
                   {top10.map((_, i) => (
                     <Cell key={i} fill={i === 0 ? "#FACC15" : i === 1 ? "#94A3B8" : i === 2 ? "#CD7C54" : "#38BDF8"} fillOpacity={0.75} />
                   ))}

@@ -117,43 +117,37 @@ router.get("/admin/stats/users-chart", async (req, res): Promise<void> => {
   res.json(rows.rows);
 });
 
+router.get("/admin/stats/revenue-chart", async (req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'MM-DD') AS day,
+      coalesce(sum(stake), 0)::text AS stakes,
+      coalesce(sum(CASE WHEN status = 'won' THEN potential_return ELSE 0 END), 0)::text AS payouts
+    FROM bets
+    WHERE created_at >= now() - interval '30 days'
+    GROUP BY date_trunc('day', created_at AT TIME ZONE 'UTC')
+    ORDER BY date_trunc('day', created_at AT TIME ZONE 'UTC')
+  `);
+  res.json(rows.rows);
+});
+
 router.get("/admin/stats/recent-activity", async (req, res): Promise<void> => {
-  const recentBets = await db
+  const logs = await db
     .select({
-      id: betsTable.id,
-      type: sql<string>`'bet'`,
-      username: usersTable.username,
-      amount: betsTable.stake,
-      status: betsTable.status,
-      createdAt: betsTable.createdAt,
+      id: adminLogsTable.id,
+      adminId: adminLogsTable.adminId,
+      adminUsername: usersTable.username,
+      action: adminLogsTable.action,
+      entityType: adminLogsTable.entityType,
+      entityId: adminLogsTable.entityId,
+      details: adminLogsTable.details,
+      createdAt: adminLogsTable.createdAt,
     })
-    .from(betsTable)
-    .leftJoin(usersTable, eq(usersTable.id, betsTable.userId))
-    .orderBy(desc(betsTable.createdAt))
-    .limit(5);
-
-  const recentTxns = await db
-    .select({
-      id: transactionsTable.id,
-      type: transactionsTable.type,
-      username: usersTable.username,
-      amount: transactionsTable.amount,
-      status: transactionsTable.status,
-      createdAt: transactionsTable.createdAt,
-    })
-    .from(transactionsTable)
-    .leftJoin(usersTable, eq(usersTable.id, transactionsTable.userId))
-    .orderBy(desc(transactionsTable.createdAt))
-    .limit(5);
-
-  const combined = [
-    ...recentBets.map(b => ({ ...b, category: "bet" as const })),
-    ...recentTxns.map(t => ({ ...t, category: "transaction" as const })),
-  ]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 8);
-
-  res.json(combined);
+    .from(adminLogsTable)
+    .leftJoin(usersTable, eq(usersTable.id, adminLogsTable.adminId))
+    .orderBy(desc(adminLogsTable.createdAt))
+    .limit(10);
+  res.json(logs);
 });
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -214,6 +208,11 @@ router.post("/admin/users", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
   const { email, username, password, role } = parsed.data;
 
+  if ((role === "admin" || role === "super_admin") && req.user?.role !== "super_admin") {
+    res.status(403).json({ error: "Forbidden: only super admins can create admin accounts" });
+    return;
+  }
+
   const existing = await db.select({ id: usersTable.id }).from(usersTable)
     .where(or(eq(usersTable.email, email.toLowerCase()), eq(usersTable.username, username)))
     .limit(1);
@@ -269,6 +268,11 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
   const parsed = PatchUserBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const { isSuspended, role, kycStatus, balanceAdjustment, balanceNote } = parsed.data;
+
+  if (role !== undefined && (role === "admin" || role === "super_admin") && req.user?.role !== "super_admin") {
+    res.status(403).json({ error: "Forbidden: only super admins can assign admin roles" });
+    return;
+  }
 
   const updates: Record<string, unknown> = {};
   if (isSuspended !== undefined) updates.isSuspended = isSuspended;
@@ -359,12 +363,15 @@ router.get("/admin/users/:id/transactions", async (req, res): Promise<void> => {
 
 // ─── Bets ────────────────────────────────────────────────────────────────────
 router.get("/admin/bets", async (req, res): Promise<void> => {
-  const { status, page = "1", limit = "20" } = req.query as Record<string, string>;
+  const { status, search, page = "1", limit = "20" } = req.query as Record<string, string>;
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
   const offset = (pageNum - 1) * limitNum;
 
-  const where = status ? eq(betsTable.status, status) : undefined;
+  const conditions = [];
+  if (status) conditions.push(eq(betsTable.status, status));
+  if (search) conditions.push(ilike(usersTable.username, `%${search}%`));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const bets = await db
     .select({
@@ -378,6 +385,7 @@ router.get("/admin/bets", async (req, res): Promise<void> => {
       status: betsTable.status,
       settledAt: betsTable.settledAt,
       createdAt: betsTable.createdAt,
+      eventName: sql<string | null>`(SELECT event_name FROM bet_selections WHERE bet_id = ${betsTable.id} LIMIT 1)`,
     })
     .from(betsTable)
     .leftJoin(usersTable, eq(usersTable.id, betsTable.userId))
@@ -386,7 +394,11 @@ router.get("/admin/bets", async (req, res): Promise<void> => {
     .limit(limitNum)
     .offset(offset);
 
-  const [total] = await db.select({ count: count() }).from(betsTable).where(where);
+  const [total] = await db
+    .select({ count: count() })
+    .from(betsTable)
+    .leftJoin(usersTable, eq(usersTable.id, betsTable.userId))
+    .where(where);
 
   res.json({ bets, total: Number(total.count), page: pageNum, limit: limitNum });
 });
@@ -538,10 +550,41 @@ router.get("/admin/referrals", async (req, res): Promise<void> => {
     .from(referralsTable)
     .leftJoin(usersTable, eq(usersTable.id, referralsTable.referrerId))
     .orderBy(desc(referralsTable.createdAt))
-    .limit(100);
+    .limit(500);
 
   const [commTotal] = await db.select({ total: sum(commissionsTable.amount) }).from(commissionsTable);
   const [commPaid] = await db.select({ total: sum(commissionsTable.amount) }).from(commissionsTable).where(eq(commissionsTable.status, "paid"));
+
+  const commByReferrerRows = await db.execute(sql`
+    SELECT r.referrer_id AS "referrerId", COALESCE(SUM(c.amount), 0)::text AS total
+    FROM commissions c
+    JOIN referrals r ON r.id = c.referral_id
+    GROUP BY r.referrer_id
+  `);
+  const commMap = new Map<number, string>(
+    (commByReferrerRows.rows as { referrerId: number; total: string }[])
+      .map(r => [Number(r.referrerId), r.total])
+  );
+
+  // Count referrals per referrer and compute top 10 by commission
+  const referrerMap = new Map<number, { referrerId: number; referrerUsername: string | null; count: number }>();
+  for (const r of referrals as Array<{ referrerId: number; referrerUsername: string | null }>) {
+    const existing = referrerMap.get(r.referrerId);
+    if (existing) {
+      existing.count++;
+    } else {
+      referrerMap.set(r.referrerId, { referrerId: r.referrerId, referrerUsername: r.referrerUsername, count: 1 });
+    }
+  }
+  const topReferrersByCommission = Array.from(referrerMap.values())
+    .map(r => ({
+      referrerId: r.referrerId,
+      name: r.referrerUsername ?? `uid:${r.referrerId}`,
+      commission: parseFloat(commMap.get(r.referrerId) ?? "0"),
+      count: r.count,
+    }))
+    .sort((a, b) => b.commission - a.commission)
+    .slice(0, 10);
 
   res.json({
     referrals,
@@ -550,6 +593,7 @@ router.get("/admin/referrals", async (req, res): Promise<void> => {
       totalCommissions: commTotal.total ?? "0",
       totalPaid: commPaid.total ?? "0",
     },
+    topReferrersByCommission,
   });
 });
 
@@ -759,10 +803,15 @@ router.delete("/admin/pools/:id", async (req, res): Promise<void> => {
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 router.get("/admin/audit-logs", async (req, res): Promise<void> => {
-  const { page = "1", limit = "50" } = req.query as Record<string, string>;
+  const { page = "1", limit = "50", action, adminId } = req.query as Record<string, string>;
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
   const offset = (pageNum - 1) * limitNum;
+
+  const conditions = [];
+  if (action) conditions.push(eq(adminLogsTable.action, action));
+  if (adminId) conditions.push(eq(adminLogsTable.adminId, parseInt(adminId)));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const logs = await db
     .select({
@@ -777,11 +826,12 @@ router.get("/admin/audit-logs", async (req, res): Promise<void> => {
     })
     .from(adminLogsTable)
     .leftJoin(usersTable, eq(usersTable.id, adminLogsTable.adminId))
+    .where(where)
     .orderBy(desc(adminLogsTable.createdAt))
     .limit(limitNum)
     .offset(offset);
 
-  const [total] = await db.select({ count: count() }).from(adminLogsTable);
+  const [total] = await db.select({ count: count() }).from(adminLogsTable).where(where);
   res.json({ logs, total: Number(total.count), page: pageNum, limit: limitNum });
 });
 
