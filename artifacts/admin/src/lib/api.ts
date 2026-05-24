@@ -135,6 +135,7 @@ export interface AdminPool {
   settledAt: string | null;
   createdAt: string;
   entryCount: number;
+  correctOutcome: string | null;
 }
 
 export interface AuditLog {

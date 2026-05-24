@@ -565,7 +565,7 @@ router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
 
   // Idempotency: reject if pool is already settled
   const [current] = await db
-    .select({ status: predictionPoolsTable.status, prizePool: predictionPoolsTable.prizePool })
+    .select({ status: predictionPoolsTable.status })
     .from(predictionPoolsTable)
     .where(eq(predictionPoolsTable.id, id))
     .limit(1);
@@ -575,12 +575,12 @@ router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  // Build update — persist outcome on the pool record via eventId (prefixed for clarity)
+  // Build update — persist correctOutcome in its dedicated column
   const setFields: Record<string, unknown> = { ...poolFields };
   if (poolFields.deadline) setFields.deadline = new Date(poolFields.deadline);
   if (poolFields.status === "settled") {
     setFields.settledAt = new Date();
-    if (outcome) setFields.eventId = `outcome:${outcome}`;
+    if (outcome !== undefined) setFields.correctOutcome = outcome;
   }
 
   const [updated] = await db
@@ -589,22 +589,29 @@ router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
     .where(eq(predictionPoolsTable.id, id))
     .returning();
 
-  // Prize distribution: equal share to every entrant
-  // (The correct outcome is recorded for audit; picks evaluation requires
-  //  a defined picks schema which is out of scope for this task)
   let settledRecipientCount = 0;
   let totalDistributed = "0";
 
-  if (poolFields.status === "settled" && updated) {
+  if (poolFields.status === "settled" && updated && outcome !== undefined) {
+    // Load all entries with their picks
     const entries = await db
-      .select({ userId: poolEntriesTable.userId })
+      .select({ userId: poolEntriesTable.userId, picks: poolEntriesTable.picks })
       .from(poolEntriesTable)
       .where(eq(poolEntriesTable.poolId, id));
 
     if (entries.length > 0 && Number(updated.prizePool) > 0) {
-      const prizePerEntry = Number(updated.prizePool) / entries.length;
+      // Evaluate picks against the correct outcome.
+      // Picks format: { outcome: string } — winners are entries where picks.outcome matches.
+      // Fall back to all entrants when no entries have a matching pick (e.g. empty picks {}).
+      const winners = entries.filter((e: { userId: number; picks: unknown }) => {
+        const p = e.picks as { outcome?: string } | null;
+        return p && typeof p.outcome === "string" && p.outcome === outcome;
+      });
+      const recipients = winners.length > 0 ? winners : entries;
+
+      const prizePerEntry = Number(updated.prizePool) / recipients.length;
       const prizeStr = prizePerEntry.toFixed(8);
-      for (const entry of entries) {
+      for (const entry of recipients) {
         await db
           .update(walletsTable)
           .set({ balanceUsdt: sql`balance_usdt + ${prizeStr}` })
@@ -614,12 +621,10 @@ router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
           type: "credit",
           amount: prizeStr,
           status: "completed",
-          notes: outcome
-            ? `Pool #${id} settlement — outcome: ${outcome}`
-            : `Pool #${id} prize distribution`,
+          notes: `Pool #${id} settlement — outcome: ${outcome}`,
         });
       }
-      settledRecipientCount = entries.length;
+      settledRecipientCount = recipients.length;
       totalDistributed = Number(updated.prizePool).toFixed(2);
     }
   }

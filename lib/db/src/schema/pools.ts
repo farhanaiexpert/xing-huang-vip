@@ -8,6 +8,8 @@ export const predictionPoolsTable = pgTable("prediction_pools", {
   title: text("title").notNull(),
   sport: text("sport").notNull(),
   eventId: text("event_id"),
+  /** The correct outcome string set by admin at settlement time (e.g. "home_win", "draw"). */
+  correctOutcome: text("correct_outcome"),
   prizePool: numeric("prize_pool", { precision: 20, scale: 8 }).notNull().default("0"),
   entryFee: numeric("entry_fee", { precision: 20, scale: 8 }).notNull().default("0"),
   status: text("status").notNull().default("open"),

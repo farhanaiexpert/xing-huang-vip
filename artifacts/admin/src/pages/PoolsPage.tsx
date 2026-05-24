@@ -78,16 +78,15 @@ export default function PoolsPage() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-sm text-[#94A3B8]">
-              Set the correct outcome for this pool. All entries will be evaluated and prizes distributed accordingly.
+              Enter the correct outcome. Entries whose <code className="text-[#38BDF8] text-xs">picks.outcome</code> field matches this string exactly will receive an equal share of the prize pool. If no entries match, all entrants share equally.
             </p>
             <div>
-              <label className="block text-xs text-[#94A3B8] mb-1">Correct Outcome / Result Notes</label>
-              <textarea
+              <label className="block text-xs text-[#94A3B8] mb-1">Correct Outcome</label>
+              <input
                 className={inp}
-                rows={3}
                 value={outcome}
                 onChange={e => setOutcome(e.target.value)}
-                placeholder="e.g. Home win, final score 2-1, Player A wins…"
+                placeholder="e.g. home_win, away_win, draw, player_a"
               />
             </div>
           </div>
@@ -171,15 +170,16 @@ export default function PoolsPage() {
                 <th className="text-left px-4 py-3">Fee</th>
                 <th className="text-left px-4 py-3">Entries</th>
                 <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3">Outcome</th>
                 <th className="text-left px-4 py-3">Deadline</th>
                 <th className="text-left px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={8} className="text-center py-12 text-[#94A3B8]">Loading…</td></tr>
+                <tr><td colSpan={9} className="text-center py-12 text-[#94A3B8]">Loading…</td></tr>
               ) : pools.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-12 text-[#94A3B8]">No pools yet</td></tr>
+                <tr><td colSpan={9} className="text-center py-12 text-[#94A3B8]">No pools yet</td></tr>
               ) : pools.map(p => (
                 <tr key={p.id} className="border-b border-white/5 hover:bg-white/2 transition-colors">
                   <td className="px-4 py-3 text-white font-medium max-w-[180px] truncate">{p.title}</td>
@@ -191,6 +191,11 @@ export default function PoolsPage() {
                     <span className={cn("px-2 py-0.5 rounded-full text-xs border", statusBg(p.status))}>
                       {p.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs max-w-[120px] truncate">
+                    {p.correctOutcome
+                      ? <span className="text-[#00DFA9] font-mono">{p.correctOutcome}</span>
+                      : <span className="text-[#4B5563]">—</span>}
                   </td>
                   <td className="px-4 py-3 text-[#94A3B8] text-xs">{fmtDate(p.deadline)}</td>
                   <td className="px-4 py-3">
