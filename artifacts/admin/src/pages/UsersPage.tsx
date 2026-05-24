@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, AdminUser, AdminBet, AdminTransaction } from "@/lib/api";
 import { fmt, fmtDate, statusBg } from "@/lib/utils";
-import { Search, Ban, CheckCircle, ChevronLeft, ChevronRight, User } from "lucide-react";
+import { Search, Ban, CheckCircle, ChevronLeft, ChevronRight, User, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -14,6 +14,9 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
   const qc = useQueryClient();
   const [adjAmount, setAdjAmount] = useState("");
   const [adjNotes, setAdjNotes] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
 
   const { data: bets = [] } = useQuery<AdminBet[]>({
     queryKey: ["user-bets", user.id],
@@ -42,6 +45,17 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       toast.success(user.isSuspended ? "User unsuspended" : "User suspended");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const resetPwMut = useMutation({
+    mutationFn: (password: string) =>
+      api.post(`/admin/users/${user.id}/reset-password`, { newPassword: password }),
+    onSuccess: () => {
+      toast.success("Password reset — all active sessions invalidated");
+      setNewPassword("");
+      setConfirmPassword("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -107,6 +121,47 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
             >
               {suspendMut.isPending ? "Updating…" : user.isSuspended ? "Unsuspend User" : "Suspend User"}
             </button>
+
+            <div className="mt-4 pt-4 border-t border-white/8 space-y-3">
+              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">Reset Password</p>
+              <div className="relative">
+                <input
+                  className={cn(inp, "pr-10")}
+                  type={showPw ? "text" : "password"}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="New password (min 8 chars)"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4B5563] hover:text-white transition-colors"
+                >
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <input
+                className={inp}
+                type={showPw ? "text" : "password"}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+              />
+              <button
+                onClick={() => {
+                  if (newPassword.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+                  if (newPassword !== confirmPassword) { toast.error("Passwords do not match"); return; }
+                  resetPwMut.mutate(newPassword);
+                }}
+                disabled={resetPwMut.isPending || !newPassword || !confirmPassword}
+                className="w-full py-2 bg-[#38BDF8]/10 text-[#38BDF8] rounded-lg text-sm font-semibold hover:bg-[#38BDF8]/20 disabled:opacity-50 transition-colors"
+              >
+                {resetPwMut.isPending ? "Resetting…" : "Set New Password"}
+              </button>
+              <p className="text-xs text-[#64748B]">
+                The user's active sessions will be invalidated immediately.
+              </p>
+            </div>
           </TabsContent>
 
           <TabsContent value="balance" className="mt-4 space-y-4">

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { eq, desc, sql, count, sum, and, or, ilike } from "drizzle-orm";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import {
   db,
   usersTable,
@@ -15,6 +16,7 @@ import {
   predictionPoolsTable,
   poolEntriesTable,
   adminLogsTable,
+  sessionsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -221,6 +223,31 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
     .limit(1);
 
   res.json(updated);
+});
+
+const ResetPasswordBody = z.object({
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+router.post("/admin/users/:id/reset-password", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const parsed = ResetPasswordBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }); return; }
+
+  const [user] = await db.select({ id: usersTable.id, username: usersTable.username })
+    .from(usersTable).where(eq(usersTable.id, id)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, id));
+
+  // Invalidate all active sessions so the user must log in with the new password
+  await db.update(sessionsTable)
+    .set({ expiresAt: new Date() })
+    .where(eq(sessionsTable.userId, id));
+
+  await logAdminAction(req.user!.userId, "reset_password", "user", id, { username: user.username });
+  res.json({ success: true });
 });
 
 router.get("/admin/users/:id/bets", async (req, res): Promise<void> => {
