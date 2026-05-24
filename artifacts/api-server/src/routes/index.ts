@@ -5,6 +5,7 @@ import walletRouter from "./wallet.js";
 import betsRouter from "./bets.js";
 import referralRouter from "./referral.js";
 import oddsRouter from "./odds.js";
+import adminRouter from "./admin.js";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use(walletRouter);
 router.use(betsRouter);
 router.use(referralRouter);
 router.use(oddsRouter);
+router.use(adminRouter);
 
 export default router;
