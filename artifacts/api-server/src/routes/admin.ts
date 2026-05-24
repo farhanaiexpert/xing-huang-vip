@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, sql, count, sum, and, or, ilike } from "drizzle-orm";
+import { eq, desc, sql, count, sum, and, or, ilike, like } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import {
