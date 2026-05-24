@@ -10,10 +10,28 @@ export function setToken(token: string) {
 
 export function clearToken() {
   sessionStorage.removeItem("cb_admin_token");
+  sessionStorage.removeItem("cb_admin_user");
 }
 
 export function isTokenStored(): boolean {
   return !!getToken();
+}
+
+export interface StoredUser {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+}
+
+export function setStoredUser(user: StoredUser) {
+  sessionStorage.setItem("cb_admin_user", JSON.stringify(user));
+}
+
+export function getStoredUser(): StoredUser | null {
+  const raw = sessionStorage.getItem("cb_admin_user");
+  if (!raw) return null;
+  try { return JSON.parse(raw) as StoredUser; } catch { return null; }
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -146,5 +164,18 @@ export interface AuditLog {
   entityType: string | null;
   entityId: number | null;
   details: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface BetsChartRow { day: string; count: number; volume: string }
+export interface UsersChartRow { day: string; count: number }
+
+export interface RecentActivityItem {
+  id: number;
+  type: string;
+  category: "bet" | "transaction";
+  username: string | null;
+  amount: string;
+  status: string;
   createdAt: string;
 }

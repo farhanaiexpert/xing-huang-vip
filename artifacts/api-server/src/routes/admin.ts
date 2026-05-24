@@ -104,6 +104,58 @@ router.get("/admin/stats/bets-chart", async (req, res): Promise<void> => {
   res.json(rows.rows);
 });
 
+router.get("/admin/stats/users-chart", async (req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'MM-DD') AS day,
+      count(*)::int AS count
+    FROM users
+    WHERE created_at >= now() - interval '30 days'
+    GROUP BY date_trunc('day', created_at AT TIME ZONE 'UTC')
+    ORDER BY date_trunc('day', created_at AT TIME ZONE 'UTC')
+  `);
+  res.json(rows.rows);
+});
+
+router.get("/admin/stats/recent-activity", async (req, res): Promise<void> => {
+  const recentBets = await db
+    .select({
+      id: betsTable.id,
+      type: sql<string>`'bet'`,
+      username: usersTable.username,
+      amount: betsTable.stake,
+      status: betsTable.status,
+      createdAt: betsTable.createdAt,
+    })
+    .from(betsTable)
+    .leftJoin(usersTable, eq(usersTable.id, betsTable.userId))
+    .orderBy(desc(betsTable.createdAt))
+    .limit(5);
+
+  const recentTxns = await db
+    .select({
+      id: transactionsTable.id,
+      type: transactionsTable.type,
+      username: usersTable.username,
+      amount: transactionsTable.amount,
+      status: transactionsTable.status,
+      createdAt: transactionsTable.createdAt,
+    })
+    .from(transactionsTable)
+    .leftJoin(usersTable, eq(usersTable.id, transactionsTable.userId))
+    .orderBy(desc(transactionsTable.createdAt))
+    .limit(5);
+
+  const combined = [
+    ...recentBets.map(b => ({ ...b, category: "bet" as const })),
+    ...recentTxns.map(t => ({ ...t, category: "transaction" as const })),
+  ]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 8);
+
+  res.json(combined);
+});
+
 // ─── Users ───────────────────────────────────────────────────────────────────
 router.get("/admin/users", async (req, res): Promise<void> => {
   const { search, page = "1", limit = "20", suspended } = req.query as Record<string, string>;
@@ -143,6 +195,36 @@ router.get("/admin/users", async (req, res): Promise<void> => {
   const [total] = await db.select({ count: count() }).from(usersTable).where(where);
 
   res.json({ users, total: Number(total.count), page: pageNum, limit: limitNum });
+});
+
+const CreateUserBody = z.object({
+  email: z.string().email(),
+  username: z.string().min(3).max(32),
+  password: z.string().min(8),
+  role: z.enum(["user", "admin", "super_admin"]).default("user"),
+});
+
+router.post("/admin/users", async (req, res): Promise<void> => {
+  const parsed = CreateUserBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0].message }); return; }
+  const { email, username, password, role } = parsed.data;
+
+  const existing = await db.select({ id: usersTable.id }).from(usersTable)
+    .where(or(eq(usersTable.email, email.toLowerCase()), eq(usersTable.username, username)))
+    .limit(1);
+  if (existing.length > 0) { res.status(409).json({ error: "Email or username already in use" }); return; }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const [newUser] = await db.insert(usersTable).values({
+    email: email.toLowerCase(),
+    username,
+    passwordHash,
+    role,
+  }).returning({ id: usersTable.id, username: usersTable.username, email: usersTable.email });
+
+  await db.insert(walletsTable).values({ userId: newUser.id });
+  await logAdminAction((req as { user: { id: number } }).user.id, "create_user", "user", newUser.id, { username, role });
+  res.status(201).json(newUser);
 });
 
 router.get("/admin/users/:id", async (req, res): Promise<void> => {
