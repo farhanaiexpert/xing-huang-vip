@@ -17,6 +17,9 @@ import {
   poolEntriesTable,
   adminLogsTable,
   sessionsTable,
+  winspinSpinsTable,
+  winspinPrizesTable,
+  sportControlsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -858,4 +861,97 @@ router.get("/admin/audit-logs", async (req, res): Promise<void> => {
   res.json({ logs, total: Number(total.count), page: pageNum, limit: limitNum });
 });
 
+// ─── WinSpin Prizes ──────────────────────────────────────────────────────────
+
+router.get("/admin/winspin/prizes", async (_req, res): Promise<void> => {
+  const prizes = await db.select().from(winspinPrizesTable).orderBy(winspinPrizesTable.weight);
+  res.json(prizes);
+});
+
+router.get("/admin/winspin/stats", async (_req, res): Promise<void> => {
+  const [totals] = await db
+    .select({ totalSpins: count(), totalPaid: sum(winspinSpinsTable.prizeAmount) })
+    .from(winspinSpinsTable);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [todayRow] = await db
+    .select({ spinsToday: count() })
+    .from(winspinSpinsTable)
+    .where(sql`${winspinSpinsTable.createdAt} >= ${today.toISOString()}`);
+
+  res.json({
+    totalSpins: Number(totals?.totalSpins ?? 0),
+    totalPaid: totals?.totalPaid ?? "0",
+    spinsToday: Number(todayRow?.spinsToday ?? 0),
+  });
+});
+
+router.post("/admin/winspin/prizes", async (req, res): Promise<void> => {
+  const schema = z.object({
+    label: z.string().min(1),
+    prizeAmount: z.string().optional().default("0"),
+    weight: z.number().int().min(1).max(100).default(10),
+    color: z.string().default("#00DFA9"),
+    maxPerDay: z.number().int().min(1).nullable().optional(),
+    isActive: z.boolean().optional().default(true),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
+
+  const [prize] = await db.insert(winspinPrizesTable).values(parsed.data).returning();
+  await logAdminAction(req.user!.userId, "winspin_prize_created", "winspin_prize", prize.id, { label: prize.label });
+  res.status(201).json(prize);
+});
+
+router.patch("/admin/winspin/prizes/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const schema = z.object({
+    label: z.string().min(1).optional(),
+    prizeAmount: z.string().optional(),
+    weight: z.number().int().min(1).max(100).optional(),
+    color: z.string().optional(),
+    maxPerDay: z.number().int().min(1).nullable().optional(),
+    isActive: z.boolean().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
+
+  const [prize] = await db.update(winspinPrizesTable).set(parsed.data).where(eq(winspinPrizesTable.id, id)).returning();
+  if (!prize) { res.status(404).json({ error: "Prize not found" }); return; }
+  await logAdminAction(req.user!.userId, "winspin_prize_updated", "winspin_prize", id, parsed.data as Record<string, unknown>);
+  res.json(prize);
+});
+
+router.delete("/admin/winspin/prizes/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  await db.delete(winspinPrizesTable).where(eq(winspinPrizesTable.id, id));
+  await logAdminAction(req.user!.userId, "winspin_prize_deleted", "winspin_prize", id);
+  res.status(204).end();
+});
+
+// ─── Sport / Market Controls ──────────────────────────────────────────────────
+
+router.get("/admin/markets", async (_req, res): Promise<void> => {
+  const controls = await db.select().from(sportControlsTable).orderBy(sportControlsTable.leagueName);
+  res.json(controls);
+});
+
+router.patch("/admin/markets/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const schema = z.object({
+    isEnabled: z.boolean().optional(),
+    isSuspended: z.boolean().optional(),
+    oddsMultiplier: z.string().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
+
+  const [control] = await db.update(sportControlsTable).set(parsed.data).where(eq(sportControlsTable.id, id)).returning();
+  if (!control) { res.status(404).json({ error: "Market not found" }); return; }
+  await logAdminAction(req.user!.userId, "market_updated", "sport_control", id, parsed.data as Record<string, unknown>);
+  res.json(control);
+});
+
 export default router;
+

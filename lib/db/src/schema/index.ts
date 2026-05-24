@@ -8,3 +8,4 @@ export * from "./pools";
 export * from "./winspin";
 export * from "./sessions";
 export * from "./admin_logs";
+export * from "./sport_controls";

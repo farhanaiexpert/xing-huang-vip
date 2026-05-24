@@ -189,3 +189,31 @@ export interface UsersChartRow { day: string; count: number }
 export interface RevenueChartRow { day: string; stakes: string; payouts: string }
 
 export type RecentActivityItem = AuditLog;
+
+export interface AdminWinspinPrize {
+  id: number;
+  label: string;
+  prizeAmount: string;
+  weight: number;
+  color: string;
+  isActive: boolean;
+  maxPerDay: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminWinspinStats {
+  totalSpins: number;
+  totalPaid: string;
+  spinsToday: number;
+}
+
+export interface AdminSportControl {
+  id: number;
+  sportKey: string;
+  leagueName: string;
+  isEnabled: boolean;
+  isSuspended: boolean;
+  oddsMultiplier: string;
+  updatedAt: string;
+}

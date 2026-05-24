@@ -1,0 +1,52 @@
+⚡ Phase 1 — Backend Foundation ✅ COMPLETE
+Everything built and working:
+
+Express API server running at /api
+PostgreSQL database connected
+Full schema: users, wallets, bets, transactions, referrals, commissions, promotions, prediction pools, sessions, audit logs, winspin
+Auth: register, login, logout with JWT tokens, password hashing
+Middleware: auth guard, request logging, error handling
+Routes: auth, bets, wallet, referral, users, odds, admin (860+ lines)
+⚡ Phase 2 — Connect Frontend to Backend ⚠️ PARTIAL
+Connected to real API:
+
+Login / register → real database accounts ✅
+Wallet balance → fetched from /api/wallet/balance ✅
+Referral / commission data → fetched from /api/referral/* ✅
+Odds → fetched from The Odds API, cached server-side ✅
+Still localStorage (not connected):
+
+Bet placement → not saved to DB ❌
+Bet history → not fetched from DB ❌
+Favourites → not synced ❌
+WinSpin, promotions, prediction pools on the player side → localStorage ❌
+⚡ Phase 3 — Admin Core ✅ COMPLETE
+All essentials working:
+
+Separate admin app at /admin with its own login wall ✅
+Overview page: 8 KPIs, 3 charts (bets over time, revenue vs payouts, new users), recent activity feed ✅
+User management: view all users, search, suspend/unsuspend, adjust balance, create new users, view their bets & transactions ✅
+Bet management: view all bets, filter by status, settle/void ✅
+Wallet & finance: all transactions, approve/reject pending deposits & withdrawals, pending totals bar ✅
+⚡ Phase 4 — Admin Operations ⚠️ PARTIAL
+Done:
+
+Promotions manager: create, edit, enable/disable, usage progress bars ✅
+Prediction pools manager: create, set outcome, settle, cancel ✅
+Not built yet:
+
+Odds & markets control (suspend markets, override odds) ❌
+WinSpin configuration (prizes, probabilities, limits) ❌
+Sports & leagues catalog (enable/disable per sport) ❌
+⚡ Phase 5 — Risk & Analytics ⚠️ PARTIAL
+Done:
+
+Audit log: full history of every admin action, with filters ✅
+Affiliate/referral management: referral list, commission stats, top-10 referrers chart ✅
+Admin Accounts page: manage admin users, roles, suspend ✅
+Not built yet:
+
+Risk & fraud management (flagged accounts, AML reports) ❌
+Full reports & analytics (revenue by sport, export CSV/PDF) ❌
+Platform settings persisted to database ❌
+Maintenance mode, global bet limits, feature toggles ❌

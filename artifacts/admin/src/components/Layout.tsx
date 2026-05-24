@@ -4,7 +4,7 @@ import { clearToken, getStoredUser } from "@/lib/api";
 import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
-  Shield, ShieldCheck,
+  Shield, ShieldCheck, Zap, Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,9 @@ const NAV_SECTIONS = [
   {
     label: "Content",
     items: [
-      { href: "/pools",       icon: Trophy,          label: "Pools"        },
+      { href: "/pools",    icon: Trophy, label: "Pools"    },
+      { href: "/winspin",  icon: Zap,    label: "WinSpin"  },
+      { href: "/markets",  icon: Globe,  label: "Markets"  },
     ],
   },
   {
