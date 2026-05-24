@@ -1,41 +1,39 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { fmt, fmtDate, statusBg } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-interface AdminReferral {
-  id: number;
-  referrerId: number;
-  referrerUsername: string | null;
-  refereeId: number;
-  refereeUsername: string | null;
-  commissionRate: string;
-  totalEarned: string;
-  status: string;
-  createdAt: string;
-}
-
-const PAGE_SIZE = 20;
+import { api, AdminReferral, AdminReferralsResponse } from "@/lib/api";
+import { fmt, fmtDate } from "@/lib/utils";
 
 export default function ReferralsPage() {
-  const [page, setPage] = useState(1);
-
-  const { data, isLoading } = useQuery<{ referrals: AdminReferral[]; total: number }>({
-    queryKey: ["admin-referrals", page],
-    queryFn: () => api.get(`/admin/referrals?page=${page}&limit=${PAGE_SIZE}`),
+  const { data, isLoading } = useQuery<AdminReferralsResponse>({
+    queryKey: ["admin-referrals"],
+    queryFn: () => api.get<AdminReferralsResponse>("/admin/referrals"),
   });
 
-  const total = data?.total ?? 0;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const referrals: AdminReferral[] = data?.referrals ?? [];
+  const stats = data?.stats;
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-white">Referrals</h1>
-        <p className="text-sm text-[#94A3B8] mt-1">{total.toLocaleString()} total relationships</p>
+        <p className="text-sm text-[#94A3B8] mt-1">{stats?.totalReferrals ?? 0} total relationships</p>
       </div>
+
+      {stats && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-[#0D1117] border border-white/8 rounded-xl p-4">
+            <div className="text-xs text-[#94A3B8] mb-1">Total Referrals</div>
+            <div className="text-xl font-bold text-white">{stats.totalReferrals}</div>
+          </div>
+          <div className="bg-[#0D1117] border border-white/8 rounded-xl p-4">
+            <div className="text-xs text-[#94A3B8] mb-1">Total Commissions Generated</div>
+            <div className="text-xl font-bold text-[#FACC15]">${fmt(stats.totalCommissions)} USDT</div>
+          </div>
+          <div className="bg-[#0D1117] border border-white/8 rounded-xl p-4">
+            <div className="text-xs text-[#94A3B8] mb-1">Total Commissions Paid</div>
+            <div className="text-xl font-bold text-[#00DFA9]">${fmt(stats.totalPaid)} USDT</div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -43,27 +41,23 @@ export default function ReferralsPage() {
             <thead>
               <tr className="border-b border-white/8 text-[#94A3B8] text-xs uppercase tracking-wide">
                 <th className="text-left px-4 py-3">Referrer</th>
-                <th className="text-left px-4 py-3">Referee</th>
-                <th className="text-left px-4 py-3">Commission Rate</th>
-                <th className="text-left px-4 py-3">Total Earned</th>
-                <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3">Referred User ID</th>
+                <th className="text-left px-4 py-3">Tier</th>
                 <th className="text-left px-4 py-3">Created</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={6} className="text-center py-12 text-[#94A3B8]">Loading…</td></tr>
-              ) : data?.referrals.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-[#94A3B8]">No referrals</td></tr>
-              ) : data?.referrals.map(r => (
+                <tr><td colSpan={4} className="text-center py-12 text-[#94A3B8]">Loading…</td></tr>
+              ) : referrals.length === 0 ? (
+                <tr><td colSpan={4} className="text-center py-12 text-[#94A3B8]">No referrals yet</td></tr>
+              ) : referrals.map(r => (
                 <tr key={r.id} className="border-b border-white/5 hover:bg-white/2 transition-colors">
                   <td className="px-4 py-3 text-white">{r.referrerUsername ?? `uid:${r.referrerId}`}</td>
-                  <td className="px-4 py-3 text-white">{r.refereeUsername ?? `uid:${r.refereeId}`}</td>
-                  <td className="px-4 py-3 text-[#38BDF8] font-mono text-xs">{fmt(parseFloat(r.commissionRate) * 100, 1)}%</td>
-                  <td className="px-4 py-3 text-[#00DFA9] font-mono text-xs">${fmt(r.totalEarned)}</td>
+                  <td className="px-4 py-3 text-[#94A3B8] font-mono text-xs">uid:{r.referredId}</td>
                   <td className="px-4 py-3">
-                    <span className={cn("px-2 py-0.5 rounded-full text-xs border", statusBg(r.status))}>
-                      {r.status}
+                    <span className="px-2 py-0.5 rounded-full text-xs border bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/20">
+                      Tier {r.tier}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-[#94A3B8] text-xs">{fmtDate(r.createdAt)}</td>
@@ -71,19 +65,6 @@ export default function ReferralsPage() {
               ))}
             </tbody>
           </table>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-white/8 text-sm text-[#94A3B8]">
-          <span>Page {page} of {pages}</span>
-          <div className="flex gap-1">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-30 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-30 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -24,6 +24,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...((options.headers as Record<string, string>) ?? {}),
   };
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    clearToken();
+    window.location.href = import.meta.env.BASE_URL + "login";
+    throw new Error("Session expired — please sign in again");
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -84,6 +89,24 @@ export interface AdminTransaction {
   reference: string | null;
   notes: string | null;
   createdAt: string;
+}
+
+export interface AdminReferral {
+  id: number;
+  referrerId: number;
+  referrerUsername: string | null;
+  referredId: number;
+  tier: number;
+  createdAt: string;
+}
+
+export interface AdminReferralsResponse {
+  referrals: AdminReferral[];
+  stats: {
+    totalReferrals: number;
+    totalCommissions: string;
+    totalPaid: string;
+  };
 }
 
 export interface AdminPromotion {

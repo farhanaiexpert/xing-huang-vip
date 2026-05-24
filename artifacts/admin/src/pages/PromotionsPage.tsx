@@ -6,6 +6,11 @@ import { Plus, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+function toIso(localDatetime: string): string | undefined {
+  if (!localDatetime) return undefined;
+  return new Date(localDatetime).toISOString();
+}
+
 export default function PromotionsPage() {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -15,18 +20,22 @@ export default function PromotionsPage() {
     maxClaims: "", expiresAt: "",
   });
 
-  const { data, isLoading } = useQuery<{ promotions: AdminPromotion[] }>({
+  const { data: promotions = [], isLoading } = useQuery<AdminPromotion[]>({
     queryKey: ["admin-promotions"],
-    queryFn: () => api.get("/admin/promotions"),
+    queryFn: () => api.get<AdminPromotion[]>("/admin/promotions"),
   });
 
   const createMut = useMutation({
     mutationFn: (body: typeof form) => api.post("/admin/promotions", {
-      ...body,
-      bonusAmount: body.bonusAmount || null,
-      minDeposit: body.minDeposit || null,
-      maxClaims: body.maxClaims ? parseInt(body.maxClaims) : null,
-      expiresAt: body.expiresAt || null,
+      title: body.title,
+      description: body.description,
+      type: body.type,
+      eligibility: body.eligibility,
+      bonusAmount: body.bonusAmount || undefined,
+      minDeposit: body.minDeposit || undefined,
+      maxClaims: body.maxClaims ? parseInt(body.maxClaims) : undefined,
+      expiresAt: toIso(body.expiresAt),
+      isActive: true,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-promotions"] });
@@ -57,7 +66,7 @@ export default function PromotionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Promotions</h1>
-          <p className="text-sm text-[#94A3B8] mt-1">{data?.promotions.length ?? 0} total</p>
+          <p className="text-sm text-[#94A3B8] mt-1">{promotions.length} total</p>
         </div>
         <button onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-4 py-2 bg-[#00DFA9] text-[#0B0F14] rounded-lg text-sm font-semibold hover:bg-[#00DFA9]/90 transition-colors">
@@ -84,6 +93,7 @@ export default function PromotionsPage() {
                 <option value="free_bet">Free Bet</option>
                 <option value="cashback">Cashback</option>
                 <option value="referral_boost">Referral Boost</option>
+                <option value="welcome">Welcome</option>
               </select>
             </div>
             <div>
@@ -127,11 +137,11 @@ export default function PromotionsPage() {
       <div className="grid gap-4">
         {isLoading ? (
           <div className="text-center py-12 text-[#94A3B8]">Loading…</div>
-        ) : data?.promotions.length === 0 ? (
+        ) : promotions.length === 0 ? (
           <div className="text-center py-12 text-[#94A3B8] bg-[#0D1117] border border-white/8 rounded-xl">
             No promotions yet
           </div>
-        ) : data?.promotions.map(p => (
+        ) : promotions.map(p => (
           <div key={p.id} className="bg-[#0D1117] border border-white/8 rounded-xl p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">

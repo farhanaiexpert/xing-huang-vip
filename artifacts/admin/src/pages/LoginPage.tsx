@@ -15,12 +15,12 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await api.post<{ token: string; user: { role: string } }>("/auth/login", { email, password });
+      const res = await api.post<{ accessToken: string; user: { role: string } }>("/auth/login", { email, password });
       if (res.user.role !== "super_admin") {
         toast.error("Access denied — super_admin role required");
         return;
       }
-      setToken(res.token);
+      setToken(res.accessToken);
       setLocation("/");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Login failed");

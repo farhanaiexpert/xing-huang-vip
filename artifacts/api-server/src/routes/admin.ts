@@ -535,6 +535,13 @@ router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
   res.json(updated);
 });
 
+router.delete("/admin/pools/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  await db.delete(predictionPoolsTable).where(eq(predictionPoolsTable.id, id));
+  await logAdminAction(req.user!.userId, "delete_pool", "pool", id, {});
+  res.sendStatus(204);
+});
+
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 router.get("/admin/audit-logs", async (req, res): Promise<void> => {
   const { page = "1", limit = "50" } = req.query as Record<string, string>;
