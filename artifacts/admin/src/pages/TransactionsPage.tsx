@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 
+function isDebit(type: string) {
+  return type === "withdrawal" || type === "bet_stake" || type === "debit";
+}
+
 export default function TransactionsPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -30,6 +34,8 @@ export default function TransactionsPage() {
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  const sel = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors";
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -38,18 +44,18 @@ export default function TransactionsPage() {
           <p className="text-sm text-[#94A3B8] mt-1">{total.toLocaleString()} total</p>
         </div>
         <div className="flex gap-2">
-          <select value={type} onChange={e => { setType(e.target.value); setPage(1); }}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9]">
+          <select value={type} onChange={e => { setType(e.target.value); setPage(1); }} className={sel}>
             <option value="">All types</option>
             <option value="deposit">Deposit</option>
             <option value="withdrawal">Withdrawal</option>
+            <option value="credit">Credit</option>
+            <option value="debit">Debit</option>
             <option value="bet_stake">Bet stake</option>
             <option value="bet_win">Bet win</option>
             <option value="commission">Commission</option>
             <option value="promotion">Promotion</option>
           </select>
-          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9]">
+          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className={sel}>
             <option value="">All statuses</option>
             <option value="pending">Pending</option>
             <option value="completed">Completed</option>
@@ -84,8 +90,8 @@ export default function TransactionsPage() {
                   <td className="px-4 py-3 text-white">{t.username ?? `uid:${t.userId}`}</td>
                   <td className="px-4 py-3 text-[#94A3B8] capitalize text-xs">{t.type.replace(/_/g, " ")}</td>
                   <td className="px-4 py-3 font-mono text-xs">
-                    <span className={t.type === "withdrawal" || t.type === "bet_stake" ? "text-red-400" : "text-[#00DFA9]"}>
-                      {t.type === "withdrawal" || t.type === "bet_stake" ? "-" : "+"}${fmt(t.amount)}
+                    <span className={isDebit(t.type) ? "text-red-400" : "text-[#00DFA9]"}>
+                      {isDebit(t.type) ? "-" : "+"}${fmt(t.amount)}
                     </span>
                   </td>
                   <td className="px-4 py-3">

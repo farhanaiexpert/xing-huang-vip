@@ -75,6 +75,21 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
   });
 });
 
+// ─── Bets chart (last 30 days) ────────────────────────────────────────────────
+router.get("/admin/stats/bets-chart", async (req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'MM-DD') AS day,
+      count(*)::int AS count,
+      coalesce(sum(stake), 0)::text AS volume
+    FROM bets
+    WHERE created_at >= now() - interval '30 days'
+    GROUP BY date_trunc('day', created_at AT TIME ZONE 'UTC')
+    ORDER BY date_trunc('day', created_at AT TIME ZONE 'UTC')
+  `);
+  res.json(rows.rows);
+});
+
 // ─── Users ───────────────────────────────────────────────────────────────────
 router.get("/admin/users", async (req, res): Promise<void> => {
   const { search, page = "1", limit = "20", suspended } = req.query as Record<string, string>;

@@ -16,8 +16,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await api.post<{ accessToken: string; user: { role: string } }>("/auth/login", { email, password });
-      if (res.user.role !== "super_admin") {
-        toast.error("Access denied — super_admin role required");
+      if (res.user.role !== "admin" && res.user.role !== "super_admin") {
+        toast.error("Access denied — admin role required");
         return;
       }
       setToken(res.accessToken);
