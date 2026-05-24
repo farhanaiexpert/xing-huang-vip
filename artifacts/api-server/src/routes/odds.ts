@@ -2,7 +2,7 @@ import { Router } from "express";
 
 const router = Router();
 
-const ODDS_API_KEY = process.env.VITE_ODDS_API_KEY;
+const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
@@ -25,10 +25,11 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
   }
 
   try {
-    const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
+    const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h&oddsFormat=decimal&dateFormat=iso`;
     const response = await fetch(url);
     if (!response.ok) {
-      res.status(response.status).json({ error: "Failed to fetch odds" });
+      const body = await response.json().catch(() => ({ error: "Failed to fetch odds" }));
+      res.status(response.status).json(body);
       return;
     }
     const data = await response.json();

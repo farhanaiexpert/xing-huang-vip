@@ -76,11 +76,9 @@ export function getLastUpdatedLabel(fetchedAt: Date | null): string {
 
 // ─── Shared fetch logic ───────────────────────────────────────────────────────
 
-async function fetchAllLeagues(
-  apiKey: string,
-): Promise<{ leagues: League[]; error: string | null }> {
+async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | null }> {
   const fetches = ODDS_API_SPORTS.map(config =>
-    fetchSportOdds(config.key, apiKey)
+    fetchSportOdds(config.key)
       .then(events => ({ config, events, ok: true  as const }))
       .catch((err: Error) => ({ config, events: [], ok: false as const, err })),
   );
@@ -138,13 +136,10 @@ export function useOddsApi(): UseOddsApiResult {
   const isMounted = useRef(true);
 
   const doFetch = useCallback(async (background: boolean) => {
-    const apiKey = import.meta.env.VITE_ODDS_API_KEY as string | undefined;
-    if (!apiKey) return;
-
     background ? setRefreshing(true) : setLoading(true);
     setError(null);
 
-    const { leagues, error: fetchError } = await fetchAllLeagues(apiKey);
+    const { leagues, error: fetchError } = await fetchAllLeagues();
 
     if (!isMounted.current) return;
 
@@ -167,9 +162,6 @@ export function useOddsApi(): UseOddsApiResult {
   useEffect(() => {
     isMounted.current = true;
 
-    const apiKey = import.meta.env.VITE_ODDS_API_KEY as string | undefined;
-    if (!apiKey) return;
-
     // If quota is known to be exhausted, surface the error immediately without
     // making any API calls (saves credits when user revisits the page).
     if (isQuotaExhausted()) {
@@ -185,7 +177,7 @@ export function useOddsApi(): UseOddsApiResult {
       setRealLeagues(cached.leagues);
       setFetchedAt(new Date(cached.fetchedAt));
     } else {
-      // Cache stale or absent — fetch (initial load → show spinner)
+      // Cache stale or absent — fetch through API server
       void doFetch(false);
     }
 

@@ -1,7 +1,7 @@
 /**
  * THE ODDS API — CLIENT TYPES & FETCH HELPERS
- * All requests are made browser-side (frontend-only, no backend).
- * API key is read from import.meta.env.VITE_ODDS_API_KEY.
+ * All requests are proxied through the CupBett API server (/api/odds/:sport).
+ * The Odds API key lives server-side only — it is never sent to the browser.
  */
 
 // ─── Raw API response shapes ──────────────────────────────────────────────────
@@ -86,39 +86,40 @@ export const ODDS_API_SPORTS: OddsApiSportConfig[] = [
 /** sportIds that real data covers — used to suppress mock leagues for the same sport */
 export const REAL_DATA_SPORT_IDS = new Set(ODDS_API_SPORTS.map(s => s.sportId));
 
-// ─── Fetch helper ─────────────────────────────────────────────────────────────
+// ─── Fetch helper — proxied through /api/odds/:sport ─────────────────────────
 
-const BASE_URL = 'https://api.the-odds-api.com/v4';
+interface ServerOddsResponse {
+  data:   OddsApiEvent[];
+  cached: boolean;
+}
+
+interface ServerErrorResponse {
+  error_code?: string;
+  message?:    string;
+  error?:      string;
+}
 
 export async function fetchSportOdds(
   sportKey: string,
-  apiKey: string,
 ): Promise<OddsApiEvent[]> {
-  const params = new URLSearchParams({
-    apiKey,
-    regions:    'uk,eu,us',
-    markets:    'h2h',
-    oddsFormat: 'decimal',
-    dateFormat: 'iso',
-  });
-  const res = await fetch(`${BASE_URL}/sports/${sportKey}/odds?${params}`);
+  const res = await fetch(`/api/odds/${sportKey}`);
+
+  if (res.status === 503) {
+    throw new Error('Odds API not configured on server');
+  }
 
   if (res.status === 401) {
-    // Parse body to distinguish "invalid key" from "quota exhausted"
-    try {
-      const body = await res.json() as { error_code?: string };
-      if (body.error_code === 'OUT_OF_USAGE_CREDITS') {
-        throw new Error('QUOTA_EXHAUSTED');
-      }
-    } catch (e) {
-      if (e instanceof Error && e.message === 'QUOTA_EXHAUSTED') throw e;
+    const body = await res.json().catch(() => ({} as ServerErrorResponse)) as ServerErrorResponse;
+    if (body.error_code === 'OUT_OF_USAGE_CREDITS') {
+      throw new Error('QUOTA_EXHAUSTED');
     }
     throw new Error('INVALID_KEY');
   }
 
-  if (res.status === 422) return [];           // sport not currently available
+  if (res.status === 422) return [];
   if (res.status === 429) throw new Error('Odds API rate limit reached');
   if (!res.ok) throw new Error(`Odds API HTTP ${res.status}`);
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
+
+  const json = await res.json() as ServerOddsResponse;
+  return Array.isArray(json.data) ? json.data : [];
 }
