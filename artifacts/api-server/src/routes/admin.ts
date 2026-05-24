@@ -231,6 +231,8 @@ const ResetPasswordBody = z.object({
 
 router.post("/admin/users/:id/reset-password", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid user ID" }); return; }
+
   const parsed = ResetPasswordBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }); return; }
 
@@ -240,11 +242,7 @@ router.post("/admin/users/:id/reset-password", async (req, res): Promise<void> =
 
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
   await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, id));
-
-  // Invalidate all active sessions so the user must log in with the new password
-  await db.update(sessionsTable)
-    .set({ expiresAt: new Date() })
-    .where(eq(sessionsTable.userId, id));
+  await db.delete(sessionsTable).where(eq(sessionsTable.userId, id));
 
   await logAdminAction(req.user!.userId, "reset_password", "user", id, { username: user.username });
   res.json({ success: true });

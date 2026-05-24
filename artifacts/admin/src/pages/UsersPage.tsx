@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, AdminUser, AdminBet, AdminTransaction } from "@/lib/api";
 import { fmt, fmtDate, statusBg } from "@/lib/utils";
-import { Search, Ban, CheckCircle, ChevronLeft, ChevronRight, User, Eye, EyeOff } from "lucide-react";
+import { Search, Ban, CheckCircle, ChevronLeft, ChevronRight, User, Eye, EyeOff, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -123,30 +123,42 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
             </button>
 
             <div className="mt-4 pt-4 border-t border-white/8 space-y-3">
-              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">Reset Password</p>
-              <div className="relative">
-                <input
-                  className={cn(inp, "pr-10")}
-                  type={showPw ? "text" : "password"}
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  placeholder="New password (min 8 chars)"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4B5563] hover:text-white transition-colors"
-                >
-                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                <KeyRound className="w-4 h-4 text-[#FACC15]" />
+                Reset Password
               </div>
-              <input
-                className={inp}
-                type={showPw ? "text" : "password"}
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
-              />
+              <div>
+                <label className="block text-xs text-[#94A3B8] mb-1">New Password (min 8 characters)</label>
+                <div className="relative">
+                  <input
+                    className={cn(inp, "pr-10")}
+                    type={showPw ? "text" : "password"}
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Enter new password…"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4B5563] hover:text-white transition-colors"
+                  >
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-[#94A3B8] mb-1">Confirm Password</label>
+                <input
+                  className={inp}
+                  type={showPw ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat new password…"
+                />
+              </div>
+              {confirmPassword && newPassword !== confirmPassword && (
+                <p className="text-xs text-red-400">Passwords do not match</p>
+              )}
               <button
                 onClick={() => {
                   if (newPassword.length < 8) { toast.error("Password must be at least 8 characters"); return; }
@@ -154,12 +166,12 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
                   resetPwMut.mutate(newPassword);
                 }}
                 disabled={resetPwMut.isPending || !newPassword || !confirmPassword}
-                className="w-full py-2 bg-[#38BDF8]/10 text-[#38BDF8] rounded-lg text-sm font-semibold hover:bg-[#38BDF8]/20 disabled:opacity-50 transition-colors"
+                className="w-full py-2 bg-[#FACC15]/10 text-[#FACC15] hover:bg-[#FACC15]/20 disabled:opacity-50 rounded-lg text-sm font-semibold transition-colors"
               >
-                {resetPwMut.isPending ? "Resetting…" : "Set New Password"}
+                {resetPwMut.isPending ? "Resetting…" : "Reset Password & Invalidate Sessions"}
               </button>
               <p className="text-xs text-[#64748B]">
-                The user's active sessions will be invalidated immediately.
+                This immediately changes the password and signs the user out of all active sessions.
               </p>
             </div>
           </TabsContent>
