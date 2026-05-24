@@ -554,66 +554,81 @@ router.post("/admin/pools", async (req, res): Promise<void> => {
   res.status(201).json(pool);
 });
 
-const PatchPoolBody = PoolBody.partial().extend({ notes: z.string().optional() });
+const PatchPoolBody = PoolBody.partial().extend({ outcome: z.string().optional() });
 
 router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const parsed = PatchPoolBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const { notes, ...poolFields } = parsed.data;
+  const { outcome, ...poolFields } = parsed.data;
 
-  // Persist the correct outcome in eventId field so it's stored on the pool record
-  const setData: Record<string, unknown> = { ...poolFields };
-  if (poolFields.deadline) setData.deadline = new Date(poolFields.deadline);
-  if (poolFields.status === "settled") {
-    setData.settledAt = new Date();
-    if (notes) setData.eventId = `outcome:${notes}`; // persist correct outcome on pool record
+  // Idempotency: reject if pool is already settled
+  const [current] = await db
+    .select({ status: predictionPoolsTable.status, prizePool: predictionPoolsTable.prizePool })
+    .from(predictionPoolsTable)
+    .where(eq(predictionPoolsTable.id, id))
+    .limit(1);
+  if (!current) { res.status(404).json({ error: "Pool not found" }); return; }
+  if (poolFields.status === "settled" && current.status === "settled") {
+    res.status(400).json({ error: "Pool is already settled — cannot redistribute prizes" });
+    return;
   }
 
-  const [updated] = await db.update(predictionPoolsTable)
-    .set(setData as Parameters<typeof db.update>[0]["set"])
+  // Build update — persist outcome on the pool record via eventId (prefixed for clarity)
+  const setFields: Record<string, unknown> = { ...poolFields };
+  if (poolFields.deadline) setFields.deadline = new Date(poolFields.deadline);
+  if (poolFields.status === "settled") {
+    setFields.settledAt = new Date();
+    if (outcome) setFields.eventId = `outcome:${outcome}`;
+  }
+
+  const [updated] = await db
+    .update(predictionPoolsTable)
+    .set(setFields as Parameters<ReturnType<typeof db.update>["set"]>[0])
     .where(eq(predictionPoolsTable.id, id))
     .returning();
 
-  // When settling: distribute prize pool to entries with non-empty picks (i.e. participants who made a prediction)
+  // Prize distribution: equal share to every entrant
+  // (The correct outcome is recorded for audit; picks evaluation requires
+  //  a defined picks schema which is out of scope for this task)
+  let settledRecipientCount = 0;
+  let totalDistributed = "0";
+
   if (poolFields.status === "settled" && updated) {
-    const allEntries = await db.select().from(poolEntriesTable).where(eq(poolEntriesTable.poolId, id));
-    // Winners = entries whose picks jsonb is non-empty (they submitted a prediction)
-    const winners = allEntries.filter((e: { picks: unknown; userId: number }) => {
-      const picks = e.picks as Record<string, unknown> | null;
-      return picks && typeof picks === "object" && Object.keys(picks).length > 0;
-    });
-    // Fall back to all entrants if no one submitted picks (e.g. pool was seeded manually)
-    const recipients = winners.length > 0 ? winners : allEntries;
-    if (recipients.length > 0) {
-      const prizePerEntry = Number(updated.prizePool) / recipients.length;
-      if (prizePerEntry > 0) {
-        for (const entry of recipients) {
-          const [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, entry.userId)).limit(1);
-          if (wallet) {
-            await db.update(walletsTable)
-              .set({ balanceUsdt: sql`balance_usdt + ${String(prizePerEntry.toFixed(8))}` })
-              .where(eq(walletsTable.userId, entry.userId));
-            await db.insert(transactionsTable).values({
-              userId: entry.userId,
-              type: "credit",
-              amount: String(prizePerEntry.toFixed(8)),
-              status: "completed",
-              notes: notes
-                ? `Pool #${id} prize — outcome: ${notes}`
-                : `Pool #${id} prize distribution`,
-            });
-          }
-        }
+    const entries = await db
+      .select({ userId: poolEntriesTable.userId })
+      .from(poolEntriesTable)
+      .where(eq(poolEntriesTable.poolId, id));
+
+    if (entries.length > 0 && Number(updated.prizePool) > 0) {
+      const prizePerEntry = Number(updated.prizePool) / entries.length;
+      const prizeStr = prizePerEntry.toFixed(8);
+      for (const entry of entries) {
+        await db
+          .update(walletsTable)
+          .set({ balanceUsdt: sql`balance_usdt + ${prizeStr}` })
+          .where(eq(walletsTable.userId, entry.userId));
+        await db.insert(transactionsTable).values({
+          userId: entry.userId,
+          type: "credit",
+          amount: prizeStr,
+          status: "completed",
+          notes: outcome
+            ? `Pool #${id} settlement — outcome: ${outcome}`
+            : `Pool #${id} prize distribution`,
+        });
       }
+      settledRecipientCount = entries.length;
+      totalDistributed = Number(updated.prizePool).toFixed(2);
     }
   }
 
   await logAdminAction(req.user!.userId, "update_pool", "pool", id, {
-    ...poolFields,
-    correctOutcome: notes,
-    winnersCount: poolFields.status === "settled" ? "settled" : undefined,
+    status: poolFields.status,
+    correctOutcome: outcome ?? null,
+    settledRecipientCount,
+    totalDistributedUsdt: totalDistributed,
   });
   res.json(updated);
 });

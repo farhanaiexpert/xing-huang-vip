@@ -45,7 +45,7 @@ export default function PoolsPage() {
 
   const settleMut = useMutation({
     mutationFn: ({ id, notes }: { id: number; notes: string }) =>
-      api.patch(`/admin/pools/${id}`, { status: "settled", notes }),
+      api.patch(`/admin/pools/${id}`, { status: "settled", outcome: notes }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-pools"] });
       toast.success("Pool settled and entries processed");
