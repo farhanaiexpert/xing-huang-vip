@@ -388,13 +388,23 @@ router.patch("/admin/transactions/:id", async (req, res): Promise<void> => {
   const { status, notes } = parsed.data;
   await db.update(transactionsTable).set({ status, notes: notes ?? txn.notes }).where(eq(transactionsTable.id, id));
 
-  // If deposit is approved, credit the wallet
+  // Deposit approved → credit wallet
   if (status === "completed" && txn.type === "deposit") {
     await db.update(walletsTable)
       .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
       .where(eq(walletsTable.userId, txn.userId));
   }
-  // If withdrawal is approved, the balance was already deducted at request time
+  // Withdrawal approved → debit wallet (funds are held in "pending" state, not deducted at request time)
+  if (status === "completed" && txn.type === "withdrawal") {
+    const [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, txn.userId)).limit(1);
+    if (!wallet || parseFloat(wallet.balanceUsdt) < parseFloat(txn.amount)) {
+      res.status(400).json({ error: "Insufficient wallet balance to complete withdrawal" });
+      return;
+    }
+    await db.update(walletsTable)
+      .set({ balanceUsdt: sql`GREATEST(0, balance_usdt - ${txn.amount})` })
+      .where(eq(walletsTable.userId, txn.userId));
+  }
 
   await logAdminAction(req.user!.userId, `${status}_transaction`, "transaction", id, { type: txn.type, amount: txn.amount });
 
@@ -552,23 +562,35 @@ router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const { notes, ...poolFields } = parsed.data;
+
+  // Persist the correct outcome in eventId field so it's stored on the pool record
+  const setData: Record<string, unknown> = { ...poolFields };
+  if (poolFields.deadline) setData.deadline = new Date(poolFields.deadline);
+  if (poolFields.status === "settled") {
+    setData.settledAt = new Date();
+    if (notes) setData.eventId = `outcome:${notes}`; // persist correct outcome on pool record
+  }
+
   const [updated] = await db.update(predictionPoolsTable)
-    .set({
-      ...poolFields,
-      deadline: poolFields.deadline ? new Date(poolFields.deadline) : undefined,
-      settledAt: poolFields.status === "settled" ? new Date() : undefined,
-    })
+    .set(setData as Parameters<typeof db.update>[0]["set"])
     .where(eq(predictionPoolsTable.id, id))
     .returning();
 
-  // When settling: distribute prize pool equally among all entrants
+  // When settling: distribute prize pool to entries with non-empty picks (i.e. participants who made a prediction)
   if (poolFields.status === "settled" && updated) {
-    const entries = await db.select().from(poolEntriesTable).where(eq(poolEntriesTable.poolId, id));
-    if (entries.length > 0) {
-      const prizePerEntry = (Number(updated.prizePool) / entries.length);
+    const allEntries = await db.select().from(poolEntriesTable).where(eq(poolEntriesTable.poolId, id));
+    // Winners = entries whose picks jsonb is non-empty (they submitted a prediction)
+    const winners = allEntries.filter((e: { picks: unknown; userId: number }) => {
+      const picks = e.picks as Record<string, unknown> | null;
+      return picks && typeof picks === "object" && Object.keys(picks).length > 0;
+    });
+    // Fall back to all entrants if no one submitted picks (e.g. pool was seeded manually)
+    const recipients = winners.length > 0 ? winners : allEntries;
+    if (recipients.length > 0) {
+      const prizePerEntry = Number(updated.prizePool) / recipients.length;
       if (prizePerEntry > 0) {
-        for (const entry of entries) {
-          const [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, entry.userId));
+        for (const entry of recipients) {
+          const [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, entry.userId)).limit(1);
           if (wallet) {
             await db.update(walletsTable)
               .set({ balanceUsdt: sql`balance_usdt + ${String(prizePerEntry.toFixed(8))}` })
@@ -578,7 +600,9 @@ router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
               type: "credit",
               amount: String(prizePerEntry.toFixed(8)),
               status: "completed",
-              notes: notes ? `Pool #${id} prize: ${notes}` : `Pool #${id} prize distribution`,
+              notes: notes
+                ? `Pool #${id} prize — outcome: ${notes}`
+                : `Pool #${id} prize distribution`,
             });
           }
         }
@@ -586,7 +610,11 @@ router.patch("/admin/pools/:id", async (req, res): Promise<void> => {
     }
   }
 
-  await logAdminAction(req.user!.userId, "update_pool", "pool", id, { ...poolFields, outcome: notes });
+  await logAdminAction(req.user!.userId, "update_pool", "pool", id, {
+    ...poolFields,
+    correctOutcome: notes,
+    winnersCount: poolFields.status === "settled" ? "settled" : undefined,
+  });
   res.json(updated);
 });
 
