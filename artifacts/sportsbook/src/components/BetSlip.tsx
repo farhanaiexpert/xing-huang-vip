@@ -5,7 +5,9 @@ import { useOddsFormat } from '../hooks/useOddsFormat';
 import { useBetHistory } from '../hooks/useBetHistory';
 import { formatOdds } from '../lib/oddsFormat';
 import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
-import { ConnectWalletModal } from './ConnectWalletModal';
+import { AuthModal } from './AuthModal';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/apiClient';
 import { cn } from '../lib/utils';
 import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Input } from './ui/input';
@@ -22,10 +24,12 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     totalOdds, accaReturn, totalSingleReturn, totalSingleStaked,
   } = useBetSlip();
 
-  const { isConnected, balance, deductBalance } = useWallet();
+  const { isConnected, balance, deductBalance, refreshBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { addBet } = useBetHistory();
   const { toast } = useToast();
-  const [isWalletOpen,   setIsWalletOpen]   = useState(false);
+  const [isAuthOpen,     setIsAuthOpen]     = useState(false);
+  const [isPlacing,      setIsPlacing]      = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
   const isScrolled = !forceExpanded && !!isScrolledProp;
   const [compactExpanded, setCompactExpanded] = useState(false);
@@ -33,28 +37,51 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
   const hasSelections = selections.length > 0;
 
   // ── Place bet ──────────────────────────────────────────────────
-  function handlePlaceBet() {
-    if (!isConnected) { setIsWalletOpen(true); return; }
+  async function handlePlaceBet() {
+    if (!isAuthenticated) { setIsAuthOpen(true); return; }
 
-    const stakeNum   = betType === 'acca' ? parseFloat(stake || '0') : totalSingleStaked;
-    const payout     = betType === 'acca' ? accaReturn : totalSingleReturn;
-    const odds       = betType === 'acca' ? totalOdds  : (stakeNum > 0 ? payout / stakeNum : 1);
+    const stakeNum = betType === 'acca' ? parseFloat(stake || '0') : totalSingleStaked;
+    const payout   = betType === 'acca' ? accaReturn : totalSingleReturn;
+    const odds     = betType === 'acca' ? totalOdds  : (stakeNum > 0 ? payout / stakeNum : 1);
 
     if (stakeNum <= 0 || balance <= 0 || stakeNum > balance) return;
 
-    const placed = {
-      betId:           `#BET-${Math.floor(Math.random() * 90000 + 10000)}`,
-      betType,
-      selections:      [...selections],
-      stake:           stakeNum,
-      totalOdds:       odds,
-      estimatedPayout: payout,
-      placedAt:        new Date(),
-    };
+    setIsPlacing(true);
+    try {
+      const apiType = betType === 'acca' ? 'accumulator' : 'single';
+      const apiSelections = selections.map(s => ({
+        eventId:    s.matchId,
+        eventName:  s.matchName,
+        marketType: s.marketName,
+        selection:  s.selectionName,
+        odds:       s.odds,
+      }));
 
-    deductBalance(stakeNum);
-    addBet(placed);
-    setConfirmation(placed);
+      await api.post('/bets', { type: apiType, stake: stakeNum, selections: apiSelections });
+
+      deductBalance(stakeNum);
+      await refreshBalance();
+
+      const placed: BetConfirmation = {
+        betId:           `#BET-${Math.floor(Math.random() * 90000 + 10000)}`,
+        betType,
+        selections:      [...selections],
+        stake:           stakeNum,
+        totalOdds:       odds,
+        estimatedPayout: payout,
+        placedAt:        new Date(),
+      };
+      addBet(placed);
+      setConfirmation(placed);
+    } catch (err) {
+      toast({
+        title: 'Bet failed',
+        description: err instanceof Error ? err.message : 'Could not place bet',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPlacing(false);
+    }
   }
 
   function handleConfirmationClose() {
@@ -64,8 +91,8 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   // ── Bet logic ─────────────────────────────────────────────────
   const accaStakeNum     = parseFloat(stake || '0');
-  const canPlaceAcca     = isConnected && betType === 'acca'   && accaStakeNum > 0 && hasSelections && balance > 0 && accaStakeNum <= balance;
-  const canPlaceSingle   = isConnected && betType === 'single' && totalSingleStaked > 0 && hasSelections && balance > 0 && totalSingleStaked <= balance;
+  const canPlaceAcca     = isAuthenticated && betType === 'acca'   && accaStakeNum > 0 && hasSelections && balance > 0 && accaStakeNum <= balance;
+  const canPlaceSingle   = isAuthenticated && betType === 'single' && totalSingleStaked > 0 && hasSelections && balance > 0 && totalSingleStaked <= balance;
   const canPlace         = canPlaceAcca || canPlaceSingle;
   const readyToStake     = hasSelections;
 
@@ -172,7 +199,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
         </aside>
 
         {/* Modals */}
-        {isWalletOpen && <ConnectWalletModal isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />}
+        {isAuthOpen && <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
         {confirmation && <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />}
       </>
     );
@@ -284,7 +311,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               isConnected={isConnected}
               balance={balance}
               canPlace={canPlaceSingle}
-              onConnectWallet={() => setIsWalletOpen(true)}
+              onConnectWallet={() => setIsAuthOpen(true)}
               onPlaceBet={handlePlaceBet}
             />
           ) : (
@@ -299,7 +326,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               balance={balance}
               canPlace={canPlaceAcca}
               readyToStake={readyToStake}
-              onConnectWallet={() => setIsWalletOpen(true)}
+              onConnectWallet={() => setIsAuthOpen(true)}
               onPlaceBet={handlePlaceBet}
             />
           )}
@@ -308,7 +335,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
       </div>
 
-      <ConnectWalletModal open={isWalletOpen} onOpenChange={setIsWalletOpen} />
+      {isAuthOpen && <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
       <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />
     </aside>
   );
@@ -638,7 +665,7 @@ function ActionButton({
 // ────────────────────────────────────────────────────────────────
 function EmptyState() {
   const { isConnected, shortAddress, walletName } = useWallet();
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-4 text-center">
@@ -669,11 +696,11 @@ function EmptyState() {
         </div>
       ) : (
         <button
-          onClick={() => setIsWalletOpen(true)}
+          onClick={() => setIsAuthOpen(true)}
           className="w-full mb-4 flex items-center gap-2 bg-[#121821] border border-[#253241] rounded-lg px-3 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all"
         >
           <Wallet className="h-4 w-4 text-[#94A3B8]/50 shrink-0" />
-          Connect wallet to place bets
+          Sign in to place bets
         </button>
       )}
 
@@ -697,7 +724,7 @@ function EmptyState() {
         Click any odds button to add
       </p>
 
-      <ConnectWalletModal open={isWalletOpen} onOpenChange={setIsWalletOpen} />
+      {isAuthOpen && <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
     </div>
   );
 }

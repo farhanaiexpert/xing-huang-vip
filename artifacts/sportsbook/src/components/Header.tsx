@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'wouter';
-import { Search, Wallet, BarChart2, Bell, LogOut, Copy, ChevronDown, X, Globe } from 'lucide-react';
-import { ConnectWalletModal } from './ConnectWalletModal';
+import { Search, Wallet, Bell, LogOut, Copy, ChevronDown, X, Globe, User } from 'lucide-react';
+import { AuthModal } from './AuthModal';
 import { useWallet } from '../hooks/useWallet';
+import { useAuth } from '../contexts/AuthContext';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { useOddsFormat } from '../hooks/useOddsFormat';
@@ -50,9 +51,10 @@ function triggerTranslate(langCode: string) {
 
 
 export function Header() {
-  const { isConnected, shortAddress, walletName, disconnect } = useWallet();
+  const { isConnected, shortAddress, walletName, balance } = useWallet();
+  const { logout } = useAuth();
   const { format, setFormat } = useOddsFormat();
-  const [isWalletOpen,     setIsWalletOpen]     = useState(false);
+  const [isAuthOpen,       setIsAuthOpen]       = useState(false);
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
   const [showSearch,       setShowSearch]       = useState(false);
   const [showNotifs,       setShowNotifs]       = useState(false);
@@ -104,7 +106,7 @@ export function Header() {
     }
   }
 
-  function handleDisconnect() { disconnect(); setShowAddressMenu(false); }
+  async function handleDisconnect() { await logout(); setShowAddressMenu(false); }
 
   function handleOpenNotifs() {
     setShowNotifs(v => !v);
@@ -329,7 +331,7 @@ export function Header() {
 
             <div className="hidden md:block h-5 w-px bg-white/[0.07] mx-1.5" />
 
-            {/* Wallet */}
+            {/* Account */}
             {isConnected && shortAddress ? (
               <div className="relative" ref={menuRef}>
                 <button
@@ -343,19 +345,26 @@ export function Header() {
                   )}
                 >
                   <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] shrink-0" />
-                  <span className="font-mono text-xs text-[#00DFA9]">{shortAddress}</span>
+                  <span className="text-xs text-[#00DFA9] font-semibold">{shortAddress}</span>
+                  {balance > 0 && (
+                    <span className="hidden sm:inline text-[10px] text-[#FACC15] font-bold bg-[#FACC15]/10 px-1.5 py-0.5 rounded-md">
+                      {balance.toFixed(2)} USDT
+                    </span>
+                  )}
                   <ChevronDown className={cn('h-3.5 w-3.5 text-[#94A3B8]/60 transition-transform duration-200', showAddressMenu && 'rotate-180')} />
                 </button>
 
                 {showAddressMenu && (
-                  <div className="absolute right-0 top-[calc(100%+8px)] w-52 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.7)] overflow-hidden z-50">
+                  <div className="absolute right-0 top-[calc(100%+8px)] w-56 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.7)] overflow-hidden z-50">
                     <div className="px-3 py-2.5 border-b border-[#253241]">
-                      <p className="text-[10px] text-[#94A3B8]/50 uppercase tracking-wider font-medium">Connected via</p>
-                      <p className="text-sm font-semibold text-[#F8FAFC] mt-0.5">{walletName}</p>
+                      <p className="text-[10px] text-[#94A3B8]/50 uppercase tracking-wider font-medium">Signed in as</p>
+                      <p className="text-sm font-semibold text-[#F8FAFC] mt-0.5">{shortAddress}</p>
+                      <p className="text-xs text-[#FACC15] font-bold mt-0.5">{balance.toFixed(2)} USDT</p>
                     </div>
                     <div className="py-1">
-                      <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Address'} onClick={handleCopy} />
-                      <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Disconnect" onClick={handleDisconnect} danger />
+                      <MenuAction icon={<User className="h-3.5 w-3.5" />} label="My Account" onClick={() => setShowAddressMenu(false)} />
+                      <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Username'} onClick={handleCopy} />
+                      <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Sign Out" onClick={handleDisconnect} danger />
                     </div>
                   </div>
                 )}
@@ -363,22 +372,22 @@ export function Header() {
             ) : (
               <button
                 data-testid="button-connect-wallet-header"
-                onClick={() => setIsWalletOpen(true)}
+                onClick={() => setIsAuthOpen(true)}
                 className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
                 style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
               >
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
-                <Wallet className="relative h-3.5 w-3.5 shrink-0" />
-                <span className="relative hidden sm:inline whitespace-nowrap">Connect Wallet</span>
-                <span className="relative sm:hidden">Connect</span>
+                <User className="relative h-3.5 w-3.5 shrink-0" />
+                <span className="relative hidden sm:inline whitespace-nowrap">Sign In</span>
+                <span className="relative sm:hidden">Sign In</span>
               </button>
             )}
           </div>
         </div>
       </header>
 
-      <ConnectWalletModal open={isWalletOpen} onOpenChange={setIsWalletOpen} />
+      <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </>
   );
 }

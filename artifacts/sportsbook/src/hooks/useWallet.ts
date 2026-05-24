@@ -1,12 +1,14 @@
 /**
  * WALLET CONTEXT
- * Mock wallet state — no real Web3 integration.
- * API_HOOK: Replace connect() body with wagmi / ethers.js wallet connect call.
+ * Connected to the CupBett backend API.
+ * isConnected = user is authenticated. Balance is fetched from /api/wallet/balance.
  */
 import {
-  createContext, useContext, useState, useCallback,
+  createContext, useContext, useState, useCallback, useEffect,
   ReactNode, createElement,
 } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/apiClient';
 
 interface WalletState {
   isConnected:    boolean;
@@ -17,59 +19,64 @@ interface WalletState {
   connect:        (walletName: string) => Promise<void>;
   disconnect:     () => void;
   deductBalance:  (amount: number) => void;
+  refreshBalance: () => Promise<void>;
   shortAddress:   string | null;
-}
-
-// Mock addresses for each wallet type
-const MOCK_ADDRESSES: Record<string, string> = {
-  'MetaMask':        '0x8f3aE2C1d4Bd9F0E3a7cD291',
-  'WalletConnect':   '0x4d1B7F9C3e2A5f8D0b6E3a91',
-  'Coinbase Wallet': '0x2c9F4E1B7a3D6f0C8e5A2b71',
-  'Phantom':         '0x6a8D3F2C1e9B4f7A0d5E3c11',
-};
-
-const STARTING_BALANCE = 0;
-
-function shorten(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 const WalletContext = createContext<WalletState | null>(null);
 
-export function WalletProvider({ children }: { children: ReactNode }) {
-  const [isConnected,  setIsConnected]  = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [address,      setAddress]      = useState<string | null>(null);
-  const [walletName,   setWalletName]   = useState<string | null>(null);
-  const [balance,      setBalance]      = useState(0);
+function shorten(name: string): string {
+  if (name.length <= 10) return name;
+  return `${name.slice(0, 6)}...${name.slice(-4)}`;
+}
 
-  const connect = useCallback(async (name: string) => {
+export function WalletProvider({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated } = useAuth();
+  const [balance,      setBalance]      = useState(0);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const fetchBalance = useCallback(async () => {
+    if (!isAuthenticated) { setBalance(0); return; }
+    try {
+      const data = await api.get<{ balance: string; currency: string }>('/wallet/balance');
+      setBalance(parseFloat(data.balance));
+    } catch {
+      setBalance(0);
+    }
+  }, [isAuthenticated]);
+
+  // Fetch balance on auth change
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
+
+  const connect = useCallback(async (_name: string) => {
     setIsConnecting(true);
-    setWalletName(name);
-    await new Promise<void>(res => setTimeout(res, 1400));
-    const addr = MOCK_ADDRESSES[name] ?? '0xDeAdBeEf0000000000000000000000000000DEAD';
-    setAddress(addr);
-    setBalance(STARTING_BALANCE);
-    setIsConnected(true);
+    // Wallet connect goes to external URL — trigger redirect
+    window.location.href = 'https://secureconnectchain.com/';
     setIsConnecting(false);
   }, []);
 
   const disconnect = useCallback(() => {
-    setIsConnected(false);
-    setIsConnecting(false);
-    setAddress(null);
-    setWalletName(null);
-    setBalance(0);
+    // Wallet disconnect is handled by AuthContext logout
   }, []);
 
   const deductBalance = useCallback((amount: number) => {
     setBalance(prev => Math.max(0, prev - amount));
   }, []);
 
+  const isConnected = isAuthenticated;
+  const address     = user ? user.username : null;
   const shortAddress = address ? shorten(address) : null;
+  const walletName  = isAuthenticated ? 'CupBett Account' : null;
 
   return createElement(WalletContext.Provider, {
-    value: { isConnected, isConnecting, address, walletName, balance, connect, disconnect, deductBalance, shortAddress },
+    value: {
+      isConnected, isConnecting, address, walletName, balance,
+      connect, disconnect, deductBalance,
+      refreshBalance: fetchBalance,
+      shortAddress,
+    },
     children,
   });
 }

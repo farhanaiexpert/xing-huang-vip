@@ -1,25 +1,25 @@
 /**
  * REFERRAL / AFFILIATE SYSTEM
- * Frontend-only with localStorage persistence.
- * API_HOOK: Replace loadStore/saveStore with real API calls when backend is ready.
+ * Fetches real data from /api/referral/* when authenticated.
+ * Falls back to empty defaults when not logged in.
  */
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../lib/apiClient';
 
-// ─── Commission rates ────────────────────────────────────────────────────────
 export const COMMISSION_RATES: Record<1 | 2 | 3, number> = { 1: 0.05, 2: 0.03, 3: 0.01 };
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 export interface ReferralUser {
   id:             string;
   address:        string;
   level:          1 | 2 | 3;
-  joinedAt:       string;   // ISO date
+  joinedAt:       string;
   referredByCode: string;
 }
 
 export interface CommissionEntry {
   id:              string;
-  date:            string;  // ISO date
+  date:            string;
   referredAddress: string;
   level:           1 | 2 | 3;
   txAmount:        number;
@@ -47,51 +47,22 @@ export interface ReferralState extends ReferralStore {
   registerReferrer: (refCode: string) => void;
   addCommission:   (entry: Omit<CommissionEntry, 'id'>) => void;
   claimPending:    () => void;
-  updateCode:      (newCode: string) => boolean; // returns false if invalid
+  updateCode:      (newCode: string) => boolean;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'cupbett_referral_v2';
-const CODE_CHARS  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-function makeCode(): string {
-  return 'IHFFXMRP';
+interface ApiCommission {
+  id: number;
+  amount: string;
+  status: string;
+  createdAt: string;
 }
-
-function shortAddr(seed: number): string {
-  const h = '0123456789abcdef';
-  const p1 = Array.from({ length: 4 }, (_, i) => h[(seed * 7  + i * 13) % 16]).join('');
-  const p2 = Array.from({ length: 4 }, (_, i) => h[(seed * 11 + i * 17) % 16]).join('');
-  return `0x${p1}...${p2}`;
+interface ApiNetwork {
+  tier1: Array<{ userId: number; username: string; createdAt: string }>;
+  totalReferrals: number;
 }
-
-function loadStore(): ReferralStore | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ReferralStore) : null;
-  } catch { return null; }
-}
-
-function saveStore(store: ReferralStore) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); } catch {}
-}
-
-function initStore(): ReferralStore {
-  const existing = loadStore();
-  if (existing) return existing;
-
-  // Read ?ref= from URL
-  const refParam = new URLSearchParams(window.location.search).get('ref') ?? null;
-  const myCode   = makeCode();
-
-  const store: ReferralStore = {
-    myCode,
-    referredByCode: refParam,
-    referrals: [],
-    commissions: [],
-  };
-  saveStore(store);
-  return store;
+interface ApiCommissionsResponse {
+  commissions: ApiCommission[];
+  summary: { total: number; pending: number; paid: number };
 }
 
 function buildLink(code: string): string {
@@ -99,63 +70,97 @@ function buildLink(code: string): string {
   return `${base}?ref=${code}`;
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+const DEFAULT_STATE: ReferralStore = {
+  myCode: 'IHFFXMRP',
+  referredByCode: null,
+  referrals: [],
+  commissions: [],
+};
+
 export function useReferral(): ReferralState {
-  const [store, setStore]     = useState<ReferralStore | null>(null);
-  const [isLoaded, setLoaded] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const [store, setStore]       = useState<ReferralStore>(DEFAULT_STATE);
+  const [isLoaded, setLoaded]   = useState(false);
 
   useEffect(() => {
-    setStore(initStore());
-    setLoaded(true);
+    if (!isAuthenticated || !user) {
+      setStore(DEFAULT_STATE);
+      setLoaded(false);
+      return;
+    }
+
+    async function loadData() {
+      try {
+        const [networkData, commData] = await Promise.all([
+          api.get<ApiNetwork>('/referral/network'),
+          api.get<ApiCommissionsResponse>('/referral/commissions'),
+        ]);
+
+        const referrals: ReferralUser[] = networkData.tier1.map(r => ({
+          id: String(r.userId),
+          address: r.username,
+          level: 1 as const,
+          joinedAt: r.createdAt,
+          referredByCode: user!.referralCode ?? '',
+        }));
+
+        const commissions: CommissionEntry[] = commData.commissions.map(c => ({
+          id: String(c.id),
+          date: c.createdAt,
+          referredAddress: '',
+          level: 1 as const,
+          txAmount: 0,
+          commissionPct: COMMISSION_RATES[1],
+          earned: parseFloat(c.amount),
+          status: c.status as 'pending' | 'paid',
+        }));
+
+        setStore({
+          myCode: user!.referralCode ?? 'IHFFXMRP',
+          referredByCode: null,
+          referrals,
+          commissions,
+        });
+      } catch {
+        setStore({
+          myCode: user!.referralCode ?? 'IHFFXMRP',
+          referredByCode: null,
+          referrals: [],
+          commissions: [],
+        });
+      }
+      setLoaded(true);
+    }
+
+    loadData();
+  }, [isAuthenticated, user]);
+
+  const registerReferrer = useCallback((_refCode: string) => {
+    // Handled at registration time via API
   }, []);
 
-  const update = useCallback((updater: (prev: ReferralStore) => ReferralStore) => {
-    setStore(prev => {
-      if (!prev) return prev;
-      const next = updater(prev);
-      saveStore(next);
-      return next;
-    });
+  const addCommission = useCallback((_entry: Omit<CommissionEntry, 'id'>) => {
+    // Handled server-side
   }, []);
-
-  const registerReferrer = useCallback((refCode: string) => {
-    update(s => ({ ...s, referredByCode: refCode }));
-  }, [update]);
-
-  const addCommission = useCallback((entry: Omit<CommissionEntry, 'id'>) => {
-    update(s => ({
-      ...s,
-      commissions: [{ ...entry, id: `c${Date.now()}` }, ...s.commissions],
-    }));
-  }, [update]);
 
   const claimPending = useCallback(() => {
-    update(s => ({
-      ...s,
-      commissions: s.commissions.map(c => c.status === 'pending' ? { ...c, status: 'paid' as const } : c),
-    }));
-  }, [update]);
+    // Handled server-side
+  }, []);
 
-  // Returns true on success, false if code is invalid or taken
-  const updateCode = useCallback((newCode: string): boolean => {
-    const clean = newCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (clean.length < 4 || clean.length > 16) return false;
-    update(s => ({ ...s, myCode: clean }));
-    return true;
-  }, [update]);
+  const updateCode = useCallback((_newCode: string): boolean => {
+    return false; // Not yet supported via API
+  }, []);
 
-  const s = store ?? { myCode: 'IHFFXMRP', referredByCode: null, referrals: [], commissions: [] };
-
-  const level1      = s.referrals.filter(r => r.level === 1);
-  const level2      = s.referrals.filter(r => r.level === 2);
-  const level3      = s.referrals.filter(r => r.level === 3);
-  const totalEarned = s.commissions.reduce((a, c) => a + c.earned, 0);
-  const pendingEarned = s.commissions.filter(c => c.status === 'pending').reduce((a, c) => a + c.earned, 0);
-  const paidEarned    = s.commissions.filter(c => c.status === 'paid').reduce((a, c) => a + c.earned, 0);
-  const myLink = isLoaded ? buildLink(s.myCode) : '';
+  const level1      = store.referrals.filter(r => r.level === 1);
+  const level2      = store.referrals.filter(r => r.level === 2);
+  const level3      = store.referrals.filter(r => r.level === 3);
+  const totalEarned   = store.commissions.reduce((a, c) => a + c.earned, 0);
+  const pendingEarned = store.commissions.filter(c => c.status === 'pending').reduce((a, c) => a + c.earned, 0);
+  const paidEarned    = store.commissions.filter(c => c.status === 'paid').reduce((a, c) => a + c.earned, 0);
+  const myLink = isLoaded ? buildLink(store.myCode) : '';
 
   return {
-    ...s,
+    ...store,
     isLoaded,
     myLink,
     level1, level2, level3,
