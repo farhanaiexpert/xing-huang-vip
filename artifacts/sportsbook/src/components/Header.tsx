@@ -51,7 +51,7 @@ function triggerTranslate(langCode: string) {
 
 
 export function Header() {
-  const { isConnected, shortAddress, walletName, balance } = useWallet();
+  const { isConnected, shortAddress, walletName, balance, connect } = useWallet();
   const { logout } = useAuth();
   const { format, setFormat } = useOddsFormat();
   const [isAuthOpen,       setIsAuthOpen]       = useState(false);
@@ -331,7 +331,7 @@ export function Header() {
 
             <div className="hidden md:block h-5 w-px bg-white/[0.07] mx-1.5" />
 
-            {/* Account */}
+            {/* Auth / Wallet */}
             {isConnected && shortAddress ? (
               <div className="relative" ref={menuRef}>
                 <button
@@ -370,18 +370,30 @@ export function Header() {
                 )}
               </div>
             ) : (
-              <button
-                data-testid="button-connect-wallet-header"
-                onClick={() => setIsAuthOpen(true)}
-                className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
-                style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
-              >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
-                <User className="relative h-3.5 w-3.5 shrink-0" />
-                <span className="relative hidden sm:inline whitespace-nowrap">Sign In</span>
-                <span className="relative sm:hidden">Sign In</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Sign In — smaller ghost button */}
+                <button
+                  onClick={() => setIsAuthOpen(true)}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-white/[0.12] text-[#94A3B8] text-xs font-semibold hover:border-white/[0.25] hover:text-[#F8FAFC] hover:bg-white/[0.05] transition-all duration-150"
+                >
+                  <User className="h-3 w-3 shrink-0" />
+                  <span className="hidden sm:inline">Sign In</span>
+                </button>
+
+                {/* Connect Wallet — original green button */}
+                <button
+                  data-testid="button-connect-wallet-header"
+                  onClick={() => connect('MetaMask')}
+                  className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
+                  style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
+                  <Wallet className="relative h-3.5 w-3.5 shrink-0" />
+                  <span className="relative hidden sm:inline whitespace-nowrap">Connect Wallet</span>
+                  <span className="relative sm:hidden">Connect</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -5,7 +5,6 @@ import { useOddsFormat } from '../hooks/useOddsFormat';
 import { useBetHistory } from '../hooks/useBetHistory';
 import { formatOdds } from '../lib/oddsFormat';
 import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
-import { AuthModal } from './AuthModal';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
 import { cn } from '../lib/utils';
@@ -24,11 +23,10 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     totalOdds, accaReturn, totalSingleReturn, totalSingleStaked,
   } = useBetSlip();
 
-  const { isConnected, balance, deductBalance, refreshBalance } = useWallet();
+  const { isConnected, balance, deductBalance, refreshBalance, connect } = useWallet();
   const { isAuthenticated } = useAuth();
   const { addBet } = useBetHistory();
   const { toast } = useToast();
-  const [isAuthOpen,     setIsAuthOpen]     = useState(false);
   const [isPlacing,      setIsPlacing]      = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
   const isScrolled = !forceExpanded && !!isScrolledProp;
@@ -199,7 +197,6 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
         </aside>
 
         {/* Modals */}
-        {isAuthOpen && <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
         {confirmation && <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />}
       </>
     );
@@ -311,7 +308,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               isConnected={isConnected}
               balance={balance}
               canPlace={canPlaceSingle}
-              onConnectWallet={() => setIsAuthOpen(true)}
+              onConnectWallet={() => connect('MetaMask')}
               onPlaceBet={handlePlaceBet}
             />
           ) : (
@@ -326,7 +323,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               balance={balance}
               canPlace={canPlaceAcca}
               readyToStake={readyToStake}
-              onConnectWallet={() => setIsAuthOpen(true)}
+              onConnectWallet={() => connect('MetaMask')}
               onPlaceBet={handlePlaceBet}
             />
           )}
@@ -335,7 +332,6 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
       </div>
 
-      {isAuthOpen && <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
       <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />
     </aside>
   );
@@ -664,8 +660,7 @@ function ActionButton({
 // EMPTY STATE
 // ────────────────────────────────────────────────────────────────
 function EmptyState() {
-  const { isConnected, shortAddress, walletName } = useWallet();
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const { isConnected, shortAddress, walletName, connect } = useWallet();
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-4 text-center">
@@ -696,11 +691,11 @@ function EmptyState() {
         </div>
       ) : (
         <button
-          onClick={() => setIsAuthOpen(true)}
+          onClick={() => connect('MetaMask')}
           className="w-full mb-4 flex items-center gap-2 bg-[#121821] border border-[#253241] rounded-lg px-3 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all"
         >
           <Wallet className="h-4 w-4 text-[#94A3B8]/50 shrink-0" />
-          Sign in to place bets
+          Connect wallet to place bets
         </button>
       )}
 
@@ -724,7 +719,6 @@ function EmptyState() {
         Click any odds button to add
       </p>
 
-      {isAuthOpen && <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
     </div>
   );
 }
