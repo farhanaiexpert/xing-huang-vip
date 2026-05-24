@@ -1,0 +1,48 @@
+
+⚡ Phase 1 — Backend Foundation
+The engine that powers everything
+Set up Express API server (artifacts/api-server)
+Connect PostgreSQL database
+Build the database schema: users, bets, wallets, transactions, referrals, promotions, prediction pools
+User authentication: register, login, logout (JWT tokens)
+Password hashing, session security
+Basic middleware: auth guard, error handling, request logging
+End result: A working API server with a real database. Frontend still uses localStorage (not connected yet).
+
+⚡ Phase 2 — Connect Frontend to Backend
+Replace localStorage with real data
+User registration & login flow in the sportsbook
+Real wallet balance (fetch from DB instead of memory)
+Bet placement → saved to DB permanently
+Bet history → fetched from DB
+Favourites → saved to DB (synced across devices)
+Referral / affiliate data → server-calculated commissions
+Odds caching → moved to server (API key hidden from browser)
+End result: Sportsbook is now fully live — real accounts, real persistent data.
+
+⚡ Phase 3 — Admin Dashboard (Part 1: Core)
+Super Admin can see and manage everything essential
+Separate React app (artifacts/admin) with its own login
+Overview dashboard — live stats, revenue chart, recent activity
+User management — view all users, suspend/ban, adjust balance
+Bet management — view all bets, void/settle bets, liability view
+Wallet & finance — deposits, withdrawals, approve/reject payouts
+End result: Admin can oversee users and money.
+
+⚡ Phase 4 — Admin Dashboard (Part 2: Operations)
+Full control over the platform
+Promotions manager — create, edit, expire bonus offers
+Odds & markets control — suspend markets, override odds
+WinSpin configuration — prizes, probabilities, limits
+Prediction pools manager — create, settle, cancel pools
+Sports & leagues catalog — enable/disable sports and leagues
+End result: Admin controls the full product experience.
+
+⚡ Phase 5 — Admin Dashboard (Part 3: Risk & Analytics)
+Protect the platform and understand the business
+Risk & fraud management — flagged accounts, duplicate detection, AML report
+Affiliate management — full referral tree, commission payouts, fraud flags
+Audit log — every admin action recorded
+Reports & analytics — revenue by sport, user acquisition, retention, export CSV/PDF
+Platform settings — maintenance mode, global limits, feature toggles, admin role management
+End result: Complete, production-grade admin platform.

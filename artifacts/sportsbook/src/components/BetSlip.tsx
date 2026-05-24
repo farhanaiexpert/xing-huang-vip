@@ -25,7 +25,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   const { isConnected, balance, deductBalance, refreshBalance, connect } = useWallet();
   const { isAuthenticated } = useAuth();
-  const { addBet } = useBetHistory();
+  const { addBet, refresh: refreshBetHistory } = useBetHistory();
   const { toast } = useToast();
   const [isPlacing,      setIsPlacing]      = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
@@ -36,7 +36,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   // ── Place bet ──────────────────────────────────────────────────
   async function handlePlaceBet() {
-    if (!isAuthenticated) { setIsAuthOpen(true); return; }
+    if (!isAuthenticated) return;
 
     const stakeNum = betType === 'acca' ? parseFloat(stake || '0') : totalSingleStaked;
     const payout   = betType === 'acca' ? accaReturn : totalSingleReturn;
@@ -56,13 +56,17 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
         odds:       s.odds,
       }));
 
-      await api.post('/bets', { type: apiType, stake: stakeNum, selections: apiSelections });
+      const placed_bet = await api.post<{ id: number }>('/bets', {
+        type: apiType,
+        stake: stakeNum,
+        selections: apiSelections,
+      });
 
       deductBalance(stakeNum);
-      await refreshBalance();
+      await Promise.all([refreshBalance(), refreshBetHistory()]);
 
       const placed: BetConfirmation = {
-        betId:           `#BET-${Math.floor(Math.random() * 90000 + 10000)}`,
+        betId:           `#BET-${placed_bet.id}`,
         betType,
         selections:      [...selections],
         stake:           stakeNum,
