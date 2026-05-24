@@ -27,7 +27,7 @@ function UserDrawer({ user, onClose }: { user: AdminUser; onClose: () => void })
 
   const balMut = useMutation({
     mutationFn: (adjustment: string) =>
-      api.patch(`/admin/users/${user.id}`, { balanceAdjustment: adjustment, notes: adjNotes || undefined }),
+      api.patch(`/admin/users/${user.id}`, { balanceAdjustment: parseFloat(adjustment), balanceNote: adjNotes || undefined }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
       toast.success("Balance adjusted");

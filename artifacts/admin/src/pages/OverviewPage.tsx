@@ -81,6 +81,7 @@ export default function OverviewPage() {
         <StatCard icon={Clock} label="Pending Deposits" value={s.transactions.pendingDeposits} color="bg-[#FACC15]/10 text-[#FACC15]" />
         <StatCard icon={CreditCard} label="Pending Withdrawals" value={s.transactions.pendingWithdrawals} color="bg-red-500/10 text-red-400" />
         <StatCard icon={Wallet} label="Total Wallet Balance" value={`$${fmt(s.platform.totalWalletBalance)} USDT`} sub={`Commissions paid: $${fmt(s.platform.totalCommissionsPaid)}`} color="bg-[#00DFA9]/10 text-[#00DFA9]" />
+        <StatCard icon={TrendingUp} label="Gross Revenue (GGR)" value={`$${fmt(s.platform.grossRevenue)} USDT`} sub="Stakes − winnings on settled bets" color="bg-[#FACC15]/10 text-[#FACC15]" />
       </div>
 
       <div className="bg-[#0D1117] border border-white/8 rounded-xl p-5">

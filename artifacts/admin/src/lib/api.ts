@@ -50,7 +50,7 @@ export interface AdminStats {
   users: { total: number };
   bets: { total: number; volume: string; open: number };
   transactions: { pendingDeposits: number; pendingWithdrawals: number };
-  platform: { totalWalletBalance: string; totalCommissionsPaid: string };
+  platform: { totalWalletBalance: string; totalCommissionsPaid: string; grossRevenue: string };
 }
 
 export interface AdminUser {
