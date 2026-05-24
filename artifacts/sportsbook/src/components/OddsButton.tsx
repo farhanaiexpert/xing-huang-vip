@@ -19,11 +19,12 @@ interface OddsButtonProps {
   odds: number;
   isLive?: boolean;
   className?: string;
+  sportId?: string;
 }
 
 export function OddsButton({
   matchId, marketId, matchName, leagueName, marketName,
-  selectionType, selectionName, odds, isLive = false, className,
+  selectionType, selectionName, odds, isLive = false, className, sportId,
 }: OddsButtonProps) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const { toast } = useToast();
@@ -87,6 +88,7 @@ export function OddsButton({
         id: selectionId, marketId, matchId,
         matchName, leagueName, marketName,
         selectionType, selectionName, odds: displayOdds,
+        sportId,
       });
       setIsPulsing(true);
       setTimeout(() => setIsPulsing(false), 280);

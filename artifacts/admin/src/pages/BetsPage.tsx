@@ -6,19 +6,20 @@ import { ChevronLeft, ChevronRight, Search, AlertTriangle, X } from "lucide-reac
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DataTable, ColDef } from "@/components/DataTable";
 
 const PAGE_SIZE = 20;
 
-function SkeletonRow({ cols }: { cols: number }) {
-  return (
-    <tr className="border-b border-white/5">
-      {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="px-4 py-3.5">
-          <div className="h-3.5 bg-white/5 rounded animate-pulse" style={{ width: `${55 + (i * 13) % 40}%` }} />
-        </td>
-      ))}
-    </tr>
-  );
+function sportLabel(sport: string | null): string {
+  if (!sport) return "—";
+  const base = sport.split("_")[0].toLowerCase();
+  const MAP: Record<string, string> = {
+    soccer: "Soccer", americanfootball: "Football", basketball: "Basketball",
+    baseball: "Baseball", icehockey: "Ice Hockey", tennis: "Tennis",
+    mma: "MMA", cricket: "Cricket", rugbyunion: "Rugby", rugbleague: "Rugby",
+    golf: "Golf", boxing: "Boxing", volleyball: "Volleyball",
+  };
+  return MAP[base] ?? sport;
 }
 
 function UserSheet({ username, onClose }: { username: string; onClose: () => void }) {
@@ -26,11 +27,10 @@ function UserSheet({ username, onClose }: { username: string; onClose: () => voi
     queryKey: ["bet-user-lookup", username],
     queryFn: () => api.get(`/admin/users?search=${encodeURIComponent(username)}&limit=1`),
   });
-
   const user = data?.users?.[0];
 
   return (
-    <Sheet open onOpenChange={(open) => !open && onClose()}>
+    <Sheet open onOpenChange={open => !open && onClose()}>
       <SheetContent className="w-[360px] max-w-full bg-[#0B0F14] border-l border-white/8">
         <SheetHeader className="pb-4 border-b border-white/8">
           <SheetTitle className="text-white text-base">User Details</SheetTitle>
@@ -55,14 +55,14 @@ function UserSheet({ username, onClose }: { username: string; onClose: () => voi
               </div>
             </div>
             <div className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">
-              {[
+              {([
                 ["User ID", `#${user.id}`],
                 ["Role", user.role],
                 ["KYC", user.kycStatus],
                 ["Country", user.country ?? "—"],
                 ["Balance", user.balance !== null ? `$${fmt(user.balance)} USDT` : "—"],
                 ["Joined", fmtDate(user.createdAt)],
-              ].map(([label, value]) => (
+              ] as [string, string][]).map(([label, value]) => (
                 <div key={label} className="flex justify-between text-sm px-4 py-2.5 border-b border-white/5 last:border-0">
                   <span className="text-[#64748B]">{label}</span>
                   <span className="text-white font-mono text-xs">{value}</span>
@@ -110,6 +110,110 @@ export default function BetsPage() {
   const openLiability = openBets.reduce((sum, b) => sum + parseFloat(b.potentialReturn), 0);
 
   const sel = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors";
+
+  const cols: ColDef<AdminBet>[] = [
+    {
+      key: "id",
+      label: "ID",
+      sortable: true,
+      getValue: b => b.id,
+      render: b => <span className="text-[#475569] font-mono text-xs">#{b.id}</span>,
+    },
+    {
+      key: "user",
+      label: "User",
+      render: b => (
+        <button
+          onClick={e => { e.stopPropagation(); if (b.username) setUserSheet(b.username); }}
+          disabled={!b.username}
+          className="text-[#38BDF8] text-sm font-medium hover:text-white hover:underline transition-colors disabled:text-[#475569] disabled:no-underline"
+        >
+          {b.username ?? `uid:${b.userId}`}
+        </button>
+      ),
+    },
+    {
+      key: "sport",
+      label: "Sport",
+      sortable: true,
+      getValue: b => b.sport ?? "",
+      render: b => (
+        <span className="text-[#64748B] text-xs">{sportLabel(b.sport)}</span>
+      ),
+    },
+    {
+      key: "match",
+      label: "Match",
+      className: "max-w-[160px]",
+      render: b => (
+        <span className="text-[#64748B] text-xs truncate block max-w-[160px]" title={b.eventName ?? ""}>
+          {b.eventName ?? <span className="text-[#334155]">—</span>}
+        </span>
+      ),
+    },
+    {
+      key: "type",
+      label: "Type",
+      sortable: true,
+      getValue: b => b.type,
+      render: b => <span className="text-[#64748B] capitalize text-xs">{b.type}</span>,
+    },
+    {
+      key: "stake",
+      label: "Stake",
+      sortable: true,
+      getValue: b => parseFloat(b.stake),
+      render: b => <span className="text-[#FACC15] font-mono text-xs font-semibold">${fmt(b.stake)}</span>,
+    },
+    {
+      key: "odds",
+      label: "Odds",
+      sortable: true,
+      getValue: b => parseFloat(b.totalOdds),
+      render: b => <span className="text-white font-mono text-xs">{fmt(b.totalOdds, 3)}×</span>,
+    },
+    {
+      key: "potential",
+      label: "Potential",
+      sortable: true,
+      getValue: b => parseFloat(b.potentialReturn),
+      render: b => <span className="text-[#00DFA9] font-mono text-xs font-semibold">${fmt(b.potentialReturn)}</span>,
+    },
+    {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      getValue: b => b.status,
+      render: b => (
+        <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", statusBg(b.status))}>
+          {b.status}
+        </span>
+      ),
+    },
+    {
+      key: "date",
+      label: "Placed",
+      sortable: true,
+      getValue: b => b.createdAt,
+      render: b => <span className="text-[#475569] text-xs whitespace-nowrap">{fmtDate(b.createdAt)}</span>,
+    },
+    {
+      key: "settle",
+      label: "Settle",
+      render: b => (
+        b.status === "open" ? (
+          <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+            <button onClick={() => settleMut.mutate({ id: b.id, betStatus: "won" })}
+              className="px-2 py-1 rounded text-xs bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 transition-colors font-medium">Won</button>
+            <button onClick={() => settleMut.mutate({ id: b.id, betStatus: "lost" })}
+              className="px-2 py-1 rounded text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-medium">Lost</button>
+            <button onClick={() => settleMut.mutate({ id: b.id, betStatus: "void" })}
+              className="px-2 py-1 rounded text-xs bg-white/5 text-[#64748B] hover:bg-white/10 transition-colors">Void</button>
+          </div>
+        ) : null
+      ),
+    },
+  ];
 
   function doSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -161,91 +265,29 @@ export default function BetsPage() {
         </div>
       )}
 
-      <div className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/8 text-[#475569] text-[11px] uppercase tracking-wider bg-white/2">
-                <th className="text-left px-4 py-3 font-medium">ID</th>
-                <th className="text-left px-4 py-3 font-medium">User</th>
-                <th className="text-left px-4 py-3 font-medium">Match</th>
-                <th className="text-left px-4 py-3 font-medium">Type</th>
-                <th className="text-left px-4 py-3 font-medium">Stake</th>
-                <th className="text-left px-4 py-3 font-medium">Odds</th>
-                <th className="text-left px-4 py-3 font-medium">Potential</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-left px-4 py-3 font-medium">Placed</th>
-                <th className="text-left px-4 py-3 font-medium">Settle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={10} />)
-              ) : data?.bets.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-16 text-[#334155]">No bets found</td></tr>
-              ) : data?.bets.map(b => (
-                <tr key={b.id} className="border-b border-white/5 hover:bg-white/2 transition-colors">
-                  <td className="px-4 py-3.5 text-[#475569] font-mono text-xs">#{b.id}</td>
-                  <td className="px-4 py-3.5">
-                    <button
-                      onClick={() => setUserSheet(b.username ?? null)}
-                      disabled={!b.username}
-                      className="text-[#38BDF8] text-sm font-medium hover:text-white hover:underline transition-colors disabled:text-[#475569] disabled:no-underline"
-                    >
-                      {b.username ?? `uid:${b.userId}`}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3.5 text-[#64748B] text-xs max-w-[160px] truncate" title={b.eventName ?? ""}>
-                    {b.eventName ?? <span className="text-[#334155]">—</span>}
-                  </td>
-                  <td className="px-4 py-3.5 text-[#64748B] capitalize text-xs">{b.type}</td>
-                  <td className="px-4 py-3.5 text-[#FACC15] font-mono text-xs font-semibold">${fmt(b.stake)}</td>
-                  <td className="px-4 py-3.5 text-white font-mono text-xs">{fmt(b.totalOdds, 3)}×</td>
-                  <td className="px-4 py-3.5 text-[#00DFA9] font-mono text-xs font-semibold">${fmt(b.potentialReturn)}</td>
-                  <td className="px-4 py-3.5">
-                    <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", statusBg(b.status))}>
-                      {b.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-[#475569] text-xs whitespace-nowrap">{fmtDate(b.createdAt)}</td>
-                  <td className="px-4 py-3.5">
-                    {b.status === "open" && (
-                      <div className="flex gap-1">
-                        <button onClick={() => settleMut.mutate({ id: b.id, betStatus: "won" })}
-                          className="px-2 py-1 rounded text-xs bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 transition-colors font-medium">
-                          Won
-                        </button>
-                        <button onClick={() => settleMut.mutate({ id: b.id, betStatus: "lost" })}
-                          className="px-2 py-1 rounded text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-medium">
-                          Lost
-                        </button>
-                        <button onClick={() => settleMut.mutate({ id: b.id, betStatus: "void" })}
-                          className="px-2 py-1 rounded text-xs bg-white/5 text-[#64748B] hover:bg-white/10 transition-colors">
-                          Void
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-white/8 text-[#475569]">
-          <span className="text-xs">Page {page} of {pages} · {total.toLocaleString()} bets total</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs px-2">{page}</span>
-            <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
+      <DataTable
+        cols={cols}
+        rows={data?.bets}
+        loading={isLoading}
+        rowKey={b => b.id}
+        empty="No bets found"
+        footer={
+          <div className="flex items-center justify-between">
+            <span className="text-xs">Page {page} of {pages} · {total.toLocaleString()} bets total</span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-xs px-2">{page}</span>
+              <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
+                className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 }

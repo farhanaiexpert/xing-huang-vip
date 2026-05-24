@@ -333,12 +333,6 @@ export default function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const roleMut = useMutation({
-    mutationFn: ({ id, role }: { id: number; role: string }) => api.patch(`/admin/users/${id}`, { role }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("Role updated"); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -414,16 +408,10 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
-                    <select
-                      value={u.role}
-                      onChange={e => roleMut.mutate({ id: u.id, role: e.target.value })}
-                      className="bg-transparent text-xs focus:outline-none cursor-pointer"
-                    >
-                      <option value="user">user</option>
-                      <option value="admin">admin</option>
-                      <option value="super_admin">super_admin</option>
-                    </select>
+                  <td className="px-4 py-3.5">
+                    <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", roleBadge(u.role))}>
+                      {u.role.replace(/_/g, " ")}
+                    </span>
                   </td>
                   <td className="px-4 py-3.5">
                     <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", kycBadge(u.kycStatus))}>

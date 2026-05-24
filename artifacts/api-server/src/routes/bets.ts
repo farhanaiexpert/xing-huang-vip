@@ -9,6 +9,7 @@ const router = Router();
 const SelectionSchema = z.object({
   eventId: z.string(),
   eventName: z.string(),
+  sport: z.string().default(""),
   marketType: z.string(),
   selection: z.string(),
   odds: z.number().positive(),
@@ -52,6 +53,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
       betId: bet.id,
       eventId: s.eventId,
       eventName: s.eventName,
+      sport: s.sport ?? "",
       marketType: s.marketType,
       selection: s.selection,
       odds: s.odds.toFixed(4),

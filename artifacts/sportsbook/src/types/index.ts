@@ -13,6 +13,8 @@ export type Selection = {
   /** Full display label: "Home Win" | "Draw" | "Away Win" | player name */
   selectionName: string;
   odds: number;
+  /** The Odds API sport key, e.g. "soccer_epl" */
+  sportId?: string;
 };
 
 export type Match = {

@@ -19,15 +19,20 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: "Growth",
+    label: "Finance",
     items: [
       { href: "/referrals",   icon: Share2,          label: "Referrals"    },
       { href: "/promotions",  icon: Gift,            label: "Promotions"   },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
       { href: "/pools",       icon: Trophy,          label: "Pools"        },
     ],
   },
   {
-    label: "Security",
+    label: "System",
     items: [
       { href: "/admin-accounts", icon: ShieldCheck,  label: "Admin Accounts" },
       { href: "/audit",          icon: ScrollText,   label: "Audit Log"      },

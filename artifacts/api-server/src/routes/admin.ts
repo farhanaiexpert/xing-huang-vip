@@ -386,6 +386,7 @@ router.get("/admin/bets", async (req, res): Promise<void> => {
       settledAt: betsTable.settledAt,
       createdAt: betsTable.createdAt,
       eventName: sql<string | null>`(SELECT event_name FROM bet_selections WHERE bet_id = ${betsTable.id} LIMIT 1)`,
+      sport: sql<string | null>`(SELECT sport FROM bet_selections WHERE bet_id = ${betsTable.id} LIMIT 1)`,
     })
     .from(betsTable)
     .leftJoin(usersTable, eq(usersTable.id, betsTable.userId))

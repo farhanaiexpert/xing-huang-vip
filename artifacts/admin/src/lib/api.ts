@@ -96,6 +96,7 @@ export interface AdminBet {
   settledAt: string | null;
   createdAt: string;
   eventName: string | null;
+  sport: string | null;
 }
 
 export interface AdminTransaction {

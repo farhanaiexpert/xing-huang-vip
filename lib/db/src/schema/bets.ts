@@ -20,6 +20,7 @@ export const betSelectionsTable = pgTable("bet_selections", {
   betId: integer("bet_id").notNull().references(() => betsTable.id, { onDelete: "cascade" }),
   eventId: text("event_id").notNull(),
   eventName: text("event_name").notNull(),
+  sport: text("sport").notNull().default(""),
   marketType: text("market_type").notNull(),
   selection: text("selection").notNull(),
   odds: numeric("odds", { precision: 10, scale: 4 }).notNull(),
