@@ -158,7 +158,7 @@ router.get("/admin/stats/recent-activity", async (req, res): Promise<void> => {
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 router.get("/admin/users", async (req, res): Promise<void> => {
-  const { search, page = "1", limit = "20", suspended } = req.query as Record<string, string>;
+  const { search, page = "1", limit = "20", suspended, role } = req.query as Record<string, string>;
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
   const offset = (pageNum - 1) * limitNum;
@@ -169,6 +169,11 @@ router.get("/admin/users", async (req, res): Promise<void> => {
   }
   if (suspended === "true") conditions.push(eq(usersTable.isSuspended, true));
   if (suspended === "false") conditions.push(eq(usersTable.isSuspended, false));
+  if (role === "admins") {
+    conditions.push(or(eq(usersTable.role, "admin"), eq(usersTable.role, "super_admin")));
+  } else if (role && role !== "all") {
+    conditions.push(eq(usersTable.role, role as "user" | "admin" | "super_admin"));
+  }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 

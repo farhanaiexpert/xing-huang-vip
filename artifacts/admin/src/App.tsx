@@ -12,6 +12,7 @@ import ReferralsPage from "@/pages/ReferralsPage";
 import PromotionsPage from "@/pages/PromotionsPage";
 import PoolsPage from "@/pages/PoolsPage";
 import AuditLogPage from "@/pages/AuditLogPage";
+import AdminAccountsPage from "@/pages/AdminAccountsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/promotions" component={() => <ProtectedRoute component={PromotionsPage} />} />
       <Route path="/pools" component={() => <ProtectedRoute component={PoolsPage} />} />
       <Route path="/audit" component={() => <ProtectedRoute component={AuditLogPage} />} />
+      <Route path="/admin-accounts" component={() => <ProtectedRoute component={AdminAccountsPage} />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );
