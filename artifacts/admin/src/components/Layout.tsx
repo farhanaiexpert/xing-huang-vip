@@ -4,7 +4,7 @@ import { clearToken, getStoredUser } from "@/lib/api";
 import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
-  Shield, ShieldCheck, Zap, Globe,
+  Shield, ShieldCheck, Zap, Globe, BarChart2, Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,10 +34,17 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    label: "Analytics",
+    items: [
+      { href: "/reports",  icon: BarChart2, label: "Reports"  },
+    ],
+  },
+  {
     label: "System",
     items: [
-      { href: "/admin-accounts", icon: ShieldCheck,  label: "Admin Accounts" },
-      { href: "/audit",          icon: ScrollText,   label: "Audit Log"      },
+      { href: "/admin-accounts", icon: ShieldCheck, label: "Admin Accounts" },
+      { href: "/audit",          icon: ScrollText,  label: "Audit Log"      },
+      { href: "/settings",       icon: Settings,    label: "Settings"       },
     ],
   },
 ];

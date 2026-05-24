@@ -9,3 +9,4 @@ export * from "./winspin";
 export * from "./sessions";
 export * from "./admin_logs";
 export * from "./sport_controls";
+export * from "./platform_settings";

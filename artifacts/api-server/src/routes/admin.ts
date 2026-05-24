@@ -20,6 +20,7 @@ import {
   winspinSpinsTable,
   winspinPrizesTable,
   sportControlsTable,
+  platformSettingsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -951,6 +952,145 @@ router.patch("/admin/markets/:id", async (req, res): Promise<void> => {
   if (!control) { res.status(404).json({ error: "Market not found" }); return; }
   await logAdminAction(req.user!.userId, "market_updated", "sport_control", id, parsed.data as Record<string, unknown>);
   res.json(control);
+});
+
+
+// ─── Platform Settings ────────────────────────────────────────────────────────
+
+router.get("/admin/settings", async (_req, res): Promise<void> => {
+  const settings = await db.select().from(platformSettingsTable).orderBy(platformSettingsTable.key);
+  res.json(settings);
+});
+
+router.patch("/admin/settings", async (req, res): Promise<void> => {
+  const body = req.body as Record<string, string>;
+  if (typeof body !== "object" || Array.isArray(body)) {
+    res.status(400).json({ error: "Body must be a key→value object" });
+    return;
+  }
+  const results: unknown[] = [];
+  for (const [key, value] of Object.entries(body)) {
+    const [row] = await db
+      .update(platformSettingsTable)
+      .set({ value: String(value), updatedAt: new Date() })
+      .where(eq(platformSettingsTable.key, key))
+      .returning();
+    if (row) results.push(row);
+  }
+  await logAdminAction(req.user!.userId, "settings_updated", "platform_settings", 0, body as Record<string, unknown>);
+  res.json(results);
+});
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
+router.get("/admin/reports/revenue-by-sport", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      COALESCE(bs.sport, 'Unknown') AS sport,
+      COUNT(DISTINCT b.id)::int     AS bet_count,
+      COALESCE(SUM(b.stake), 0)::text                                                          AS total_staked,
+      COALESCE(SUM(CASE WHEN b.status = 'won' THEN b.potential_return ELSE 0 END), 0)::text   AS total_paid_out,
+      COALESCE(SUM(b.stake) - SUM(CASE WHEN b.status = 'won' THEN b.potential_return ELSE 0 END), 0)::text AS net_revenue
+    FROM bets b
+    JOIN bet_selections bs ON bs.bet_id = b.id
+    WHERE b.status IN ('won', 'lost')
+    GROUP BY bs.sport
+    ORDER BY (SUM(b.stake) - SUM(CASE WHEN b.status = 'won' THEN b.potential_return ELSE 0 END)) DESC
+  `);
+  const mapped = (rows.rows as Array<Record<string, unknown>>).map(r => ({
+    sport:       r.sport,
+    betCount:    Number(r.bet_count),
+    totalStaked: String(r.total_staked),
+    totalPaidOut: String(r.total_paid_out),
+    netRevenue:  String(r.net_revenue),
+  }));
+  res.json(mapped);
+});
+
+router.get("/admin/reports/top-bettors", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      u.username,
+      COUNT(b.id)::int       AS bet_count,
+      COALESCE(SUM(b.stake), 0)::text AS total_staked
+    FROM bets b
+    JOIN users u ON u.id = b.user_id
+    GROUP BY u.username
+    ORDER BY SUM(b.stake) DESC
+    LIMIT 20
+  `);
+  const mapped = (rows.rows as Array<Record<string, unknown>>).map(r => ({
+    username:    String(r.username),
+    betCount:    Number(r.bet_count),
+    totalStaked: String(r.total_staked),
+  }));
+  res.json(mapped);
+});
+
+router.get("/admin/reports/daily-pnl", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      to_char(date_trunc('day', b.created_at AT TIME ZONE 'UTC'), 'MM-DD') AS day,
+      COALESCE(SUM(b.stake), 0)::text AS stakes,
+      COALESCE(SUM(CASE WHEN b.status = 'won' THEN b.potential_return ELSE 0 END), 0)::text AS payouts
+    FROM bets b
+    WHERE b.status IN ('won', 'lost')
+      AND b.created_at >= now() - interval '30 days'
+    GROUP BY date_trunc('day', b.created_at AT TIME ZONE 'UTC')
+    ORDER BY date_trunc('day', b.created_at AT TIME ZONE 'UTC')
+  `);
+  res.json(rows.rows);
+});
+
+// ─── CSV Exports ──────────────────────────────────────────────────────────────
+
+router.get("/admin/reports/export/bets", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      b.id, u.username, u.email,
+      b.stake, b.potential_return, b.status, b.bet_type,
+      b.created_at,
+      STRING_AGG(bs.event_name || ' — ' || bs.market_name || ' @ ' || bs.odds, ' | ') AS selections
+    FROM bets b
+    JOIN users u ON u.id = b.user_id
+    LEFT JOIN bet_selections bs ON bs.bet_id = b.id
+    GROUP BY b.id, u.username, u.email
+    ORDER BY b.created_at DESC
+    LIMIT 10000
+  `);
+  const headers = ["id", "username", "email", "stake", "potential_return", "status", "bet_type", "created_at", "selections"];
+  const csv = [
+    headers.join(","),
+    ...(rows.rows as Array<Record<string, unknown>>).map(r =>
+      headers.map(h => JSON.stringify(r[h] ?? "")).join(",")
+    ),
+  ].join("\n");
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="cupbett-bets-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.send(csv);
+});
+
+router.get("/admin/reports/export/transactions", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      t.id, u.username, u.email,
+      t.type, t.amount, t.currency, t.status,
+      t.reference, t.created_at
+    FROM transactions t
+    JOIN users u ON u.id = t.user_id
+    ORDER BY t.created_at DESC
+    LIMIT 10000
+  `);
+  const headers = ["id", "username", "email", "type", "amount", "currency", "status", "reference", "created_at"];
+  const csv = [
+    headers.join(","),
+    ...(rows.rows as Array<Record<string, unknown>>).map(r =>
+      headers.map(h => JSON.stringify(r[h] ?? "")).join(",")
+    ),
+  ].join("\n");
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="cupbett-transactions-${new Date().toISOString().slice(0, 10)}.csv"`);
+  res.send(csv);
 });
 
 export default router;

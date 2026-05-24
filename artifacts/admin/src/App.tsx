@@ -15,6 +15,8 @@ import AuditLogPage from "@/pages/AuditLogPage";
 import AdminAccountsPage from "@/pages/AdminAccountsPage";
 import WinSpinPage from "@/pages/WinSpinPage";
 import MarketsPage from "@/pages/MarketsPage";
+import SettingsPage from "@/pages/SettingsPage";
+import ReportsPage from "@/pages/ReportsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -44,6 +46,8 @@ function Router() {
       <Route path="/admin-accounts" component={() => <ProtectedRoute component={AdminAccountsPage} />} />
       <Route path="/winspin" component={() => <ProtectedRoute component={WinSpinPage} />} />
       <Route path="/markets" component={() => <ProtectedRoute component={MarketsPage} />} />
+      <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
+      <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );

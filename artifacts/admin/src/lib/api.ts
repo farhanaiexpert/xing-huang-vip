@@ -217,3 +217,31 @@ export interface AdminSportControl {
   oddsMultiplier: string;
   updatedAt: string;
 }
+
+export interface PlatformSetting {
+  id: number;
+  key: string;
+  value: string;
+  description: string | null;
+  updatedAt: string;
+}
+
+export interface RevenueBySport {
+  sport: string;
+  betCount: number;
+  totalStaked: string;
+  totalPaidOut: string;
+  netRevenue: string;
+}
+
+export interface TopBettor {
+  username: string;
+  betCount: number;
+  totalStaked: string;
+}
+
+export interface DailyPnL {
+  day: string;
+  stakes: string;
+  payouts: string;
+}
