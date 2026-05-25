@@ -356,7 +356,7 @@ export function WalletPage() {
           </div>
 
           {/* Step 2 – Submit TxID (redesigned) */}
-          <div className="rounded-2xl overflow-hidden"
+          <div className="rounded-2xl"
             style={{ background: 'linear-gradient(135deg, #0A1628 0%, #0E1520 100%)', border: '1px solid rgba(56,189,248,0.20)' }}>
 
             {/* Header */}
