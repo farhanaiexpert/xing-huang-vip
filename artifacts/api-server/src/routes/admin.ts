@@ -1322,5 +1322,169 @@ router.delete("/admin/users/:id/notes/:noteId", async (req, res): Promise<void> 
   res.status(204).end();
 });
 
+
+// ─── Batch Settlement ─────────────────────────────────────────────────────────
+
+router.get("/admin/settlement/events", async (req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      bs.event_id,
+      bs.event_name,
+      bs.sport,
+      COUNT(*) FILTER (WHERE bs.status = 'open')::int  AS open_count,
+      COUNT(DISTINCT b.user_id)::int                    AS player_count,
+      COALESCE(SUM(b.stake) FILTER (WHERE bs.status = 'open'), 0)::text AS total_staked
+    FROM bet_selections bs
+    JOIN bets b ON b.id = bs.bet_id
+    WHERE bs.status = 'open' AND b.status = 'open'
+    GROUP BY bs.event_id, bs.event_name, bs.sport
+    HAVING COUNT(*) FILTER (WHERE bs.status = 'open') > 0
+    ORDER BY open_count DESC
+  `);
+  res.json(rows.rows);
+});
+
+router.get("/admin/settlement/events/:eventId", async (req, res): Promise<void> => {
+  const eventId = req.params.eventId;
+  const rows = await db.execute(sql`
+    SELECT
+      bs.market_type,
+      bs.selection,
+      COUNT(*)::int                                    AS open_count,
+      COUNT(DISTINCT b.user_id)::int                  AS player_count,
+      COALESCE(SUM(b.stake), 0)::text                 AS total_staked,
+      COALESCE(SUM(b.potential_return), 0)::text      AS total_liability
+    FROM bet_selections bs
+    JOIN bets b ON b.id = bs.bet_id
+    WHERE bs.event_id = ${eventId}
+      AND bs.status = 'open'
+      AND b.status = 'open'
+    GROUP BY bs.market_type, bs.selection
+    ORDER BY bs.market_type, bs.selection
+  `);
+
+  const meta = await db.execute(sql`
+    SELECT event_name, sport FROM bet_selections WHERE event_id = ${eventId} LIMIT 1
+  `);
+
+  res.json({
+    eventId,
+    eventName: (meta.rows[0] as Record<string, unknown>)?.event_name ?? eventId,
+    sport: (meta.rows[0] as Record<string, unknown>)?.sport ?? "",
+    markets: rows.rows,
+  });
+});
+
+router.post("/admin/settlement/settle", async (req, res): Promise<void> => {
+  const schema = z.object({
+    eventId: z.string().min(1),
+    outcomes: z.array(z.object({
+      marketType: z.string().min(1),
+      selection: z.string().min(1),
+      result: z.enum(["won", "lost", "void"]),
+    })).min(1),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() }); return; }
+
+  const { eventId, outcomes } = parsed.data;
+
+  let totalSettled = 0, totalWon = 0, totalLost = 0, totalVoided = 0;
+  let totalPaidOut = 0;
+
+  await db.transaction(async (tx) => {
+    const affectedBetIds = new Set<number>();
+
+    // Step 1: update each matching selection
+    for (const { marketType, selection, result } of outcomes) {
+      const updated = await tx.execute(sql`
+        UPDATE bet_selections
+        SET status = ${result}
+        WHERE event_id = ${eventId}
+          AND market_type = ${marketType}
+          AND selection = ${selection}
+          AND status = 'open'
+        RETURNING bet_id
+      `);
+      for (const r of updated.rows as Array<{ bet_id: number }>) {
+        affectedBetIds.add(r.bet_id);
+      }
+    }
+
+    if (affectedBetIds.size === 0) return;
+
+    // Step 2: evaluate each affected bet
+    for (const betId of affectedBetIds) {
+      const [bet] = await tx.select().from(betsTable).where(eq(betsTable.id, betId)).limit(1);
+      if (!bet || bet.status !== "open") continue;
+
+      const allSelections = await tx.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, betId));
+
+      // Only resolve if ALL selections are now settled
+      if (allSelections.some(s => s.status === "open")) continue;
+
+      const hasLost  = allSelections.some(s => s.status === "lost");
+      const allVoid  = allSelections.every(s => s.status === "void");
+      const wonLegs  = allSelections.filter(s => s.status === "won");
+
+      let newStatus: string;
+      let payout = 0;
+
+      if (hasLost) {
+        newStatus = "lost";
+        totalLost++;
+      } else if (allVoid) {
+        newStatus = "void";
+        payout = parseFloat(String(bet.stake));
+        totalVoided++;
+      } else {
+        // won (possibly with some voided legs — recalculate odds from non-void legs only)
+        newStatus = "won";
+        const adjustedOdds = wonLegs.reduce((acc, s) => acc * parseFloat(String(s.odds)), 1);
+        payout = parseFloat(String(bet.stake)) * adjustedOdds;
+        totalWon++;
+      }
+
+      await tx.update(betsTable).set({ status: newStatus, settledAt: new Date() }).where(eq(betsTable.id, betId));
+      totalSettled++;
+
+      if (payout > 0) {
+        totalPaidOut += payout;
+        const txType = newStatus === "void" ? "refund" : "win";
+        const txNote = newStatus === "void"
+          ? `Bet #${betId} voided — stake refunded`
+          : `Bet #${betId} won — payout $${payout.toFixed(2)}`;
+
+        await tx.insert(transactionsTable).values({
+          userId: bet.userId,
+          type: txType,
+          amount: String(payout.toFixed(8)),
+          status: "completed",
+          notes: txNote,
+        });
+
+        await tx.execute(sql`
+          UPDATE wallets SET balance_usdt = balance_usdt + ${String(payout.toFixed(8))}
+          WHERE user_id = ${bet.userId}
+        `);
+      }
+    }
+  });
+
+  await logAdminAction(req.user!.userId, "batch_settle", "event", 0, {
+    eventId, outcomes: outcomes.length, settled: totalSettled, won: totalWon, lost: totalLost, voided: totalVoided,
+  });
+
+  res.json({
+    settled: totalSettled,
+    won: totalWon,
+    lost: totalLost,
+    voided: totalVoided,
+    totalPaidOut: totalPaidOut.toFixed(2),
+  });
+});
+
 export default router;
+
 

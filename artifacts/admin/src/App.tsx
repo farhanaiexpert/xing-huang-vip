@@ -18,6 +18,7 @@ import MarketsPage from "@/pages/MarketsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import UserProfilePage from "@/pages/UserProfilePage";
+import SettlementPage from "@/pages/SettlementPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
       <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
       <Route path="/users/:id" component={() => <ProtectedRoute component={UserProfilePage} />} />
+      <Route path="/settlement" component={() => <ProtectedRoute component={SettlementPage} />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );

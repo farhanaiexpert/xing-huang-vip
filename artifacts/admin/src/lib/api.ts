@@ -306,3 +306,36 @@ export interface UserNote {
   adminUsername: string;
   createdAt: string;
 }
+
+export interface SettlementEvent {
+  event_id: string;
+  event_name: string;
+  sport: string;
+  open_count: number;
+  player_count: number;
+  total_staked: string;
+}
+
+export interface SettlementMarket {
+  market_type: string;
+  selection: string;
+  open_count: number;
+  player_count: number;
+  total_staked: string;
+  total_liability: string;
+}
+
+export interface EventDetail {
+  eventId: string;
+  eventName: string;
+  sport: string;
+  markets: SettlementMarket[];
+}
+
+export interface SettlementResult {
+  settled: number;
+  won: number;
+  lost: number;
+  voided: number;
+  totalPaidOut: string;
+}
