@@ -377,7 +377,59 @@ export function WalletPage() {
             </div>
 
             <div className="p-5">
-              {depSuccess ? (
+              {depSubmitting ? (
+                /* ── Verifying state ── */
+                <div className="flex flex-col items-center py-10 gap-5 text-center">
+                  {/* Outer pulsing ring */}
+                  <div className="relative flex items-center justify-center">
+                    <div className="absolute w-24 h-24 rounded-full animate-ping opacity-10"
+                      style={{ background: 'radial-gradient(circle, #38BDF8, transparent)', animationDuration: '1.4s' }} />
+                    <div className="absolute w-20 h-20 rounded-full opacity-20 animate-pulse"
+                      style={{ background: 'conic-gradient(from 0deg, #38BDF8, #00DFA9, #38BDF8)', animationDuration: '2s' }} />
+                    {/* Spinning arc */}
+                    <svg className="w-20 h-20 animate-spin" style={{ animationDuration: '1.1s' }} viewBox="0 0 80 80">
+                      <circle cx="40" cy="40" r="34" fill="none" stroke="#38BDF8" strokeWidth="3"
+                        strokeDasharray="160" strokeDashoffset="120" strokeLinecap="round"
+                        style={{ opacity: 0.9 }} />
+                      <circle cx="40" cy="40" r="34" fill="none" stroke="#00DFA9" strokeWidth="1"
+                        strokeDasharray="213" strokeLinecap="round" style={{ opacity: 0.15 }} />
+                    </svg>
+                    {/* Centre icon */}
+                    <div className="absolute w-12 h-12 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)' }}>
+                      <svg className="w-6 h-6 text-[#38BDF8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round"
+                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[16px] font-black text-[#F8FAFC] tracking-tight">Verifying on-chain…</p>
+                    <p className="text-[11px] text-[#64748B] mt-1">Checking your transaction on the Tron blockchain</p>
+                  </div>
+
+                  {/* Animated step list */}
+                  <div className="w-full max-w-xs space-y-2">
+                    {[
+                      'Looking up transaction hash',
+                      'Confirming USDT TRC-20 transfer',
+                      'Validating recipient & amount',
+                    ].map((step, i) => (
+                      <div key={step}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl border border-white/[0.06] bg-white/[0.02]"
+                        style={{ animationDelay: `${i * 0.3}s` }}>
+                        <div className="w-4 h-4 rounded-full border-2 border-[#38BDF8]/40 flex items-center justify-center shrink-0">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-pulse" style={{ animationDelay: `${i * 0.4}s` }} />
+                        </div>
+                        <span className="text-[11px] text-[#64748B] text-left">{step}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-[10px] text-[#334155] italic">This usually completes in a few seconds</p>
+                </div>
+              ) : depSuccess ? (
                 /* ── Success state ── */
                 <div className="flex flex-col items-center py-8 gap-4 text-center">
                   <div className="relative">
