@@ -21,6 +21,7 @@ import { OddsSimulationProvider } from "@/hooks/useOddsSimulation";
 import { OddsFormatProvider } from "@/hooks/useOddsFormat";
 import { OddsDataProvider } from "@/hooks/useOddsData";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
@@ -68,28 +69,30 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <OddsFormatProvider>
-            <OddsSimulationProvider>
-              <OddsDataProvider>
-                <FavoritesProvider>
-                  <WalletProvider>
-                    <BetHistoryProvider>
-                      <BetSlipProvider>
-                        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                          <Router />
-                        </WouterRouter>
-                        <MobileBottomNav />
-                        <OnboardingGuide />
-                        <PromoPopup />
-                        <TransactionNotifier />
-                        <Toaster />
-                      </BetSlipProvider>
-                    </BetHistoryProvider>
-                  </WalletProvider>
-                </FavoritesProvider>
-              </OddsDataProvider>
-            </OddsSimulationProvider>
-          </OddsFormatProvider>
+          <NotificationsProvider>
+            <OddsFormatProvider>
+              <OddsSimulationProvider>
+                <OddsDataProvider>
+                  <FavoritesProvider>
+                    <WalletProvider>
+                      <BetHistoryProvider>
+                        <BetSlipProvider>
+                          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                            <Router />
+                          </WouterRouter>
+                          <MobileBottomNav />
+                          <OnboardingGuide />
+                          <PromoPopup />
+                          <TransactionNotifier />
+                          <Toaster />
+                        </BetSlipProvider>
+                      </BetHistoryProvider>
+                    </WalletProvider>
+                  </FavoritesProvider>
+                </OddsDataProvider>
+              </OddsSimulationProvider>
+            </OddsFormatProvider>
+          </NotificationsProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

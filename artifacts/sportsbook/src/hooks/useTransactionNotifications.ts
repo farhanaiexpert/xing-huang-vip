@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/contexts/NotificationsContext";
 import { api } from "@/lib/apiClient";
 
 interface Txn {
@@ -24,7 +25,10 @@ function getStored(): Record<number, string> {
 export function useTransactionNotifications() {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const { addNotification } = useNotifications();
   const initialized = useRef(false);
+  const addRef = useRef(addNotification);
+  addRef.current = addNotification;
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
@@ -46,19 +50,62 @@ export function useTransactionNotifications() {
           if (!initialized.current) continue;
 
           const prev = stored[t.id];
-          if (prev === "pending" && t.status === "completed") {
-            toastRef.current({
-              title: "✅ Deposit Approved!",
-              description: `$${parseFloat(t.amount).toFixed(2)} USDT has been credited to your account.`,
-            });
-          } else if (prev === "pending" && t.status === "rejected") {
-            toastRef.current({
-              title: "Deposit Not Approved",
-              description: t.notes
-                ? `Reason: ${t.notes}`
-                : "Your deposit request was not approved. Contact support if you need help.",
-              variant: "destructive",
-            });
+          const amt = `$${parseFloat(t.amount).toFixed(2)} USDT`;
+
+          if (t.type === "deposit") {
+            if (prev === "pending" && t.status === "completed") {
+              addRef.current({
+                type: "deposit_approved",
+                title: "Deposit Approved ✅",
+                message: `${amt} has been credited to your account.`,
+                link: "/account/wallet",
+              });
+              toastRef.current({
+                title: "✅ Deposit Approved!",
+                description: `${amt} has been credited to your account.`,
+              });
+            } else if (prev === "pending" && t.status === "rejected") {
+              addRef.current({
+                type: "deposit_rejected",
+                title: "Deposit Not Approved",
+                message: t.notes
+                  ? `Reason: ${t.notes}`
+                  : "Your deposit request was not approved. Contact support.",
+                link: "/account/wallet",
+              });
+              toastRef.current({
+                title: "Deposit Not Approved",
+                description: t.notes
+                  ? `Reason: ${t.notes}`
+                  : "Contact support if you need help.",
+                variant: "destructive",
+              });
+            }
+          } else if (t.type === "withdrawal") {
+            if (prev === "pending" && t.status === "completed") {
+              addRef.current({
+                type: "withdrawal_approved",
+                title: "Withdrawal Processed ✅",
+                message: `${amt} has been sent to your wallet.`,
+                link: "/account/wallet",
+              });
+              toastRef.current({
+                title: "✅ Withdrawal Processed!",
+                description: `${amt} has been sent to your wallet.`,
+              });
+            } else if (prev === "pending" && t.status === "rejected") {
+              addRef.current({
+                type: "withdrawal_rejected",
+                title: "Withdrawal Rejected",
+                message: t.notes ?? "Your withdrawal was not processed.",
+                link: "/account/wallet",
+              });
+              toastRef.current({
+                title: "Withdrawal Rejected",
+                description: t.notes ?? "Your withdrawal was not processed.",
+                variant: "destructive",
+              });
+            }
           }
         }
 

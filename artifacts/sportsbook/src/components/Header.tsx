@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'wouter';
-import { Search, Wallet, Bell, LogOut, Copy, ChevronDown, X, Globe, User } from 'lucide-react';
+import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
+import { NotificationBell } from './NotificationBell';
 import { useWallet } from '../hooks/useWallet';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useRef, useEffect } from 'react';
@@ -74,13 +75,12 @@ export function Header() {
   const [isAuthOpen,       setIsAuthOpen]       = useState(false);
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
   const [showSearch,       setShowSearch]       = useState(false);
-  const [showNotifs,       setShowNotifs]       = useState(false);
+
   const [showLang,         setShowLang]         = useState(false);
   const [currentLang,      setCurrentLang]      = useState('en');
   const [searchQuery,      setSearchQuery]      = useState('');
   const [copied,           setCopied]           = useState(false);
   const menuRef   = useRef<HTMLDivElement>(null);
-  const notifsRef = useRef<HTMLDivElement>(null);
   const langRef   = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -93,9 +93,8 @@ export function Header() {
   // Close dropdowns on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (menuRef.current   && !menuRef.current.contains(e.target as Node))   setShowAddressMenu(false);
-      if (notifsRef.current && !notifsRef.current.contains(e.target as Node)) setShowNotifs(false);
-      if (langRef.current   && !langRef.current.contains(e.target as Node))   setShowLang(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node))   setShowAddressMenu(false);
+      if (langRef.current && !langRef.current.contains(e.target as Node))   setShowLang(false);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -131,10 +130,6 @@ export function Header() {
   }
 
   async function handleDisconnect() { await logout(); setShowAddressMenu(false); }
-
-  function handleOpenNotifs() {
-    setShowNotifs(v => !v);
-  }
 
   // Quick search results (filter mock sports/pages)
   const QUICK_LINKS = [
@@ -311,27 +306,7 @@ export function Header() {
             </HeaderIconBtn>
 
             {/* Notifications */}
-            <div className="relative" ref={notifsRef}>
-              <HeaderIconBtn aria-label="Notifications" onClick={handleOpenNotifs}>
-                <Bell className="h-4 w-4" />
-              </HeaderIconBtn>
-
-              {/* Notifications dropdown */}
-              {showNotifs && (
-                <div className="absolute right-0 top-[calc(100%+8px)] w-72 bg-[#0D1117] border border-[#253241] rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.7)] overflow-hidden z-50">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#253241]">
-                    <p className="text-sm font-bold text-[#F8FAFC]">Notifications</p>
-                  </div>
-                  <div className="flex flex-col items-center justify-center py-10 px-4 gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#253241]/50 flex items-center justify-center">
-                      <Bell className="h-5 w-5 text-[#94A3B8]/40" />
-                    </div>
-                    <p className="text-sm text-[#94A3B8]/50 text-center">No notifications yet</p>
-                    <p className="text-[11px] text-[#94A3B8]/30 text-center leading-snug">Bet settlements, odds alerts and<br />promotions will appear here</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotificationBell />
 
             <div className="hidden md:block h-5 w-px bg-white/[0.07] mx-1.5" />
 
