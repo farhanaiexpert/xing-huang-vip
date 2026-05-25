@@ -9,9 +9,11 @@ import adminRouter from "./admin.js";
 import winspinRouter from "./winspin.js";
 import promotionsRouter from "./promotions.js";
 import poolsRouter from "./pools.js";
+import setupRouter from "./setup.js";
 
 const router = Router();
 
+router.use(setupRouter);
 router.use(authRouter);
 router.use(usersRouter);
 router.use(walletRouter);

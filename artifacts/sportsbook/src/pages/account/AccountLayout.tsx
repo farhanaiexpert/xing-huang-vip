@@ -58,6 +58,7 @@ export function AccountLayout() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
+      sessionStorage.setItem('cb_return_to', window.location.pathname);
       setLocation('/');
       setTimeout(() => window.dispatchEvent(new CustomEvent('openLoginModal')), 150);
     }

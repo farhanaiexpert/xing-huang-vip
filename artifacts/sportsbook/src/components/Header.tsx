@@ -52,8 +52,23 @@ function triggerTranslate(langCode: string) {
 
 export function Header() {
   const { isConnected, shortAddress, walletName, balance, connect } = useWallet();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const [, setLocation] = useLocation();
   const { format, setFormat } = useOddsFormat();
+
+  // After login, redirect to the page the user was trying to reach (e.g. /account)
+  const prevUserId = useRef<number | null>(null);
+  useEffect(() => {
+    const currentId = user?.id ?? null;
+    if (prevUserId.current === null && currentId !== null) {
+      const returnTo = sessionStorage.getItem('cb_return_to');
+      if (returnTo && returnTo !== '/' && returnTo !== '') {
+        sessionStorage.removeItem('cb_return_to');
+        setLocation(returnTo);
+      }
+    }
+    prevUserId.current = currentId;
+  }, [user, setLocation]);
   const [isAuthOpen,       setIsAuthOpen]       = useState(false);
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
   const [showSearch,       setShowSearch]       = useState(false);
