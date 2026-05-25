@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'wouter';
 import { X, QrCode, Zap, CreditCard, Wallet, ArrowRight, Lock, Shield, Clock, CheckCircle2, CircleDollarSign } from 'lucide-react';
 import { AuthModal } from './AuthModal';
@@ -70,10 +71,10 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   if (!isVisible && !authOpen) return null;
 
-  return (
+  return createPortal(
     <>
       {isVisible && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/75 backdrop-blur-sm"
@@ -249,6 +250,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
       )}
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
-    </>
+    </>,
+    document.body
   );
 }
