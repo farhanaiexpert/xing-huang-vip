@@ -92,7 +92,11 @@ export function WalletPage() {
   const [depAutoVerified, setDepAutoVerified] = useState(false);
 
   // NOWPayments
-  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual'>('nowpayments');
+  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual'>(() => {
+    const hint = sessionStorage.getItem('cupbett_deposit_method');
+    sessionStorage.removeItem('cupbett_deposit_method');
+    return (hint === 'manual' ? 'manual' : 'nowpayments') as 'nowpayments' | 'manual';
+  });
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
   const [nppAmount, setNppAmount]     = useState('');
   const [nppCurrency, setNppCurrency] = useState('usdttrc20');
