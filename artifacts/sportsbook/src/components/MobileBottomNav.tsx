@@ -4,7 +4,7 @@ import {
   Home, Grid3X3, Receipt, Gift, MoreHorizontal,
   History, HelpCircle, Star, FileText, ShieldCheck,
   Landmark, ChevronRight, Wallet, X, Zap, Check,
-  TrendingUp, Share2,
+  TrendingUp, Share2, UserCircle,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useWallet } from '../hooks/useWallet';
@@ -21,11 +21,11 @@ const ODDS_FORMATS = [
 ] as const;
 
 const QUICK_ACTIONS = [
-  { icon: History,    label: 'Bet History', sub: 'View your bets',     href: '/bet-history', color: '#38BDF8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.18)' },
-  { icon: Star,       label: 'WinSpin',     sub: 'Spin & win',         href: '/winspin',     color: '#F59E0B', bg: 'rgba(245,158,11,0.08)',   border: 'rgba(245,158,11,0.18)' },
-  { icon: HelpCircle, label: 'Help & Rules',sub: 'Learn how to bet',   href: '/help',        color: '#A78BFA', bg: 'rgba(167,139,250,0.08)',  border: 'rgba(167,139,250,0.18)' },
-  { icon: TrendingUp, label: 'Promotions',  sub: 'Bonuses & offers',   href: '/promotions',  color: '#00DFA9', bg: 'rgba(0,223,169,0.08)',    border: 'rgba(0,223,169,0.18)' },
-  { icon: Share2,     label: 'Affiliate',   sub: 'Earn referral USDT', href: '/affiliate',   color: '#FACC15', bg: 'rgba(250,204,21,0.08)',   border: 'rgba(250,204,21,0.18)' },
+  { icon: History,    label: 'Bet History', sub: 'View your bets',     href: '/account/bets',      color: '#38BDF8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.18)' },
+  { icon: Star,       label: 'WinSpin',     sub: 'Spin & win',         href: '/winspin',            color: '#F59E0B', bg: 'rgba(245,158,11,0.08)',   border: 'rgba(245,158,11,0.18)' },
+  { icon: HelpCircle, label: 'Help & Rules',sub: 'Learn how to bet',   href: '/help',               color: '#A78BFA', bg: 'rgba(167,139,250,0.08)',  border: 'rgba(167,139,250,0.18)' },
+  { icon: TrendingUp, label: 'Promotions',  sub: 'Bonuses & offers',   href: '/promotions',         color: '#00DFA9', bg: 'rgba(0,223,169,0.08)',    border: 'rgba(0,223,169,0.18)' },
+  { icon: Share2,     label: 'Affiliate',   sub: 'Earn referral USDT', href: '/account/referrals',  color: '#FACC15', bg: 'rgba(250,204,21,0.08)',   border: 'rgba(250,204,21,0.18)' },
 ];
 
 const LEGAL_LINKS = [
@@ -35,7 +35,7 @@ const LEGAL_LINKS = [
 ];
 
 const MORE_PAGES = [
-  '/bet-history', '/winspin', '/help', '/terms', '/privacy', '/aml', '/affiliate',
+  '/account', '/winspin', '/help', '/terms', '/privacy', '/aml',
 ];
 
 export function MobileBottomNav() {
@@ -61,8 +61,8 @@ export function MobileBottomNav() {
     if (location !== '/') setLocation('/');
   }
 
-  const isHome   = location === '/';
-  const isPromos = location === '/promotions';
+  const isHome    = location === '/';
+  const isAccount = location.startsWith('/account');
   const isBetSlipTab = betSlipOpen;
   const isSportsTab  = sportsOpen;
   const isMoreTab    = moreOpen || MORE_PAGES.includes(location);
@@ -113,13 +113,13 @@ export function MobileBottomNav() {
             </div>
           </button>
 
-          <Link href="/promotions"
+          <Link href="/account"
             className={cn(
               'flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150',
-              isPromos && !isMoreTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
+              isAccount && !isMoreTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
             )}>
-            <Gift className="h-5 w-5" />
-            <span>Promos</span>
+            <UserCircle className="h-5 w-5" />
+            <span>Account</span>
           </Link>
 
           <button

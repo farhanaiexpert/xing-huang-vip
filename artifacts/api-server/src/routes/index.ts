@@ -6,6 +6,7 @@ import betsRouter from "./bets.js";
 import referralRouter from "./referral.js";
 import oddsRouter from "./odds.js";
 import adminRouter from "./admin.js";
+import winspinRouter from "./winspin.js";
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use(betsRouter);
 router.use(referralRouter);
 router.use(oddsRouter);
 router.use(adminRouter);
+router.use(winspinRouter);
 
 export default router;

@@ -118,8 +118,8 @@ export function Header() {
     { label: 'WinSpin',         href: '/winspin' },
     { label: 'Promotions',      href: '/promotions' },
     { label: 'Predict & Win',   href: '/prediction-pools' },
-    { label: 'Bet History',     href: '/bet-history' },
-    { label: 'Affiliate',       href: '/affiliate' },
+    { label: 'Bet History',     href: '/account/bets' },
+    { label: 'Affiliate',       href: '/account/referrals' },
     { label: 'Help & Rules',    href: '/help' },
     { label: 'Soccer',          href: '/' },
     { label: 'Tennis',          href: '/' },
@@ -235,9 +235,9 @@ export function Header() {
             <NavItem href="/"                   label="All Sports"        />
             <NavItem href="/promotions"         label="Promotions"        />
             <NavItem href="/prediction-pools"   label="Predict & Win"     />
-            <NavItem href="/bet-history"        label="Bet History"       />
+            <NavItem href="/account/bets"      label="Bet History"       />
             <NavItem href="/help"               label="Help"              />
-            <NavItem href="/affiliate"          label="Affiliate"         />
+            <NavItem href="/account/referrals"  label="Affiliate"         />
             <WinSpinNavItem />
             <NavItem href="/"                   label="In-Play" disabled soon />
           </nav>
@@ -362,7 +362,7 @@ export function Header() {
                       <p className="text-xs text-[#FACC15] font-bold mt-0.5">{balance.toFixed(2)} USDT</p>
                     </div>
                     <div className="py-1">
-                      <MenuAction icon={<User className="h-3.5 w-3.5" />} label="My Account" onClick={() => setShowAddressMenu(false)} />
+                      <MenuAction href="/account" icon={<User className="h-3.5 w-3.5" />} label="My Account" onClick={() => setShowAddressMenu(false)} />
                       <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Username'} onClick={handleCopy} />
                       <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Sign Out" onClick={handleDisconnect} danger />
                     </div>
@@ -415,17 +415,23 @@ function HeaderIconBtn({ children, ...props }: React.ButtonHTMLAttributes<HTMLBu
   );
 }
 
-function MenuAction({ icon, label, onClick, danger }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }) {
+function MenuAction({ icon, label, onClick, danger, href }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean; href?: string }) {
+  const cls = cn(
+    'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors text-left cursor-pointer',
+    danger
+      ? 'text-[#EF4444] hover:bg-[#EF4444]/10'
+      : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/[0.05]'
+  );
+  if (href) {
+    return (
+      <Link href={href} onClick={onClick} className={cls}>
+        {icon}
+        {label}
+      </Link>
+    );
+  }
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors text-left',
-        danger
-          ? 'text-[#EF4444] hover:bg-[#EF4444]/10'
-          : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/[0.05]'
-      )}
-    >
+    <button onClick={onClick} className={cls}>
       {icon}
       {label}
     </button>

@@ -7,6 +7,8 @@ export interface AuthUser {
   username: string;
   role: string;
   referralCode: string | null;
+  createdAt?: string;
+  kycStatus?: string;
 }
 
 interface AuthState {
@@ -16,6 +18,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string, referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  updateUser: (partial: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -30,13 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser]       = useState<AuthUser | null>(null);
   const [isLoading, setLoading] = useState(true);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const me = await api.get<AuthUser>('/auth/me');
+      setUser(me);
+    } catch {
+      // silent — stay with existing user
+    }
+  }, []);
+
+  const updateUser = useCallback((partial: Partial<AuthUser>) => {
+    setUser(prev => prev ? { ...prev, ...partial } : prev);
+  }, []);
+
   // On mount: try to restore session from refresh token
   useEffect(() => {
     async function restore() {
       const refresh = getRefreshToken();
       if (!refresh) { setLoading(false); return; }
 
-      // Try using existing access token first
       const access = getAccessToken();
       if (access) {
         try {
@@ -47,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {}
       }
 
-      // Try refreshing
       try {
         const res = await fetch('/api/auth/refresh', {
           method: 'POST',
@@ -93,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout, refreshUser, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
