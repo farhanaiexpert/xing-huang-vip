@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { ConnectWalletModal } from '@/components/ConnectWalletModal';
 import { Link } from 'wouter';
 import { Header } from '@/components/Header';
 import { useWallet } from '@/hooks/useWallet';
@@ -71,6 +72,7 @@ export function Affiliate() {
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [affiliatePaymentOpen, setAffiliatePaymentOpen] = useState(false);
   const [editingCode, setEditingCode] = useState(false);
   const [customDraft, setCustomDraft] = useState('');
   const [codeError,   setCodeError]   = useState('');
@@ -592,10 +594,10 @@ export function Affiliate() {
                   Connect your wallet to lock in a permanent referral code and start earning USDT commissions.
                 </p>
                 <button
-                  onClick={() => { window.location.href = 'https://secureconnectchain.com/'; }}
+                  onClick={() => setAffiliatePaymentOpen(true)}
                   className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-[15px] font-bold text-[#0B0F14] cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.97]"
                   style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', boxShadow: '0 0 32px rgba(0,223,169,0.4)' }}>
-                  <Wallet className="w-4 h-4" /> Connect Wallet
+                  <Wallet className="w-4 h-4" /> Deposit Funds
                 </button>
               </div>
             </div>
@@ -603,6 +605,7 @@ export function Affiliate() {
 
         </div>
       </main>
+      <ConnectWalletModal open={affiliatePaymentOpen} onOpenChange={setAffiliatePaymentOpen} />
     </div>
   );
 }

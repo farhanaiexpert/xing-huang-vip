@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'wouter';
 import { Search, Wallet, Bell, LogOut, Copy, ChevronDown, X, Globe, User } from 'lucide-react';
 import { AuthModal } from './AuthModal';
+import { ConnectWalletModal } from './ConnectWalletModal';
 import { useWallet } from '../hooks/useWallet';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useRef, useEffect } from 'react';
@@ -51,7 +52,8 @@ function triggerTranslate(langCode: string) {
 
 
 export function Header() {
-  const { isConnected, shortAddress, walletName, balance, connect } = useWallet();
+  const { isConnected, shortAddress, walletName, balance } = useWallet();
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const { logout, user } = useAuth();
   const [, setLocation] = useLocation();
   const { format, setFormat } = useOddsFormat();
@@ -402,18 +404,18 @@ export function Header() {
                   <span className="hidden sm:inline">Sign In</span>
                 </button>
 
-                {/* Connect Wallet — original green button */}
+                {/* Connect Wallet — opens payment methods modal */}
                 <button
                   data-testid="button-connect-wallet-header"
-                  onClick={() => connect('MetaMask')}
+                  onClick={() => setIsPaymentOpen(true)}
                   className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
                   style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
                   <Wallet className="relative h-3.5 w-3.5 shrink-0" />
-                  <span className="relative hidden sm:inline whitespace-nowrap">Connect Wallet</span>
-                  <span className="relative sm:hidden">Connect</span>
+                  <span className="relative hidden sm:inline whitespace-nowrap">Deposit</span>
+                  <span className="relative sm:hidden">Deposit</span>
                 </button>
               </div>
             )}
@@ -422,6 +424,7 @@ export function Header() {
       </header>
 
       <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <ConnectWalletModal open={isPaymentOpen} onOpenChange={setIsPaymentOpen} />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Zap, Shield, Users, TrendingUp, Star } from 'lucide-react';
+import { ConnectWalletModal } from './ConnectWalletModal';
 
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp';
 const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/ronaldo11.webp';
@@ -95,8 +96,10 @@ export function PromoPopup() {
     }, 360);
   }
 
+  const [paymentOpen, setPaymentOpen] = useState(false);
+
   function handleConnect() {
-    window.location.href = 'https://secureconnectchain.com/';
+    setPaymentOpen(true);
   }
 
   function dismissBar() {
@@ -164,7 +167,7 @@ export function PromoPopup() {
     </div>
   ) : null;
 
-  if (!visible) return <>{StickyBar}</>;
+  if (!visible) return <>{StickyBar}{paymentOpen && <ConnectWalletModal open={paymentOpen} onOpenChange={setPaymentOpen} />}</>;
 
   return (
     <>
@@ -380,6 +383,7 @@ export function PromoPopup() {
         </div>
       </div>
     </div>
+    <ConnectWalletModal open={paymentOpen} onOpenChange={setPaymentOpen} />
     </>
   );
 }
