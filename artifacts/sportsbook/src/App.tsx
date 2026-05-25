@@ -24,6 +24,12 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
+import { useTransactionNotifications } from "@/hooks/useTransactionNotifications";
+
+function TransactionNotifier() {
+  useTransactionNotifications();
+  return null;
+}
 
 const queryClient = new QueryClient();
 
@@ -75,6 +81,7 @@ function App() {
                         <MobileBottomNav />
                         <OnboardingGuide />
                         <PromoPopup />
+                        <TransactionNotifier />
                         <Toaster />
                       </BetSlipProvider>
                     </BetHistoryProvider>

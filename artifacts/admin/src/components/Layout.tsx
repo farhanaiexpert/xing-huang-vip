@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { clearToken, getStoredUser } from "@/lib/api";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
@@ -8,57 +9,64 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NAV_SECTIONS = [
-  {
-    label: "Platform",
-    items: [
-      { href: "/",            icon: LayoutDashboard, label: "Overview"     },
-      { href: "/users",       icon: Users,           label: "Users"        },
-      { href: "/bets",        icon: Receipt,         label: "Bets"         },
-      { href: "/settlement",  icon: CheckCheck,      label: "Settlement"   },
-      { href: "/transactions",icon: CreditCard,      label: "Transactions" },
-    ],
-  },
-  {
-    label: "Finance",
-    items: [
-      { href: "/referrals",   icon: Share2,          label: "Referrals"    },
-      { href: "/promotions",  icon: Gift,            label: "Promotions"   },
-    ],
-  },
-  {
-    label: "Content",
-    items: [
-      { href: "/pools",    icon: Trophy, label: "Pools"    },
-      { href: "/winspin",  icon: Zap,    label: "WinSpin"  },
-      { href: "/markets",  icon: Globe,  label: "Markets"  },
-    ],
-  },
-  {
-    label: "Analytics",
-    items: [
-      { href: "/reports",  icon: BarChart2, label: "Reports"  },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { href: "/admin-accounts", icon: ShieldCheck, label: "Admin Accounts" },
-      { href: "/audit",          icon: ScrollText,  label: "Audit Log"      },
-      { href: "/settings",       icon: Settings,    label: "Settings"       },
-    ],
-  },
-];
-
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const storedUser = getStoredUser();
+
+  const handleCountChange = useCallback((count: number) => {
+    setPendingCount(count);
+  }, []);
+
+  useAdminNotifications(handleCountChange);
 
   function logout() {
     clearToken();
     setLocation("/login");
   }
+
+  const NAV_SECTIONS = [
+    {
+      label: "Platform",
+      items: [
+        { href: "/",             icon: LayoutDashboard, label: "Overview",      badge: 0 },
+        { href: "/users",        icon: Users,           label: "Users",         badge: 0 },
+        { href: "/bets",         icon: Receipt,         label: "Bets",          badge: 0 },
+        { href: "/settlement",   icon: CheckCheck,      label: "Settlement",    badge: 0 },
+        { href: "/transactions", icon: CreditCard,      label: "Transactions",  badge: pendingCount },
+      ],
+    },
+    {
+      label: "Finance",
+      items: [
+        { href: "/referrals",  icon: Share2, label: "Referrals",  badge: 0 },
+        { href: "/promotions", icon: Gift,   label: "Promotions", badge: 0 },
+      ],
+    },
+    {
+      label: "Content",
+      items: [
+        { href: "/pools",   icon: Trophy, label: "Pools",   badge: 0 },
+        { href: "/winspin", icon: Zap,    label: "WinSpin", badge: 0 },
+        { href: "/markets", icon: Globe,  label: "Markets", badge: 0 },
+      ],
+    },
+    {
+      label: "Analytics",
+      items: [
+        { href: "/reports", icon: BarChart2, label: "Reports", badge: 0 },
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        { href: "/admin-accounts", icon: ShieldCheck, label: "Admin Accounts", badge: 0 },
+        { href: "/audit",          icon: ScrollText,  label: "Audit Log",      badge: 0 },
+        { href: "/settings",       icon: Settings,    label: "Settings",       badge: 0 },
+      ],
+    },
+  ];
 
   return (
     <div className="flex h-screen bg-[#0B0F14] text-[#F8FAFC] overflow-hidden">
@@ -127,7 +135,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
               {collapsed && <div className="mx-3 my-1 border-t border-white/6" />}
               <div className={cn("space-y-0.5", collapsed ? "px-2" : "px-2")}>
-                {section.items.map(({ href, icon: Icon, label }) => {
+                {section.items.map(({ href, icon: Icon, label, badge }) => {
                   const active = href === "/" ? location === "/" : location.startsWith(href);
                   return (
                     <Link key={href} href={href}
@@ -140,8 +148,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       )}
                       title={collapsed ? label : undefined}
                     >
-                      <Icon className={cn("shrink-0", collapsed ? "w-[18px] h-[18px]" : "w-4 h-4")} />
-                      {!collapsed && <span>{label}</span>}
+                      <div className="relative shrink-0">
+                        <Icon className={cn(collapsed ? "w-[18px] h-[18px]" : "w-4 h-4")} />
+                        {badge > 0 && (
+                          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-black leading-none">
+                            {badge > 99 ? "99+" : badge}
+                          </span>
+                        )}
+                      </div>
+                      {!collapsed && (
+                        <span className="flex-1">{label}</span>
+                      )}
+                      {!collapsed && badge > 0 && (
+                        <span className="ml-auto min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black">
+                          {badge > 99 ? "99+" : badge}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}

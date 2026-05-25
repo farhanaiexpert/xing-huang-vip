@@ -353,86 +353,150 @@ export function WalletPage() {
             </div>
           </div>
 
-          {/* Step 2 – Submit TxID */}
-          <div className="rounded-2xl border border-white/[0.09] bg-[#0E1520] overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06]">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-md bg-[#38BDF8]/15 flex items-center justify-center">
-                  <span className="text-[9px] font-black text-[#38BDF8]">2</span>
+          {/* Step 2 – Submit TxID (redesigned) */}
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #0A1628 0%, #0E1520 100%)', border: '1px solid rgba(56,189,248,0.20)' }}>
+
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-white/[0.06]"
+              style={{ background: 'linear-gradient(90deg, rgba(56,189,248,0.06) 0%, transparent 100%)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
+                  <span className="text-[11px] font-black text-[#38BDF8]">2</span>
                 </div>
-                <p className="text-[12px] font-bold text-[#F8FAFC]">Submit your Transaction ID</p>
+                <div>
+                  <p className="text-[14px] font-bold text-[#F8FAFC]">Submit Your Transaction ID</p>
+                  <p className="text-[11px] text-[#64748B] mt-0.5">
+                    After sending USDT, paste your TxHash below to confirm
+                  </p>
+                </div>
               </div>
-              <p className="text-[11px] text-[#64748B] mt-1 ml-7">
-                After sending, paste your TxID / TxHash from your wallet app to confirm your deposit.
-              </p>
             </div>
 
-            <div className="p-4">
+            <div className="p-5">
               {depSuccess ? (
-                <div className="flex flex-col items-center py-6 gap-3 text-center">
-                  <div className="w-14 h-14 rounded-full bg-[#00DFA9]/15 border border-[#00DFA9]/30 flex items-center justify-center">
-                    <CheckCircle2 className="h-7 w-7 text-[#00DFA9]" />
+                /* ── Success state ── */
+                <div className="flex flex-col items-center py-8 gap-4 text-center">
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.2)' }}>
+                      <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                      <Check className="w-3 h-3 text-[#0B0F14]" />
+                    </div>
                   </div>
                   <div>
-                    <p className="text-[15px] font-bold text-[#F8FAFC]">Deposit submitted!</p>
-                    <p className="text-[12px] text-[#64748B] mt-0.5">
-                      Our team will verify your transaction and credit your account within {depositInfo?.processingTime ?? '30 minutes'}.
+                    <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Submitted! 🎉</p>
+                    <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                      Our team will verify your transaction on-chain and credit your account within{' '}
+                      <span className="text-[#38BDF8] font-semibold">{depositInfo?.processingTime ?? '5–30 minutes'}</span>.
                     </p>
                   </div>
+                  <div className="flex items-center gap-2 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-xl px-4 py-2.5">
+                    <Clock className="h-3.5 w-3.5 text-[#FACC15] shrink-0" />
+                    <p className="text-[11px] text-[#FACC15]/80">You'll be notified when your deposit is approved</p>
+                  </div>
                   <button onClick={() => setDepSuccess(false)}
-                    className="px-4 py-2 rounded-xl text-[12px] font-bold text-[#00DFA9] border border-[#00DFA9]/30 hover:bg-[#00DFA9]/10 transition-all">
+                    className="mt-1 px-5 py-2 rounded-xl text-[12px] font-bold text-[#38BDF8] border border-[#38BDF8]/25 hover:bg-[#38BDF8]/10 transition-all">
                     Submit another deposit
                   </button>
                 </div>
               ) : (
-                <form onSubmit={submitDeposit} className="space-y-3">
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
-                      Amount (USDT)
-                    </label>
-                    <input
-                      type="number"
-                      min="10"
-                      step="0.01"
-                      value={depAmount}
-                      onChange={e => setDepAmount(e.target.value)}
-                      placeholder={`Minimum ${depositInfo?.minDeposit ?? 10} USDT`}
-                      className="mt-1.5 w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-3 py-2.5 text-[13px] text-[#F8FAFC] placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9]/50 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
-                      Transaction Hash (TxID)
-                    </label>
-                    <input
-                      type="text"
-                      value={depTxHash}
-                      onChange={e => setDepTxHash(e.target.value)}
-                      placeholder="Paste your TxHash from Trust Wallet / Binance..."
-                      className="mt-1.5 w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-3 py-2.5 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9]/50 transition-colors"
-                    />
-                    <p className="text-[10px] text-[#64748B] mt-1 flex items-center gap-1">
-                      <Info className="h-2.5 w-2.5" />
-                      Find TxID in your wallet's transaction history after sending
-                    </p>
+                /* ── Form ── */
+                <form onSubmit={submitDeposit} className="space-y-4">
+
+                  {/* Amount + TxID side by side on larger screens */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Amount */}
+                    <div className="group">
+                      <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                        <CircleDollarSign className="h-3 w-3" />
+                        Amount Sent (USDT)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="10"
+                          step="0.01"
+                          value={depAmount}
+                          onChange={e => setDepAmount(e.target.value)}
+                          placeholder={`Min ${depositInfo?.minDeposit ?? 10} USDT`}
+                          className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">
+                          USDT
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* TxID / TxHash */}
+                    <div className="group">
+                      <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                        <ExternalLink className="h-3 w-3" />
+                        Transaction Hash (TxID)
+                      </label>
+                      <input
+                        type="text"
+                        value={depTxHash}
+                        onChange={e => setDepTxHash(e.target.value)}
+                        placeholder="Paste TxHash — e.g. abc123...xyz"
+                        className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/60 focus:ring-1 focus:ring-[#38BDF8]/20 transition-all"
+                      />
+                    </div>
                   </div>
 
+                  {/* Where to find TxID help box */}
+                  <div className="rounded-xl bg-[#0B0F14]/80 border border-white/[0.06] p-3">
+                    <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Info className="h-3 w-3" /> Where to find your TxID
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {[
+                        { app: 'Trust Wallet', steps: 'Wallet → History → tap transaction → copy TxID' },
+                        { app: 'Binance',      steps: 'Wallet → Withdraw History → tap transaction → TxID' },
+                        { app: 'OKX / Others', steps: 'Transaction History → Details → Transaction Hash' },
+                      ].map(({ app, steps }) => (
+                        <div key={app} className="flex flex-col gap-0.5">
+                          <p className="text-[10px] font-bold text-[#38BDF8]">{app}</p>
+                          <p className="text-[10px] text-[#64748B] leading-relaxed">{steps}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Error */}
                   {depError && (
-                    <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-                      <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                    <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl p-3.5">
+                      <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
                       <p className="text-[12px] text-red-400">{depError}</p>
                     </div>
                   )}
 
-                  <button type="submit" disabled={depSubmitting}
-                    className="w-full py-3 rounded-xl font-bold text-[13px] text-[#0B0F14] transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 20px rgba(0,223,169,0.25)' }}>
+                  {/* Submit */}
+                  <button
+                    type="submit"
+                    disabled={depSubmitting}
+                    className="w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.30)' }}
+                  >
                     {depSubmitting ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
-                      </span>
-                    ) : 'Confirm Deposit'}
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Verifying & Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        Confirm Deposit
+                      </>
+                    )}
                   </button>
+
+                  <p className="text-center text-[10px] text-[#64748B]">
+                    ⚡ Deposits are verified on-chain within {depositInfo?.processingTime ?? '5–30 min'} of submission
+                  </p>
                 </form>
               )}
             </div>
