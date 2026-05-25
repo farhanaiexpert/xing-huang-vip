@@ -28,6 +28,8 @@ interface Transaction {
   network: string | null;
   walletAddress: string | null;
   notes: string | null;
+  verified: boolean | null;
+  verificationNote: string | null;
   createdAt: string;
 }
 
@@ -757,13 +759,28 @@ export function WalletPage() {
                       </div>
                       <p className="text-[10px] text-[#64748B] mt-0.5">{fmtDate(tx.createdAt)}</p>
                       {tx.txHash && (
-                        <a
-                          href={`https://tronscan.org/#/transaction/${tx.txHash}`}
-                          target="_blank" rel="noopener noreferrer"
-                          className="mt-1 inline-flex items-center gap-1 text-[10px] text-[#38BDF8] hover:underline font-mono">
-                          {tx.txHash.length > 20 ? `${tx.txHash.slice(0, 10)}...${tx.txHash.slice(-8)}` : tx.txHash}
-                          <ExternalLink className="h-2.5 w-2.5" />
-                        </a>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <a
+                            href={`https://tronscan.org/#/transaction/${tx.txHash}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] text-[#38BDF8] hover:underline font-mono">
+                            {tx.txHash.length > 20 ? `${tx.txHash.slice(0, 10)}...${tx.txHash.slice(-8)}` : tx.txHash}
+                            <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                          {tx.type === 'deposit' && (
+                            tx.verified === true ? (
+                              <span title={tx.verificationNote ?? 'Auto-verified on the Tron blockchain'}
+                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/20">
+                                <CheckCircle2 className="h-2.5 w-2.5" /> Verified on-chain
+                              </span>
+                            ) : tx.verified === false ? (
+                              <span title={tx.verificationNote ?? 'Under manual review by our team'}
+                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                <Clock className="h-2.5 w-2.5" /> Under review
+                              </span>
+                            ) : null
+                          )}
+                        </div>
                       )}
                       {tx.walletAddress && tx.type === 'withdrawal' && (
                         <p className="mt-1 text-[10px] text-[#64748B] font-mono">
