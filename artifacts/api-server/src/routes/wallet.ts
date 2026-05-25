@@ -5,7 +5,7 @@ import { z } from "zod/v4";
 import { db, walletsTable, transactionsTable } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { verifyTronDeposit } from "../lib/tronVerify.js";
-import { createPayment, getPaymentStatus, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
+import { createPayment, getPaymentStatus, getMinimumPaymentAmount, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
@@ -140,6 +140,20 @@ router.post("/wallet/deposit/nowpayments/create", authenticate, async (req, res)
   const domain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
   const ipnCallbackUrl = domain ? `https://${domain}/api/webhooks/nowpayments` : undefined;
 
+  // Pre-flight: check minimum amount for the chosen currency
+  try {
+    const minUsd = await getMinimumPaymentAmount(currency);
+    if (minUsd > 0 && amount < minUsd) {
+      const minRounded = Math.ceil(minUsd * 100) / 100;
+      res.status(400).json({
+        error: `Minimum deposit for this currency is $${minRounded} USDT. Please enter a higher amount.`,
+      });
+      return;
+    }
+  } catch {
+    // Non-fatal — continue and let the payment attempt surface any error
+  }
+
   try {
     const payment = await createPayment({
       priceAmount: amount,
@@ -175,6 +189,15 @@ router.post("/wallet/deposit/nowpayments/create", authenticate, async (req, res)
       expiresAt:    payment.expiresAt,
     });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    // Parse AMOUNT_MINIMAL_ERROR from NOWPayments response body
+    const minMatch = msg.match(/"message"\s*:\s*"Crypto amount ([\d.]+) is less than minimal/);
+    if (msg.includes("AMOUNT_MINIMAL_ERROR") || minMatch) {
+      res.status(400).json({
+        error: "Amount is below the minimum for this cryptocurrency. Please increase your deposit amount or choose a different currency (e.g. USDT TRC-20).",
+      });
+      return;
+    }
     logger.error({ err }, "Failed to create NOWPayments payment");
     res.status(502).json({ error: "Payment gateway unavailable — please try again or use manual deposit" });
   }

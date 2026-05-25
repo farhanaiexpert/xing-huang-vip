@@ -8,9 +8,9 @@ import { ConnectWalletModal } from './ConnectWalletModal';
 const WHEEL_ICON = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/wheel-spin.webp';
 
 const PLAYER_AVATARS = [
-  'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/player1.webp',
-  'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/player3.webp',
-  'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/player2.webp',
+  'https://randomuser.me/api/portraits/men/32.jpg',
+  'https://randomuser.me/api/portraits/women/55.jpg',
+  'https://randomuser.me/api/portraits/men/67.jpg',
 ];
 
 const SEGMENTS = [

@@ -107,6 +107,18 @@ export async function getPaymentStatus(paymentId: string): Promise<NowPayment> {
   return parsePayment(data);
 }
 
+/** Returns the minimum payment amount in USD for the given pay currency */
+export async function getMinimumPaymentAmount(payCurrency: string = "usdttrc20"): Promise<number> {
+  try {
+    const data = await nowGet<{ min_amount: number; currency_from: string; currency_to: string }>(
+      `/min-amount?currency_from=usd&currency_to=${payCurrency}`
+    );
+    return Number(data.min_amount) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 // ── IPN Signature Verification ────────────────────────────────────────────────
 
 /** Sort object keys recursively (NOWPayments requirement for HMAC verification) */

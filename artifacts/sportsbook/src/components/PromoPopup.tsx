@@ -17,11 +17,11 @@ const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
 }));
 
 const AVATARS = [
-  'https://i.pravatar.cc/40?img=3',
-  'https://i.pravatar.cc/40?img=12',
-  'https://i.pravatar.cc/40?img=25',
-  'https://i.pravatar.cc/40?img=47',
-  'https://i.pravatar.cc/40?img=68',
+  'https://randomuser.me/api/portraits/men/32.jpg',
+  'https://randomuser.me/api/portraits/women/44.jpg',
+  'https://randomuser.me/api/portraits/men/78.jpg',
+  'https://randomuser.me/api/portraits/women/21.jpg',
+  'https://randomuser.me/api/portraits/men/56.jpg',
 ];
 
 const DOT_BG = `radial-gradient(ellipse at 55% 85%, rgba(0,223,169,0.15) 0%, transparent 50%), radial-gradient(ellipse at 20% 20%, rgba(56,189,248,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 10%, rgba(250,204,21,0.08) 0%, transparent 40%), linear-gradient(160deg, #0D1825 0%, #081018 100%)`;
@@ -34,7 +34,7 @@ const IMG_BASE: React.CSSProperties = {
   objectFit: 'contain',
   objectPosition: 'bottom center',
   display: 'block',
-  transform: 'scale(1.14)',
+  transform: 'scale(0.91)',
   transformOrigin: 'bottom center',
   transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
