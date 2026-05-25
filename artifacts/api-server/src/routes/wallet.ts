@@ -1,19 +1,21 @@
 import { Router } from "express";
 import { eq, desc } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { db, walletsTable, transactionsTable } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
+import { verifyTronDeposit } from "../lib/tronVerify.js";
+import { logger } from "../lib/logger.js";
 
 const router = Router();
 
 // ── Platform deposit config ───────────────────────────────────────────────────
-// Update PLATFORM_USDT_ADDRESS with your actual TRC-20 address
 export const PLATFORM_DEPOSIT = {
   address: process.env.DEPOSIT_WALLET_ADDRESS ?? "PASTE_YOUR_TRC20_WALLET_ADDRESS_HERE",
   network: "TRC-20",
   qrImageUrl: "https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Farhan-QR.png",
   minDeposit: 10,
-  processingTime: "5–30 minutes",
+  processingTime: "instant (auto-verified) or up to 30 minutes (manual review)",
 };
 
 // ── GET /wallet/deposit-info ─── public, no auth needed ──────────────────────
@@ -63,7 +65,7 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
   }
   const { amount, txHash, network } = parsed.data;
 
-  // Prevent duplicate TxHash submissions
+  // ── Prevent duplicate TxHash submissions ─────────────────────────────────────
   const [existing] = await db.select({ id: transactionsTable.id })
     .from(transactionsTable)
     .where(eq(transactionsTable.txHash, txHash))
@@ -73,16 +75,51 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     return;
   }
 
-  const [txn] = await db.insert(transactionsTable).values({
-    userId: req.user!.userId,
-    type: "deposit",
-    amount: amount.toString(),
-    status: "pending",
-    txHash,
-    network,
-  }).returning();
+  // ── On-chain verification via Tronscan ────────────────────────────────────────
+  logger.info({ txHash, amount, userId: req.user!.userId }, "Starting on-chain deposit verification");
 
-  res.status(201).json(txn);
+  const verification = await verifyTronDeposit(txHash, PLATFORM_DEPOSIT.address, amount);
+
+  logger.info({ txHash, verified: verification.verified, note: verification.note }, "Verification result");
+
+  if (verification.verified) {
+    // ── AUTO-APPROVE: verified on-chain → credit balance immediately ─────────
+    const [txn] = await db.insert(transactionsTable).values({
+      userId: req.user!.userId,
+      type: "deposit",
+      amount: amount.toString(),
+      status: "completed",
+      txHash,
+      network,
+      verified: true,
+      verificationNote: verification.note,
+    }).returning();
+
+    // Credit wallet balance
+    await db.update(walletsTable)
+      .set({ balanceUsdt: sql`balance_usdt + ${amount.toString()}` })
+      .where(eq(walletsTable.userId, req.user!.userId));
+
+    logger.info({ txHash, amount, userId: req.user!.userId }, "Deposit auto-approved and balance credited");
+
+    res.status(201).json({ ...txn, autoVerified: true });
+  } else {
+    // ── MANUAL REVIEW: could not verify → pending for admin ──────────────────
+    const [txn] = await db.insert(transactionsTable).values({
+      userId: req.user!.userId,
+      type: "deposit",
+      amount: amount.toString(),
+      status: "pending",
+      txHash,
+      network,
+      verified: false,
+      verificationNote: verification.note,
+    }).returning();
+
+    logger.info({ txHash, amount, userId: req.user!.userId, reason: verification.note }, "Deposit pending manual review");
+
+    res.status(201).json({ ...txn, autoVerified: false, reviewReason: verification.note });
+  }
 });
 
 // ── POST /wallet/withdraw ─────────────────────────────────────────────────────

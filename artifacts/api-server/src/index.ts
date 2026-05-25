@@ -13,9 +13,20 @@ async function runMigrations() {
         ADD COLUMN IF NOT EXISTS network text DEFAULT 'TRC-20',
         ADD COLUMN IF NOT EXISTS wallet_address text
     `);
-    logger.info("DB migrations applied");
+    logger.info("DB migration v1 applied (tx_hash, network, wallet_address)");
   } catch (err) {
-    logger.warn({ err }, "Migration step skipped (columns may already exist)");
+    logger.warn({ err }, "Migration v1 skipped (columns may already exist)");
+  }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE transactions
+        ADD COLUMN IF NOT EXISTS verified boolean DEFAULT false,
+        ADD COLUMN IF NOT EXISTS verification_note text
+    `);
+    logger.info("DB migration v2 applied (verified, verification_note)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v2 skipped (columns may already exist)");
   }
 }
 

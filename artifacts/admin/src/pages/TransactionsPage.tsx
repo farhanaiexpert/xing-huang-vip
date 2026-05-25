@@ -106,7 +106,27 @@ export default function TransactionsPage() {
     {
       key: "txhash", label: "TxHash / Address",
       render: t => {
-        if (t.txHash) return <TxHashLink hash={t.txHash} network={t.network} />;
+        if (t.txHash) return (
+          <div className="flex flex-col gap-1">
+            <TxHashLink hash={t.txHash} network={t.network} />
+            {/* Blockchain verification badge — only shown for deposits */}
+            {t.type === "deposit" && (
+              t.verified === true ? (
+                <span
+                  title={t.verificationNote ?? "Auto-verified via Tronscan"}
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md w-fit bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/20">
+                  ✓ Verified on-chain
+                </span>
+              ) : (
+                <span
+                  title={t.verificationNote ?? "Manual review required"}
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md w-fit bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  ⚠ Needs review
+                </span>
+              )
+            )}
+          </div>
+        );
         if (t.walletAddress) return (
           <span className="text-[#475569] text-xs font-mono">
             {t.walletAddress.length > 14
@@ -120,9 +140,12 @@ export default function TransactionsPage() {
     },
     {
       key: "notes", label: "Notes",
-      render: t => t.notes
-        ? <span className="text-[#475569] text-xs max-w-[120px] truncate block">{t.notes}</span>
-        : <span className="text-[#475569] text-xs">—</span>,
+      render: t => {
+        const note = t.verificationNote ?? t.notes;
+        return note
+          ? <span className="text-[#475569] text-xs max-w-[150px] truncate block" title={note}>{note}</span>
+          : <span className="text-[#475569] text-xs">—</span>;
+      },
     },
     {
       key: "date", label: "Date", sortable: true,

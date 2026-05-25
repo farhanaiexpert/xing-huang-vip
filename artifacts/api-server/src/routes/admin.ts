@@ -541,6 +541,8 @@ router.get("/admin/transactions", async (req, res): Promise<void> => {
       txHash: transactionsTable.txHash,
       network: transactionsTable.network,
       walletAddress: transactionsTable.walletAddress,
+      verified: transactionsTable.verified,
+      verificationNote: transactionsTable.verificationNote,
       createdAt: transactionsTable.createdAt,
     })
     .from(transactionsTable)

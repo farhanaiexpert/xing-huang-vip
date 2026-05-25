@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, numeric, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, numeric, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -14,6 +14,8 @@ export const transactionsTable = pgTable("transactions", {
   txHash: text("tx_hash"),
   network: text("network").default("TRC-20"),
   walletAddress: text("wallet_address"),
+  verified: boolean("verified").default(false),
+  verificationNote: text("verification_note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -111,6 +111,8 @@ export interface AdminTransaction {
   txHash: string | null;
   network: string | null;
   walletAddress: string | null;
+  verified: boolean | null;
+  verificationNote: string | null;
   createdAt: string;
 }
 
