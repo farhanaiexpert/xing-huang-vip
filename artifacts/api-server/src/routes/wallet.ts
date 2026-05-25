@@ -1,11 +1,34 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
-import { z } from "zod";
+import { eq, desc } from "drizzle-orm";
+import { z } from "zod/v4";
 import { db, walletsTable, transactionsTable } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 
 const router = Router();
 
+// ── Platform deposit config ───────────────────────────────────────────────────
+// Update PLATFORM_USDT_ADDRESS with your actual TRC-20 address
+export const PLATFORM_DEPOSIT = {
+  address: process.env.DEPOSIT_WALLET_ADDRESS ?? "PASTE_YOUR_TRC20_WALLET_ADDRESS_HERE",
+  network: "TRC-20",
+  qrImageUrl: "https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Farhan-QR.png",
+  minDeposit: 10,
+  processingTime: "5–30 minutes",
+};
+
+// ── GET /wallet/deposit-info ─── public, no auth needed ──────────────────────
+router.get("/wallet/deposit-info", (_req, res): void => {
+  res.json({
+    address: PLATFORM_DEPOSIT.address,
+    network: PLATFORM_DEPOSIT.network,
+    qrImageUrl: PLATFORM_DEPOSIT.qrImageUrl,
+    minDeposit: PLATFORM_DEPOSIT.minDeposit,
+    processingTime: PLATFORM_DEPOSIT.processingTime,
+    currency: "USDT",
+  });
+});
+
+// ── GET /wallet/balance ───────────────────────────────────────────────────────
 router.get("/wallet/balance", authenticate, async (req, res): Promise<void> => {
   const [wallet] = await db.select().from(walletsTable)
     .where(eq(walletsTable.userId, req.user!.userId)).limit(1);
@@ -16,49 +39,66 @@ router.get("/wallet/balance", authenticate, async (req, res): Promise<void> => {
   res.json({ balance: wallet.balanceUsdt, currency: "USDT" });
 });
 
+// ── GET /wallet/transactions ──────────────────────────────────────────────────
 router.get("/wallet/transactions", authenticate, async (req, res): Promise<void> => {
   const txns = await db.select().from(transactionsTable)
     .where(eq(transactionsTable.userId, req.user!.userId))
-    .orderBy(transactionsTable.createdAt);
+    .orderBy(desc(transactionsTable.createdAt))
+    .limit(50);
   res.json(txns);
 });
 
+// ── POST /wallet/deposit ──────────────────────────────────────────────────────
 const DepositBody = z.object({
-  amount: z.number().positive(),
-  reference: z.string().optional(),
+  amount:  z.number().positive().min(PLATFORM_DEPOSIT.minDeposit, `Minimum deposit is ${PLATFORM_DEPOSIT.minDeposit} USDT`),
+  txHash:  z.string().min(10, "Please enter a valid transaction hash"),
+  network: z.string().default("TRC-20"),
 });
 
 router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => {
   const parsed = DepositBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { amount, reference } = parsed.data;
+  const { amount, txHash, network } = parsed.data;
+
+  // Prevent duplicate TxHash submissions
+  const [existing] = await db.select({ id: transactionsTable.id })
+    .from(transactionsTable)
+    .where(eq(transactionsTable.txHash, txHash))
+    .limit(1);
+  if (existing) {
+    res.status(409).json({ error: "This transaction hash has already been submitted." });
+    return;
+  }
 
   const [txn] = await db.insert(transactionsTable).values({
     userId: req.user!.userId,
     type: "deposit",
     amount: amount.toString(),
     status: "pending",
-    reference,
+    txHash,
+    network,
   }).returning();
 
   res.status(201).json(txn);
 });
 
+// ── POST /wallet/withdraw ─────────────────────────────────────────────────────
 const WithdrawBody = z.object({
-  amount: z.number().positive(),
-  walletAddress: z.string().min(10),
+  amount:        z.number().positive().min(10, "Minimum withdrawal is 10 USDT"),
+  walletAddress: z.string().min(10, "Please enter a valid USDT wallet address"),
+  network:       z.string().default("TRC-20"),
 });
 
 router.post("/wallet/withdraw", authenticate, async (req, res): Promise<void> => {
   const parsed = WithdrawBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { amount, walletAddress } = parsed.data;
+  const { amount, walletAddress, network } = parsed.data;
 
   const [wallet] = await db.select().from(walletsTable)
     .where(eq(walletsTable.userId, req.user!.userId)).limit(1);
@@ -72,6 +112,8 @@ router.post("/wallet/withdraw", authenticate, async (req, res): Promise<void> =>
     type: "withdrawal",
     amount: amount.toString(),
     status: "pending",
+    walletAddress,
+    network,
     reference: walletAddress,
   }).returning();
 

@@ -108,6 +108,9 @@ export interface AdminTransaction {
   status: string;
   reference: string | null;
   notes: string | null;
+  txHash: string | null;
+  network: string | null;
+  walletAddress: string | null;
   createdAt: string;
 }
 

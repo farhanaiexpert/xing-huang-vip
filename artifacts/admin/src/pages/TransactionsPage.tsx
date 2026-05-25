@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, AdminTransaction, PendingTotals } from "@/lib/api";
 import { fmt, fmtDate, statusBg } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowDownCircle, ArrowUpCircle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DataTable, ColDef } from "@/components/DataTable";
@@ -11,6 +11,20 @@ const PAGE_SIZE = 20;
 
 function isDebit(type: string) {
   return type === "withdrawal" || type === "bet_stake" || type === "debit";
+}
+
+function TxHashLink({ hash, network }: { hash: string | null; network: string | null }) {
+  if (!hash) return <span className="text-[#475569] text-xs">—</span>;
+  const short = hash.length > 16 ? `${hash.slice(0, 8)}…${hash.slice(-6)}` : hash;
+  const url = (network ?? "TRC-20") === "TRC-20"
+    ? `https://tronscan.org/#/transaction/${hash}`
+    : `https://bscscan.com/tx/${hash}`;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-[#38BDF8] text-xs font-mono hover:underline">
+      {short} <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+    </a>
+  );
 }
 
 export default function TransactionsPage() {
@@ -28,15 +42,16 @@ export default function TransactionsPage() {
   const { data: pendingTotals } = useQuery<PendingTotals>({
     queryKey: ["admin-txns-pending-totals"],
     queryFn: () => api.get("/admin/transactions/pending-totals"),
+    refetchInterval: 30_000,
   });
 
   const approveMut = useMutation({
-    mutationFn: ({ id, txStatus }: { id: number; txStatus: string }) =>
-      api.patch(`/admin/transactions/${id}`, { status: txStatus }),
-    onSuccess: () => {
+    mutationFn: ({ id, txStatus, notes }: { id: number; txStatus: string; notes?: string }) =>
+      api.patch(`/admin/transactions/${id}`, { status: txStatus, ...(notes ? { notes } : {}) }),
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["admin-txns"] });
       qc.invalidateQueries({ queryKey: ["admin-txns-pending-totals"] });
-      toast.success("Transaction updated");
+      toast.success(vars.txStatus === "completed" ? "✅ Transaction approved — balance updated" : "Transaction rejected");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -59,7 +74,16 @@ export default function TransactionsPage() {
     {
       key: "type", label: "Type", sortable: true,
       getValue: t => t.type,
-      render: t => <span className="text-[#64748B] capitalize text-xs">{t.type.replace(/_/g, " ")}</span>,
+      render: t => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[#64748B] capitalize text-xs">{t.type.replace(/_/g, " ")}</span>
+          {t.network && (
+            <span className="text-[10px] text-[#38BDF8] bg-[#38BDF8]/10 px-1.5 py-0.5 rounded-md w-fit">
+              {t.network}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: "amount", label: "Amount", sortable: true,
@@ -80,8 +104,25 @@ export default function TransactionsPage() {
       ),
     },
     {
-      key: "reference", label: "Reference",
-      render: t => <span className="text-[#475569] text-xs font-mono">{t.reference ?? "—"}</span>,
+      key: "txhash", label: "TxHash / Address",
+      render: t => {
+        if (t.txHash) return <TxHashLink hash={t.txHash} network={t.network} />;
+        if (t.walletAddress) return (
+          <span className="text-[#475569] text-xs font-mono">
+            {t.walletAddress.length > 14
+              ? `${t.walletAddress.slice(0, 7)}…${t.walletAddress.slice(-5)}`
+              : t.walletAddress}
+          </span>
+        );
+        if (t.reference) return <span className="text-[#475569] text-xs font-mono">{t.reference.slice(0, 20)}{t.reference.length > 20 ? '…' : ''}</span>;
+        return <span className="text-[#475569] text-xs">—</span>;
+      },
+    },
+    {
+      key: "notes", label: "Notes",
+      render: t => t.notes
+        ? <span className="text-[#475569] text-xs max-w-[120px] truncate block">{t.notes}</span>
+        : <span className="text-[#475569] text-xs">—</span>,
     },
     {
       key: "date", label: "Date", sortable: true,
@@ -93,12 +134,16 @@ export default function TransactionsPage() {
       render: t => (
         t.status === "pending" ? (
           <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-            <button onClick={() => approveMut.mutate({ id: t.id, txStatus: "completed" })}
-              className="px-2.5 py-1 rounded-lg text-xs bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 transition-colors font-medium">
+            <button
+              onClick={() => approveMut.mutate({ id: t.id, txStatus: "completed" })}
+              disabled={approveMut.isPending}
+              className="px-2.5 py-1 rounded-lg text-xs bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 transition-colors font-medium disabled:opacity-50">
               Approve
             </button>
-            <button onClick={() => approveMut.mutate({ id: t.id, txStatus: "rejected" })}
-              className="px-2.5 py-1 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-medium">
+            <button
+              onClick={() => approveMut.mutate({ id: t.id, txStatus: "rejected" })}
+              disabled={approveMut.isPending}
+              className="px-2.5 py-1 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-medium disabled:opacity-50">
               Reject
             </button>
           </div>
@@ -114,7 +159,7 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-bold text-white tracking-tight">Transactions</h1>
           <p className="text-sm text-[#475569] mt-0.5">{total.toLocaleString()} total</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <select value={type} onChange={e => { setType(e.target.value); setPage(1); }} className={sel}>
             <option value="">All types</option>
             <option value="deposit">Deposit</option>
@@ -135,6 +180,7 @@ export default function TransactionsPage() {
         </div>
       </div>
 
+      {/* Pending totals */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex items-center gap-3 bg-[#00DFA9]/6 border border-[#00DFA9]/15 rounded-xl px-4 py-3">
           <div className="p-2 rounded-lg bg-[#00DFA9]/10">
@@ -174,7 +220,7 @@ export default function TransactionsPage() {
         empty="No transactions found"
         footer={
           <div className="flex items-center justify-between">
-            <span className="text-xs">Page {page} of {pages}</span>
+            <span className="text-xs">Page {page} of {pages} · {total} total</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
                 className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">

@@ -538,6 +538,9 @@ router.get("/admin/transactions", async (req, res): Promise<void> => {
       status: transactionsTable.status,
       reference: transactionsTable.reference,
       notes: transactionsTable.notes,
+      txHash: transactionsTable.txHash,
+      network: transactionsTable.network,
+      walletAddress: transactionsTable.walletAddress,
       createdAt: transactionsTable.createdAt,
     })
     .from(transactionsTable)

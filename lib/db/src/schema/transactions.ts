@@ -11,6 +11,9 @@ export const transactionsTable = pgTable("transactions", {
   status: text("status").notNull().default("pending"),
   reference: text("reference"),
   notes: text("notes"),
+  txHash: text("tx_hash"),
+  network: text("network").default("TRC-20"),
+  walletAddress: text("wallet_address"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
