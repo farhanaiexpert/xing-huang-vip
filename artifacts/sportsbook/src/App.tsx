@@ -43,6 +43,9 @@ function Router() {
       <Route path="/bet-history">
         {() => <Redirect to="/account/bets" />}
       </Route>
+      <Route path="/my-bets">
+        {() => <Redirect to="/account/bets" />}
+      </Route>
       <Route path="/affiliate">
         {() => <Redirect to="/account/referrals" />}
       </Route>

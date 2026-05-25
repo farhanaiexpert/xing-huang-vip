@@ -61,9 +61,9 @@ export function OverviewPage() {
       href: '/account/bets',
     },
     {
-      label: 'Win Rate',
-      value: `${winRate}%`,
-      sub: `${wonBets} won`,
+      label: 'Bets Won',
+      value: wonBets,
+      sub: bets.length > 0 ? `${winRate}% win rate` : '—',
       icon: TrendingUp,
       color: '#FACC15',
       bg: 'rgba(250,204,21,0.08)',

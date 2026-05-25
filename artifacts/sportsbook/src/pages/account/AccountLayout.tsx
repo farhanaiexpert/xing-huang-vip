@@ -57,7 +57,10 @@ export function AccountLayout() {
   const PageComponent = PAGES[section];
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) setLocation('/');
+    if (!isLoading && !isAuthenticated) {
+      setLocation('/');
+      setTimeout(() => window.dispatchEvent(new CustomEvent('openLoginModal')), 150);
+    }
   }, [isAuthenticated, isLoading, setLocation]);
 
   if (isLoading) {

@@ -84,6 +84,13 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Listen for external login-modal open requests (e.g. from AccountLayout auth guard)
+  useEffect(() => {
+    function handler() { setIsAuthOpen(true); }
+    window.addEventListener('openLoginModal', handler);
+    return () => window.removeEventListener('openLoginModal', handler);
+  }, []);
+
   // Focus search input when opened
   useEffect(() => {
     if (showSearch) setTimeout(() => searchRef.current?.focus(), 50);

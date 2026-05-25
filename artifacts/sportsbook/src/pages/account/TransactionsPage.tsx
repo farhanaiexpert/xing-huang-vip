@@ -65,7 +65,7 @@ function txColor(type: string) {
   return '#38BDF8';
 }
 
-function TxRow({ tx }: { tx: Transaction }) {
+function TxRow({ tx, runningBalance }: { tx: Transaction; runningBalance?: number }) {
   const credit = isCredit(tx.type);
   const color = txColor(tx.type);
   return (
@@ -90,6 +90,11 @@ function TxRow({ tx }: { tx: Transaction }) {
         <p className="text-[13px] font-bold" style={{ color: credit ? '#00DFA9' : '#EF4444' }}>
           {credit ? '+' : '-'}${fmtAmt(tx.amount)}
         </p>
+        {runningBalance !== undefined && (
+          <p className="text-[9px] text-[#475569] font-mono mt-0.5">
+            bal: ${runningBalance.toFixed(2)}
+          </p>
+        )}
         <p className="text-[10px] text-[#64748B] capitalize">{tx.status}</p>
       </div>
     </div>
@@ -137,6 +142,19 @@ export function TransactionsPage() {
   const totalDeposits    = all.filter(t => t.type === 'deposit')    .reduce((s, t) => s + parseFloat(t.amount), 0);
   const totalWithdrawals = all.filter(t => t.type === 'withdrawal') .reduce((s, t) => s + parseFloat(t.amount), 0);
   const totalWinnings    = all.filter(t => t.type === 'win')        .reduce((s, t) => s + parseFloat(t.amount), 0);
+
+  // Running balance map: compute on chrono order (all is newest-first, so reverse to get oldest-first)
+  const runningBalances = useMemo(() => {
+    const chrono = [...all].reverse();
+    let bal = 0;
+    const map = new Map<number, number>();
+    for (const tx of chrono) {
+      const amt = parseFloat(tx.amount);
+      bal += isCredit(tx.type) ? amt : -amt;
+      map.set(tx.id, bal);
+    }
+    return map;
+  }, [all]);
 
   return (
     <div className="space-y-4">
@@ -212,7 +230,7 @@ export function TransactionsPage() {
             </div>
             {paginated.map((tx, i) => (
               <div key={tx.id} className={cn(i > 0 && 'border-t border-white/[0.04]')}>
-                <TxRow tx={tx} />
+                <TxRow tx={tx} runningBalance={runningBalances.get(tx.id)} />
               </div>
             ))}
           </div>
