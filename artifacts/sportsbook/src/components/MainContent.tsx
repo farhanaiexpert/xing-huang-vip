@@ -18,6 +18,7 @@ import { FlashOdds } from "./FlashOdds";
 import { JackpotPool } from "./JackpotPool";
 import { LiveBetFeed } from "./LiveBetFeed";
 import { SportDetailPage, SPORT_DETAIL_IDS } from "./SportDetailPage";
+import { ConnectWalletModal } from "./ConnectWalletModal";
 import { cn } from "../lib/utils";
 import {
   Search,
@@ -82,7 +83,7 @@ const PROMO_PILLS = [
   { id: "acca-boost", label: "Acca Boost", color: "#00DFA9" },
 ];
 
-function USDTDepositBanner() {
+function USDTDepositBanner({ onDeposit }: { onDeposit: () => void }) {
   return (
     <div
       className="relative mb-5 rounded-xl p-px"
@@ -133,6 +134,7 @@ function USDTDepositBanner() {
               <p className="text-[8px] text-[#94A3B8]/40 leading-none mt-0.5">100% first deposit match</p>
             </div>
             <button
+              onClick={onDeposit}
               className="shrink-0 px-4 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 active:scale-95 whitespace-nowrap"
               style={{ background: "linear-gradient(135deg,#00DFA9 0%,#00C98A 100%)" }}>
               Deposit Now →
@@ -180,6 +182,7 @@ function USDTDepositBanner() {
           </div>
           {/* CTA */}
           <button
+            onClick={onDeposit}
             className="shrink-0 px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 hover:brightness-110 hover:scale-105 active:scale-95 hover:shadow-[0_0_20px_rgba(0,223,169,0.5)] whitespace-nowrap"
             style={{ background: "linear-gradient(135deg,#00DFA9 0%,#00C98A 100%)" }}>
             Deposit Now →
@@ -197,6 +200,7 @@ export function MainContent({
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [depositOpen, setDepositOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Real + mock leagues from global context (also powers MatchDetail page)
@@ -616,7 +620,7 @@ export function MainContent({
             </div>
           ) : (
             <>
-              {showFeatured && <USDTDepositBanner />}
+              {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
               {showFeatured && <JackpotPool />}
               {showFeatured && <FlashOdds />}
               {showFeatured && <LiveBetFeed />}
@@ -723,6 +727,8 @@ export function MainContent({
         {/* ── Site footer ─────────────────────────────────────────────── */}
         {!isLoading && <SiteFooter />}
       </div>
+
+      <ConnectWalletModal open={depositOpen} onOpenChange={setDepositOpen} />
     </div>
   );
 }

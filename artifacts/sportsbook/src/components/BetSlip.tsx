@@ -260,7 +260,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               </span>
             </div>
             <button
-              onClick={() => toast({ title: 'Top up coming soon', description: 'Payment integration is on the way!' })}
+              onClick={() => setDepositOpen(true)}
               className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-[#00DFA9] text-[#0B0F14] px-3 py-1.5 rounded-lg hover:brightness-110 active:scale-95 transition-all leading-none"
             >
               <Plus className="h-3 w-3" />
