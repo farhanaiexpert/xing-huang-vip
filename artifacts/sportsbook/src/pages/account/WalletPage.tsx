@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
   Clock, XCircle, RefreshCw, Loader2, CircleDollarSign, Shield,
-  AlertCircle, ExternalLink, Info,
+  AlertCircle, ExternalLink, Info, QrCode, Zap, CreditCard, Lock,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -213,6 +213,61 @@ export function WalletPage() {
       {/* ── DEPOSIT TAB ───────────────────────────────────────────────────── */}
       {tab === 'deposit' && (
         <div className="space-y-4">
+
+          {/* ── Method selector ─────────────────────────────────────────── */}
+          <div className="rounded-2xl border border-white/[0.07] bg-[#0E1520] p-4">
+            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Choose Deposit Method</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {/* TRC-20 USDT — active */}
+              <div
+                className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 cursor-default"
+                style={{
+                  background: 'rgba(0,223,169,0.10)',
+                  border: '2px solid rgba(0,223,169,0.50)',
+                  boxShadow: '0 0 16px rgba(0,223,169,0.10)',
+                }}
+              >
+                <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                  <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
+                </div>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(0,223,169,0.18)', border: '1px solid rgba(0,223,169,0.35)' }}>
+                  <QrCode className="w-4.5 h-4.5 text-[#00DFA9]" />
+                </div>
+                <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">USDT Manual</p>
+                <p className="text-[9px] text-[#00DFA9] font-semibold">TRC-20</p>
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.3)' }}>
+                  Active
+                </span>
+              </div>
+
+              {/* Coming soon cards */}
+              {([
+                { name: 'NOWPayments', tag: '100+ coins', icon: Zap, color: '#38BDF8', bg: 'rgba(56,189,248,0.07)', border: 'rgba(56,189,248,0.14)' },
+                { name: 'Binance Pay', tag: '0% fee',     icon: CreditCard, color: '#FACC15', bg: 'rgba(250,204,21,0.07)', border: 'rgba(250,204,21,0.14)' },
+                { name: 'WalletConnect', tag: 'Web3',     icon: Wallet,    color: '#A78BFA', bg: 'rgba(167,139,250,0.07)', border: 'rgba(167,139,250,0.14)' },
+              ] as const).map(({ name, tag, icon: Icon, color, bg, border }) => (
+                <div
+                  key={name}
+                  className="relative rounded-xl p-3 flex flex-col items-center gap-1.5"
+                  style={{ background: bg, border: `1px solid ${border}`, opacity: 0.5 }}
+                >
+                  <div className="absolute top-1.5 right-1.5">
+                    <Lock className="w-3 h-3 text-[#64748B]" />
+                  </div>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: bg, border: `1px solid ${border}` }}>
+                    <Icon className="w-4.5 h-4.5" style={{ color }} />
+                  </div>
+                  <p className="text-[11px] font-bold text-[#94A3B8] text-center leading-tight">{name}</p>
+                  <p className="text-[9px] text-[#64748B]">{tag}</p>
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>
+                    Soon
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-2">

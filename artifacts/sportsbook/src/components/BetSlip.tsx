@@ -13,6 +13,7 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Selection } from '../types';
 import { useToast } from '../hooks/use-toast';
+import { ConnectWalletModal } from './ConnectWalletModal';
 
 export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }: { className?: string; forceExpanded?: boolean; isScrolled?: boolean }) {
   const {
@@ -29,6 +30,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
   const { toast } = useToast();
   const [isPlacing,      setIsPlacing]      = useState(false);
   const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
+  const [depositOpen,    setDepositOpen]    = useState(false);
   const isScrolled = !forceExpanded && !!isScrolledProp;
   const [compactExpanded, setCompactExpanded] = useState(false);
 
@@ -313,7 +315,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               isConnected={isConnected}
               balance={balance}
               canPlace={canPlaceSingle}
-              onConnectWallet={() => connect('MetaMask')}
+              onConnectWallet={() => setDepositOpen(true)}
               onPlaceBet={handlePlaceBet}
             />
           ) : (
@@ -328,7 +330,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               balance={balance}
               canPlace={canPlaceAcca}
               readyToStake={readyToStake}
-              onConnectWallet={() => connect('MetaMask')}
+              onConnectWallet={() => setDepositOpen(true)}
               onPlaceBet={handlePlaceBet}
             />
           )}
@@ -338,6 +340,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
       </div>
 
       <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />
+      <ConnectWalletModal open={depositOpen} onOpenChange={setDepositOpen} />
     </aside>
   );
 }
@@ -696,11 +699,11 @@ function EmptyState() {
         </div>
       ) : (
         <button
-          onClick={() => connect('MetaMask')}
+          onClick={() => setDepositOpen(true)}
           className="w-full mb-4 flex items-center gap-2 bg-[#121821] border border-[#253241] rounded-lg px-3 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all"
         >
           <Wallet className="h-4 w-4 text-[#94A3B8]/50 shrink-0" />
-          Connect wallet to place bets
+          Deposit to place bets
         </button>
       )}
 

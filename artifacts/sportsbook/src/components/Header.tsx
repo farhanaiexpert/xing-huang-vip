@@ -357,6 +357,17 @@ export function Header() {
 
             {/* Auth / Wallet */}
             {isConnected && shortAddress ? (
+              <div className="flex items-center gap-2">
+                {/* Deposit button — always visible for logged-in users */}
+                <button
+                  onClick={() => setIsPaymentOpen(true)}
+                  className="relative group flex items-center gap-1.5 h-8 px-3 rounded-xl text-[#0B0F14] text-xs font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
+                  style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ boxShadow: '0 0 16px rgba(0,223,169,0.5)' }} />
+                  <span className="relative">+ Deposit</span>
+                </button>
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setShowAddressMenu(v => !v)}
@@ -392,6 +403,7 @@ export function Header() {
                     </div>
                   </div>
                 )}
+              </div>
               </div>
             ) : (
               <div className="flex items-center gap-2">
