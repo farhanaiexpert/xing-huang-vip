@@ -8,6 +8,7 @@ import oddsRouter from "./odds.js";
 import adminRouter from "./admin.js";
 import winspinRouter from "./winspin.js";
 import promotionsRouter from "./promotions.js";
+import poolsRouter from "./pools.js";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use(oddsRouter);
 router.use(adminRouter);
 router.use(winspinRouter);
 router.use(promotionsRouter);
+router.use(poolsRouter);
 
 export default router;

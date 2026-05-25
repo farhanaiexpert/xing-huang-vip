@@ -81,6 +81,35 @@ export function AccountLayout() {
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-20 xl:pb-0">
       <Header />
 
+      {/* ── Mobile sticky section tab bar (9 account sections) ── */}
+      <div className="xl:hidden sticky top-0 z-30 bg-[#0B0F14]/95 backdrop-blur-sm border-b border-white/[0.06] px-3 py-2 space-y-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0">
+            <span className="text-[9px] font-black text-[#00DFA9]">{initials}</span>
+          </div>
+          <p className="text-[12px] font-bold text-[#F8FAFC] truncate">{user.username}</p>
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {NAV.map(item => {
+            const Icon = item.icon;
+            const isActive = section === item.id;
+            return (
+              <Link key={item.id} href={`/account/${item.id}`}>
+                <div className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap border transition-all duration-150 cursor-pointer',
+                  isActive
+                    ? 'bg-[#00DFA9]/12 text-[#00DFA9] border-[#00DFA9]/30'
+                    : 'bg-[#0E1520] text-[#94A3B8]/55 border-white/[0.06]',
+                )}>
+                  <Icon className="h-3 w-3 shrink-0" />
+                  {item.label}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="max-w-[1400px] mx-auto px-3 xl:px-6">
         <div className="flex gap-5 py-5">
 
@@ -140,39 +169,6 @@ export function AccountLayout() {
 
           {/* ── Main content ───────────────────────────────────────── */}
           <main className="flex-1 min-w-0">
-            {/* Mobile: user strip + scrollable tab bar */}
-            <div className="xl:hidden mb-4 space-y-3">
-              <div className="flex items-center gap-2.5 px-1">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0">
-                  <span className="text-[11px] font-black text-[#00DFA9]">{initials}</span>
-                </div>
-                <div>
-                  <p className="text-[13px] font-bold text-[#F8FAFC]">{user.username}</p>
-                  <p className="text-[10px] text-[#94A3B8]/45">{user.email}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
-                {NAV.map(item => {
-                  const Icon = item.icon;
-                  const active = section === item.id;
-                  return (
-                    <Link key={item.id} href={`/account/${item.id}`}>
-                      <div className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-semibold whitespace-nowrap border transition-all duration-150 cursor-pointer',
-                        active
-                          ? 'bg-[#00DFA9]/12 text-[#00DFA9] border-[#00DFA9]/30'
-                          : 'bg-[#0E1520] text-[#94A3B8]/55 border-white/[0.06] hover:text-[#F8FAFC]',
-                      )}>
-                        <Icon className="h-3 w-3 shrink-0" />
-                        {item.label}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-
             <PageComponent />
           </main>
         </div>

@@ -19,7 +19,7 @@ interface Transaction {
 }
 
 type Range = '7d' | '30d' | '90d' | 'all';
-type TxFilter = 'all' | 'deposit' | 'withdrawal' | 'bet' | 'win';
+type TxFilter = 'all' | 'deposit' | 'withdrawal' | 'bet' | 'win' | 'credit';
 
 const RANGES: { key: Range; label: string }[] = [
   { key: '7d',  label: 'Last 7d'  },
@@ -34,6 +34,7 @@ const TYPE_FILTERS: { key: TxFilter; label: string }[] = [
   { key: 'withdrawal', label: 'Withdrawals' },
   { key: 'bet',        label: 'Bets' },
   { key: 'win',        label: 'Winnings' },
+  { key: 'credit',     label: 'Credits' },
 ];
 
 function fmtAmt(amount: string) {
@@ -48,21 +49,36 @@ function fmtDate(iso: string) {
 
 function txLabel(type: string) {
   const m: Record<string, string> = {
-    deposit: 'Deposit', withdrawal: 'Withdrawal',
-    bet: 'Bet Placed', win: 'Winnings', bonus: 'Bonus Credit',
+    deposit:    'Deposit',
+    withdrawal: 'Withdrawal',
+    bet:        'Bet Placed',
+    debit:      'Bet Placed',
+    win:        'Winnings',
+    credit:     'Credit',
+    bonus:      'Bonus Credit',
   };
   return m[type] ?? type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function isCredit(type: string) {
-  return type === 'deposit' || type === 'win' || type === 'bonus';
+  return type === 'deposit' || type === 'win' || type === 'credit' || type === 'bonus';
 }
 
 function txColor(type: string) {
-  if (type === 'deposit') return '#00DFA9';
-  if (type === 'withdrawal') return '#EF4444';
-  if (type === 'win') return '#FACC15';
+  if (type === 'deposit')                    return '#00DFA9';
+  if (type === 'withdrawal')                 return '#EF4444';
+  if (type === 'win')                        return '#FACC15';
+  if (type === 'credit' || type === 'bonus') return '#00DFA9';
   return '#38BDF8';
+}
+
+/** Returns true when tx.type matches the active filter key */
+function matchesFilter(type: string, filter: TxFilter): boolean {
+  if (filter === 'all')        return true;
+  if (filter === 'bet')        return type === 'bet' || type === 'debit';
+  if (filter === 'win')        return type === 'win';
+  if (filter === 'credit')     return type === 'credit' || type === 'bonus';
+  return type === filter;
 }
 
 function TxRow({ tx, runningBalance }: { tx: Transaction; runningBalance?: number }) {
@@ -131,7 +147,7 @@ export function TransactionsPage() {
     return all.filter(tx => {
       const old = now - new Date(tx.createdAt).getTime() > cutoff;
       if (old) return false;
-      if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
+      if (!matchesFilter(tx.type, typeFilter)) return false;
       return true;
     });
   }, [all, range, typeFilter]);

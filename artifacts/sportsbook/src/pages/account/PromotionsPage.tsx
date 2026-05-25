@@ -5,12 +5,12 @@ import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Gift, Zap, CalendarCheck, Users, Tv2, Trophy,
-  ChevronRight, CheckCircle2, Clock, Info, Copy, Check,
-  ExternalLink, Loader2, Star,
+  Gift, ExternalLink, CheckCircle2, Clock,
+  Loader2, Star, AlertCircle,
 } from 'lucide-react';
 
 type PromoCategory = 'All' | 'Welcome' | 'Weekly' | 'Loyalty';
+const CATEGORIES: PromoCategory[] = ['All', 'Welcome', 'Weekly', 'Loyalty'];
 
 interface ApiPromotion {
   id: number;
@@ -25,60 +25,8 @@ interface ApiPromotion {
   expiresAt: string | null;
   createdAt: string;
   claimed: boolean;
+  claimedAt: string | null;
 }
-
-const DISPLAY_PROMOS = [
-  {
-    id: 'welcome', category: 'Welcome' as PromoCategory,
-    icon: <Gift className="h-5 w-5" />, accent: '#00DFA9',
-    tag: 'New Players', tagColor: 'bg-[#00DFA9]/15 text-[#00DFA9]',
-    title: '100% Welcome Bonus', subtitle: 'Up to 500 USDT on your first deposit',
-    desc: "Make your first deposit and we'll match it 100%, giving you double the funds to explore the markets. Min. deposit 20 USDT. 5× wagering requirement.",
-    cta: 'Claim Bonus', ctaAction: 'claim', highlight: true,
-  },
-  {
-    id: 'acca', category: 'Weekly' as PromoCategory,
-    icon: <Zap className="h-5 w-5" />, accent: '#FACC15',
-    tag: 'Always On', tagColor: 'bg-[#FACC15]/15 text-[#FACC15]',
-    title: 'Acca Boost', subtitle: 'Up to +50% on winning accumulators',
-    desc: 'Win more on your accumulators. 4 selections: +10% · 5 selections: +20% · 6 selections: +35% · 7+: +50%. Applied automatically to qualifying bets.',
-    cta: 'Bet Now', ctaAction: 'bet', highlight: false,
-  },
-  {
-    id: 'friday', category: 'Weekly' as PromoCategory,
-    icon: <CalendarCheck className="h-5 w-5" />, accent: '#38BDF8',
-    tag: 'Every Friday', tagColor: 'bg-[#38BDF8]/15 text-[#38BDF8]',
-    title: 'Free Bet Friday', subtitle: '10 USDT free bet, every single week',
-    desc: 'Place at least 25 USDT in total bets Mon–Thu and receive a 10 USDT free bet credited every Friday at 09:00 UTC.',
-    cta: 'Learn More', ctaAction: 'info', highlight: false,
-  },
-  {
-    id: 'refer', category: 'Weekly' as PromoCategory,
-    icon: <Users className="h-5 w-5" />, accent: '#A78BFA',
-    tag: 'Ongoing', tagColor: 'bg-[#A78BFA]/15 text-[#A78BFA]',
-    title: 'Refer a Friend', subtitle: '25 USDT for you, 25 USDT for them',
-    desc: 'Share your referral link. When your friend signs up and deposits 50 USDT+, you both receive a 25 USDT free bet.',
-    cta: 'Share Link', ctaAction: 'share', highlight: false,
-  },
-  {
-    id: 'cashback', category: 'Loyalty' as PromoCategory,
-    icon: <Trophy className="h-5 w-5" />, accent: '#F97316',
-    tag: 'VIP Only', tagColor: 'bg-[#F97316]/15 text-[#F97316]',
-    title: 'Weekly Cashback', subtitle: '5% back on losing bets, every Monday',
-    desc: 'VIP members get 5% cashback on their net losses from Mon–Sun, credited every Monday morning.',
-    cta: 'Learn More', ctaAction: 'info', highlight: false,
-  },
-  {
-    id: 'liveboost', category: 'Weekly' as PromoCategory,
-    icon: <Tv2 className="h-5 w-5" />, accent: '#EC4899',
-    tag: 'Live Betting', tagColor: 'bg-[#EC4899]/15 text-[#EC4899]',
-    title: 'Live Bet Boost', subtitle: 'Enhanced odds on in-play markets',
-    desc: 'Get boosted odds on selected live markets every weekend. Look for the ⚡ icon next to boosted markets.',
-    cta: 'View Markets', ctaAction: 'bet', highlight: false,
-  },
-];
-
-const CATEGORIES: PromoCategory[] = ['All', 'Welcome', 'Weekly', 'Loyalty'];
 
 function typeToCategory(type: string): PromoCategory {
   if (type === 'welcome') return 'Welcome';
@@ -102,19 +50,22 @@ function fmtExpiry(expiresAt: string | null) {
   return `Expires in ${days}d`;
 }
 
+function fmtClaimedAt(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function PromotionsPage() {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
-  const [active, setActive]   = useState<PromoCategory>('All');
-  const [copied, setCopied]   = useState(false);
-  const [apiPromos, setApiPromos] = useState<ApiPromotion[]>([]);
-  const [claiming, setClaiming]   = useState<number | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [apiError, setApiError]   = useState(false);
+  const [active, setActive] = useState<PromoCategory>('All');
+  const [promos, setPromos]  = useState<ApiPromotion[]>([]);
+  const [claiming, setClaiming] = useState<number | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     api.get<ApiPromotion[]>('/promotions')
-      .then(data => { setApiPromos(data); setLoading(false); })
+      .then(data => { setPromos(data); setLoading(false); })
       .catch(() => { setApiError(true); setLoading(false); });
   }, []);
 
@@ -123,7 +74,8 @@ export function PromotionsPage() {
     setClaiming(id);
     try {
       await api.post(`/promotions/${id}/claim`, {});
-      setApiPromos(prev => prev.map(p => p.id === id ? { ...p, claimed: true } : p));
+      const now = new Date().toISOString();
+      setPromos(prev => prev.map(p => p.id === id ? { ...p, claimed: true, claimedAt: now } : p));
       toast({ title: 'Promotion claimed!', description: 'Check your wallet for the bonus.' });
     } catch {
       toast({ title: 'Already claimed or not eligible', variant: 'destructive' });
@@ -132,21 +84,7 @@ export function PromotionsPage() {
     }
   }
 
-  function handleDisplayCta(action: string) {
-    if (action === 'share') {
-      const code = typeof window !== 'undefined'
-        ? (localStorage.getItem('cb_referral_code') ?? 'CUPBETT')
-        : 'CUPBETT';
-      void navigator.clipboard.writeText(`${window.location.origin}/?ref=${code}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
-      toast({ title: 'Referral link copied!' });
-    } else {
-      toast({ title: 'Opening promotion…' });
-    }
-  }
-
-  const showApiPromos = !loading && !apiError && apiPromos.length > 0;
+  const filtered = promos.filter(p => active === 'All' || typeToCategory(p.type) === active);
 
   return (
     <div className="space-y-4">
@@ -174,138 +112,108 @@ export function PromotionsPage() {
         ))}
       </div>
 
+      {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-14">
           <Loader2 className="h-5 w-5 text-[#00DFA9] animate-spin" />
         </div>
       )}
 
-      {/* Live API promotions */}
-      {showApiPromos && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="h-[1.5px] flex-1 bg-[#1E2A38]" />
-            <span className="text-[9px] font-bold uppercase tracking-widest text-[#00DFA9]/60">Live Promotions</span>
-            <div className="h-[1.5px] flex-1 bg-[#1E2A38]" />
-          </div>
-          {apiPromos
-            .filter(p => active === 'All' || typeToCategory(p.type) === active)
-            .map(promo => {
-              const expired = isExpired(promo.expiresAt);
-              return (
-                <div key={promo.id}
-                  className={cn(
-                    'relative rounded-2xl border overflow-hidden',
-                    promo.claimed ? 'border-[#00DFA9]/20 bg-[#071A12]/50' :
-                    expired ? 'border-white/[0.04] bg-[#0E1520] opacity-60' :
-                    'border-white/[0.09] bg-[#0E1520]'
-                  )}>
-                  {!expired && !promo.claimed && (
-                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15]" />
-                  )}
-                  <div className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center shrink-0 mt-0.5 text-[#00DFA9]">
-                        <Star className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-[#00DFA9]/15 text-[#00DFA9]">
-                            {promo.type.charAt(0).toUpperCase() + promo.type.slice(1)}
-                          </span>
-                          <h3 className="text-[14px] font-bold text-[#F8FAFC]">{promo.title}</h3>
-                        </div>
-                        {promo.bonusAmount && (
-                          <p className="text-[12px] font-semibold text-[#00DFA9] mb-1">+{promo.bonusAmount} USDT bonus</p>
-                        )}
-                        <p className="text-[11px] text-[#64748B] leading-relaxed">{promo.description}</p>
-                        <p className="text-[10px] text-[#475569] mt-1.5">{fmtExpiry(promo.expiresAt)}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex justify-end">
-                      {promo.claimed ? (
-                        <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/25">
-                          <CheckCircle2 className="h-3 w-3" /> Claimed
-                        </span>
-                      ) : expired ? (
-                        <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold bg-white/5 text-[#64748B] border border-white/[0.08]">
-                          <Clock className="h-3 w-3" /> Expired
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => claimPromo(promo.id)}
-                          disabled={claiming === promo.id}
-                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.97] bg-gradient-to-r from-[#00DFA9] to-[#00C49A] text-[#0B0F14] disabled:opacity-50"
-                        >
-                          {claiming === promo.id
-                            ? <Loader2 className="h-3 w-3 animate-spin" />
-                            : <><Gift className="h-3 w-3" />Claim</>}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Error */}
+      {!loading && apiError && (
+        <div className="rounded-2xl border border-[#EF4444]/20 bg-[#EF4444]/5 p-6 text-center">
+          <AlertCircle className="h-8 w-8 text-[#EF4444]/50 mx-auto mb-2" />
+          <p className="text-[13px] font-semibold text-[#F8FAFC]">Could not load promotions</p>
+          <p className="text-[11px] text-[#64748B] mt-1">Please try again later.</p>
         </div>
       )}
 
-      {/* Display / marketing promotions */}
-      {!loading && (
+      {/* Empty state */}
+      {!loading && !apiError && filtered.length === 0 && (
+        <div className="rounded-2xl border border-[#00DFA9]/12 p-8 text-center"
+          style={{ background: 'linear-gradient(135deg, #071A12 0%, #0B0F14 100%)' }}>
+          <Gift className="h-10 w-10 text-[#00DFA9]/25 mx-auto mb-3" />
+          <p className="text-[14px] font-bold text-[#F8FAFC] mb-1.5">No promotions right now</p>
+          <p className="text-[11px] text-[#64748B] leading-relaxed">
+            New offers are added regularly. Check back soon.
+          </p>
+        </div>
+      )}
+
+      {/* Promotions list */}
+      {!loading && !apiError && filtered.length > 0 && (
         <div className="space-y-3">
-          {showApiPromos && (
-            <div className="flex items-center gap-2">
-              <div className="h-[1.5px] flex-1 bg-[#1E2A38]" />
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]/60">Standard Offers</span>
-              <div className="h-[1.5px] flex-1 bg-[#1E2A38]" />
-            </div>
-          )}
-          {(active === 'All' ? DISPLAY_PROMOS : DISPLAY_PROMOS.filter(p => p.category === active)).map(promo => (
-            <div key={promo.id} className={cn(
-              'relative rounded-2xl border overflow-hidden',
-              promo.highlight
-                ? 'border-[#00DFA9]/30 bg-gradient-to-br from-[#071A12] to-[#0B0F14]'
-                : 'border-white/[0.07] bg-[#0E1520]'
-            )}>
-              {promo.highlight && (
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15]" />
-              )}
-              <div className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
-                    style={{ background: `${promo.accent}12`, border: `1px solid ${promo.accent}25`, color: promo.accent }}>
-                    {promo.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={cn('px-1.5 py-0.5 rounded-md text-[9px] font-bold', promo.tagColor)}>{promo.tag}</span>
-                      <h3 className="text-[14px] font-bold text-[#F8FAFC]">{promo.title}</h3>
+          {filtered.map(promo => {
+            const expired = isExpired(promo.expiresAt);
+            return (
+              <div key={promo.id}
+                className={cn(
+                  'relative rounded-2xl border overflow-hidden',
+                  promo.claimed
+                    ? 'border-[#00DFA9]/20 bg-[#071A12]/50'
+                    : expired
+                      ? 'border-white/[0.04] bg-[#0E1520] opacity-60'
+                      : 'border-white/[0.09] bg-[#0E1520]'
+                )}>
+                {!expired && !promo.claimed && (
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15]" />
+                )}
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center shrink-0 mt-0.5 text-[#00DFA9]">
+                      <Star className="h-5 w-5" />
                     </div>
-                    <p className="text-[12px] font-semibold mb-1.5" style={{ color: promo.accent }}>{promo.subtitle}</p>
-                    <p className="text-[11px] text-[#64748B] leading-relaxed">{promo.desc}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-[#00DFA9]/15 text-[#00DFA9]">
+                          {promo.type.charAt(0).toUpperCase() + promo.type.slice(1)}
+                        </span>
+                        <h3 className="text-[14px] font-bold text-[#F8FAFC]">{promo.title}</h3>
+                      </div>
+                      {promo.bonusAmount && (
+                        <p className="text-[12px] font-semibold text-[#00DFA9] mb-1">
+                          +{promo.bonusAmount} USDT bonus
+                        </p>
+                      )}
+                      {promo.minDeposit && (
+                        <p className="text-[10px] text-[#475569] mb-1">
+                          Min. deposit: {promo.minDeposit} USDT
+                        </p>
+                      )}
+                      <p className="text-[11px] text-[#64748B] leading-relaxed">{promo.description}</p>
+                      <p className="text-[10px] text-[#475569] mt-1.5">{fmtExpiry(promo.expiresAt)}</p>
+                      {promo.claimed && promo.claimedAt && (
+                        <p className="text-[10px] text-[#00DFA9]/60 mt-0.5">
+                          Claimed on {fmtClaimedAt(promo.claimedAt)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 flex justify-end">
-                  <button
-                    onClick={() => handleDisplayCta(promo.ctaAction)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.97]"
-                    style={{
-                      background: promo.highlight
-                        ? `linear-gradient(135deg, ${promo.accent} 0%, ${promo.accent}CC 100%)`
-                        : `${promo.accent}18`,
-                      color: promo.highlight ? '#0B0F14' : promo.accent,
-                      border: promo.highlight ? 'none' : `1px solid ${promo.accent}30`,
-                    }}
-                  >
-                    {promo.ctaAction === 'share' && copied
-                      ? <><Check className="h-3 w-3" />Copied!</>
-                      : <>{promo.cta}<ChevronRight className="h-3 w-3" /></>
-                    }
-                  </button>
+                  <div className="mt-3 flex justify-end">
+                    {promo.claimed ? (
+                      <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/25">
+                        <CheckCircle2 className="h-3 w-3" /> Claimed
+                      </span>
+                    ) : expired ? (
+                      <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold bg-white/5 text-[#64748B] border border-white/[0.08]">
+                        <Clock className="h-3 w-3" /> Expired
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => claimPromo(promo.id)}
+                        disabled={claiming === promo.id}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.97] bg-gradient-to-r from-[#00DFA9] to-[#00C49A] text-[#0B0F14] disabled:opacity-50"
+                      >
+                        {claiming === promo.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <><Gift className="h-3 w-3" />Claim</>}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

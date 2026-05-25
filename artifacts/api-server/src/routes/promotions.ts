@@ -41,15 +41,22 @@ router.get("/promotions", async (req, res): Promise<void> => {
 
   if (userId) {
     const claims = await db
-      .select({ promotionId: promotionClaimsTable.promotionId })
+      .select({
+        promotionId: promotionClaimsTable.promotionId,
+        claimedAt:   promotionClaimsTable.claimedAt,
+      })
       .from(promotionClaimsTable)
       .where(eq(promotionClaimsTable.userId, userId));
-    const claimed = new Set(claims.map((c) => c.promotionId));
-    res.json(promos.map((p) => ({ ...p, claimed: claimed.has(p.id) })));
+    const claimMap = new Map(claims.map((c) => [c.promotionId, c.claimedAt]));
+    res.json(promos.map((p) => ({
+      ...p,
+      claimed:   claimMap.has(p.id),
+      claimedAt: claimMap.get(p.id) ?? null,
+    })));
     return;
   }
 
-  res.json(promos.map((p) => ({ ...p, claimed: false })));
+  res.json(promos.map((p) => ({ ...p, claimed: false, claimedAt: null })));
 });
 
 router.post("/promotions/:id/claim", authenticate, async (req, res): Promise<void> => {
