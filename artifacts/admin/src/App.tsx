@@ -17,6 +17,7 @@ import WinSpinPage from "@/pages/WinSpinPage";
 import MarketsPage from "@/pages/MarketsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ReportsPage from "@/pages/ReportsPage";
+import UserProfilePage from "@/pages/UserProfilePage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/markets" component={() => <ProtectedRoute component={MarketsPage} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
       <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
+      <Route path="/users/:id" component={() => <ProtectedRoute component={UserProfilePage} />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );

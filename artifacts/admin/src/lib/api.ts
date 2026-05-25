@@ -245,3 +245,64 @@ export interface DailyPnL {
   stakes: string;
   payouts: string;
 }
+
+export interface UserProfileStats {
+  user: AdminUser;
+  wallet: { balance: string };
+  stats: {
+    bets: {
+      total: number; open: number; won: number; lost: number; voided: number;
+      totalStaked: string; totalReturned: string; winRate: number; lifetimeValue: string;
+    };
+    transactions: {
+      totalDeposited: string; totalWithdrawn: string;
+      pendingDeposits: number; pendingWithdrawals: number;
+    };
+    referrals: { referredByUsername: string | null; totalReferred: number; totalCommissions: string };
+    winspin: { totalSpins: number; totalWon: string };
+    promoClaims: number;
+  };
+}
+
+export interface BetWithSelections extends AdminBet {
+  selections: Array<{
+    id: number; eventName: string; marketName: string; outcomeName: string;
+    odds: string; sport: string; result: string | null;
+  }>;
+}
+
+export interface UserSession {
+  id: number;
+  createdAt: string;
+  expiresAt: string;
+  isActive: boolean;
+}
+
+export interface UserReferralTree {
+  referredBy: { id: number; username: string } | null;
+  referred: Array<{ id: number; username: string; joinedAt: string; totalStaked: string; commissions: string }>;
+  totalCommissions: string;
+}
+
+export interface UserPromoClaim {
+  id: number;
+  promotionId: number;
+  promotionTitle: string;
+  bonusAmount: string;
+  claimedAt: string;
+}
+
+export interface UserSpinRecord {
+  id: number;
+  prizeLabel: string;
+  prizeAmount: string;
+  createdAt: string;
+}
+
+export interface UserNote {
+  id: number;
+  note: string;
+  tag: string;
+  adminUsername: string;
+  createdAt: string;
+}

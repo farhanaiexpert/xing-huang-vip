@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, sql, count, sum, and, or, ilike, like } from "drizzle-orm";
+import { eq, desc, sql, count, sum, and, or, ilike, like, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import {
@@ -21,6 +21,7 @@ import {
   winspinPrizesTable,
   sportControlsTable,
   platformSettingsTable,
+  userNotesTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -345,24 +346,52 @@ router.post("/admin/users/:id/reset-password", async (req, res): Promise<void> =
 
 router.get("/admin/users/:id/bets", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")));
+  const status = String(req.query.status ?? "all");
+  const PAGE = 20;
+
+  const where = status === "all"
+    ? eq(betsTable.userId, id)
+    : and(eq(betsTable.userId, id), eq(betsTable.status, status));
+
+  const [{ total }] = await db.select({ total: count() }).from(betsTable).where(where);
+
   const bets = await db
     .select()
     .from(betsTable)
-    .where(eq(betsTable.userId, id))
+    .where(where)
     .orderBy(desc(betsTable.createdAt))
-    .limit(50);
-  res.json(bets);
+    .limit(PAGE)
+    .offset((page - 1) * PAGE);
+
+  const betIds = bets.map(b => b.id);
+  const selections = betIds.length > 0
+    ? await db.select().from(betSelectionsTable).where(inArray(betSelectionsTable.betId, betIds))
+    : [];
+
+  const selMap: Record<number, (typeof selections)> = {};
+  for (const s of selections) {
+    if (!selMap[s.betId]) selMap[s.betId] = [];
+    selMap[s.betId].push(s);
+  }
+
+  res.json({ bets: bets.map(b => ({ ...b, selections: selMap[b.id] ?? [] })), total, page, pages: Math.ceil(Number(total) / PAGE) });
 });
 
 router.get("/admin/users/:id/transactions", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
-  const txns = await db
-    .select()
-    .from(transactionsTable)
-    .where(eq(transactionsTable.userId, id))
-    .orderBy(desc(transactionsTable.createdAt))
-    .limit(50);
-  res.json(txns);
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")));
+  const type = String(req.query.type ?? "all");
+  const PAGE = 20;
+
+  const where = type === "all"
+    ? eq(transactionsTable.userId, id)
+    : and(eq(transactionsTable.userId, id), eq(transactionsTable.type, type));
+
+  const [{ total }] = await db.select({ total: count() }).from(transactionsTable).where(where);
+  const txns = await db.select().from(transactionsTable).where(where)
+    .orderBy(desc(transactionsTable.createdAt)).limit(PAGE).offset((page - 1) * PAGE);
+  res.json({ transactions: txns, total, page, pages: Math.ceil(Number(total) / PAGE) });
 });
 
 // ─── Bets ────────────────────────────────────────────────────────────────────
@@ -1091,6 +1120,206 @@ router.get("/admin/reports/export/transactions", async (_req, res): Promise<void
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", `attachment; filename="cupbett-transactions-${new Date().toISOString().slice(0, 10)}.csv"`);
   res.send(csv);
+});
+
+
+// ─── User Profile: comprehensive stats ───────────────────────────────────────
+router.get("/admin/users/:id/profile", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid user ID" }); return; }
+
+  const [user] = await db.select({
+    id: usersTable.id, email: usersTable.email, username: usersTable.username,
+    role: usersTable.role, kycStatus: usersTable.kycStatus, country: usersTable.country,
+    isSuspended: usersTable.isSuspended, referralCode: usersTable.referralCode,
+    createdAt: usersTable.createdAt, balance: walletsTable.balanceUsdt,
+  }).from(usersTable).leftJoin(walletsTable, eq(walletsTable.userId, usersTable.id))
+    .where(eq(usersTable.id, id)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  const betStatsRows = await db.execute(sql`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE status = 'open')::int AS open,
+      COUNT(*) FILTER (WHERE status = 'won')::int AS won,
+      COUNT(*) FILTER (WHERE status = 'lost')::int AS lost,
+      COUNT(*) FILTER (WHERE status IN ('void','voided','cancelled'))::int AS voided,
+      COALESCE(SUM(stake), 0)::text AS total_staked,
+      COALESCE(SUM(CASE WHEN status = 'won' THEN potential_return ELSE 0 END), 0)::text AS total_returned
+    FROM bets WHERE user_id = ${id}
+  `);
+  const bs = betStatsRows.rows[0] as Record<string, unknown>;
+  const totalStaked = parseFloat(String(bs.total_staked));
+  const totalReturned = parseFloat(String(bs.total_returned));
+  const wonCount = Number(bs.won);
+  const settledCount = wonCount + Number(bs.lost) + Number(bs.voided);
+  const winRate = settledCount > 0 ? Math.round((wonCount / settledCount) * 100) : 0;
+  const lifetimeValue = (totalStaked - totalReturned).toFixed(2);
+
+  const txStatsRows = await db.execute(sql`
+    SELECT
+      COALESCE(SUM(amount) FILTER (WHERE type IN ('deposit','credit') AND status = 'completed'), 0)::text AS total_deposited,
+      COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0)::text AS total_withdrawn,
+      COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending')::int AS pending_deposits,
+      COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending')::int AS pending_withdrawals
+    FROM transactions WHERE user_id = ${id}
+  `);
+  const ts = txStatsRows.rows[0] as Record<string, unknown>;
+
+  const refRows = await db.execute(sql`
+    SELECT
+      (SELECT u.username FROM referrals r JOIN users u ON u.id = r.referrer_id WHERE r.referred_id = ${id} LIMIT 1) AS referred_by,
+      (SELECT COUNT(*)::int FROM referrals WHERE referrer_id = ${id}) AS total_referred,
+      COALESCE((SELECT SUM(amount)::text FROM commissions WHERE user_id = ${id}), '0') AS total_commissions
+  `);
+  const rf = refRows.rows[0] as Record<string, unknown>;
+
+  const wsRows = await db.execute(sql`
+    SELECT COUNT(*)::int AS total_spins, COALESCE(SUM(prize_amount), 0)::text AS total_won
+    FROM winspin_spins WHERE user_id = ${id}
+  `);
+  const ws = wsRows.rows[0] as Record<string, unknown>;
+
+  const [{ promoClaims }] = await db.select({ promoClaims: count() })
+    .from(promotionClaimsTable).where(eq(promotionClaimsTable.userId, id));
+
+  res.json({
+    user: { ...user, balance: user.balance ?? "0" },
+    wallet: { balance: String(user.balance ?? "0") },
+    stats: {
+      bets: {
+        total: Number(bs.total), open: Number(bs.open), won: Number(bs.won),
+        lost: Number(bs.lost), voided: Number(bs.voided),
+        totalStaked: String(bs.total_staked), totalReturned: String(bs.total_returned),
+        winRate, lifetimeValue,
+      },
+      transactions: {
+        totalDeposited: String(ts.total_deposited), totalWithdrawn: String(ts.total_withdrawn),
+        pendingDeposits: Number(ts.pending_deposits), pendingWithdrawals: Number(ts.pending_withdrawals),
+      },
+      referrals: {
+        referredByUsername: rf.referred_by ? String(rf.referred_by) : null,
+        totalReferred: Number(rf.total_referred),
+        totalCommissions: String(rf.total_commissions),
+      },
+      winspin: { totalSpins: Number(ws.total_spins), totalWon: String(ws.total_won) },
+      promoClaims: Number(promoClaims),
+    },
+  });
+});
+
+// ─── User Profile: sessions (login history) ───────────────────────────────────
+router.get("/admin/users/:id/sessions", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const rows = await db.select({
+    id: sessionsTable.id,
+    createdAt: sessionsTable.createdAt,
+    expiresAt: sessionsTable.expiresAt,
+  }).from(sessionsTable).where(eq(sessionsTable.userId, id))
+    .orderBy(desc(sessionsTable.createdAt)).limit(50);
+  const now = new Date();
+  res.json(rows.map(r => ({ ...r, isActive: new Date(r.expiresAt) > now })));
+});
+
+router.post("/admin/users/:id/invalidate-sessions", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  await db.delete(sessionsTable).where(eq(sessionsTable.userId, id));
+  await logAdminAction(req.user!.userId, "invalidate_sessions", "user", id, {});
+  res.json({ success: true });
+});
+
+// ─── User Profile: referral tree ─────────────────────────────────────────────
+router.get("/admin/users/:id/referrals", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+
+  const referredByRows = await db.execute(sql`
+    SELECT u.id, u.username FROM referrals r
+    JOIN users u ON u.id = r.referrer_id
+    WHERE r.referred_id = ${id} LIMIT 1
+  `);
+  const referredBy = (referredByRows.rows[0] as { id: number; username: string } | undefined) ?? null;
+
+  const referredRows = await db.execute(sql`
+    SELECT
+      u.id, u.username, u.created_at AS joined_at,
+      COALESCE(SUM(b.stake), 0)::text AS total_staked,
+      COALESCE((SELECT SUM(c.amount) FROM commissions c WHERE c.user_id = ${id} AND c.referral_id = r.id), 0)::text AS commissions
+    FROM referrals r
+    JOIN users u ON u.id = r.referred_id
+    LEFT JOIN bets b ON b.user_id = u.id
+    WHERE r.referrer_id = ${id}
+    GROUP BY u.id, u.username, u.created_at, r.id
+    ORDER BY u.created_at DESC
+  `);
+
+  const totalCommRows = await db.execute(sql`
+    SELECT COALESCE(SUM(amount), 0)::text AS total FROM commissions WHERE user_id = ${id}
+  `);
+  const totalCommissions = String((totalCommRows.rows[0] as Record<string, unknown>).total ?? "0");
+
+  res.json({ referredBy, referred: referredRows.rows, totalCommissions });
+});
+
+// ─── User Profile: promotion claims ──────────────────────────────────────────
+router.get("/admin/users/:id/promotions", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const rows = await db.execute(sql`
+    SELECT pc.id, pc.promotion_id, p.title AS promotion_title,
+           p.bonus_amount, pc.claimed_at
+    FROM promotion_claims pc
+    JOIN promotions p ON p.id = pc.promotion_id
+    WHERE pc.user_id = ${id}
+    ORDER BY pc.claimed_at DESC
+  `);
+  res.json(rows.rows);
+});
+
+// ─── User Profile: winspin history ───────────────────────────────────────────
+router.get("/admin/users/:id/winspin", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const rows = await db.select().from(winspinSpinsTable)
+    .where(eq(winspinSpinsTable.userId, id))
+    .orderBy(desc(winspinSpinsTable.createdAt)).limit(100);
+  res.json(rows);
+});
+
+// ─── User Profile: notes ─────────────────────────────────────────────────────
+router.get("/admin/users/:id/notes", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const rows = await db.execute(sql`
+    SELECT n.id, n.note, n.tag, n.created_at,
+           a.username AS admin_username
+    FROM user_notes n
+    JOIN users a ON a.id = n.admin_id
+    WHERE n.user_id = ${id}
+    ORDER BY n.created_at DESC
+  `);
+  res.json(rows.rows);
+});
+
+router.post("/admin/users/:id/notes", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const schema = z.object({
+    note: z.string().min(1).max(1000),
+    tag: z.enum(["general", "warning", "vip", "fraud", "support"]).default("general"),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
+
+  const [note] = await db.insert(userNotesTable)
+    .values({ userId: id, adminId: req.user!.userId, note: parsed.data.note, tag: parsed.data.tag })
+    .returning();
+  const [admin] = await db.select({ username: usersTable.username })
+    .from(usersTable).where(eq(usersTable.id, req.user!.userId)).limit(1);
+
+  await logAdminAction(req.user!.userId, "add_note", "user", id, { tag: parsed.data.tag });
+  res.json({ ...note, adminUsername: admin.username });
+});
+
+router.delete("/admin/users/:id/notes/:noteId", async (req, res): Promise<void> => {
+  const noteId = parseInt(req.params.noteId);
+  await db.delete(userNotesTable).where(eq(userNotesTable.id, noteId));
+  res.status(204).end();
 });
 
 export default router;
