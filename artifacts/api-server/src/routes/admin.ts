@@ -543,6 +543,8 @@ router.get("/admin/transactions", async (req, res): Promise<void> => {
       walletAddress: transactionsTable.walletAddress,
       verified: transactionsTable.verified,
       verificationNote: transactionsTable.verificationNote,
+      nowpaymentsPaymentId: transactionsTable.nowpaymentsPaymentId,
+      nowpaymentsStatus: transactionsTable.nowpaymentsStatus,
       createdAt: transactionsTable.createdAt,
     })
     .from(transactionsTable)

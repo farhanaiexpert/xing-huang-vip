@@ -33,6 +33,16 @@ interface Transaction {
   createdAt: string;
 }
 
+interface NppPayment {
+  paymentId: string;
+  payAddress: string;
+  payAmount: number;
+  payCurrency: string;
+  priceAmount: number;
+  priceCurrency: string;
+  expiresAt: string | null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(v: string | number) {
   return parseFloat(v as string).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -80,6 +90,16 @@ export function WalletPage() {
   const [depError, setDepError]     = useState('');
   const [depSuccess, setDepSuccess] = useState(false);
   const [depAutoVerified, setDepAutoVerified] = useState(false);
+
+  // NOWPayments
+  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual'>('nowpayments');
+  const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
+  const [nppAmount, setNppAmount]     = useState('');
+  const [nppCurrency, setNppCurrency] = useState('usdttrc20');
+  const [nppPayment, setNppPayment]   = useState<NppPayment | null>(null);
+  const [nppTimeLeft, setNppTimeLeft] = useState(0);
+  const [nppError, setNppError]       = useState('');
+  const [nppAddrCopied, setNppAddrCopied] = useState(false);
 
   // Withdrawal form
   const [wdAmount, setWdAmount]     = useState('');
@@ -149,6 +169,69 @@ export function WalletPage() {
       setWdError(err instanceof Error ? err.message : 'Submission failed');
     } finally { setWdSubmitting(false); }
   }
+
+  // ── NOWPayments handlers ─────────────────────────────────────────────────────
+  async function createNppPayment() {
+    const amount = parseFloat(nppAmount);
+    if (!nppAmount || isNaN(amount) || amount < 10) { setNppError('Minimum deposit is 10 USDT'); return; }
+    setNppState('creating'); setNppError('');
+    try {
+      const result = await api.post<NppPayment & { status: string; expiresAt: string | null }>(
+        '/wallet/deposit/nowpayments/create', { amount, currency: nppCurrency }
+      );
+      setNppPayment(result);
+      setNppTimeLeft(result.expiresAt
+        ? Math.max(0, Math.floor((new Date(result.expiresAt).getTime() - Date.now()) / 1000))
+        : 20 * 60);
+      setNppState('paying');
+      loadData();
+    } catch (err: unknown) {
+      setNppError(err instanceof Error ? err.message : 'Failed to create payment');
+      setNppState('idle');
+    }
+  }
+
+  function copyNppAddress() {
+    if (!nppPayment) return;
+    navigator.clipboard.writeText(nppPayment.payAddress);
+    setNppAddrCopied(true);
+    setTimeout(() => setNppAddrCopied(false), 2000);
+  }
+
+  function resetNpp() {
+    setNppState('idle'); setNppPayment(null);
+    setNppAmount(''); setNppError(''); setNppTimeLeft(0);
+  }
+
+  // Countdown timer
+  useEffect(() => {
+    if (nppState !== 'paying' || nppTimeLeft <= 0) return;
+    const id = setInterval(() => {
+      setNppTimeLeft(prev => {
+        if (prev <= 1) { setNppState('expired'); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [nppState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-poll payment status every 10 s
+  useEffect(() => {
+    if (nppState !== 'paying' || !nppPayment) return;
+    const id = setInterval(async () => {
+      try {
+        const r = await api.get<{ status: string; credited: boolean }>(
+          `/wallet/deposit/nowpayments/${nppPayment.paymentId}/status`
+        );
+        if (r.credited || r.status === 'finished' || r.status === 'confirmed') {
+          setNppState('success'); loadData();
+        } else if (r.status === 'failed' || r.status === 'refunded') {
+          setNppState('failed');
+        }
+      } catch { /* silent */ }
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [nppState, nppPayment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -222,64 +305,80 @@ export function WalletPage() {
           <div className="rounded-2xl border border-white/[0.07] bg-[#0E1520] p-4">
             <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Choose Deposit Method</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {/* TRC-20 USDT — active */}
-              <div
-                className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 cursor-default"
-                style={{
-                  background: 'rgba(0,223,169,0.10)',
-                  border: '2px solid rgba(0,223,169,0.50)',
-                  boxShadow: '0 0 16px rgba(0,223,169,0.10)',
-                }}
-              >
-                <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#00DFA9] flex items-center justify-center">
-                  <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
+
+              {/* NOWPayments — active default */}
+              <button onClick={() => { setDepositMethod('nowpayments'); resetNpp(); }}
+                className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-left"
+                style={depositMethod === 'nowpayments' ? { background: 'rgba(56,189,248,0.10)', border: '2px solid rgba(56,189,248,0.50)', boxShadow: '0 0 16px rgba(56,189,248,0.10)' }
+                  : { background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.14)' }}>
+                {depositMethod === 'nowpayments' && (
+                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#38BDF8] flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
+                  </div>
+                )}
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
+                  <Zap className="w-4.5 h-4.5 text-[#38BDF8]" />
                 </div>
+                <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">NOWPayments</p>
+                <p className="text-[9px] text-[#38BDF8] font-semibold">300+ coins</p>
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(56,189,248,0.15)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.3)' }}>Auto</span>
+              </button>
+
+              {/* Manual TRC-20 */}
+              <button onClick={() => setDepositMethod('manual')}
+                className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-left"
+                style={depositMethod === 'manual' ? { background: 'rgba(0,223,169,0.10)', border: '2px solid rgba(0,223,169,0.50)', boxShadow: '0 0 16px rgba(0,223,169,0.10)' }
+                  : { background: 'rgba(0,223,169,0.04)', border: '1px solid rgba(0,223,169,0.14)' }}>
+                {depositMethod === 'manual' && (
+                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
+                  </div>
+                )}
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center"
                   style={{ background: 'rgba(0,223,169,0.18)', border: '1px solid rgba(0,223,169,0.35)' }}>
                   <QrCode className="w-4.5 h-4.5 text-[#00DFA9]" />
                 </div>
                 <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">USDT Manual</p>
                 <p className="text-[9px] text-[#00DFA9] font-semibold">TRC-20</p>
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.3)' }}>
-                  Active
-                </span>
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.3)' }}>Manual</span>
+              </button>
+
+              {/* Coming soon — Binance Pay */}
+              <div className="relative rounded-xl p-3 flex flex-col items-center gap-1.5" style={{ background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.14)', opacity: 0.5 }}>
+                <div className="absolute top-1.5 right-1.5"><Lock className="w-3 h-3 text-[#64748B]" /></div>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.14)' }}>
+                  <CreditCard className="w-4.5 h-4.5 text-[#FACC15]" />
+                </div>
+                <p className="text-[11px] font-bold text-[#94A3B8] text-center leading-tight">Binance Pay</p>
+                <p className="text-[9px] text-[#64748B]">0% fee</p>
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>Soon</span>
               </div>
 
-              {/* Coming soon cards */}
-              {([
-                { name: 'NOWPayments', tag: '100+ coins', icon: Zap, color: '#38BDF8', bg: 'rgba(56,189,248,0.07)', border: 'rgba(56,189,248,0.14)' },
-                { name: 'Binance Pay', tag: '0% fee',     icon: CreditCard, color: '#FACC15', bg: 'rgba(250,204,21,0.07)', border: 'rgba(250,204,21,0.14)' },
-                { name: 'WalletConnect', tag: 'Web3',     icon: Wallet,    color: '#A78BFA', bg: 'rgba(167,139,250,0.07)', border: 'rgba(167,139,250,0.14)' },
-              ] as const).map(({ name, tag, icon: Icon, color, bg, border }) => (
-                <div
-                  key={name}
-                  className="relative rounded-xl p-3 flex flex-col items-center gap-1.5"
-                  style={{ background: bg, border: `1px solid ${border}`, opacity: 0.5 }}
-                >
-                  <div className="absolute top-1.5 right-1.5">
-                    <Lock className="w-3 h-3 text-[#64748B]" />
-                  </div>
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: bg, border: `1px solid ${border}` }}>
-                    <Icon className="w-4.5 h-4.5" style={{ color }} />
-                  </div>
-                  <p className="text-[11px] font-bold text-[#94A3B8] text-center leading-tight">{name}</p>
-                  <p className="text-[9px] text-[#64748B]">{tag}</p>
-                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>
-                    Soon
-                  </span>
+              {/* Coming soon — WalletConnect */}
+              <div className="relative rounded-xl p-3 flex flex-col items-center gap-1.5" style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.14)', opacity: 0.5 }}>
+                <div className="absolute top-1.5 right-1.5"><Lock className="w-3 h-3 text-[#64748B]" /></div>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.14)' }}>
+                  <Wallet className="w-4.5 h-4.5 text-[#A78BFA]" />
                 </div>
-              ))}
+                <p className="text-[11px] font-bold text-[#94A3B8] text-center leading-tight">WalletConnect</p>
+                <p className="text-[9px] text-[#64748B]">Web3</p>
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>Soon</span>
+              </div>
             </div>
           </div>
 
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-2">
-            {[
+            {(depositMethod === 'nowpayments' ? [
+              { icon: Shield, label: 'Secure', sub: '300+ currencies', color: '#38BDF8' },
+              { icon: Zap, label: 'Auto Credit', sub: 'No TxHash needed', color: '#00DFA9' },
+              { icon: CircleDollarSign, label: 'Min 10 USDT', sub: '~20 min window', color: '#FACC15' },
+            ] : [
               { icon: Shield, label: 'Secure', sub: 'TRC-20 Network', color: '#00DFA9' },
-              { icon: Clock,  label: 'Fast',   sub: '5–30 min',        color: '#38BDF8' },
+              { icon: Clock, label: 'Fast', sub: '5–30 min', color: '#38BDF8' },
               { icon: CircleDollarSign, label: 'Min 10 USDT', sub: 'No deposit fees', color: '#FACC15' },
-            ].map(({ icon: Icon, label, sub, color }) => (
+            ]).map(({ icon: Icon, label, sub, color }) => (
               <div key={label} className="rounded-xl border border-white/[0.07] bg-[#0E1520] p-3 text-center">
                 <Icon className="h-4 w-4 mx-auto mb-1" style={{ color }} />
                 <p className="text-[11px] font-bold text-[#F8FAFC]">{label}</p>
@@ -288,19 +387,232 @@ export function WalletPage() {
             ))}
           </div>
 
-          {/* QR + Address card */}
-          <div className="rounded-2xl border border-white/[0.09] bg-[#0E1520] overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06]">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-md bg-[#00DFA9]/15 flex items-center justify-center">
-                  <span className="text-[9px] font-black text-[#00DFA9]">1</span>
+          {/* ── NOWPayments auto-pay panel ─────────────────────────────── */}
+          {depositMethod === 'nowpayments' && (
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #0A1628 100%)', border: '1px solid rgba(56,189,248,0.20)' }}>
+              <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(56,189,248,0.06) 0%, transparent 100%)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
+                    <Zap className="h-4 w-4 text-[#38BDF8]" />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Deposit via NOWPayments</p>
+                    <p className="text-[11px] text-[#64748B] mt-0.5">Enter amount → get unique address → pay → auto-credited</p>
+                  </div>
                 </div>
-                <p className="text-[12px] font-bold text-[#F8FAFC]">Send USDT to this address</p>
-                <span className="ml-auto text-[10px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 border border-[#00DFA9]/20 px-2 py-0.5 rounded-full">
-                  TRC-20
-                </span>
+              </div>
+              <div className="p-5">
+
+                {/* IDLE */}
+                {nppState === 'idle' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                          <CircleDollarSign className="h-3 w-3" /> Amount (USDT)
+                        </label>
+                        <div className="relative">
+                          <input type="number" min="10" step="0.01" value={nppAmount}
+                            onChange={e => { setNppAmount(e.target.value); setNppError(''); }}
+                            placeholder="Min 10 USDT"
+                            className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/60 focus:ring-1 focus:ring-[#38BDF8]/20 transition-all pr-16" />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#38BDF8] bg-[#38BDF8]/10 px-2 py-0.5 rounded-lg">USDT</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                          <Zap className="h-3 w-3" /> Pay With
+                        </label>
+                        <select value={nppCurrency} onChange={e => setNppCurrency(e.target.value)}
+                          className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[13px] font-semibold text-[#F8FAFC] focus:outline-none focus:border-[#38BDF8]/60 focus:ring-1 focus:ring-[#38BDF8]/20 transition-all">
+                          <option value="usdttrc20">USDT (TRC-20 / Tron)</option>
+                          <option value="usdterc20">USDT (ERC-20 / Ethereum)</option>
+                          <option value="btc">Bitcoin (BTC)</option>
+                          <option value="eth">Ethereum (ETH)</option>
+                          <option value="bnbbsc">BNB (BSC / BEP-20)</option>
+                          <option value="ltc">Litecoin (LTC)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <p className="text-[10px] text-[#64748B] font-semibold">Quick:</p>
+                      {[10, 50, 100, 250, 500].map(amt => (
+                        <button key={amt} type="button" onClick={() => setNppAmount(String(amt))}
+                          className={cn('text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all',
+                            nppAmount === String(amt)
+                              ? 'bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/40'
+                              : 'bg-white/5 text-[#64748B] border border-white/[0.07] hover:bg-white/10 hover:text-white')}>
+                          ${amt}
+                        </button>
+                      ))}
+                    </div>
+                    {nppError && (
+                      <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl p-3">
+                        <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                        <p className="text-[12px] text-red-400">{nppError}</p>
+                      </div>
+                    )}
+                    <button onClick={createNppPayment}
+                      className="w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2"
+                      style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)', boxShadow: '0 0 24px rgba(56,189,248,0.30)' }}>
+                      <Zap className="h-4 w-4" /> Generate Payment Address
+                    </button>
+                    <p className="text-center text-[10px] text-[#64748B]">
+                      A unique address is generated for each deposit — your balance is credited automatically when payment is confirmed
+                    </p>
+                  </div>
+                )}
+
+                {/* CREATING */}
+                {nppState === 'creating' && (
+                  <div className="flex flex-col items-center py-12 gap-5 text-center">
+                    <div className="relative flex items-center justify-center">
+                      <div className="absolute w-24 h-24 rounded-full animate-ping opacity-10" style={{ background: 'radial-gradient(circle, #38BDF8, transparent)', animationDuration: '1.4s' }} />
+                      <svg className="w-20 h-20 animate-spin" style={{ animationDuration: '1.1s' }} viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#38BDF8" strokeWidth="3" strokeDasharray="160" strokeDashoffset="120" strokeLinecap="round" />
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#00DFA9" strokeWidth="1" strokeDasharray="213" strokeLinecap="round" style={{ opacity: 0.15 }} />
+                      </svg>
+                      <div className="absolute w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)' }}>
+                        <Zap className="w-6 h-6 text-[#38BDF8]" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-black text-[#F8FAFC]">Generating address…</p>
+                      <p className="text-[11px] text-[#64748B] mt-1">Connecting to NOWPayments gateway</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* PAYING */}
+                {nppState === 'paying' && nppPayment && (
+                  <div className="space-y-4">
+                    {/* Timer */}
+                    <div className="flex items-center justify-between px-4 py-2.5 rounded-xl"
+                      style={{ background: nppTimeLeft < 300 ? 'rgba(239,68,68,0.08)' : 'rgba(56,189,248,0.08)', border: `1px solid ${nppTimeLeft < 300 ? 'rgba(239,68,68,0.25)' : 'rgba(56,189,248,0.25)'}` }}>
+                      <div className="flex items-center gap-2">
+                        <Clock className={`h-4 w-4 ${nppTimeLeft < 300 ? 'text-red-400' : 'text-[#38BDF8]'}`} />
+                        <span className="text-[12px] font-bold text-[#F8FAFC]">Payment expires in</span>
+                      </div>
+                      <span className={`text-[16px] font-black tabular-nums ${nppTimeLeft < 300 ? 'text-red-400' : 'text-[#38BDF8]'}`}>
+                        {Math.floor(nppTimeLeft / 60)}:{String(nppTimeLeft % 60).padStart(2, '0')}
+                      </span>
+                    </div>
+                    {/* QR + address */}
+                    <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-[#0B0F14] border border-white/[0.07]">
+                      <div className="p-2 rounded-xl bg-white flex-shrink-0" style={{ boxShadow: '0 0 0 1px rgba(56,189,248,0.2)' }}>
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(nppPayment.payAddress)}`}
+                          alt="Payment address QR" className="w-[140px] h-[140px] object-contain" />
+                      </div>
+                      <div className="flex-1 w-full space-y-3">
+                        <div>
+                          <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Send Exactly</p>
+                          <div className="flex items-center gap-2 bg-[#38BDF8]/5 border border-[#38BDF8]/20 rounded-xl px-4 py-2.5">
+                            <span className="text-[18px] font-black text-[#F8FAFC] tabular-nums">{nppPayment.payAmount}</span>
+                            <span className="text-[12px] font-bold text-[#38BDF8] uppercase">{nppPayment.payCurrency}</span>
+                          </div>
+                          <p className="text-[10px] text-[#64748B] mt-1">≈ ${fmt(nppPayment.priceAmount)} USDT credited to your account</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">To This Address</p>
+                          <div className="flex items-center gap-2 bg-[#0E1520] border border-white/[0.08] rounded-xl px-3 py-2">
+                            <p className="flex-1 text-[11px] font-mono text-[#94A3B8] break-all leading-relaxed select-all">{nppPayment.payAddress}</p>
+                            <button onClick={copyNppAddress}
+                              className={cn('shrink-0 p-2 rounded-lg transition-all', nppAddrCopied ? 'bg-[#38BDF8]/20 text-[#38BDF8]' : 'bg-white/5 text-[#64748B] hover:bg-white/10 hover:text-white')}>
+                              {nppAddrCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                            </button>
+                          </div>
+                          {nppAddrCopied && <p className="text-[10px] text-[#38BDF8] mt-1 flex items-center gap-1"><Check className="h-2.5 w-2.5" /> Address copied</p>}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Polling indicator */}
+                    <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#00DFA9]/5 border border-[#00DFA9]/15">
+                      <div className="relative w-3 h-3 flex-shrink-0">
+                        <div className="absolute inset-0 rounded-full bg-[#00DFA9] animate-ping opacity-60" style={{ animationDuration: '1.5s' }} />
+                        <div className="relative w-3 h-3 rounded-full bg-[#00DFA9]" />
+                      </div>
+                      <p className="text-[11px] text-[#00DFA9]/80">Monitoring your payment — balance updates automatically when confirmed</p>
+                    </div>
+                    <div className="flex items-start gap-2 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-xl p-3">
+                      <AlertCircle className="h-3.5 w-3.5 text-[#FACC15] shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-[#FACC15]/80 leading-relaxed">
+                        Send <strong>exactly</strong> the amount shown above to this unique address. Do not send from an exchange that requires a memo/tag.
+                      </p>
+                    </div>
+                    <button onClick={resetNpp}
+                      className="w-full py-2.5 rounded-xl text-[12px] font-bold text-[#64748B] border border-white/[0.07] hover:text-white hover:bg-white/5 transition-all">
+                      ← Start a new payment
+                    </button>
+                  </div>
+                )}
+
+                {/* SUCCESS */}
+                {nppState === 'success' && (
+                  <div className="flex flex-col items-center py-8 gap-4 text-center">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.2)' }}>
+                        <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
+                      </div>
+                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                        <Check className="w-3 h-3 text-[#0B0F14]" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Credited! ⚡</p>
+                      <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                        Your payment was confirmed and <span className="text-[#00DFA9] font-semibold">automatically credited</span> to your account.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-[#00DFA9]/5 border border-[#00DFA9]/15 rounded-xl px-4 py-2.5">
+                      <Check className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
+                      <p className="text-[11px] text-[#00DFA9]/80">Funds are available in your wallet now</p>
+                    </div>
+                    <button onClick={resetNpp}
+                      className="mt-1 px-5 py-2 rounded-xl text-[12px] font-bold text-[#38BDF8] border border-[#38BDF8]/25 hover:bg-[#38BDF8]/10 transition-all">
+                      Make another deposit
+                    </button>
+                  </div>
+                )}
+
+                {/* EXPIRED / FAILED */}
+                {(nppState === 'expired' || nppState === 'failed') && (
+                  <div className="flex flex-col items-center py-8 gap-4 text-center">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.10)', border: '2px solid rgba(239,68,68,0.25)' }}>
+                      <XCircle className="h-8 w-8 text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-black text-[#F8FAFC]">{nppState === 'expired' ? 'Payment Expired' : 'Payment Failed'}</p>
+                      <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                        {nppState === 'expired'
+                          ? 'This payment session has expired. Please generate a new address to deposit.'
+                          : 'The payment was not completed. Please try again or use Manual deposit.'}
+                      </p>
+                    </div>
+                    <button onClick={resetNpp}
+                      className="px-5 py-2.5 rounded-xl font-black text-[13px] text-[#0B0F14] transition-all hover:scale-[1.01]"
+                      style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)' }}>
+                      Try Again
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
+          )}
+
+          {/* ── Manual TRC-20 flow ──────────────────────────────────────── */}
+          {depositMethod === 'manual' && (
+            <>
+              {/* QR + Address card */}
+              <div className="rounded-2xl border border-white/[0.09] bg-[#0E1520] overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-md bg-[#00DFA9]/15 flex items-center justify-center">
+                      <span className="text-[9px] font-black text-[#00DFA9]">1</span>
+                    </div>
+                    <p className="text-[12px] font-bold text-[#F8FAFC]">Send USDT to this address</p>
+                    <span className="ml-auto text-[10px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 border border-[#00DFA9]/20 px-2 py-0.5 rounded-full">TRC-20</span>
+                  </div>
+                </div>
 
             <div className="p-4 flex flex-col sm:flex-row items-center gap-5">
               {/* QR Code */}
@@ -600,6 +912,8 @@ export function WalletPage() {
               ))}
             </div>
           </div>
+            </>
+          )}
         </div>
       )}
 

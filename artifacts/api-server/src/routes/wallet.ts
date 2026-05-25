@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { db, walletsTable, transactionsTable } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { verifyTronDeposit } from "../lib/tronVerify.js";
+import { createPayment, getPaymentStatus, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
@@ -119,6 +120,118 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     logger.info({ txHash, amount, userId: req.user!.userId, reason: verification.note }, "Deposit pending manual review");
 
     res.status(201).json({ ...txn, autoVerified: false, reviewReason: verification.note });
+  }
+});
+
+// ── POST /wallet/deposit/nowpayments/create ───────────────────────────────────
+const NppCreateBody = z.object({
+  amount:   z.number().positive().min(10, "Minimum deposit is 10 USDT"),
+  currency: z.string().default("usdttrc20"),
+});
+
+router.post("/wallet/deposit/nowpayments/create", authenticate, async (req, res): Promise<void> => {
+  const parsed = NppCreateBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const { amount, currency } = parsed.data;
+
+  const domain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+  const ipnCallbackUrl = domain ? `https://${domain}/api/webhooks/nowpayments` : undefined;
+
+  try {
+    const payment = await createPayment({
+      priceAmount: amount,
+      priceCurrency: "usd",
+      payCurrency: currency,
+      orderId: `cupbett-${req.user!.userId}-${Date.now()}`,
+      orderDescription: `CupBett deposit $${amount} USDT for user ${req.user!.userId}`,
+      ipnCallbackUrl,
+    });
+
+    const [txn] = await db.insert(transactionsTable).values({
+      userId: req.user!.userId,
+      type: "deposit",
+      amount: amount.toString(),
+      status: "pending",
+      network: currency === "usdttrc20" ? "TRC-20" : currency.toUpperCase(),
+      nowpaymentsPaymentId: payment.paymentId,
+      nowpaymentsStatus: payment.paymentStatus,
+      verificationNote: `NOWPayments payment ${payment.paymentId}`,
+    }).returning();
+
+    logger.info({ paymentId: payment.paymentId, userId: req.user!.userId, amount, currency }, "NOWPayments payment created");
+
+    res.status(201).json({
+      transactionId: txn.id,
+      paymentId:    payment.paymentId,
+      payAddress:   payment.payAddress,
+      payAmount:    payment.payAmount,
+      payCurrency:  payment.payCurrency,
+      priceAmount:  payment.priceAmount,
+      priceCurrency: payment.priceCurrency,
+      status:       payment.paymentStatus,
+      expiresAt:    payment.expiresAt,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to create NOWPayments payment");
+    res.status(502).json({ error: "Payment gateway unavailable — please try again or use manual deposit" });
+  }
+});
+
+// ── GET /wallet/deposit/nowpayments/:paymentId/status ─────────────────────────
+router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async (req, res): Promise<void> => {
+  const paymentId = req.params.paymentId as string;
+
+  const [txn] = await db.select().from(transactionsTable)
+    .where(eq(transactionsTable.nowpaymentsPaymentId, paymentId))
+    .limit(1);
+
+  if (!txn) { res.status(404).json({ error: "Payment not found" }); return; }
+  if (txn.userId !== req.user!.userId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  // Already settled by webhook
+  if (txn.status === "completed") {
+    res.json({ status: "finished", nowpaymentsStatus: txn.nowpaymentsStatus, credited: true });
+    return;
+  }
+  if (txn.status === "rejected") {
+    res.json({ status: txn.nowpaymentsStatus ?? "failed", nowpaymentsStatus: txn.nowpaymentsStatus, credited: false });
+    return;
+  }
+
+  // Poll NOWPayments for live status
+  try {
+    const payment = await getPaymentStatus(paymentId);
+
+    await db.update(transactionsTable)
+      .set({ nowpaymentsStatus: payment.paymentStatus })
+      .where(eq(transactionsTable.id, txn.id));
+
+    // Webhook fallback: if finished but not yet credited
+    if (FINISHED_STATUSES.has(payment.paymentStatus)) {
+      await db.update(transactionsTable)
+        .set({ status: "completed", verified: true, verificationNote: `Auto-credited via NOWPayments (${payment.paymentStatus})` })
+        .where(eq(transactionsTable.id, txn.id));
+      await db.update(walletsTable)
+        .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
+        .where(eq(walletsTable.userId, txn.userId));
+      logger.info({ paymentId, userId: txn.userId }, "NOWPayments deposit credited via polling fallback");
+      res.json({ status: payment.paymentStatus, nowpaymentsStatus: payment.paymentStatus, credited: true });
+      return;
+    }
+
+    if (FAILED_STATUSES.has(payment.paymentStatus)) {
+      await db.update(transactionsTable)
+        .set({ status: "rejected", verificationNote: `NOWPayments payment ${payment.paymentStatus}` })
+        .where(eq(transactionsTable.id, txn.id));
+    }
+
+    res.json({ status: payment.paymentStatus, nowpaymentsStatus: payment.paymentStatus, credited: false });
+  } catch (err) {
+    logger.warn({ err, paymentId }, "Failed to poll NOWPayments status");
+    res.json({ status: txn.nowpaymentsStatus ?? "waiting", nowpaymentsStatus: txn.nowpaymentsStatus, credited: false });
   }
 });
 

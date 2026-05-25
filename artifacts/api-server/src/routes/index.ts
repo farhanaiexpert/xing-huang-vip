@@ -10,6 +10,7 @@ import winspinRouter from "./winspin.js";
 import promotionsRouter from "./promotions.js";
 import poolsRouter from "./pools.js";
 import setupRouter from "./setup.js";
+import webhooksRouter from "./webhooks.js";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use(adminRouter);
 router.use(winspinRouter);
 router.use(promotionsRouter);
 router.use(poolsRouter);
+router.use(webhooksRouter);
 
 export default router;

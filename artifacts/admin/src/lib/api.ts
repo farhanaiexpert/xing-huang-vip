@@ -113,6 +113,8 @@ export interface AdminTransaction {
   walletAddress: string | null;
   verified: boolean | null;
   verificationNote: string | null;
+  nowpaymentsPaymentId: string | null;
+  nowpaymentsStatus: string | null;
   createdAt: string;
 }
 

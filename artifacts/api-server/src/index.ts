@@ -28,6 +28,17 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v2 skipped (columns may already exist)");
   }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE transactions
+        ADD COLUMN IF NOT EXISTS nowpayments_payment_id text,
+        ADD COLUMN IF NOT EXISTS nowpayments_status text
+    `);
+    logger.info("DB migration v3 applied (nowpayments_payment_id, nowpayments_status)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v3 skipped (columns may already exist)");
+  }
 }
 
 runMigrations().then(() => {

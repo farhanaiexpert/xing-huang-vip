@@ -142,9 +142,18 @@ export default function TransactionsPage() {
       key: "notes", label: "Notes",
       render: t => {
         const note = t.verificationNote ?? t.notes;
-        return note
-          ? <span className="text-[#475569] text-xs max-w-[150px] truncate block" title={note}>{note}</span>
-          : <span className="text-[#475569] text-xs">—</span>;
+        return (
+          <div className="flex flex-col gap-0.5">
+            {t.nowpaymentsPaymentId && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-1.5 py-0.5 rounded-full max-w-[150px] truncate" title={`NowPayments ID: ${t.nowpaymentsPaymentId}`}>
+                ⚡ {t.nowpaymentsStatus ?? "NPP"} · {t.nowpaymentsPaymentId.slice(0, 8)}…
+              </span>
+            )}
+            {note
+              ? <span className="text-[#475569] text-xs max-w-[150px] truncate block" title={note}>{note}</span>
+              : !t.nowpaymentsPaymentId && <span className="text-[#475569] text-xs">—</span>}
+          </div>
+        );
       },
     },
     {

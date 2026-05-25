@@ -16,6 +16,8 @@ export const transactionsTable = pgTable("transactions", {
   walletAddress: text("wallet_address"),
   verified: boolean("verified").default(false),
   verificationNote: text("verification_note"),
+  nowpaymentsPaymentId: text("nowpayments_payment_id"),
+  nowpaymentsStatus: text("nowpayments_status"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
