@@ -69,14 +69,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className={cn(
-          "flex items-center border-b border-white/8 h-[56px] px-3",
+          "flex items-center border-b border-white/8 h-[64px] px-3",
           collapsed ? "justify-center" : "justify-between px-4"
         )}>
           {!collapsed && (
             <img
               src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
               alt="CupBett"
-              className="h-7 object-contain"
+              className="h-10 object-contain"
               onError={e => {
                 e.currentTarget.style.display = "none";
                 const next = e.currentTarget.nextElementSibling as HTMLElement | null;
