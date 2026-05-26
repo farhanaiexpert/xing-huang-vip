@@ -40,6 +40,8 @@ export type Match = {
   liveMinute?: number;
   score?: { home: number; away: number };
   marketCount?: number;
+  /** Formatted kickoff time, e.g. "Today, 20:00" or "Sat, 15:30" */
+  kickoffTime?: string;
 };
 
 export type League = {

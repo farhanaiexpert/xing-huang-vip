@@ -99,6 +99,8 @@ function BetCard({ bet }: { bet: PlacedBet }) {
             <p className="text-[10px] mt-0.5 flex items-center gap-1">
               {bet.selections.some(s => s.isLive) ? (
                 <><span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse inline-block" /><span className="text-[#EF4444]/80">In play</span></>
+              ) : bet.selections[0]?.kickoffTime ? (
+                <span className="text-[#FACC15]/70">🕐 Kicks off {bet.selections[0].kickoffTime}</span>
               ) : (
                 <span className="text-[#64748B]">⏱ Placed {fmtDate(bet.placedAt)}</span>
               )}

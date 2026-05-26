@@ -159,14 +159,25 @@ export function BetConfirmationModal({ confirmation, onClose }: BetConfirmationM
         </div>
 
         {/* What happens next */}
-        <div className="mx-5 mb-4 rounded-xl bg-[#0B0F14] border border-[#253241]/60 px-4 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 mb-2">What happens next</p>
-          <div className="space-y-1.5 text-[11px] text-[#94A3B8]/70 leading-snug">
-            <p className="flex items-start gap-1.5"><span className="text-[#00DFA9] shrink-0">✓</span> Your bet is live and stake has been reserved</p>
-            <p className="flex items-start gap-1.5"><span className="text-[#00DFA9] shrink-0">✓</span> Settles automatically once the match ends</p>
-            <p className="flex items-start gap-1.5"><span className="text-[#00DFA9] shrink-0">✓</span> Winnings credited instantly to your wallet</p>
-          </div>
-        </div>
+        {(() => {
+          const isAnyLive = selections.some(s => s.isLive);
+          const kt = selections[0]?.kickoffTime;
+          const timingLine = isAnyLive
+            ? 'Match is in play — settlement expected within minutes of final whistle'
+            : kt
+              ? `Kicks off ${kt} — we'll settle as soon as the match ends`
+              : 'Bet settles automatically once the match is over';
+          return (
+            <div className="mx-5 mb-4 rounded-xl bg-[#0B0F14] border border-[#253241]/60 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 mb-2">What happens next</p>
+              <div className="space-y-1.5 text-[11px] text-[#94A3B8]/70 leading-snug">
+                <p className="flex items-start gap-1.5"><span className="text-[#00DFA9] shrink-0">✓</span> Your stake has been reserved and bet is confirmed</p>
+                <p className="flex items-start gap-1.5"><span className={`shrink-0 ${isAnyLive ? 'text-[#EF4444]' : 'text-[#FACC15]'}`}>⏱</span> {timingLine}</p>
+                <p className="flex items-start gap-1.5"><span className="text-[#00DFA9] shrink-0">✓</span> Winnings credited instantly to your wallet on settlement</p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Actions */}
         <div className="px-5 pb-5 flex flex-col gap-2">

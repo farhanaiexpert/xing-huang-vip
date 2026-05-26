@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBetHistory } from '@/hooks/useBetHistory';
 import { Header } from '@/components/Header';
 import { cn } from '@/lib/utils';
 import {
@@ -52,6 +53,7 @@ function isSection(s: string): s is SectionId {
 
 export function AccountLayout() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { openBetsCount } = useBetHistory();
   const params = useParams<{ section?: string }>();
   const [, setLocation] = useLocation();
 
@@ -143,6 +145,7 @@ export function AccountLayout() {
               {NAV.map((item, i) => {
                 const Icon = item.icon;
                 const active = section === item.id;
+                const showBadge = item.id === 'bets' && openBetsCount > 0;
                 return (
                   <Link key={item.id} href={`/account/${item.id}`}>
                     <div className={cn(
@@ -154,7 +157,12 @@ export function AccountLayout() {
                     )}>
                       <Icon className="h-3.5 w-3.5 shrink-0" />
                       <span className="text-[12.5px] font-medium flex-1">{item.label}</span>
-                      {active && <div className="w-1 h-3.5 rounded-full bg-[#00DFA9] shrink-0" />}
+                      {showBadge && (
+                        <span className="min-w-[18px] h-4.5 rounded-full bg-[#38BDF8] text-white text-[9px] font-bold flex items-center justify-center px-1.5 tabular-nums shadow-[0_0_6px_rgba(56,189,248,0.4)]">
+                          {openBetsCount > 9 ? '9+' : openBetsCount}
+                        </span>
+                      )}
+                      {active && !showBadge && <div className="w-1 h-3.5 rounded-full bg-[#00DFA9] shrink-0" />}
                     </div>
                   </Link>
                 );

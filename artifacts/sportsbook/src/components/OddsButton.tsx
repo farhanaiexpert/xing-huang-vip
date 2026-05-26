@@ -20,11 +20,12 @@ interface OddsButtonProps {
   isLive?: boolean;
   className?: string;
   sportId?: string;
+  kickoffTime?: string;
 }
 
 export function OddsButton({
   matchId, marketId, matchName, leagueName, marketName,
-  selectionType, selectionName, odds, isLive = false, className, sportId,
+  selectionType, selectionName, odds, isLive = false, className, sportId, kickoffTime,
 }: OddsButtonProps) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const { toast } = useToast();
@@ -89,6 +90,7 @@ export function OddsButton({
         matchName, leagueName, marketName,
         selectionType, selectionName, odds: displayOdds,
         sportId,
+        kickoffTime: isLive ? undefined : kickoffTime,
       });
       setIsPulsing(true);
       setTimeout(() => setIsPulsing(false), 280);

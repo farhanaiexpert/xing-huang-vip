@@ -753,12 +753,18 @@ function ActionButton({
 
   return (
     <button
-      onClick={onPlaceBet}
+      onClick={canPlace ? onPlaceBet : undefined}
+      disabled={!canPlace}
       data-testid="button-place-bet"
-      className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#00DFA9] text-[#0B0F14] hover:shadow-[0_0_28px_rgba(0,223,169,0.55),0_0_60px_rgba(0,223,169,0.2)] hover:scale-[1.02] active:scale-[0.97] transition-all duration-200 cursor-pointer"
+      className={cn(
+        'w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200',
+        canPlace
+          ? 'bg-[#00DFA9] text-[#0B0F14] hover:shadow-[0_0_28px_rgba(0,223,169,0.55),0_0_60px_rgba(0,223,169,0.2)] hover:scale-[1.02] active:scale-[0.97] cursor-pointer'
+          : 'bg-[#1E2A38] text-[#94A3B8]/40 cursor-not-allowed'
+      )}
     >
       <CheckCircle2 className="h-4 w-4 shrink-0" />
-      Place Bet {canPlace ? '' : ''}
+      Place Bet
     </button>
   );
 }

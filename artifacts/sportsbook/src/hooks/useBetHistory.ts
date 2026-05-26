@@ -143,18 +143,28 @@ export function BetHistoryProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
-  // Auto-poll every 30s when tab is visible and there are open bets
+  // Track open-bet presence in a ref so the interval callback always sees fresh value
+  const openBetsRef = useRef(false);
+  useEffect(() => {
+    openBetsRef.current = bets.some(b => isOpenStatus(b.status));
+  }, [bets]);
+
+  // Auto-poll every 30s when tab is visible and there are open bets.
+  // The interval clears itself once openBetsRef goes false.
   useEffect(() => {
     if (!isAuthenticated) return;
 
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    function startPolling() {
+    function startInterval() {
+      if (intervalId) return;
       intervalId = setInterval(() => {
         if (document.visibilityState !== 'visible') return;
-        // Only poll if there are open bets
-        const hasOpen = bets.some(b => isOpenStatus(b.status));
-        if (!hasOpen) return;
+        if (!openBetsRef.current) {
+          clearInterval(intervalId!);
+          intervalId = null;
+          return;
+        }
         refresh();
       }, 30_000);
     }
@@ -162,16 +172,18 @@ export function BetHistoryProvider({ children }: { children: ReactNode }) {
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
         refresh();
+        if (openBetsRef.current) startInterval();
       }
     }
 
-    startPolling();
+    // Start immediately only if there are open bets
+    if (openBetsRef.current) startInterval();
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       if (intervalId) clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [isAuthenticated, bets, refresh]);
+  }, [isAuthenticated, refresh]);
 
   const addBet = useCallback((bet: PlacedBet) => {
     setBets(prev => [bet, ...prev]);

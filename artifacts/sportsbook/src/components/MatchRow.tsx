@@ -51,7 +51,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
   const [dayPart, timePart] = match.date.split(', ');
 
   const { marketId, marketName } = getMarketMeta(match.sportId, match.id);
-  const sharedOddsProps = { matchId: match.id, marketId, matchName, leagueName, marketName, isLive: match.isLive };
+  const sharedOddsProps = { matchId: match.id, marketId, matchName, leagueName, marketName, isLive: match.isLive, sportId: match.sportId, kickoffTime: match.isLive ? undefined : match.kickoffTime };
 
   function handleRowClick(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('button[data-testid^="odds-btn"]')) return;
