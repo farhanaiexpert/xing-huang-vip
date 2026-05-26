@@ -83,10 +83,10 @@ function App() {
                         <BetSlipProvider>
                           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                             <Router />
+                            <PromoPopup />
                           </WouterRouter>
                           <MobileBottomNav />
                           <OnboardingGuide />
-                          <PromoPopup />
                           <TransactionNotifier />
                           <Toaster />
                         </BetSlipProvider>

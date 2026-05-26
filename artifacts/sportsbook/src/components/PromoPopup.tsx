@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Zap, Shield, Users, TrendingUp, Star } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { ConnectWalletModal } from './ConnectWalletModal';
 
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp';
@@ -40,6 +41,7 @@ const IMG_BASE: React.CSSProperties = {
 };
 
 export function PromoPopup() {
+  const [location] = useLocation();
   const [visible,   setVisible]   = useState(false);
   const [closing,   setClosing]   = useState(false);
   const [hovered,    setHovered]    = useState(false);
@@ -111,6 +113,9 @@ export function PromoPopup() {
   }
 
   const altVisible = hovered || showAlt;
+
+  // Only show on the homepage
+  if (location !== '/') return null;
 
   // Sticky claim bar — always in DOM after popup dismissed, shown/hidden via CSS transform
   const StickyBar = dismissed && !barStopped ? (
