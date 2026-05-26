@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, inArray, and, gt, or, sql } from "drizzle-orm";
+import { eq, desc, inArray, and, gt, or, sql, isNull } from "drizzle-orm";
 import { z } from "zod";
 import {
   db, betsTable, betSelectionsTable, walletsTable, transactionsTable,
@@ -41,6 +41,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
   const [excl] = await db.select().from(selfExclusionsTable)
     .where(and(
       eq(selfExclusionsTable.userId, userId),
+      isNull(selfExclusionsTable.liftedAt),
       or(
         eq(selfExclusionsTable.isPermanent, true),
         gt(selfExclusionsTable.endsAt, now),
@@ -84,6 +85,25 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     const suspended = controls.find(c => c.isSuspended);
     if (suspended) {
       res.status(403).json({ error: `Live betting is suspended for ${suspended.leagueName}` });
+      return;
+    }
+  }
+
+  // ── Market liability suspension check ─────────────────────────────────────
+  for (const s of selections) {
+    const [suspendedMarket] = await db.select().from(marketLiabilityTable)
+      .where(and(
+        eq(marketLiabilityTable.eventId, s.eventId),
+        eq(marketLiabilityTable.marketType, s.marketType),
+        eq(marketLiabilityTable.selection, s.selection),
+        eq(marketLiabilityTable.isSuspended, true),
+      ))
+      .limit(1);
+    if (suspendedMarket) {
+      res.status(403).json({
+        error: `This market is temporarily suspended — ${s.selection} (${s.eventName}). Try another selection.`,
+        code: "MARKET_SUSPENDED",
+      });
       return;
     }
   }

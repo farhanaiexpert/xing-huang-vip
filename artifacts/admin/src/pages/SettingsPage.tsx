@@ -26,9 +26,11 @@ const SETTING_CONFIGS: SettingConfig[] = [
   { key: "max_daily_bet_count",      label: "Max Daily Bets Per User",   description: "Maximum number of bets a player can place in one day.",                 type: "number",  section: "Betting"   },
   { key: "min_deposit_amount",       label: "Min Deposit (USDT)",        description: "Minimum deposit amount a player can request.",                          type: "number",  section: "Finance"   },
   { key: "min_withdrawal_amount",    label: "Min Withdrawal (USDT)",     description: "Minimum withdrawal amount a player can request.",                       type: "number",  section: "Finance"   },
+  { key: "global_margin_pct",        label: "Global Margin %",           description: "House margin applied to all odds globally (0–20%). Per-sport overrides take precedence.", type: "number", section: "Odds & Risk" },
+  { key: "liability_threshold_usdt", label: "Liability Threshold (USDT)",description: "Auto-suspend a market when its open payout exposure exceeds this amount.", type: "number", section: "Odds & Risk" },
 ];
 
-const SECTIONS = ["Platform", "Features", "Betting", "Finance"];
+const SECTIONS = ["Platform", "Features", "Betting", "Finance", "Odds & Risk"];
 
 function BooleanToggle({ value, onChange, danger }: { value: boolean; onChange: (v: boolean) => void; danger?: boolean }) {
   return (
@@ -155,10 +157,11 @@ export default function SettingsPage() {
         return (
           <div key={section} className="bg-[#111827] border border-white/8 rounded-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-white/8 flex items-center gap-2">
-              {section === "Platform" && <Shield     className="w-4 h-4 text-[#EF4444]" />}
-              {section === "Features" && <ToggleRight className="w-4 h-4 text-[#38BDF8]" />}
-              {section === "Betting"  && <DollarSign className="w-4 h-4 text-[#FACC15]" />}
-              {section === "Finance"  && <DollarSign className="w-4 h-4 text-[#00DFA9]" />}
+              {section === "Platform"    && <Shield     className="w-4 h-4 text-[#EF4444]" />}
+              {section === "Features"    && <ToggleRight className="w-4 h-4 text-[#38BDF8]" />}
+              {section === "Betting"     && <DollarSign className="w-4 h-4 text-[#FACC15]" />}
+              {section === "Finance"     && <DollarSign className="w-4 h-4 text-[#00DFA9]" />}
+              {section === "Odds & Risk" && <Shield     className="w-4 h-4 text-[#00DFA9]" />}
               <span className="text-sm font-semibold text-white">{section}</span>
             </div>
             <div className="divide-y divide-white/5">

@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, or, gt, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { db, usersTable, walletsTable, sessionsTable, referralsTable } from "@workspace/db";
+import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable } from "@workspace/db";
 import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken } from "../lib/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
 
@@ -91,6 +91,27 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
   if (user.isSuspended) {
     res.status(403).json({ error: "Account is suspended" });
+    return;
+  }
+
+  // Block login for permanent or long-term self-exclusions (take-a-break only blocks betting)
+  const now = new Date();
+  const [excl] = await db.select().from(selfExclusionsTable)
+    .where(and(
+      eq(selfExclusionsTable.userId, user.id),
+      isNull(selfExclusionsTable.liftedAt),
+      eq(selfExclusionsTable.isTakeABreak, false),
+      or(
+        eq(selfExclusionsTable.isPermanent, true),
+        gt(selfExclusionsTable.endsAt, now),
+      ),
+    ))
+    .limit(1);
+  if (excl) {
+    const endsMsg = excl.isPermanent
+      ? "Your account is permanently self-excluded. Please contact support for assistance."
+      : `You have self-excluded until ${new Date(excl.endsAt!).toLocaleDateString()}. Please contact support if you need help.`;
+    res.status(403).json({ error: endsMsg, code: "SELF_EXCLUDED" });
     return;
   }
 

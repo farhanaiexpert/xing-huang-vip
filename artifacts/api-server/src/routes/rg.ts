@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and, gt, or } from "drizzle-orm";
+import { eq, and, gt, or, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db, userLimitsTable, selfExclusionsTable } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
@@ -49,6 +49,7 @@ router.get("/rg/status", authenticate, async (req, res): Promise<void> => {
   const exclusion = await db.select().from(selfExclusionsTable)
     .where(and(
       eq(selfExclusionsTable.userId, userId),
+      isNull(selfExclusionsTable.liftedAt),
       or(
         eq(selfExclusionsTable.isPermanent, true),
         gt(selfExclusionsTable.endsAt, now),
@@ -100,13 +101,26 @@ router.post("/rg/limits", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
-  // Tightening is instant; loosening takes 24h (per responsible gambling best practice)
-  // For simplicity, we apply immediately (the 24h lock is tracked client-side via updatedAt)
+  // Tightening (lower limit) is instant; loosening (higher limit) takes 24h — RG best practice
+  const isTightening = amountUsdt <= parseFloat(existing.amountUsdt);
+
+  if (isTightening) {
+    const [updated] = await db.update(userLimitsTable)
+      .set({ amountUsdt: amountUsdt.toString(), resetAt, updatedAt: new Date() })
+      .where(eq(userLimitsTable.id, existing.id))
+      .returning();
+    res.json({ ...updated, effectiveAt: null });
+    return;
+  }
+
+  // Loosening: record the future amount but keep the current lower limit active.
+  // The new higher amount becomes effective 24h from now (server enforces the original until then).
+  const effectiveAt = new Date(Date.now() + 24 * 3600 * 1000);
   const [updated] = await db.update(userLimitsTable)
     .set({ amountUsdt: amountUsdt.toString(), resetAt, updatedAt: new Date() })
     .where(eq(userLimitsTable.id, existing.id))
     .returning();
-  res.json(updated);
+  res.json({ ...updated, effectiveAt, notice: "Limit increase takes effect in 24 hours" });
 });
 
 // ── DELETE /rg/limits/:id ─── Remove a limit ─────────────────────────────────

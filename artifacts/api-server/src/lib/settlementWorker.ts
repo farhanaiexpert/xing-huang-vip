@@ -8,7 +8,7 @@
  * on an already-settled event is a no-op.
  */
 
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import {
   db,
   betsTable,
@@ -16,6 +16,7 @@ import {
   walletsTable,
   transactionsTable,
   settlementLogTable,
+  marketLiabilityTable,
 } from "@workspace/db";
 import { logger } from "./logger.js";
 
@@ -279,6 +280,21 @@ async function settleBetsForEvent(
         .set({ status: newStatus, settledAt: new Date(), settledPayout: String(payout.toFixed(8)) })
         .where(eq(betsTable.id, betId));
       totalSettled++;
+
+      // ── Decrement market_liability for each selection now that the bet is settled ─
+      for (const sel of allSelections) {
+        const selPayout = parseFloat(String(sel.odds)) * parseFloat(String(bet.stake));
+        await tx.execute(sql`
+          UPDATE market_liability
+          SET
+            total_stake       = GREATEST(0, total_stake - ${String(bet.stake)}::numeric),
+            potential_payout  = GREATEST(0, potential_payout - ${selPayout.toFixed(8)}::numeric),
+            bet_count         = GREATEST(0, bet_count - 1)
+          WHERE event_id    = ${sel.eventId}
+            AND market_type = ${sel.marketType}
+            AND selection   = ${sel.selection}
+        `);
+      }
 
       if (payout > 0) {
         totalPayout += payout;

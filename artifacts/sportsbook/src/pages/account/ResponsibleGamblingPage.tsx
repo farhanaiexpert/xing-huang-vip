@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Shield, Clock, Ban, AlertTriangle, TrendingDown, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-
-const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+import { api } from '@/lib/apiClient';
 
 interface UserLimit {
   id: number;
@@ -29,19 +28,6 @@ interface RGStatus {
 type Tab = 'overview' | 'limits' | 'exclusion';
 type LimitType = 'deposit' | 'loss';
 type Period = 'daily' | 'weekly' | 'monthly';
-
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('cb_auth_token');
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error((err as { error?: string }).error ?? 'Request failed');
-  }
-  return res.json() as Promise<T>;
-}
 
 const EXCLUSION_OPTIONS = [
   { label: '24 Hours', hours: 24, description: 'Short cooling-off break', icon: Clock, color: 'text-[#38BDF8]' },
@@ -78,7 +64,7 @@ export function ResponsibleGamblingPage() {
   const [confirm, setConfirm] = useState(false);
 
   useEffect(() => {
-    apiFetch<RGStatus>('/rg/status')
+    api.get<RGStatus>('/api/rg/status')
       .then(data => setStatus(data))
       .catch(() => setStatus({ limits: [], exclusion: null }))
       .finally(() => setLoading(false));
@@ -95,11 +81,8 @@ export function ResponsibleGamblingPage() {
     if (isNaN(amt) || amt <= 0) { flash('err', 'Enter a valid amount'); return; }
     setSaving(true);
     try {
-      await apiFetch('/rg/limits', {
-        method: 'POST',
-        body: JSON.stringify({ limitType, period, amountUsdt: amt }),
-      });
-      const updated = await apiFetch<RGStatus>('/rg/status');
+      await api.post('/api/rg/limits', { limitType, period, amountUsdt: amt });
+      const updated = await api.get<RGStatus>('/api/rg/status');
       setStatus(updated);
       setLimitAmount('');
       flash('ok', `${limitType.charAt(0).toUpperCase() + limitType.slice(1)} limit set — ${amt.toFixed(2)} USDT ${period}`);
@@ -113,7 +96,7 @@ export function ResponsibleGamblingPage() {
   async function handleRemoveLimit(id: number) {
     setSaving(true);
     try {
-      await apiFetch(`/rg/limits/${id}`, { method: 'DELETE' });
+      await api.delete(`/api/rg/limits/${id}`);
       setStatus(prev => prev ? { ...prev, limits: prev.limits.filter(l => l.id !== id) } : prev);
       flash('ok', 'Limit removed');
     } catch (e) {
@@ -129,15 +112,12 @@ export function ResponsibleGamblingPage() {
     if (!opt && selExclusion !== null) { flash('err', 'Select an exclusion period'); return; }
     setSaving(true);
     try {
-      await apiFetch('/rg/exclusion', {
-        method: 'POST',
-        body: JSON.stringify({
-          durationHours: selExclusion ?? undefined,
-          isPermanent: selExclusion === null,
-          isTakeABreak: selExclusion !== null && selExclusion <= 168,
-        }),
+      await api.post('/api/rg/exclusion', {
+        durationHours: selExclusion ?? undefined,
+        isPermanent: selExclusion === null,
+        isTakeABreak: selExclusion !== null && selExclusion <= 168,
       });
-      const updated = await apiFetch<RGStatus>('/rg/status');
+      const updated = await api.get<RGStatus>('/api/rg/status');
       setStatus(updated);
       setConfirm(false);
       flash('ok', selExclusion === null ? 'Account permanently excluded' : `Break activated — ${opt?.label}`);

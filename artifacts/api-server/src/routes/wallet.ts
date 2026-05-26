@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gt } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
-import { db, walletsTable, transactionsTable } from "@workspace/db";
+import { db, walletsTable, transactionsTable, userLimitsTable } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { verifyTronDeposit } from "../lib/tronVerify.js";
 import { createPayment, getPaymentStatus, getMinimumPaymentAmount, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
@@ -65,6 +65,32 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     return;
   }
   const { amount, txHash, network } = parsed.data;
+  const userId = req.user!.userId;
+
+  // ── Deposit limit enforcement ─────────────────────────────────────────────────
+  const now = new Date();
+  const [depositLimit] = await db.select().from(userLimitsTable)
+    .where(and(
+      eq(userLimitsTable.userId, userId),
+      eq(userLimitsTable.limitType, "deposit"),
+      gt(userLimitsTable.resetAt, now),
+    ))
+    .limit(1);
+  if (depositLimit) {
+    const limitAmt = parseFloat(depositLimit.amountUsdt);
+    const usedAmt = parseFloat(depositLimit.currentUsage ?? "0");
+    if (usedAmt + amount > limitAmt) {
+      const remaining = Math.max(0, limitAmt - usedAmt);
+      res.status(403).json({
+        error: `Deposit limit exceeded. You can deposit up to ${remaining.toFixed(2)} USDT in this ${depositLimit.period}.`,
+        code: "DEPOSIT_LIMIT_EXCEEDED",
+        remaining,
+        limit: limitAmt,
+        used: usedAmt,
+      });
+      return;
+    }
+  }
 
   // ── Prevent duplicate TxHash submissions ─────────────────────────────────────
   const [existing] = await db.select({ id: transactionsTable.id })
@@ -86,7 +112,7 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
   if (verification.verified) {
     // ── AUTO-APPROVE: verified on-chain → credit balance immediately ─────────
     const [txn] = await db.insert(transactionsTable).values({
-      userId: req.user!.userId,
+      userId,
       type: "deposit",
       amount: amount.toString(),
       status: "completed",
@@ -99,15 +125,22 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     // Credit wallet balance
     await db.update(walletsTable)
       .set({ balanceUsdt: sql`balance_usdt + ${amount.toString()}` })
-      .where(eq(walletsTable.userId, req.user!.userId));
+      .where(eq(walletsTable.userId, userId));
 
-    logger.info({ txHash, amount, userId: req.user!.userId }, "Deposit auto-approved and balance credited");
+    // Update deposit limit usage
+    if (depositLimit) {
+      await db.update(userLimitsTable)
+        .set({ currentUsage: sql`current_usage + ${amount.toString()}` })
+        .where(eq(userLimitsTable.id, depositLimit.id));
+    }
+
+    logger.info({ txHash, amount, userId }, "Deposit auto-approved and balance credited");
 
     res.status(201).json({ ...txn, autoVerified: true });
   } else {
     // ── MANUAL REVIEW: could not verify → pending for admin ──────────────────
     const [txn] = await db.insert(transactionsTable).values({
-      userId: req.user!.userId,
+      userId,
       type: "deposit",
       amount: amount.toString(),
       status: "pending",
@@ -117,7 +150,7 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
       verificationNote: verification.note,
     }).returning();
 
-    logger.info({ txHash, amount, userId: req.user!.userId, reason: verification.note }, "Deposit pending manual review");
+    logger.info({ txHash, amount, userId, reason: verification.note }, "Deposit pending manual review");
 
     res.status(201).json({ ...txn, autoVerified: false, reviewReason: verification.note });
   }

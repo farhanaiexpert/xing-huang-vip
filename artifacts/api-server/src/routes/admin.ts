@@ -1755,6 +1755,65 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
 
 // ─── Liability Monitor ────────────────────────────────────────────────────────
 
+// ── GET /admin/reports/book-balance ── Book balance: open stakes vs payouts vs settled ──
+router.get("/admin/reports/book-balance", async (_req, res): Promise<void> => {
+  const [openResult, settledResult, platformResult] = await Promise.all([
+    // Open bets: grouped by sport
+    db.execute(sql`
+      SELECT
+        bs.sport,
+        COUNT(DISTINCT b.id)::int                         AS open_bets,
+        SUM(b.stake)::numeric                             AS total_staked,
+        SUM(b.potential_payout)::numeric                  AS potential_payout
+      FROM bets b
+      JOIN bet_selections bs ON bs.bet_id = b.id
+      WHERE b.status = 'open'
+      GROUP BY bs.sport
+      ORDER BY total_staked DESC
+    `),
+    // Settled bets: grouped by sport
+    db.execute(sql`
+      SELECT
+        bs.sport,
+        COUNT(DISTINCT b.id) FILTER (WHERE b.status = 'won')::int   AS bets_won,
+        COUNT(DISTINCT b.id) FILTER (WHERE b.status = 'lost')::int  AS bets_lost,
+        COUNT(DISTINCT b.id) FILTER (WHERE b.status = 'void')::int  AS bets_voided,
+        SUM(b.stake)::numeric                                        AS total_staked,
+        COALESCE(SUM(b.settled_payout), 0)::numeric                 AS total_paid_out
+      FROM bets b
+      JOIN bet_selections bs ON bs.bet_id = b.id
+      WHERE b.status IN ('won', 'lost', 'void')
+      GROUP BY bs.sport
+      ORDER BY total_staked DESC
+    `),
+    // Platform totals across all statuses
+    db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'open')::int                   AS open_bets,
+        COUNT(*) FILTER (WHERE status IN ('won','lost','void'))::int   AS settled_bets,
+        COALESCE(SUM(stake), 0)::numeric                               AS lifetime_staked,
+        COALESCE(SUM(settled_payout) FILTER (WHERE status IN ('won','void')), 0)::numeric AS lifetime_paid_out
+      FROM bets
+    `),
+  ]);
+
+  const platform = platformResult.rows[0] as {
+    open_bets: number; settled_bets: number; lifetime_staked: string; lifetime_paid_out: string;
+  };
+
+  res.json({
+    platform: {
+      openBets: platform.open_bets,
+      settledBets: platform.settled_bets,
+      lifetimeStaked: parseFloat(platform.lifetime_staked ?? "0"),
+      lifetimePaidOut: parseFloat(platform.lifetime_paid_out ?? "0"),
+      houseEdge: parseFloat(platform.lifetime_staked ?? "0") - parseFloat(platform.lifetime_paid_out ?? "0"),
+    },
+    openBySport:    openResult.rows,
+    settledBySport: settledResult.rows,
+  });
+});
+
 router.get("/admin/liability", async (_req, res): Promise<void> => {
   const rows = await db
     .select()
