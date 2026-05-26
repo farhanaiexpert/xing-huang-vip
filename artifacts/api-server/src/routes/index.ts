@@ -12,6 +12,8 @@ import poolsRouter from "./pools.js";
 import setupRouter from "./setup.js";
 import webhooksRouter from "./webhooks.js";
 import rgRouter from "./rg.js";
+import boostsRouter from "./boosts.js";
+import loyaltyRouter from "./loyalty.js";
 
 const router = Router();
 
@@ -28,5 +30,7 @@ router.use(promotionsRouter);
 router.use(poolsRouter);
 router.use(webhooksRouter);
 router.use(rgRouter);
+router.use(boostsRouter);
+router.use(loyaltyRouter);
 
 export default router;

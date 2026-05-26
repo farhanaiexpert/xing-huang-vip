@@ -16,6 +16,7 @@ import { NBAHighlights } from "./NBAHighlights";
 import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { FlashOdds } from "./FlashOdds";
 import { JackpotPool } from "./JackpotPool";
+import { PriceBoostsStrip } from "./PriceBoostsStrip";
 import { LiveBetFeed } from "./LiveBetFeed";
 import { SportDetailPage, SPORT_DETAIL_IDS } from "./SportDetailPage";
 import { ConnectWalletModal } from "./ConnectWalletModal";
@@ -621,6 +622,7 @@ export function MainContent({
           ) : (
             <>
               {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
+              {showFeatured && <PriceBoostsStrip />}
               {showFeatured && <JackpotPool />}
               {showFeatured && <FlashOdds />}
               {showFeatured && <LiveBetFeed />}

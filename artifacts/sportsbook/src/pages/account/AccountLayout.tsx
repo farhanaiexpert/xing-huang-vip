@@ -18,6 +18,8 @@ import { WinSpinHistoryPage }       from './WinSpinHistoryPage';
 import { PoolsPage }                from './PoolsPage';
 import { SettingsPage }             from './SettingsPage';
 import { ResponsibleGamblingPage }  from './ResponsibleGamblingPage';
+import { VIPPage }                  from './VIPPage';
+import { Crown } from 'lucide-react';
 
 const NAV = [
   { id: 'overview',     label: 'Overview',           icon: LayoutDashboard },
@@ -26,6 +28,7 @@ const NAV = [
   { id: 'transactions', label: 'Transactions',        icon: ArrowLeftRight },
   { id: 'referrals',    label: 'Referrals',           icon: Users },
   { id: 'promotions',   label: 'Promotions',          icon: Gift },
+  { id: 'vip',          label: 'VIP & Loyalty',       icon: Crown },
   { id: 'winspin',      label: 'WinSpin',             icon: Star },
   { id: 'pools',        label: 'Pools',               icon: Trophy },
   { id: 'settings',     label: 'Settings',            icon: Settings },
@@ -41,6 +44,7 @@ const PAGES: Record<SectionId, React.ComponentType> = {
   transactions: TransactionsPage,
   referrals:    ReferralsPage,
   promotions:   PromotionsPage,
+  vip:          VIPPage,
   winspin:      WinSpinHistoryPage,
   pools:        PoolsPage,
   settings:     SettingsPage,

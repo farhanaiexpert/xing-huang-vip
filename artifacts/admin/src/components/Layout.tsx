@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
   Shield, ShieldCheck, Zap, Globe, BarChart2, Settings, CheckCheck,
-  Activity, DollarSign,
+  Activity, DollarSign, TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,9 +48,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     {
       label: "Content",
       items: [
-        { href: "/pools",   icon: Trophy, label: "Pools",   badge: 0 },
-        { href: "/winspin", icon: Zap,    label: "WinSpin", badge: 0 },
-        { href: "/markets", icon: Globe,  label: "Markets", badge: 0 },
+        { href: "/pools",   icon: Trophy,      label: "Pools",         badge: 0 },
+        { href: "/winspin", icon: Zap,         label: "WinSpin",       badge: 0 },
+        { href: "/markets", icon: Globe,        label: "Markets",       badge: 0 },
+        { href: "/boosts",  icon: TrendingUp,  label: "Price Boosts",  badge: 0 },
       ],
     },
     {

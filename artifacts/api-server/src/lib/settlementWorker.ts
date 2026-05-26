@@ -18,6 +18,7 @@ import {
   settlementLogTable,
   marketLiabilityTable,
   userLimitsTable,
+  loyaltyPointsTable,
 } from "@workspace/db";
 import { logger } from "./logger.js";
 import { nextResetAt } from "./depositGuard.js";
@@ -345,6 +346,16 @@ async function settleBetsForEvent(
           WHERE user_id = ${bet.userId}
         `);
       }
+
+      // ── Award loyalty points (1 pt/USDT staked; 2× for accas) ───────────────
+      const stakeAmt = parseFloat(String(bet.stake));
+      const loyaltyPts = stakeAmt * (bet.type === "acca" ? 2 : 1);
+      await tx.insert(loyaltyPointsTable).values({
+        userId: bet.userId,
+        betId,
+        points: loyaltyPts.toFixed(2),
+        reason: "bet_settled",
+      });
     }
   });
 

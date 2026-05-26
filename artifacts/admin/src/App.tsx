@@ -22,6 +22,7 @@ import SettlementPage from "@/pages/SettlementPage";
 import LiabilityPage from "@/pages/LiabilityPage";
 import RGPlayersPage from "@/pages/RGPlayersPage";
 import BookBalancePage from "@/pages/BookBalancePage";
+import BoostsPage from "@/pages/BoostsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/liability"     component={() => <ProtectedRoute component={LiabilityPage}    />} />
       <Route path="/rg-players"   component={() => <ProtectedRoute component={RGPlayersPage}     />} />
       <Route path="/book-balance" component={() => <ProtectedRoute component={BookBalancePage}   />} />
+      <Route path="/boosts"      component={() => <ProtectedRoute component={BoostsPage}        />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );
