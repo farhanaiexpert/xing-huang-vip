@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, walletsTable, transactionsTable } from "@workspace/db";
+import { eq, sql, and, gt } from "drizzle-orm";
+import { db, walletsTable, transactionsTable, userLimitsTable } from "@workspace/db";
 import { verifyIpnSignature, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
 import { logger } from "../lib/logger.js";
 
@@ -56,6 +56,34 @@ router.post("/webhooks/nowpayments", async (req, res): Promise<void> => {
 
   // ── 4. Credit wallet when payment finishes ─────────────────────────────────
   if (FINISHED_STATUSES.has(paymentStatus) && txn.status !== "completed") {
+    const depositAmount = parseFloat(txn.amount);
+    const now = new Date();
+
+    // Check deposit limit before crediting
+    const [depositLimit] = await db.select().from(userLimitsTable)
+      .where(and(
+        eq(userLimitsTable.userId, txn.userId),
+        eq(userLimitsTable.limitType, "deposit"),
+        gt(userLimitsTable.resetAt, now),
+      ))
+      .limit(1);
+
+    if (depositLimit) {
+      const effectiveLimit = depositLimit.pendingAmountUsdt && depositLimit.pendingEffectiveAt && new Date(depositLimit.pendingEffectiveAt) <= now
+        ? parseFloat(depositLimit.pendingAmountUsdt)
+        : parseFloat(depositLimit.amountUsdt);
+      const used = parseFloat(depositLimit.currentUsage ?? "0");
+      if (used + depositAmount > effectiveLimit) {
+        // Over limit — reject the credit and mark as rejected
+        await db.update(transactionsTable)
+          .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
+          .where(eq(transactionsTable.id, txn.id));
+        logger.warn({ paymentId, userId: txn.userId, depositAmount, used, effectiveLimit }, "NOWPayments deposit rejected: deposit limit exceeded");
+        res.status(200).json({ received: true });
+        return;
+      }
+    }
+
     await db.update(transactionsTable)
       .set({ status: "completed", verified: true, verificationNote: `Auto-credited via NOWPayments (${paymentStatus})` })
       .where(eq(transactionsTable.id, txn.id));
@@ -63,6 +91,13 @@ router.post("/webhooks/nowpayments", async (req, res): Promise<void> => {
     await db.update(walletsTable)
       .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
       .where(eq(walletsTable.userId, txn.userId));
+
+    // Update deposit limit usage
+    if (depositLimit) {
+      await db.update(userLimitsTable)
+        .set({ currentUsage: sql`current_usage + ${txn.amount}` })
+        .where(eq(userLimitsTable.id, depositLimit.id));
+    }
 
     logger.info({ paymentId, userId: txn.userId, amount: txn.amount }, "NOWPayments deposit credited to wallet");
   }

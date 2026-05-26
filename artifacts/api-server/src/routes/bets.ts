@@ -59,16 +59,28 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
-  // ── Loss limit check ───────────────────────────────────────────────────────
+  // ── Loss limit check (limit = max cumulative losses allowed per period) ─────
+  // Usage is incremented only when a bet is actually LOST (in settlementWorker),
+  // so here we check if the current usage already exceeds the limit.
   const lossLimits = await db.select().from(userLimitsTable)
     .where(and(eq(userLimitsTable.userId, userId), eq(userLimitsTable.limitType, "loss")));
 
   for (const lim of lossLimits) {
-    if (new Date(lim.resetAt) < now) continue; // expired, will be reset on /rg/status
-    const remaining = parseFloat(lim.amountUsdt) - parseFloat(lim.currentUsage);
-    if (stake > remaining) {
+    if (new Date(lim.resetAt) < now) continue; // expired, skip
+
+    // Lazily promote a matured pending increase
+    let effectiveLimit = parseFloat(lim.amountUsdt);
+    if (lim.pendingAmountUsdt && lim.pendingEffectiveAt && new Date(lim.pendingEffectiveAt) <= now) {
+      effectiveLimit = parseFloat(lim.pendingAmountUsdt);
+      await db.update(userLimitsTable)
+        .set({ amountUsdt: lim.pendingAmountUsdt, pendingAmountUsdt: null, pendingEffectiveAt: null })
+        .where(eq(userLimitsTable.id, lim.id));
+    }
+
+    const remaining = effectiveLimit - parseFloat(lim.currentUsage);
+    if (remaining <= 0) {
       res.status(403).json({
-        error: `Your ${lim.period} loss limit of ${parseFloat(lim.amountUsdt).toFixed(2)} USDT has been reached. Betting is blocked until your limit resets.`,
+        error: `Your ${lim.period} loss limit of ${effectiveLimit.toFixed(2)} USDT has been reached. Betting is blocked until your limit resets.`,
         code: "LOSS_LIMIT_EXCEEDED",
       });
       return;
@@ -155,14 +167,6 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     status: "completed",
     reference: `bet_${bet.id}`,
   });
-
-  // ── Update loss limit usage ────────────────────────────────────────────────
-  for (const lim of lossLimits) {
-    if (new Date(lim.resetAt) < now) continue;
-    await db.update(userLimitsTable)
-      .set({ currentUsage: sql`current_usage + ${stake.toString()}` })
-      .where(eq(userLimitsTable.id, lim.id));
-  }
 
   // ── Upsert market liability ────────────────────────────────────────────────
   const liabilityThresholdRow = await db.select().from(platformSettingsTable)

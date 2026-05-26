@@ -149,6 +149,18 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v7 skipped");
   }
+
+  // v8: add pending limit increase support (deferred 24 h cooling-off for loosening)
+  try {
+    await db.execute(sql`
+      ALTER TABLE user_limits
+        ADD COLUMN IF NOT EXISTS pending_amount_usdt  NUMERIC(20,8),
+        ADD COLUMN IF NOT EXISTS pending_effective_at  TIMESTAMPTZ
+    `);
+    logger.info("DB migration v8 applied (user_limits: pending_amount_usdt, pending_effective_at)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v8 skipped");
+  }
 }
 
 runMigrations().then(() => {

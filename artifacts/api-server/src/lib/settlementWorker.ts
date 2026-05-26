@@ -17,6 +17,7 @@ import {
   transactionsTable,
   settlementLogTable,
   marketLiabilityTable,
+  userLimitsTable,
 } from "@workspace/db";
 import { logger } from "./logger.js";
 
@@ -294,6 +295,28 @@ async function settleBetsForEvent(
             AND market_type = ${sel.marketType}
             AND selection   = ${sel.selection}
         `);
+      }
+
+      // ── Increment loss limit usage if the bet was LOST ───────────────────
+      // Loss limits track cumulative losses per period (not stakes at placement).
+      if (newStatus === "lost") {
+        const now = new Date();
+        const lossLimits = await tx
+          .select()
+          .from(userLimitsTable)
+          .where(
+            and(
+              eq(userLimitsTable.userId, bet.userId),
+              eq(userLimitsTable.limitType, "loss"),
+            ),
+          );
+        for (const lim of lossLimits) {
+          if (new Date(lim.resetAt) < now) continue;
+          await tx
+            .update(userLimitsTable)
+            .set({ currentUsage: sql`current_usage + ${String(bet.stake)}` })
+            .where(eq(userLimitsTable.id, lim.id));
+        }
       }
 
       if (payout > 0) {

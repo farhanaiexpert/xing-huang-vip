@@ -77,15 +77,22 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     ))
     .limit(1);
   if (depositLimit) {
-    const limitAmt = parseFloat(depositLimit.amountUsdt);
+    // Lazily promote a matured pending increase
+    let effectiveLimit = parseFloat(depositLimit.amountUsdt);
+    if (depositLimit.pendingAmountUsdt && depositLimit.pendingEffectiveAt && new Date(depositLimit.pendingEffectiveAt) <= now) {
+      effectiveLimit = parseFloat(depositLimit.pendingAmountUsdt);
+      await db.update(userLimitsTable)
+        .set({ amountUsdt: depositLimit.pendingAmountUsdt, pendingAmountUsdt: null, pendingEffectiveAt: null })
+        .where(eq(userLimitsTable.id, depositLimit.id));
+    }
     const usedAmt = parseFloat(depositLimit.currentUsage ?? "0");
-    if (usedAmt + amount > limitAmt) {
-      const remaining = Math.max(0, limitAmt - usedAmt);
+    if (usedAmt + amount > effectiveLimit) {
+      const remaining = Math.max(0, effectiveLimit - usedAmt);
       res.status(403).json({
         error: `Deposit limit exceeded. You can deposit up to ${remaining.toFixed(2)} USDT in this ${depositLimit.period}.`,
         code: "DEPOSIT_LIMIT_EXCEEDED",
         remaining,
-        limit: limitAmt,
+        limit: effectiveLimit,
         used: usedAmt,
       });
       return;
@@ -267,12 +274,42 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
 
     // Webhook fallback: if finished but not yet credited
     if (FINISHED_STATUSES.has(payment.paymentStatus)) {
+      const depositAmt = parseFloat(txn.amount);
+      const pollNow = new Date();
+
+      // Enforce deposit limit before crediting
+      const [dlimit] = await db.select().from(userLimitsTable)
+        .where(and(
+          eq(userLimitsTable.userId, txn.userId),
+          eq(userLimitsTable.limitType, "deposit"),
+          gt(userLimitsTable.resetAt, pollNow),
+        ))
+        .limit(1);
+      if (dlimit) {
+        const effLimit = dlimit.pendingAmountUsdt && dlimit.pendingEffectiveAt && new Date(dlimit.pendingEffectiveAt) <= pollNow
+          ? parseFloat(dlimit.pendingAmountUsdt)
+          : parseFloat(dlimit.amountUsdt);
+        const used = parseFloat(dlimit.currentUsage ?? "0");
+        if (used + depositAmt > effLimit) {
+          await db.update(transactionsTable)
+            .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
+            .where(eq(transactionsTable.id, txn.id));
+          res.json({ status: "rejected", nowpaymentsStatus: payment.paymentStatus, credited: false, error: "Deposit limit exceeded" });
+          return;
+        }
+      }
+
       await db.update(transactionsTable)
         .set({ status: "completed", verified: true, verificationNote: `Auto-credited via NOWPayments (${payment.paymentStatus})` })
         .where(eq(transactionsTable.id, txn.id));
       await db.update(walletsTable)
         .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
         .where(eq(walletsTable.userId, txn.userId));
+      if (dlimit) {
+        await db.update(userLimitsTable)
+          .set({ currentUsage: sql`current_usage + ${txn.amount}` })
+          .where(eq(userLimitsTable.id, dlimit.id));
+      }
       logger.info({ paymentId, userId: txn.userId }, "NOWPayments deposit credited via polling fallback");
       res.json({ status: payment.paymentStatus, nowpaymentsStatus: payment.paymentStatus, credited: true });
       return;

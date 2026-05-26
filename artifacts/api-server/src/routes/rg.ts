@@ -101,23 +101,24 @@ router.post("/rg/limits", authenticate, async (req, res): Promise<void> => {
     return;
   }
 
-  // Tightening (lower limit) is instant; loosening (higher limit) takes 24h — RG best practice
+  // Tightening (lower limit) is instant; loosening (higher limit) is deferred 24 h.
   const isTightening = amountUsdt <= parseFloat(existing.amountUsdt);
 
   if (isTightening) {
+    // Tightening: apply immediately, clear any pending loosening
     const [updated] = await db.update(userLimitsTable)
-      .set({ amountUsdt: amountUsdt.toString(), resetAt, updatedAt: new Date() })
+      .set({ amountUsdt: amountUsdt.toString(), resetAt, updatedAt: new Date(), pendingAmountUsdt: null, pendingEffectiveAt: null })
       .where(eq(userLimitsTable.id, existing.id))
       .returning();
     res.json({ ...updated, effectiveAt: null });
     return;
   }
 
-  // Loosening: record the future amount but keep the current lower limit active.
-  // The new higher amount becomes effective 24h from now (server enforces the original until then).
+  // Loosening: store as pending — amountUsdt (the lower active limit) stays UNCHANGED until 24 h have passed.
+  // The server enforces the original lower limit until pendingEffectiveAt.
   const effectiveAt = new Date(Date.now() + 24 * 3600 * 1000);
   const [updated] = await db.update(userLimitsTable)
-    .set({ amountUsdt: amountUsdt.toString(), resetAt, updatedAt: new Date() })
+    .set({ pendingAmountUsdt: amountUsdt.toString(), pendingEffectiveAt: effectiveAt, updatedAt: new Date() })
     .where(eq(userLimitsTable.id, existing.id))
     .returning();
   res.json({ ...updated, effectiveAt, notice: "Limit increase takes effect in 24 hours" });

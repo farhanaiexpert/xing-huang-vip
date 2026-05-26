@@ -1764,7 +1764,7 @@ router.get("/admin/reports/book-balance", async (_req, res): Promise<void> => {
         bs.sport,
         COUNT(DISTINCT b.id)::int                         AS open_bets,
         SUM(b.stake)::numeric                             AS total_staked,
-        SUM(b.potential_payout)::numeric                  AS potential_payout
+        SUM(b.potential_return)::numeric                  AS potential_payout
       FROM bets b
       JOIN bet_selections bs ON bs.bet_id = b.id
       WHERE b.status = 'open'
