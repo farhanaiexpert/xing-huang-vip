@@ -22,6 +22,7 @@ import {
   sportControlsTable,
   platformSettingsTable,
   userNotesTable,
+  settlementLogTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -1483,6 +1484,30 @@ router.post("/admin/settlement/settle", async (req, res): Promise<void> => {
     eventId, outcomes: outcomes.length, settled: totalSettled, won: totalWon, lost: totalLost, voided: totalVoided,
   });
 
+  // Write to settlement_log
+  if (totalSettled > 0) {
+    const eventMeta = await db.execute(sql`
+      SELECT event_name, sport FROM bet_selections WHERE event_id = ${eventId} LIMIT 1
+    `);
+    const meta = (eventMeta.rows[0] as Record<string, string> | undefined) ?? {};
+    await db.insert(settlementLogTable).values({
+      eventId,
+      eventName: meta.event_name ?? eventId,
+      sport: meta.sport ?? "",
+      result: "manual",
+      homeTeam: "",
+      awayTeam: "",
+      homeScore: "",
+      awayScore: "",
+      betsSettled: totalSettled,
+      betsWon: totalWon,
+      betsLost: totalLost,
+      betsVoided: totalVoided,
+      totalPayout: totalPaidOut.toFixed(8),
+      source: "manual",
+    });
+  }
+
   res.json({
     settled: totalSettled,
     won: totalWon,
@@ -1490,6 +1515,82 @@ router.post("/admin/settlement/settle", async (req, res): Promise<void> => {
     voided: totalVoided,
     totalPaidOut: totalPaidOut.toFixed(2),
   });
+});
+
+// ── Settlement Log ────────────────────────────────────────────────────────────
+
+router.get("/admin/settlement/log", async (req, res): Promise<void> => {
+  const { page = "1", limit = "20", source, sport } = req.query as Record<string, string>;
+  const pageNum = Math.max(1, parseInt(page, 10));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+  const offset = (pageNum - 1) * limitNum;
+
+  const conditions = [];
+  if (source && source !== "all") conditions.push(eq(settlementLogTable.source, source));
+  if (sport && sport !== "all")   conditions.push(eq(settlementLogTable.sport, sport));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [logs, [{ total }]] = await Promise.all([
+    db.select().from(settlementLogTable).where(where).orderBy(desc(settlementLogTable.settledAt)).limit(limitNum).offset(offset),
+    db.select({ total: count() }).from(settlementLogTable).where(where),
+  ]);
+
+  res.json({ logs, total: Number(total), page: pageNum, limit: limitNum });
+});
+
+// ── Re-open a settled bet (for admin override / re-settlement) ─────────────────
+
+router.post("/admin/bets/:id/reopen", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid bet id" }); return; }
+
+  const [bet] = await db.select().from(betsTable).where(eq(betsTable.id, id)).limit(1);
+  if (!bet) { res.status(404).json({ error: "Bet not found" }); return; }
+  if (bet.status === "open") { res.status(400).json({ error: "Bet is already open" }); return; }
+
+  const previousStatus = bet.status;
+
+  await db.transaction(async (tx) => {
+    await tx.update(betsTable).set({ status: "open", settledAt: null }).where(eq(betsTable.id, id));
+    await tx.execute(sql`UPDATE bet_selections SET status = 'open' WHERE bet_id = ${id}`);
+
+    // Reverse any payout/refund that was already credited
+    if (previousStatus === "won") {
+      const payout = parseFloat(String(bet.potentialReturn));
+      if (payout > 0) {
+        await tx.execute(sql`
+          UPDATE wallets SET balance_usdt = GREATEST(0, balance_usdt - ${String(payout.toFixed(8))})
+          WHERE user_id = ${bet.userId}
+        `);
+        await tx.insert(transactionsTable).values({
+          userId: bet.userId,
+          type: "debit",
+          amount: payout.toFixed(8),
+          status: "completed",
+          notes: `Bet #${id} reopened by admin — payout reversed for re-settlement`,
+        });
+      }
+    } else if (previousStatus === "void") {
+      const stake = parseFloat(String(bet.stake));
+      if (stake > 0) {
+        await tx.execute(sql`
+          UPDATE wallets SET balance_usdt = GREATEST(0, balance_usdt - ${String(stake.toFixed(8))})
+          WHERE user_id = ${bet.userId}
+        `);
+        await tx.insert(transactionsTable).values({
+          userId: bet.userId,
+          type: "debit",
+          amount: stake.toFixed(8),
+          status: "completed",
+          notes: `Bet #${id} reopened by admin — refund reversed for re-settlement`,
+        });
+      }
+    }
+  });
+
+  await logAdminAction(req.user!.userId, "reopen_bet", "bet", id, { previousStatus });
+  const [updated] = await db.select().from(betsTable).where(eq(betsTable.id, id)).limit(1);
+  res.json({ bet: updated, message: `Bet #${id} reopened from status '${previousStatus}'` });
 });
 
 export default router;
