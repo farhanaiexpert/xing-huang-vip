@@ -146,7 +146,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         <CheckCircle2 className="w-3 h-3" /> Auto-credited
                       </span>
                       <span className="w-px h-3 bg-white/[0.1]" />
-                      <span className="text-[11px] font-semibold text-[#94A3B8]">Min ~$20 USDT</span>
+                      <span className="text-[11px] font-semibold text-[#94A3B8]">Min ~20 USDT</span>
                     </div>
 
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-black text-[#0B0F14] transition-all w-fit"

@@ -148,13 +148,13 @@ export function BetConfirmationModal({ confirmation, onClose }: BetConfirmationM
         {/* Summary grid */}
         <div className="mx-5 mb-5 rounded-xl bg-[#0B0F14] border border-[#253241] overflow-hidden">
           <div className="grid grid-cols-3 divide-x divide-[#253241]">
-            <SummaryCell label="Stake"      value={`$${stake.toFixed(2)}`} />
+            <SummaryCell label="Stake"      value={`${stake.toFixed(2)} USDT`} />
             <SummaryCell label="Total Odds" value={totalOdds.toFixed(2)}   highlight />
-            <SummaryCell label="Est. Return" value={`$${estimatedPayout.toFixed(2)}`} />
+            <SummaryCell label="Est. Return" value={`${estimatedPayout.toFixed(2)} USDT`} />
           </div>
           <div className="border-t border-[#253241] px-4 py-2.5 flex items-center justify-between bg-[#22C55E]/5">
             <span className="text-[11px] font-medium text-[#94A3B8]">Potential Profit</span>
-            <span className="text-sm font-black text-[#22C55E]">+${profit.toFixed(2)}</span>
+            <span className="text-sm font-black text-[#22C55E]">+{profit.toFixed(2)} USDT</span>
           </div>
         </div>
 

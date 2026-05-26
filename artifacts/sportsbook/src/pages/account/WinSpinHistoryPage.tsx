@@ -63,8 +63,8 @@ export function WinSpinHistoryPage() {
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Total Spins', value: spins.length.toString(), color: '#38BDF8', suffix: '' },
-            { label: 'Total Won',   value: `$${totalWon.toFixed(2)}`, color: '#00DFA9', suffix: ' USDT' },
-            { label: 'Best Prize',  value: bestSpin ? `$${parseFloat(bestSpin.prizeAmount).toFixed(2)}` : '$0.00', color: '#FACC15', suffix: ' USDT' },
+            { label: 'Total Won',   value: `${totalWon.toFixed(2)}`, color: '#00DFA9', suffix: ' USDT' },
+            { label: 'Best Prize',  value: bestSpin ? `${parseFloat(bestSpin.prizeAmount).toFixed(2)}` : '0.00', color: '#FACC15', suffix: ' USDT' },
           ].map(s => (
             <div key={s.label} className="rounded-2xl p-3.5 border border-white/[0.07] bg-[#0E1520] overflow-hidden relative">
               <div className="absolute top-0 left-0 right-0 h-[1.5px]"
@@ -124,7 +124,7 @@ export function WinSpinHistoryPage() {
                   <p className="text-[10px] text-[#64748B]">{fmtDate(sp.createdAt)}</p>
                 </div>
                 <p className="text-[14px] font-black shrink-0" style={{ color }}>
-                  {amt > 0 ? `+$${amt.toFixed(2)}` : 'No prize'}
+                  {amt > 0 ? `+${amt.toFixed(2)} USDT` : 'No prize'}
                 </p>
               </div>
             );

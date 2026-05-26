@@ -184,7 +184,7 @@ export function buildAccaCards(matches: TennisMatch[]): AccaCard[] {
     selections: setMatches.map(m => `${fav(m)} to win 2 - 0 (v ${und(m)})`),
     boostLabel: '+5% ACCA BOOST',
     odds: setOdds,
-    returnExample: `€10 returns €${(setOdds * 10).toFixed(2)} incl. €${(setOdds * 10 * 0.05).toFixed(2)} boost`,
+    returnExample: `10 USDT returns ${(setOdds * 10).toFixed(2)} USDT incl. ${(setOdds * 10 * 0.05).toFixed(2)} USDT boost`,
   };
 
   // Card 2 — To Win Match (4 selections)
@@ -196,7 +196,7 @@ export function buildAccaCards(matches: TennisMatch[]): AccaCard[] {
     selections: winMatches.map(m => `${fav(m)} (v ${und(m)})`),
     boostLabel: '+7.5% ACCA BOOST',
     odds: winOdds,
-    returnExample: `€10 returns €${(winOdds * 10).toFixed(2)} incl. €${(winOdds * 10 * 0.075).toFixed(2)} boost`,
+    returnExample: `10 USDT returns ${(winOdds * 10).toFixed(2)} USDT incl. ${(winOdds * 10 * 0.075).toFixed(2)} USDT boost`,
   };
 
   // Card 3 — First Set Winner (3 visible + extras)
@@ -209,7 +209,7 @@ export function buildAccaCards(matches: TennisMatch[]): AccaCard[] {
     extraLegs: 2,
     boostLabel: '+10% ACCA BOOST',
     odds: fswOdds,
-    returnExample: `€10 returns €${(fswOdds * 10).toFixed(2)} incl. €${(fswOdds * 10 * 0.1).toFixed(2)} boost`,
+    returnExample: `10 USDT returns ${(fswOdds * 10).toFixed(2)} USDT incl. ${(fswOdds * 10 * 0.1).toFixed(2)} USDT boost`,
   };
 
   // Card 4 — Match special / BET BOOST
@@ -227,7 +227,7 @@ export function buildAccaCards(matches: TennisMatch[]): AccaCard[] {
     boostLabel: 'BET BOOST',
     odds: baseOdds,
     boostedOdds,
-    returnExample: `€10 returns €${(boostedOdds * 10).toFixed(2)}`,
+    returnExample: `10 USDT returns ${(boostedOdds * 10).toFixed(2)} USDT`,
     isSpecial: true,
     specialLabel: 'BET BOOST ❯❯',
   };

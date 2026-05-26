@@ -986,7 +986,7 @@ function SiteFooter() {
 const TRUST_STATS = [
   {
     icon: <BarChart2 className="h-4 w-4" />,
-    value: "$2.4B+",
+    value: "2.4B+ USDT",
     label: "Volume Wagered",
     color: "text-[#00DFA9]",
     glow: "rgba(0,223,169,0.10)",

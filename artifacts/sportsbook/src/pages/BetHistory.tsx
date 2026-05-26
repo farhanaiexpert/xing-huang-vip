@@ -142,14 +142,14 @@ export function BetHistory() {
             />
             <StatCard
               label="Total Staked"
-              value={`$${totalStake.toFixed(2)}`}
+              value={`${totalStake.toFixed(2)} USDT`}
               sub="across all bets"
               icon={<BarChart2 className="h-4 w-4" />}
               color="blue"
             />
             <StatCard
               label="Pot. Returns"
-              value={`$${potReturn.toFixed(2)}`}
+              value={`${potReturn.toFixed(2)} USDT`}
               sub="if all win"
               icon={<TrendingUp className="h-4 w-4" />}
               color="green"
@@ -350,9 +350,9 @@ function BetCard({ bet }: { bet: PlacedBet }) {
         <div className="flex items-center gap-3 pt-2.5 border-t border-white/5 flex-wrap">
           <DataPill label="Odds"        value={formatOdds(bet.totalOdds, format)} accent="yellow" />
           <div className="w-px h-6 bg-[#253241]" />
-          <DataPill label="Stake"       value={`$${bet.stake.toFixed(2)}`} />
+          <DataPill label="Stake"       value={`${bet.stake.toFixed(2)} USDT`} />
           <div className="w-px h-6 bg-[#253241]" />
-          <DataPill label="Pot. Return" value={`$${bet.estimatedPayout.toFixed(2)}`} accent="green" />
+          <DataPill label="Pot. Return" value={`${bet.estimatedPayout.toFixed(2)} USDT`} accent="green" />
           {isAcca && (
             <button
               onClick={() => setExpanded(v => !v)}

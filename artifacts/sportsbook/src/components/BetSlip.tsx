@@ -174,14 +174,13 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
                   {betType === 'acca' ? (
                     <div className="space-y-1.5">
                       <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-[#94A3B8]/50 font-medium pointer-events-none">£</span>
                         <Input type="number" placeholder="0.00" value={stake} onChange={e => setStake(e.target.value)}
-                          className="pl-6 h-8 text-[12px] bg-[#0B0F14] border-[#253241]/60 text-[#F8FAFC] rounded-xl focus-visible:ring-1 focus-visible:ring-[#00DFA9]/40" />
+                          className="pl-3 h-8 text-[12px] bg-[#0B0F14] border-[#253241]/60 text-[#F8FAFC] rounded-xl focus-visible:ring-1 focus-visible:ring-[#00DFA9]/40" />
                       </div>
                       {accaReturn > 0 && (
                         <div className="flex justify-between items-center">
                           <span className="text-[10px] text-[#94A3B8]/50">Est. Return</span>
-                          <span className="text-[11px] font-bold text-[#00DFA9]">£{accaReturn.toFixed(2)}</span>
+                          <span className="text-[11px] font-bold text-[#00DFA9]">{accaReturn.toFixed(2)} USDT</span>
                         </div>
                       )}
                     </div>
@@ -189,7 +188,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
                     totalSingleStaked > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="text-[10px] text-[#94A3B8]/50">Total staked</span>
-                        <span className="text-[11px] font-bold text-[#F8FAFC]">£{totalSingleStaked.toFixed(2)}</span>
+                        <span className="text-[11px] font-bold text-[#F8FAFC]">{totalSingleStaked.toFixed(2)} USDT</span>
                       </div>
                     )
                   )}
@@ -262,7 +261,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
             )}>
               <Wallet className="h-3.5 w-3.5 shrink-0" />
               <span className="text-[12px] font-bold tabular-nums leading-none truncate">
-                ${balance.toFixed(2)}
+                {balance.toFixed(2)} USDT
               </span>
             </div>
             <button
@@ -382,7 +381,7 @@ function SingleView({
     if (!isAuthenticated) disabledHint = 'Log in to place bets';
     else if (totalSingleStaked <= 0) disabledHint = 'Enter a stake for at least one selection';
     else if (balance === 0) disabledHint = 'Insufficient balance — top up to bet';
-    else if (totalSingleStaked > balance) disabledHint = `Total stake exceeds your balance ($${balance.toFixed(2)})`;
+    else if (totalSingleStaked > balance) disabledHint = `Total stake exceeds your balance (${balance.toFixed(2)} USDT)`;
   }
 
   return (
@@ -402,11 +401,10 @@ function SingleView({
                   <div className="mt-2 space-y-1.5">
                     <div className="flex items-center gap-2">
                       <div className="relative flex-1">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#94A3B8] z-10 pointer-events-none">$</span>
                         <Input
                           type="number"
-                          placeholder="Stake"
-                          className="pl-6 pr-2 h-8 rounded-lg text-xs bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50"
+                          placeholder="Stake USDT"
+                          className="pl-3 pr-2 h-8 rounded-lg text-xs bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50"
                           value={singleStakes[sel.id] || ''}
                           onChange={e => setSingleStake(sel.id, e.target.value)}
                         />
@@ -414,10 +412,10 @@ function SingleView({
                       <div className="text-right shrink-0 w-[72px]">
                         <p className="text-[9px] text-[#94A3B8]/60 leading-none mb-0.5">Return · Profit</p>
                         <p className={cn('text-xs font-bold leading-none', ret ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40')}>
-                          {ret ? `$${ret}` : '—'}
+                          {ret ? `${ret} USDT` : '—'}
                         </p>
                         {profit && (
-                          <p className="text-[9px] font-semibold text-[#00DFA9] leading-none mt-0.5">+${profit}</p>
+                          <p className="text-[9px] font-semibold text-[#00DFA9] leading-none mt-0.5">+{profit} USDT</p>
                         )}
                       </div>
                     </div>
@@ -429,7 +427,7 @@ function SingleView({
                           onClick={() => setSingleStake(sel.id, String(parseFloat(singleStakes[sel.id] || '0') + amt))}
                           className="flex-1 h-6 rounded-md text-[10px] font-semibold border bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80 transition-all duration-150"
                         >
-                          +${amt}
+                          +{amt}
                         </button>
                       ))}
                       <button
@@ -453,14 +451,14 @@ function SingleView({
           <div className="flex justify-between items-center">
             <span className="text-[11px] text-[#94A3B8]">Total Stake</span>
             <span className="text-sm font-bold text-[#F8FAFC]">
-              {totalSingleStaked > 0 ? `$${totalSingleStaked.toFixed(2)}` : '—'}
+              {totalSingleStaked > 0 ? `${totalSingleStaked.toFixed(2)} USDT` : '—'}
             </span>
           </div>
           <div className="h-px bg-[#253241]" />
           <div className="flex justify-between items-center">
             <span className="text-[11px] text-[#94A3B8]">Total Return</span>
             <span className={cn('text-sm font-bold', totalSingleReturn > 0 ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40')}>
-              {totalSingleReturn > 0 ? `$${totalSingleReturn.toFixed(2)}` : '—'}
+              {totalSingleReturn > 0 ? `${totalSingleReturn.toFixed(2)} USDT` : '—'}
             </span>
           </div>
           {totalProfit > 0 && (
@@ -468,7 +466,7 @@ function SingleView({
               <div className="h-px bg-[#253241]" />
               <div className="flex justify-between items-center">
                 <span className="text-[11px] text-[#94A3B8]">Profit if Win</span>
-                <span className="text-sm font-bold text-[#00DFA9]">+${totalProfit.toFixed(2)}</span>
+                <span className="text-sm font-bold text-[#00DFA9]">+{totalProfit.toFixed(2)} USDT</span>
               </div>
             </>
           )}
@@ -480,7 +478,7 @@ function SingleView({
         )}
         {isConnected && totalSingleStaked > balance && balance > 0 && (
           <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center leading-snug">
-            Stake exceeds available balance (${balance.toFixed(2)}). Please top up.
+            Stake exceeds available balance ({balance.toFixed(2)} USDT). Please top up.
           </p>
         )}
         <ActionButton
@@ -527,7 +525,7 @@ function AccaView({
     if (!isAuthenticated) disabledHint = 'Log in to place bets';
     else if (stakeNum <= 0) disabledHint = 'Enter a stake amount to continue';
     else if (balance === 0) disabledHint = 'Insufficient balance — top up to bet';
-    else if (stakeNum > balance) disabledHint = `Stake exceeds your balance ($${balance.toFixed(2)})`;
+    else if (stakeNum > balance) disabledHint = `Stake exceeds your balance (${balance.toFixed(2)} USDT)`;
     else if (selections.length < 2) disabledHint = 'Add at least 2 selections for an accumulator';
   }
   return (
@@ -561,7 +559,7 @@ function AccaView({
           <div className="flex justify-between items-center">
             <span className="text-[11px] text-[#94A3B8]">Potential Return</span>
             <span className={cn('text-sm font-bold transition-colors', accaReturn > 0 ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40')}>
-              {accaReturn > 0 ? `$${accaReturn.toFixed(2)}` : '—'}
+              {accaReturn > 0 ? `${accaReturn.toFixed(2)} USDT` : '—'}
             </span>
           </div>
           {accaReturn > 0 && stakeNum > 0 && (
@@ -569,7 +567,7 @@ function AccaView({
               <div className="h-px bg-[#253241]" />
               <div className="flex justify-between items-center">
                 <span className="text-[11px] text-[#94A3B8]">Profit if Win</span>
-                <span className="text-sm font-bold text-[#00DFA9]">+${(accaReturn - stakeNum).toFixed(2)}</span>
+                <span className="text-sm font-bold text-[#00DFA9]">+{(accaReturn - stakeNum).toFixed(2)} USDT</span>
               </div>
             </>
           )}
@@ -578,12 +576,11 @@ function AccaView({
         {/* Stake */}
         <div className="space-y-1.5">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-[#94A3B8] z-10 pointer-events-none">$</span>
             <Input
               type="number"
-              placeholder="Enter stake…"
+              placeholder="Enter stake (USDT)…"
               data-testid="input-stake"
-              className="pl-7 pr-3 h-10 rounded-lg text-sm bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
+              className="pl-3 pr-3 h-10 rounded-lg text-sm bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
               value={stake}
               onChange={e => setStake(e.target.value)}
             />
@@ -596,7 +593,7 @@ function AccaView({
                 onClick={() => setStake(String(parseFloat(stake || '0') + amt))}
                 className="h-7 rounded-lg text-[11px] font-semibold border bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80 transition-all duration-150"
               >
-                +${amt}
+                +{amt}
               </button>
             ))}
             <button
@@ -616,7 +613,7 @@ function AccaView({
         )}
         {isConnected && stakeNum > balance && balance > 0 && (
           <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center leading-snug">
-            Stake exceeds available balance (${balance.toFixed(2)}). Please top up.
+            Stake exceeds available balance ({balance.toFixed(2)} USDT). Please top up.
           </p>
         )}
         <ActionButton

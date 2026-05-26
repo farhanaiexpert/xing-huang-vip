@@ -62,7 +62,7 @@ export const EUROPA_BOOST_CARDS: EuropaBoostCard[] = [
     ],
     originalOdds:  13.00,
     boostedOdds:   15.00,
-    returnExample: '€10 returns €150',
+    returnExample: '10 USDT returns 150 USDT',
   },
   {
     id:           'uel_boost_2',
@@ -76,7 +76,7 @@ export const EUROPA_BOOST_CARDS: EuropaBoostCard[] = [
     popularity:    151,
     originalOdds:  4.50,
     boostedOdds:   5.00,
-    returnExample: '€10 returns €50',
+    returnExample: '10 USDT returns 50 USDT',
   },
   {
     id:           'uel_boost_3',
@@ -89,7 +89,7 @@ export const EUROPA_BOOST_CARDS: EuropaBoostCard[] = [
     ],
     originalOdds:  7.00,
     boostedOdds:   8.00,
-    returnExample: '€10 returns €80',
+    returnExample: '10 USDT returns 80 USDT',
   },
   {
     id:           'uel_boost_4',
@@ -103,7 +103,7 @@ export const EUROPA_BOOST_CARDS: EuropaBoostCard[] = [
     ],
     originalOdds:  10.00,
     boostedOdds:   11.00,
-    returnExample: '€10 returns €110',
+    returnExample: '10 USDT returns 110 USDT',
   },
 ];
 

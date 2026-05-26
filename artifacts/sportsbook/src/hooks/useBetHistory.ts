@@ -108,18 +108,18 @@ export function BetHistoryProvider({ children }: { children: ReactNode }) {
           if (newStatus === 'won' || newStatus === 'settled') {
             toast({
               title: '🎉 Bet Won!',
-              description: `${bet.betId} settled — you won $${profit.toFixed(2)}`,
+              description: `${bet.betId} settled — you won ${profit.toFixed(2)} USDT`,
             });
           } else if (newStatus === 'lost') {
             toast({
               title: 'Bet Settled — Lost',
-              description: `${bet.betId} — stake of $${bet.stake.toFixed(2)} lost`,
+              description: `${bet.betId} — stake of ${bet.stake.toFixed(2)} USDT lost`,
               variant: 'destructive',
             });
           } else if (newStatus === 'void' || newStatus === 'voided') {
             toast({
               title: 'Bet Voided',
-              description: `${bet.betId} — stake of $${bet.stake.toFixed(2)} refunded`,
+              description: `${bet.betId} — stake of ${bet.stake.toFixed(2)} USDT refunded`,
             });
           }
         }

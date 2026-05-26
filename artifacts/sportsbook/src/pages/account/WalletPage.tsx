@@ -932,7 +932,7 @@ export function WalletPage() {
             </div>
             <div>
               <p className="text-[10px] text-[#64748B] font-semibold uppercase tracking-wider">Available to Withdraw</p>
-              <p className="text-[20px] font-black text-[#F8FAFC]">${fmt(balance)} <span className="text-[13px] font-bold text-[#00DFA9]">USDT</span></p>
+              <p className="text-[20px] font-black text-[#F8FAFC]">{fmt(balance)} <span className="text-[13px] font-bold text-[#00DFA9]">USDT</span></p>
             </div>
           </div>
 

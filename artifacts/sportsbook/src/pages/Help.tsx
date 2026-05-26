@@ -19,10 +19,10 @@ const SECTIONS = [
     title: 'How Odds Work',
     summary: 'Odds represent the probability of an outcome and determine your potential return.',
     content: [
-      { heading: 'What are odds?', text: 'Odds are numbers that tell you how much profit you can make relative to your stake. For example, odds of 2.00 mean you double your money if you win — stake $10, return $20.' },
-      { heading: 'Decimal odds (default)', text: 'CupBett shows decimal odds by default. Your total return (stake + profit) = Stake × Odds. So $10 at 3.50 returns $35 total, a profit of $25.' },
-      { heading: 'Fractional odds', text: 'Common in the UK. 5/2 means for every $2 you stake, you win $5 profit. To convert: (numerator ÷ denominator) + 1 = decimal equivalent.' },
-      { heading: 'American odds', text: 'Common in the US. Positive (+150) shows profit on a $100 stake. Negative (−200) shows how much you need to stake to win $100. Use the DEC / FRAC / US toggle in the header to switch formats.' },
+      { heading: 'What are odds?', text: 'Odds are numbers that tell you how much profit you can make relative to your stake. For example, odds of 2.00 mean you double your money if you win — stake 10 USDT, return 20 USDT.' },
+      { heading: 'Decimal odds (default)', text: 'CupBett shows decimal odds by default. Your total return (stake + profit) = Stake × Odds. So 10 USDT at 3.50 returns 35 USDT total, a profit of 25 USDT.' },
+      { heading: 'Fractional odds', text: 'Common in the UK. 5/2 means for every 2 USDT you stake, you win 5 USDT profit. To convert: (numerator ÷ denominator) + 1 = decimal equivalent.' },
+      { heading: 'American odds', text: 'Common in the US. Positive (+150) shows profit on a 100 USDT stake. Negative (−200) shows how much you need to stake to win 100 USDT. Use the DEC / FRAC / US toggle in the header to switch formats.' },
       { heading: 'Odds movement', text: 'Odds can shorten (get smaller) or drift (get bigger) as events approach or money comes in. Live odds update in real time during a match.' },
     ],
   },
@@ -49,7 +49,7 @@ const SECTIONS = [
     content: [
       { heading: 'Adding selections', text: 'Every time you click an odds button, that selection appears in your Bet Slip with the selection name, match, and current odds.' },
       { heading: 'Single vs Accumulator', text: 'Use the toggle at the top of the Bet Slip to switch between Single bets (each selection bet individually) and Accumulator bets (all selections combined into one bet).' },
-      { heading: 'Entering a stake', text: 'Type your stake amount in the input field, or use the quick preset buttons ($5, $10, $25, $50). Your Potential Returns update instantly.' },
+      { heading: 'Entering a stake', text: 'Type your stake amount in the input field, or use the quick preset buttons (5, 10, 25, 50 USDT). Your Potential Returns update instantly.' },
       { heading: 'Removing selections', text: 'Click the × icon on any selection card to remove it. Click the trash icon at the top to clear the entire slip at once.' },
       { heading: 'Mobile bet slip', text: 'On smaller screens, the Bet Slip is hidden. Tap the floating green button at the bottom right (it shows your selection count) to open it as a drawer.' },
     ],
@@ -61,7 +61,7 @@ const SECTIONS = [
     title: 'Accumulator Bets',
     summary: 'An accumulator (acca) combines multiple selections into one bet with multiplied odds.',
     content: [
-      { heading: 'How accas work', text: 'All your selections are multiplied together to create a combined odds figure. Stake $10 on a 4-fold acca at combined odds of 12.00 and you\'ll return $120 if all four selections win.' },
+      { heading: 'How accas work', text: 'All your selections are multiplied together to create a combined odds figure. Stake 10 USDT on a 4-fold acca at combined odds of 12.00 and you\'ll return 120 USDT if all four selections win.' },
       { heading: 'All legs must win', text: 'For an accumulator to pay out, every single selection must win. If even one loses, the entire bet loses. Higher risk, but much greater reward.' },
       { heading: 'Building an acca', text: 'Switch the Bet Slip to Accumulator mode, then add as many selections as you like from any sport or market. The combined odds and potential return update in real time.' },
       { heading: 'Acca Boost', text: 'Some featured accumulators on the home page have an Acca Boost label. These offer enhanced odds on pre-selected combinations as a promotional offer.' },

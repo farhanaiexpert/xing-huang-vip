@@ -256,7 +256,7 @@ function LoyaltySection({ onJoin }: { onJoin: () => void }) {
         <h2 className="text-base font-black text-[#F8FAFC]">Loyalty Programme</h2>
       </div>
       <p className="text-[12px] text-[#94A3B8]/55 mb-6 max-w-xl">
-        Earn 1 loyalty point for every $1 wagered. Points unlock higher tiers with better multipliers, faster withdrawals, and exclusive perks — automatically.
+        Earn 1 loyalty point for every 1 USDT wagered. Points unlock higher tiers with better multipliers, faster withdrawals, and exclusive perks — automatically.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -331,7 +331,7 @@ export function Promotions() {
   function handleInfo() {
     toast({
       title: 'Free Bet Friday',
-      description: 'Bet $25+ Mon–Thu and your $10 free bet lands every Friday at 09:00 UTC automatically.',
+      description: 'Bet 25+ USDT Mon–Thu and your 10 USDT free bet lands every Friday at 09:00 UTC automatically.',
     });
   }
 
@@ -342,7 +342,7 @@ export function Promotions() {
     setTimeout(() => setCopied(false), 2500);
     toast({
       title: 'Referral link copied!',
-      description: 'Share it with friends. You both get $25 when they deposit $50+.',
+      description: 'Share it with friends. You both get 25 USDT when they deposit 50+ USDT.',
     });
   }
 
@@ -367,15 +367,15 @@ export function Promotions() {
               </div>
               <h1 className="text-3xl font-black tracking-tight leading-tight">100% Match Bonus</h1>
               <p className="text-[#94A3B8]/70 text-sm mt-1.5 max-w-sm">
-                New to CupBett? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">$500</span> in bonus funds.
+                New to CupBett? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">500 USDT</span> in bonus funds.
               </p>
-              <p className="text-[10px] text-[#94A3B8]/35 mt-3">18+ · T&Cs apply · 5× wagering req. · Min. $20 deposit</p>
+              <p className="text-[10px] text-[#94A3B8]/35 mt-3">18+ · T&Cs apply · 5× wagering req. · Min. 20 USDT deposit</p>
             </div>
             <button
               onClick={handleClaim}
               className="shrink-0 flex items-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3 rounded-xl transition-all duration-150"
             >
-              Claim $500 Bonus <ChevronRight className="h-4 w-4" />
+              Claim 500 USDT Bonus <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>

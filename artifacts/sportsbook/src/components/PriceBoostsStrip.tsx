@@ -111,7 +111,7 @@ function BoostCard({ boost }: { boost: PriceBoost }) {
         </span>
         {boost.maxStake && (
           <span className="ml-auto text-[9px] text-[#94A3B8]/40">
-            Max ${parseFloat(boost.maxStake).toFixed(0)}
+            Max {parseFloat(boost.maxStake).toFixed(0)} USDT
           </span>
         )}
       </div>

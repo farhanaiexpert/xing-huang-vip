@@ -104,11 +104,11 @@ function TxRow({ tx, runningBalance }: { tx: Transaction; runningBalance?: numbe
       </div>
       <div className="text-right shrink-0">
         <p className="text-[13px] font-bold" style={{ color: credit ? '#00DFA9' : '#EF4444' }}>
-          {credit ? '+' : '-'}${fmtAmt(tx.amount)}
+          {credit ? '+' : '-'}{fmtAmt(tx.amount)} USDT
         </p>
         {runningBalance !== undefined && (
           <p className="text-[9px] text-[#475569] font-mono mt-0.5">
-            bal: ${runningBalance.toFixed(2)}
+            bal: {runningBalance.toFixed(2)} USDT
           </p>
         )}
         <p className="text-[10px] text-[#64748B] capitalize">{tx.status}</p>
@@ -186,7 +186,7 @@ export function TransactionsPage() {
           ].map(s => (
             <div key={s.label} className="rounded-2xl p-3.5 border border-white/[0.07] bg-[#0E1520]">
               <div className="h-[2px] rounded-full mb-3" style={{ background: s.color }} />
-              <p className="text-[16px] font-black" style={{ color: s.color }}>${s.value.toFixed(2)}</p>
+              <p className="text-[16px] font-black" style={{ color: s.color }}>{s.value.toFixed(2)} USDT</p>
               <p className="text-[10px] text-[#64748B] mt-0.5">{s.label}</p>
             </div>
           ))}

@@ -338,10 +338,10 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       { id: 'bx_3', team1: 'Hamzah Sheeraz',   team2: 'Alem Begic',       leagueName: 'Light Middleweight',dateLabel: rel(5, 22, 0), odds1: 1.05,  odds2: 10.00, team1Country: 'GB', team2Country: 'BA' },
     ],
     betBoostCards: [
-      { id: 'bx_bb_1', title: 'Fight Result: Frank Sanchez', matchName: 'Frank Sanchez vs Richard Torrez Jr', baseOdds: 9.00,  boostedOdds: 10.00, exampleReturn: '€10 returns €100' },
-      { id: 'bx_bb_2', title: 'Fight Result: Richard Torrez Jr', matchName: 'Frank Sanchez vs Richard Torrez Jr', baseOdds: 3.75, boostedOdds: 4.00,  exampleReturn: '€10 returns €40'  },
-      { id: 'bx_bb_3', title: 'Fight Result: Hamzah Sheeraz',    matchName: 'Hamzah Sheeraz vs Alem Begic',      baseOdds: 5.50, boostedOdds: 6.00,  exampleReturn: '€10 returns €60'  },
-      { id: 'bx_bb_4', title: 'Fight Result: Alem Begic',        matchName: 'Hamzah Sheeraz vs Alem Begic',      baseOdds: 17.00,boostedOdds: 19.00, exampleReturn: '€10 returns €190' },
+      { id: 'bx_bb_1', title: 'Fight Result: Frank Sanchez', matchName: 'Frank Sanchez vs Richard Torrez Jr', baseOdds: 9.00,  boostedOdds: 10.00, exampleReturn: '10 USDT returns 100 USDT' },
+      { id: 'bx_bb_2', title: 'Fight Result: Richard Torrez Jr', matchName: 'Frank Sanchez vs Richard Torrez Jr', baseOdds: 3.75, boostedOdds: 4.00,  exampleReturn: '10 USDT returns 40 USDT'  },
+      { id: 'bx_bb_3', title: 'Fight Result: Hamzah Sheeraz',    matchName: 'Hamzah Sheeraz vs Alem Begic',      baseOdds: 5.50, boostedOdds: 6.00,  exampleReturn: '10 USDT returns 60 USDT'  },
+      { id: 'bx_bb_4', title: 'Fight Result: Alem Begic',        matchName: 'Hamzah Sheeraz vs Alem Begic',      baseOdds: 17.00,boostedOdds: 19.00, exampleReturn: '10 USDT returns 190 USDT' },
     ],
   },
 
@@ -416,10 +416,10 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       { id: 'es_3', team1: 'Nongshim RedForce', team2: 'KT Rolster',      leagueName: 'LOL — LCX',           dateLabel: rel(2, 13, 0),  odds1: 3.75, odds2: 1.25, team1Country: 'KR', team2Country: 'KR' },
     ],
     betBoostCards: [
-      { id: 'es_bb_1', title: 'Weibo Gaming',  subtitle: 'Map 1 — Race to 30 Kills',             matchName: 'Weibo Gaming vs Bilibili Gaming', baseOdds: 3.75, boostedOdds: 4.00, exampleReturn: '€10 returns €40'  },
-      { id: 'es_bb_2', title: 'Cloud',         subtitle: 'Map 1 — First Dragon to Spawn',        matchName: 'Weibo Gaming vs Bilibili Gaming', baseOdds: 5.50, boostedOdds: 6.00, exampleReturn: '€10 returns €60'  },
-      { id: 'es_bb_3', title: 'Cloud',         subtitle: 'Map 1 — First Dragon to Spawn',        matchName: 'JD Gaming vs Anyones Legend',     baseOdds: 5.50, boostedOdds: 6.00, exampleReturn: '€10 returns €60'  },
-      { id: 'es_bb_4', title: 'Yes',           subtitle: 'Both Teams to Destroy an Inhibitor',   matchName: 'JD Gaming vs Anyones Legend',     baseOdds: 8.50, boostedOdds: 9.50, exampleReturn: '€10 returns €95'  },
+      { id: 'es_bb_1', title: 'Weibo Gaming',  subtitle: 'Map 1 — Race to 30 Kills',             matchName: 'Weibo Gaming vs Bilibili Gaming', baseOdds: 3.75, boostedOdds: 4.00, exampleReturn: '10 USDT returns 40 USDT'  },
+      { id: 'es_bb_2', title: 'Cloud',         subtitle: 'Map 1 — First Dragon to Spawn',        matchName: 'Weibo Gaming vs Bilibili Gaming', baseOdds: 5.50, boostedOdds: 6.00, exampleReturn: '10 USDT returns 60 USDT'  },
+      { id: 'es_bb_3', title: 'Cloud',         subtitle: 'Map 1 — First Dragon to Spawn',        matchName: 'JD Gaming vs Anyones Legend',     baseOdds: 5.50, boostedOdds: 6.00, exampleReturn: '10 USDT returns 60 USDT'  },
+      { id: 'es_bb_4', title: 'Yes',           subtitle: 'Both Teams to Destroy an Inhibitor',   matchName: 'JD Gaming vs Anyones Legend',     baseOdds: 8.50, boostedOdds: 9.50, exampleReturn: '10 USDT returns 95 USDT'  },
     ],
     matchLists: [
       { id: 'ml_all',  name: 'All Matches',        count: 15, isHighlighted: true },

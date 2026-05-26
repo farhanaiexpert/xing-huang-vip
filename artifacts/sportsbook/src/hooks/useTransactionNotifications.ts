@@ -50,7 +50,7 @@ export function useTransactionNotifications() {
           if (!initialized.current) continue;
 
           const prev = stored[t.id];
-          const amt = `$${parseFloat(t.amount).toFixed(2)} USDT`;
+          const amt = `${parseFloat(t.amount).toFixed(2)} USDT`;
 
           if (t.type === "deposit") {
             if (prev === "pending" && t.status === "completed") {

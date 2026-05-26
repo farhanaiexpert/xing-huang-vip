@@ -40,7 +40,7 @@ function fmtDeadline(iso: string) {
 function fmtPrize(amount: string) {
   const n = parseFloat(amount);
   if (!n) return '—';
-  return `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT`;
+  return `${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT`;
 }
 
 export function PoolsPage() {

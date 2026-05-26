@@ -42,7 +42,7 @@ export function OverviewPage() {
   const STATS = [
     {
       label: 'Balance',
-      value: `$${balance.toFixed(2)}`,
+      value: `${balance.toFixed(2)}`,
       sub: 'USDT',
       icon: Wallet,
       color: '#00DFA9',
@@ -72,7 +72,7 @@ export function OverviewPage() {
     },
     {
       label: 'Total Wagered',
-      value: `$${totalWagered.toFixed(2)}`,
+      value: `${totalWagered.toFixed(2)}`,
       sub: 'USDT',
       icon: Activity,
       color: '#A78BFA',
@@ -196,7 +196,7 @@ export function OverviewPage() {
               </div>
               <div>
                 <p className="text-[13px] font-bold text-[#F8FAFC]">Referral Earnings</p>
-                <p className="text-[11px] text-[#64748B]">{ref.referrals.length} referrals · ${ref.totalEarned.toFixed(2)} USDT earned</p>
+                <p className="text-[11px] text-[#64748B]">{ref.referrals.length} referrals · {ref.totalEarned.toFixed(2)} USDT earned</p>
               </div>
             </div>
             <span className="text-[11px] font-semibold text-[#FACC15]">View →</span>

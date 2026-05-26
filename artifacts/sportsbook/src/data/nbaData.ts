@@ -122,7 +122,7 @@ const STATIC_BOOST_CARDS: NbaBoostCard[] = [
     popularity:   219,
     originalOdds: 4.30,
     boostedOdds:  4.75,
-    returnExample: '€10 returns €47.50',
+    returnExample: '10 USDT returns 47.50 USDT',
   },
   {
     id:           'boost_2',
@@ -137,7 +137,7 @@ const STATIC_BOOST_CARDS: NbaBoostCard[] = [
     popularity:   116,
     originalOdds: 11.50,
     boostedOdds:  13.00,
-    returnExample: '€10 returns €130',
+    returnExample: '10 USDT returns 130 USDT',
   },
   {
     id:           'boost_3',
@@ -151,7 +151,7 @@ const STATIC_BOOST_CARDS: NbaBoostCard[] = [
     popularity:   231,
     originalOdds: 16.00,
     boostedOdds:  17.00,
-    returnExample: '€10 returns €170',
+    returnExample: '10 USDT returns 170 USDT',
   },
   {
     id:           'boost_4',
@@ -166,7 +166,7 @@ const STATIC_BOOST_CARDS: NbaBoostCard[] = [
     popularity:   178,
     originalOdds: 13.00,
     boostedOdds:  15.00,
-    returnExample: '€10 returns €150',
+    returnExample: '10 USDT returns 150 USDT',
   },
 ];
 

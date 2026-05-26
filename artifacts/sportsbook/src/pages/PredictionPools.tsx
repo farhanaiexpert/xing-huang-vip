@@ -707,7 +707,7 @@ export function PredictionPools() {
               {/* Stats */}
               <div className="flex gap-5 sm:gap-7 shrink-0">
                 <div className="text-center space-y-0.5">
-                  <p className="text-[22px] font-black text-[#00DFA9]">${totalPrizePool.toLocaleString()}</p>
+                  <p className="text-[22px] font-black text-[#00DFA9]">{totalPrizePool.toLocaleString()} USDT</p>
                   <p className="text-[9px] font-semibold uppercase tracking-wider text-[#94A3B8]/45">In prizes</p>
                 </div>
                 <div className="w-px bg-[#1E2A38] self-stretch" />

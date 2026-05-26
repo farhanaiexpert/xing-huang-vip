@@ -150,15 +150,15 @@ function BetCard({ bet }: { bet: PlacedBet }) {
 
         {/* Right */}
         <div className="text-right shrink-0 min-w-[80px]">
-          <p className="text-[13px] font-bold text-[#F8FAFC]">${bet.stake.toFixed(2)}</p>
+          <p className="text-[13px] font-bold text-[#F8FAFC]">{bet.stake.toFixed(2)} USDT</p>
           {k === 'won' ? (
-            <p className="text-[11px] font-bold text-[#00DFA9]">🏆 +${profit.toFixed(2)}</p>
+            <p className="text-[11px] font-bold text-[#00DFA9]">🏆 +{profit.toFixed(2)} USDT</p>
           ) : k === 'lost' ? (
-            <p className="text-[11px] font-bold text-[#EF4444]">-${bet.stake.toFixed(2)}</p>
+            <p className="text-[11px] font-bold text-[#EF4444]">-{bet.stake.toFixed(2)} USDT</p>
           ) : k === 'void' ? (
             <p className="text-[11px] font-semibold text-[#94A3B8]">Refunded</p>
           ) : (
-            <p className="text-[11px] text-[#64748B]">Pot ${bet.estimatedPayout.toFixed(2)}</p>
+            <p className="text-[11px] text-[#64748B]">Pot {bet.estimatedPayout.toFixed(2)} USDT</p>
           )}
           <p className="text-[10px] text-[#475569] mt-0.5">{fmtDate(bet.placedAt)}</p>
         </div>
@@ -201,16 +201,16 @@ function BetCard({ bet }: { bet: PlacedBet }) {
           </div>
           <div className="flex items-center justify-between px-4 py-2.5 border-t border-white/[0.06] bg-black/20">
             <div className="flex items-center gap-4 text-[11px] text-[#64748B]">
-              <span>Stake: <span className="text-[#F8FAFC] font-semibold">${bet.stake.toFixed(2)}</span></span>
+              <span>Stake: <span className="text-[#F8FAFC] font-semibold">{bet.stake.toFixed(2)} USDT</span></span>
               <span>Odds: <span className="text-[#FACC15] font-semibold">{formatOdds(bet.totalOdds, format)}</span></span>
             </div>
             <div className="flex items-center gap-1.5 text-[11px]">
               {k === 'won' ? (
-                <><TrendingUp className="h-3 w-3 text-[#00DFA9]" /><span className="text-[#00DFA9] font-bold">+${profit.toFixed(2)}</span></>
+                <><TrendingUp className="h-3 w-3 text-[#00DFA9]" /><span className="text-[#00DFA9] font-bold">+{profit.toFixed(2)} USDT</span></>
               ) : k === 'lost' ? (
-                <><TrendingDown className="h-3 w-3 text-[#EF4444]" /><span className="text-[#EF4444] font-bold">-${bet.stake.toFixed(2)}</span></>
+                <><TrendingDown className="h-3 w-3 text-[#EF4444]" /><span className="text-[#EF4444] font-bold">-{bet.stake.toFixed(2)} USDT</span></>
               ) : (
-                <span className="text-[#64748B]">Potential: ${bet.estimatedPayout.toFixed(2)}</span>
+                <span className="text-[#64748B]">Potential: {bet.estimatedPayout.toFixed(2)} USDT</span>
               )}
             </div>
           </div>

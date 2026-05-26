@@ -295,7 +295,7 @@ export function ReferralsPage() {
             </div>
             <div>
               <p className="text-[13px] font-bold text-[#F8FAFC]">
-                ${ref.pendingEarned.toFixed(2)} USDT pending
+                {ref.pendingEarned.toFixed(2)} USDT pending
               </p>
               <p className="text-[10px] text-[#64748B]">Commission awaiting settlement</p>
             </div>
@@ -345,7 +345,7 @@ export function ReferralsPage() {
                     <p className="text-[10px] text-[#64748B]">{fmtDate(c.date)}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-[13px] font-bold text-[#00DFA9]">+${c.earned.toFixed(2)}</p>
+                    <p className="text-[13px] font-bold text-[#00DFA9]">+{c.earned.toFixed(2)} USDT</p>
                     <StatusBadge status={c.status} />
                   </div>
                 </div>
