@@ -60,11 +60,11 @@ export function ResponsibleGamblingPage() {
   const [limitAmount, setLimitAmount] = useState('');
 
   // Exclusion state
-  const [selExclusion, setSelExclusion] = useState<number | null>(null); // hours or null=permanent
+  const [selExclusion, setSelExclusion] = useState<number | null | undefined>(undefined); // undefined=no selection, number=hours, null=permanent
   const [confirm, setConfirm] = useState(false);
 
   useEffect(() => {
-    api.get<RGStatus>('/api/rg/status')
+    api.get<RGStatus>('/rg/status')
       .then(data => setStatus(data))
       .catch(() => setStatus({ limits: [], exclusion: null }))
       .finally(() => setLoading(false));
@@ -81,8 +81,8 @@ export function ResponsibleGamblingPage() {
     if (isNaN(amt) || amt <= 0) { flash('err', 'Enter a valid amount'); return; }
     setSaving(true);
     try {
-      await api.post('/api/rg/limits', { limitType, period, amountUsdt: amt });
-      const updated = await api.get<RGStatus>('/api/rg/status');
+      await api.post('/rg/limits', { limitType, period, amountUsdt: amt });
+      const updated = await api.get<RGStatus>('/rg/status');
       setStatus(updated);
       setLimitAmount('');
       flash('ok', `${limitType.charAt(0).toUpperCase() + limitType.slice(1)} limit set — ${amt.toFixed(2)} USDT ${period}`);
@@ -96,7 +96,7 @@ export function ResponsibleGamblingPage() {
   async function handleRemoveLimit(id: number) {
     setSaving(true);
     try {
-      await api.delete(`/api/rg/limits/${id}`);
+      await api.delete(`/rg/limits/${id}`);
       setStatus(prev => prev ? { ...prev, limits: prev.limits.filter(l => l.id !== id) } : prev);
       flash('ok', 'Limit removed');
     } catch (e) {
@@ -112,12 +112,12 @@ export function ResponsibleGamblingPage() {
     if (!opt && selExclusion !== null) { flash('err', 'Select an exclusion period'); return; }
     setSaving(true);
     try {
-      await api.post('/api/rg/exclusion', {
+      await api.post('/rg/exclusion', {
         durationHours: selExclusion ?? undefined,
         isPermanent: selExclusion === null,
-        isTakeABreak: selExclusion !== null && selExclusion <= 24,
+        isTakeABreak: selExclusion !== null && selExclusion !== undefined && selExclusion <= 24,
       });
-      const updated = await api.get<RGStatus>('/api/rg/status');
+      const updated = await api.get<RGStatus>('/rg/status');
       setStatus(updated);
       setConfirm(false);
       flash('ok', selExclusion === null ? 'Account permanently excluded' : `Break activated — ${opt?.label}`);

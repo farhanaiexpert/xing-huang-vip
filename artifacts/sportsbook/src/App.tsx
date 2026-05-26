@@ -39,7 +39,7 @@ function RGFooterBanner() {
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0B0F14]/95 border-t border-white/8 py-2 px-4 flex items-center justify-center gap-3 text-[11px] text-[#64748B] md:pb-2 pb-[calc(0.5rem+56px)]">
       <span className="text-[#FACC15]">18+</span>
       <span>Play responsibly.</span>
-      <Link href="/account/responsible-gambling"
+      <Link href="/account/responsible"
         className="text-[#00DFA9] hover:underline">
         Set limits &amp; self-exclude
       </Link>

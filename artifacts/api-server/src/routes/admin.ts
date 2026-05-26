@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, gte, lte, sql, count, sum, and, or, ilike, like, inArray } from "drizzle-orm";
+import { eq, desc, gte, lte, sql, count, sum, and, or, ilike, like, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import {
@@ -1947,6 +1947,37 @@ router.get("/admin/rg/players", async (_req, res): Promise<void> => {
   }
 
   res.json([...playerMap.values()]);
+});
+
+// ── POST /admin/rg/exclusions ── Admin-initiated exclusion for any user ────────
+router.post("/admin/rg/exclusions", async (req, res): Promise<void> => {
+  const schema = z.object({
+    userId: z.number().int().positive(),
+    durationHours: z.number().int().positive().optional(),
+    isPermanent: z.boolean().default(false),
+    reason: z.string().max(500).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }); return; }
+
+  const { userId, durationHours, isPermanent, reason } = parsed.data;
+  if (!isPermanent && !durationHours) { res.status(400).json({ error: "Provide durationHours or set isPermanent=true" }); return; }
+
+  const [existing] = await db.select().from(selfExclusionsTable)
+    .where(and(eq(selfExclusionsTable.userId, userId), isNull(selfExclusionsTable.liftedAt)))
+    .limit(1);
+  if (existing) { res.status(409).json({ error: "User already has an active exclusion" }); return; }
+
+  const endsAt = isPermanent ? null : new Date(Date.now() + durationHours! * 3600 * 1000);
+  const [excl] = await db.insert(selfExclusionsTable).values({
+    userId,
+    isPermanent,
+    isTakeABreak: false,
+    endsAt,
+    reason: reason ?? "Admin-initiated exclusion",
+  }).returning();
+  await logAdminAction(req.user!.userId, "exclusion_created", "self_exclusions", excl.id, { userId, isPermanent, durationHours });
+  res.status(201).json(excl);
 });
 
 router.patch("/admin/rg/exclusions/:id", async (req, res): Promise<void> => {
