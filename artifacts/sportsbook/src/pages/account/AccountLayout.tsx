@@ -5,28 +5,30 @@ import { Header } from '@/components/Header';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Wallet, Receipt, ArrowLeftRight,
-  Users, Gift, Star, Trophy, Settings, LogOut,
+  Users, Gift, Star, Trophy, Settings, LogOut, Shield,
 } from 'lucide-react';
-import { OverviewPage }       from './OverviewPage';
-import { WalletPage }          from './WalletPage';
-import { BetsPage }            from './BetsPage';
-import { TransactionsPage }    from './TransactionsPage';
-import { ReferralsPage }       from './ReferralsPage';
-import { PromotionsPage }      from './PromotionsPage';
-import { WinSpinHistoryPage }  from './WinSpinHistoryPage';
-import { PoolsPage }           from './PoolsPage';
-import { SettingsPage }        from './SettingsPage';
+import { OverviewPage }              from './OverviewPage';
+import { WalletPage }               from './WalletPage';
+import { BetsPage }                 from './BetsPage';
+import { TransactionsPage }         from './TransactionsPage';
+import { ReferralsPage }            from './ReferralsPage';
+import { PromotionsPage }           from './PromotionsPage';
+import { WinSpinHistoryPage }       from './WinSpinHistoryPage';
+import { PoolsPage }                from './PoolsPage';
+import { SettingsPage }             from './SettingsPage';
+import { ResponsibleGamblingPage }  from './ResponsibleGamblingPage';
 
 const NAV = [
-  { id: 'overview',     label: 'Overview',      icon: LayoutDashboard },
-  { id: 'wallet',       label: 'Wallet',         icon: Wallet },
-  { id: 'bets',         label: 'My Bets',        icon: Receipt },
-  { id: 'transactions', label: 'Transactions',   icon: ArrowLeftRight },
-  { id: 'referrals',    label: 'Referrals',      icon: Users },
-  { id: 'promotions',   label: 'Promotions',     icon: Gift },
-  { id: 'winspin',      label: 'WinSpin',        icon: Star },
-  { id: 'pools',        label: 'Pools',          icon: Trophy },
-  { id: 'settings',     label: 'Settings',       icon: Settings },
+  { id: 'overview',     label: 'Overview',           icon: LayoutDashboard },
+  { id: 'wallet',       label: 'Wallet',              icon: Wallet },
+  { id: 'bets',         label: 'My Bets',             icon: Receipt },
+  { id: 'transactions', label: 'Transactions',        icon: ArrowLeftRight },
+  { id: 'referrals',    label: 'Referrals',           icon: Users },
+  { id: 'promotions',   label: 'Promotions',          icon: Gift },
+  { id: 'winspin',      label: 'WinSpin',             icon: Star },
+  { id: 'pools',        label: 'Pools',               icon: Trophy },
+  { id: 'settings',     label: 'Settings',            icon: Settings },
+  { id: 'responsible',  label: 'Responsible Gaming',  icon: Shield },
 ] as const;
 
 type SectionId = (typeof NAV)[number]['id'];
@@ -41,6 +43,7 @@ const PAGES: Record<SectionId, React.ComponentType> = {
   winspin:      WinSpinHistoryPage,
   pools:        PoolsPage,
   settings:     SettingsPage,
+  responsible:  ResponsibleGamblingPage,
 };
 
 function isSection(s: string): s is SectionId {

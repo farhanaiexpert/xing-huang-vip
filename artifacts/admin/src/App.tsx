@@ -19,6 +19,8 @@ import SettingsPage from "@/pages/SettingsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import SettlementPage from "@/pages/SettlementPage";
+import LiabilityPage from "@/pages/LiabilityPage";
+import RGPlayersPage from "@/pages/RGPlayersPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -52,6 +54,8 @@ function Router() {
       <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
       <Route path="/users/:id" component={() => <ProtectedRoute component={UserProfilePage} />} />
       <Route path="/settlement" component={() => <ProtectedRoute component={SettlementPage} />} />
+      <Route path="/liability" component={() => <ProtectedRoute component={LiabilityPage} />} />
+      <Route path="/rg-players" component={() => <ProtectedRoute component={RGPlayersPage} />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );

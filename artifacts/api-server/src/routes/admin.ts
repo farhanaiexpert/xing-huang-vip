@@ -23,6 +23,9 @@ import {
   platformSettingsTable,
   userNotesTable,
   settlementLogTable,
+  marketLiabilityTable,
+  userLimitsTable,
+  selfExclusionsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -981,6 +984,7 @@ router.patch("/admin/markets/:id", async (req, res): Promise<void> => {
     isEnabled: z.boolean().optional(),
     isSuspended: z.boolean().optional(),
     oddsMultiplier: z.string().optional(),
+    marginOverride: z.string().nullable().optional(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
@@ -1747,6 +1751,179 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
   }
 
   res.json({ settled: totalSettled, won: totalWon, lost: totalLost, voided: totalVoided, totalPaidOut: totalPaidOut.toFixed(2) });
+});
+
+// ─── Liability Monitor ────────────────────────────────────────────────────────
+
+router.get("/admin/liability", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(marketLiabilityTable)
+    .orderBy(desc(marketLiabilityTable.potentialPayout));
+  res.json(rows);
+});
+
+router.patch("/admin/liability/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const schema = z.object({ isSuspended: z.boolean() });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
+
+  const [row] = await db
+    .update(marketLiabilityTable)
+    .set({ isSuspended: parsed.data.isSuspended })
+    .where(eq(marketLiabilityTable.id, id))
+    .returning();
+  if (!row) { res.status(404).json({ error: "Market not found" }); return; }
+
+  await logAdminAction(req.user!.userId, "liability_updated", "market_liability", id, parsed.data as Record<string, unknown>);
+  res.json(row);
+});
+
+// ─── Responsible Gambling Admin ───────────────────────────────────────────────
+
+router.get("/admin/rg/players", async (_req, res): Promise<void> => {
+  const now = new Date();
+
+  // Players with active exclusions
+  const exclusions = await db.execute(sql`
+    SELECT
+      u.id   AS user_id,
+      u.username,
+      u.email,
+      se.id,
+      se.is_permanent,
+      se.is_take_a_break,
+      se.ends_at,
+      se.reason,
+      se.lifted_at,
+      se.created_at
+    FROM self_exclusions se
+    JOIN users u ON u.id = se.user_id
+    WHERE se.lifted_at IS NULL
+      AND (se.is_permanent = TRUE OR se.ends_at > ${now})
+    ORDER BY se.created_at DESC
+  `);
+
+  // Players with any limits
+  const limits = await db.execute(sql`
+    SELECT
+      ul.id,
+      ul.user_id,
+      ul.limit_type,
+      ul.period,
+      ul.amount_usdt,
+      ul.current_usage,
+      ul.reset_at
+    FROM user_limits ul
+    ORDER BY ul.user_id
+  `);
+
+  // Merge into player records
+  type ExcRow = {
+    user_id: number; username: string; email: string;
+    id: number; is_permanent: boolean; is_take_a_break: boolean;
+    ends_at: string | null; reason: string | null; lifted_at: string | null; created_at: string;
+  };
+  type LimRow = {
+    id: number; user_id: number; limit_type: string; period: string;
+    amount_usdt: string; current_usage: string; reset_at: string;
+  };
+
+  const playerMap = new Map<number, {
+    userId: number; username: string; email: string;
+    exclusion: object | null; limits: object[];
+  }>();
+
+  for (const row of (exclusions.rows as ExcRow[])) {
+    playerMap.set(row.user_id, {
+      userId: row.user_id,
+      username: row.username,
+      email: row.email,
+      exclusion: {
+        id: row.id,
+        isPermanent: row.is_permanent,
+        isTakeABreak: row.is_take_a_break,
+        endsAt: row.ends_at,
+        reason: row.reason,
+        liftedAt: row.lifted_at,
+        createdAt: row.created_at,
+      },
+      limits: [],
+    });
+  }
+
+  for (const row of (limits.rows as LimRow[])) {
+    if (!playerMap.has(row.user_id)) {
+      // fetch user info
+      const [user] = await db.select({ username: usersTable.username, email: usersTable.email })
+        .from(usersTable).where(eq(usersTable.id, row.user_id)).limit(1);
+      if (user) {
+        playerMap.set(row.user_id, {
+          userId: row.user_id,
+          username: user.username,
+          email: user.email,
+          exclusion: null,
+          limits: [],
+        });
+      }
+    }
+    const player = playerMap.get(row.user_id);
+    if (player) {
+      player.limits.push({
+        id: row.id,
+        limitType: row.limit_type,
+        period: row.period,
+        amountUsdt: row.amount_usdt,
+        currentUsage: row.current_usage,
+        resetAt: row.reset_at,
+      });
+    }
+  }
+
+  res.json([...playerMap.values()]);
+});
+
+router.patch("/admin/rg/exclusions/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const schema = z.object({
+    action: z.enum(["lift", "extend"]),
+    extendHours: z.number().int().positive().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
+
+  const [excl] = await db.select().from(selfExclusionsTable)
+    .where(eq(selfExclusionsTable.id, id)).limit(1);
+  if (!excl) { res.status(404).json({ error: "Exclusion not found" }); return; }
+
+  if (parsed.data.action === "lift") {
+    const [updated] = await db.update(selfExclusionsTable)
+      .set({ liftedAt: new Date(), liftedByAdminId: req.user!.userId })
+      .where(eq(selfExclusionsTable.id, id))
+      .returning();
+    await logAdminAction(req.user!.userId, "exclusion_lifted", "self_exclusions", id, {});
+    res.json(updated);
+    return;
+  }
+
+  if (parsed.data.action === "extend" && parsed.data.extendHours) {
+    const currentEndsAt = excl.endsAt ?? new Date();
+    const newEndsAt = new Date(currentEndsAt.getTime() + parsed.data.extendHours * 3600 * 1000);
+    const [updated] = await db.update(selfExclusionsTable)
+      .set({ endsAt: newEndsAt })
+      .where(eq(selfExclusionsTable.id, id))
+      .returning();
+    await logAdminAction(req.user!.userId, "exclusion_extended", "self_exclusions", id, { extendHours: parsed.data.extendHours });
+    res.json(updated);
+    return;
+  }
+
+  res.status(400).json({ error: "Invalid action" });
 });
 
 export default router;

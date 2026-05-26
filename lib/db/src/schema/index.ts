@@ -12,3 +12,5 @@ export * from "./sport_controls";
 export * from "./platform_settings";
 export * from "./user_notes";
 export * from "./settlement_log";
+export * from "./liability";
+export * from "./responsible_gambling";

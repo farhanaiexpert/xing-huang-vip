@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, sportControlsTable } from "@workspace/db";
+import { db, sportControlsTable, platformSettingsTable } from "@workspace/db";
 
 const router = Router();
 
@@ -34,19 +34,47 @@ async function getActiveLiveSports(): Promise<string[]> {
   }
 }
 
-// ─── Upsert sport control row (auto-register sports on first fetch) ────────────
-async function upsertSportControl(sportKey: string, leagueName: string) {
+// ─── Read global margin % from platform_settings ──────────────────────────────
+async function getGlobalMarginPct(): Promise<number> {
   try {
-    await db
-      .insert(sportControlsTable)
-      .values({ sportKey, leagueName })
-      .onConflictDoNothing();
+    const [row] = await db.select().from(platformSettingsTable)
+      .where(eq(platformSettingsTable.key, "global_margin_pct"))
+      .limit(1);
+    return row ? Math.max(0, Math.min(100, parseFloat(row.value) || 0)) : 0;
   } catch {
-    // ignore — row already exists
+    return 0;
   }
 }
 
-// ─── Apply odds multiplier to all bookmaker outcomes ─────────────────────────
+// ─── Apply margin: displayedOdds = trueOdds * (1 - margin/100) ───────────────
+// "true odds 2.00 @ 5% margin → displayed as 1.90"
+function applyMargin(data: unknown, marginPct: number): unknown {
+  if (marginPct <= 0 || !Array.isArray(data)) return data;
+  const factor = 1 - marginPct / 100;
+  return (data as Record<string, unknown>[]).map(event => ({
+    ...event,
+    bookmakers: Array.isArray(event.bookmakers)
+      ? (event.bookmakers as Record<string, unknown>[]).map(bm => ({
+          ...bm,
+          markets: Array.isArray(bm.markets)
+            ? (bm.markets as Record<string, unknown>[]).map(mkt => ({
+                ...mkt,
+                outcomes: Array.isArray(mkt.outcomes)
+                  ? (mkt.outcomes as Record<string, unknown>[]).map(o => ({
+                      ...o,
+                      price: typeof o.price === "number"
+                        ? Math.max(1.01, Math.round(o.price * factor * 100) / 100)
+                        : o.price,
+                    }))
+                  : mkt.outcomes,
+              }))
+            : bm.markets,
+        }))
+      : event.bookmakers,
+  }));
+}
+
+// ─── Apply odds multiplier (legacy pricing adjustment) ────────────────────────
 function applyMultiplier(data: unknown, multiplier: number): unknown {
   if (multiplier === 1 || !Array.isArray(data)) return data;
   return (data as Record<string, unknown>[]).map(event => ({
@@ -70,6 +98,18 @@ function applyMultiplier(data: unknown, multiplier: number): unknown {
         }))
       : event.bookmakers,
   }));
+}
+
+// ─── Upsert sport control row (auto-register sports on first fetch) ────────────
+async function upsertSportControl(sportKey: string, leagueName: string) {
+  try {
+    await db
+      .insert(sportControlsTable)
+      .values({ sportKey, leagueName })
+      .onConflictDoNothing();
+  } catch {
+    // ignore — row already exists
+  }
 }
 
 router.get("/odds/:sport", async (req, res): Promise<void> => {
@@ -98,9 +138,17 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
 
   const cacheKey = `odds_${sport}`;
   const cached = cache.get(cacheKey);
+
+  // Effective margin: per-sport override > global
+  const globalMargin = await getGlobalMarginPct();
+  const effectiveMargin = control?.marginOverride != null
+    ? Math.max(0, Math.min(100, parseFloat(control.marginOverride)))
+    : globalMargin;
+  const multiplier = control ? parseFloat(control.oddsMultiplier) : 1;
+
   if (cached && cached.expiresAt > Date.now()) {
-    const multiplier = control ? parseFloat(control.oddsMultiplier) : 1;
-    res.json({ data: applyMultiplier(cached.data, multiplier), cached: true });
+    const adjusted = applyMultiplier(applyMargin(cached.data, effectiveMargin), multiplier);
+    res.json({ data: adjusted, cached: true });
     return;
   }
 
@@ -116,7 +164,6 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
     cache.set(cacheKey, { data, expiresAt: Date.now() + CACHE_TTL });
 
     // Auto-register this sport in sport_controls if not present
-    // Derive a human-readable league name from the sport key
     const leagueName = sport
       .replace(/^soccer_/, "")
       .replace(/^americanfootball_/, "")
@@ -131,9 +178,9 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
 
     await upsertSportControl(sport, leagueName);
 
-    const multiplier = control ? parseFloat(control.oddsMultiplier) : 1;
-    res.json({ data: applyMultiplier(data, multiplier), cached: false });
-  } catch (err) {
+    const adjusted = applyMultiplier(applyMargin(data, effectiveMargin), multiplier);
+    res.json({ data: adjusted, cached: false });
+  } catch {
     res.status(500).json({ error: "Failed to fetch odds" });
   }
 });
@@ -179,6 +226,9 @@ router.get("/live/events", async (_req, res): Promise<void> => {
     const controls = await db.select().from(sportControlsTable);
     const controlMap = new Map(controls.map(c => [c.sportKey, c]));
 
+    // Read global margin once
+    const globalMargin = await getGlobalMarginPct();
+
     // Merge seed list with any additional enabled sports from DB
     const activeSports = await getActiveLiveSports();
 
@@ -203,8 +253,13 @@ router.get("/live/events", async (_req, res): Promise<void> => {
           (ev.bookmakers as unknown[]).length > 0
         );
 
+        const effectiveMargin = ctrl?.marginOverride != null
+          ? Math.max(0, parseFloat(ctrl.marginOverride))
+          : globalMargin;
         const multiplier = ctrl ? parseFloat(ctrl.oddsMultiplier) : 1;
-        return (applyMultiplier(liveEvents, multiplier) as Record<string, unknown>[]).map(ev => ({
+
+        const adjusted = applyMultiplier(applyMargin(liveEvents, effectiveMargin), multiplier);
+        return (adjusted as Record<string, unknown>[]).map(ev => ({
           ...ev,
           sport_key: sportKey,
         }));

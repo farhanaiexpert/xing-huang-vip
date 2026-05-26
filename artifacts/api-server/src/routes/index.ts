@@ -11,6 +11,7 @@ import promotionsRouter from "./promotions.js";
 import poolsRouter from "./pools.js";
 import setupRouter from "./setup.js";
 import webhooksRouter from "./webhooks.js";
+import rgRouter from "./rg.js";
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use(winspinRouter);
 router.use(promotionsRouter);
 router.use(poolsRouter);
 router.use(webhooksRouter);
+router.use(rgRouter);
 
 export default router;

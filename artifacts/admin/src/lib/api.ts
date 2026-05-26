@@ -222,6 +222,7 @@ export interface AdminSportControl {
   isEnabled: boolean;
   isSuspended: boolean;
   oddsMultiplier: string;
+  marginOverride: string | null;
   updatedAt: string;
 }
 

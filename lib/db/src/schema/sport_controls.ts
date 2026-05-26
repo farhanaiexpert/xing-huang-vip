@@ -9,6 +9,7 @@ export const sportControlsTable = pgTable("sport_controls", {
   isEnabled: boolean("is_enabled").notNull().default(true),
   isSuspended: boolean("is_suspended").notNull().default(false),
   oddsMultiplier: numeric("odds_multiplier", { precision: 10, scale: 4 }).notNull().default("1.0000"),
+  marginOverride: numeric("margin_override", { precision: 5, scale: 2 }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 

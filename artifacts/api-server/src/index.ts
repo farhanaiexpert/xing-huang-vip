@@ -87,6 +87,68 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v4 skipped");
   }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE sport_controls
+        ADD COLUMN IF NOT EXISTS margin_override numeric(5,2)
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS market_liability (
+        id               SERIAL PRIMARY KEY,
+        event_id         TEXT NOT NULL,
+        event_name       TEXT NOT NULL DEFAULT '',
+        sport            TEXT NOT NULL DEFAULT '',
+        market_type      TEXT NOT NULL,
+        selection        TEXT NOT NULL,
+        total_stake      NUMERIC(20,8) NOT NULL DEFAULT 0,
+        potential_payout NUMERIC(20,8) NOT NULL DEFAULT 0,
+        bet_count        INTEGER NOT NULL DEFAULT 0,
+        is_suspended     BOOLEAN NOT NULL DEFAULT FALSE,
+        updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(event_id, market_type, selection)
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS user_limits (
+        id             SERIAL PRIMARY KEY,
+        user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        limit_type     TEXT NOT NULL,
+        period         TEXT NOT NULL,
+        amount_usdt    NUMERIC(20,8) NOT NULL,
+        current_usage  NUMERIC(20,8) NOT NULL DEFAULT 0,
+        reset_at       TIMESTAMPTZ NOT NULL,
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(user_id, limit_type, period)
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS self_exclusions (
+        id                    SERIAL PRIMARY KEY,
+        user_id               INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        duration_hours        INTEGER,
+        starts_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        ends_at               TIMESTAMPTZ,
+        is_permanent          BOOLEAN NOT NULL DEFAULT FALSE,
+        is_take_a_break       BOOLEAN NOT NULL DEFAULT FALSE,
+        reason                TEXT,
+        lifted_at             TIMESTAMPTZ,
+        lifted_by_admin_id    INTEGER,
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      INSERT INTO platform_settings (key, value, description)
+      VALUES
+        ('global_margin_pct',      '0',    'Global odds margin percentage (0–20). Applied to all outgoing odds.'),
+        ('liability_threshold_usdt','5000', 'Auto-suspend a market when open liability exceeds this USDT amount.')
+      ON CONFLICT (key) DO NOTHING
+    `);
+    logger.info("DB migration v7 applied (market_liability, user_limits, self_exclusions, margin_override)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v7 skipped");
+  }
 }
 
 runMigrations().then(() => {

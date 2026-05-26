@@ -1,7 +1,11 @@
 import { Router } from "express";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and, gt, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db, betsTable, betSelectionsTable, walletsTable, transactionsTable, sportControlsTable } from "@workspace/db";
+import {
+  db, betsTable, betSelectionsTable, walletsTable, transactionsTable,
+  sportControlsTable, marketLiabilityTable, userLimitsTable, selfExclusionsTable,
+  platformSettingsTable,
+} from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 
 const router = Router();
@@ -30,8 +34,47 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     return;
   }
   const { type, stake, selections } = parsed.data;
+  const userId = req.user!.userId;
 
-  // ── Suspension check for live bets ────────────────────────────────────────
+  // ── Self-exclusion check ────────────────────────────────────────────────────
+  const now = new Date();
+  const [excl] = await db.select().from(selfExclusionsTable)
+    .where(and(
+      eq(selfExclusionsTable.userId, userId),
+      or(
+        eq(selfExclusionsTable.isPermanent, true),
+        gt(selfExclusionsTable.endsAt, now),
+      ),
+    ))
+    .limit(1);
+
+  if (excl) {
+    const msg = excl.isTakeABreak
+      ? "You are on a cooling-off break. Betting is temporarily unavailable."
+      : excl.isPermanent
+        ? "Your account is permanently self-excluded. Please contact support."
+        : `You are self-excluded until ${new Date(excl.endsAt!).toLocaleDateString()}.`;
+    res.status(403).json({ error: msg, code: "SELF_EXCLUDED" });
+    return;
+  }
+
+  // ── Loss limit check ───────────────────────────────────────────────────────
+  const lossLimits = await db.select().from(userLimitsTable)
+    .where(and(eq(userLimitsTable.userId, userId), eq(userLimitsTable.limitType, "loss")));
+
+  for (const lim of lossLimits) {
+    if (new Date(lim.resetAt) < now) continue; // expired, will be reset on /rg/status
+    const remaining = parseFloat(lim.amountUsdt) - parseFloat(lim.currentUsage);
+    if (stake > remaining) {
+      res.status(403).json({
+        error: `Your ${lim.period} loss limit of ${parseFloat(lim.amountUsdt).toFixed(2)} USDT has been reached. Betting is blocked until your limit resets.`,
+        code: "LOSS_LIMIT_EXCEEDED",
+      });
+      return;
+    }
+  }
+
+  // ── Suspension check for live bets ─────────────────────────────────────────
   const liveSports = [...new Set(selections.filter(s => s.isLive).map(s => s.sport).filter(Boolean))];
   if (liveSports.length > 0) {
     const controls = await db
@@ -45,8 +88,9 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     }
   }
 
+  // ── Balance check ──────────────────────────────────────────────────────────
   const [wallet] = await db.select().from(walletsTable)
-    .where(eq(walletsTable.userId, req.user!.userId)).limit(1);
+    .where(eq(walletsTable.userId, userId)).limit(1);
   if (!wallet || parseFloat(wallet.balanceUsdt) < stake) {
     res.status(400).json({ error: "Insufficient balance" });
     return;
@@ -56,7 +100,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
   const potentialReturn = stake * totalOdds;
 
   const [bet] = await db.insert(betsTable).values({
-    userId: req.user!.userId,
+    userId,
     type,
     stake: stake.toString(),
     totalOdds: totalOdds.toFixed(4),
@@ -82,15 +126,62 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
   const newBalance = (parseFloat(wallet.balanceUsdt) - stake).toFixed(8);
   await db.update(walletsTable)
     .set({ balanceUsdt: newBalance })
-    .where(eq(walletsTable.userId, req.user!.userId));
+    .where(eq(walletsTable.userId, userId));
 
   await db.insert(transactionsTable).values({
-    userId: req.user!.userId,
+    userId,
     type: "debit",
     amount: stake.toString(),
     status: "completed",
     reference: `bet_${bet.id}`,
   });
+
+  // ── Update loss limit usage ────────────────────────────────────────────────
+  for (const lim of lossLimits) {
+    if (new Date(lim.resetAt) < now) continue;
+    await db.update(userLimitsTable)
+      .set({ currentUsage: sql`current_usage + ${stake.toString()}` })
+      .where(eq(userLimitsTable.id, lim.id));
+  }
+
+  // ── Upsert market liability ────────────────────────────────────────────────
+  const liabilityThresholdRow = await db.select().from(platformSettingsTable)
+    .where(eq(platformSettingsTable.key, "liability_threshold_usdt"))
+    .limit(1).then(r => r[0]);
+  const threshold = liabilityThresholdRow ? parseFloat(liabilityThresholdRow.value) : 5000;
+
+  for (const s of selections) {
+    const selectionOdds = parseFloat(s.odds.toFixed(4));
+    const selectionPayout = stake * selectionOdds;
+
+    await db.execute(sql`
+      INSERT INTO market_liability (event_id, event_name, sport, market_type, selection, total_stake, potential_payout, bet_count)
+      VALUES (${s.eventId}, ${s.eventName}, ${s.sport ?? ""}, ${s.marketType}, ${s.selection}, ${stake.toString()}, ${selectionPayout.toString()}, 1)
+      ON CONFLICT (event_id, market_type, selection)
+      DO UPDATE SET
+        total_stake      = market_liability.total_stake + EXCLUDED.total_stake,
+        potential_payout = market_liability.potential_payout + EXCLUDED.potential_payout,
+        bet_count        = market_liability.bet_count + 1,
+        updated_at       = NOW()
+    `);
+
+    // Auto-suspend if liability exceeds threshold
+    if (threshold > 0) {
+      const [liability] = await db.select().from(marketLiabilityTable)
+        .where(and(
+          eq(marketLiabilityTable.eventId, s.eventId),
+          eq(marketLiabilityTable.marketType, s.marketType),
+          eq(marketLiabilityTable.selection, s.selection),
+        ))
+        .limit(1);
+
+      if (liability && parseFloat(liability.potentialPayout) > threshold && !liability.isSuspended) {
+        await db.update(marketLiabilityTable)
+          .set({ isSuspended: true })
+          .where(eq(marketLiabilityTable.id, liability.id));
+      }
+    }
+  }
 
   res.status(201).json(bet);
 });
