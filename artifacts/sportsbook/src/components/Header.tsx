@@ -263,10 +263,10 @@ export function Header() {
           </nav>
 
           {/* Right */}
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
 
-            {/* Language picker */}
-            <div className="relative" ref={langRef}>
+            {/* Language picker — hidden on mobile, shown sm+ */}
+            <div className="relative hidden sm:block" ref={langRef}>
               <HeaderIconBtn aria-label="Language" onClick={() => setShowLang(v => !v)}>
                 <Globe className="h-4 w-4" style={{ color: '#00D9A6' }} />
               </HeaderIconBtn>
@@ -333,7 +333,7 @@ export function Header() {
 
             {/* Auth / Wallet */}
             {isConnected && shortAddress ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 {/* Deposit button — always visible for logged-in users */}
                 <button
                   onClick={() => setIsPaymentOpen(true)}
@@ -344,7 +344,8 @@ export function Header() {
                     style={{ boxShadow: '0 0 16px rgba(0,223,169,0.5)' }} />
                   <span className="relative">+ Deposit</span>
                 </button>
-              <div className="relative" ref={menuRef}>
+                {/* Wallet address button — hidden on mobile (visible in More drawer) */}
+                <div className="relative hidden sm:block" ref={menuRef}>
                 <button
                   onClick={() => setShowAddressMenu(v => !v)}
                   data-testid="button-wallet-address"
@@ -358,7 +359,7 @@ export function Header() {
                   <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] shrink-0" />
                   <span className="text-xs text-[#00DFA9] font-semibold">{shortAddress}</span>
                   {balance > 0 && (
-                    <span className="hidden sm:inline text-[10px] text-[#FACC15] font-bold bg-[#FACC15]/10 px-1.5 py-0.5 rounded-md">
+                    <span className="text-[10px] text-[#FACC15] font-bold bg-[#FACC15]/10 px-1.5 py-0.5 rounded-md">
                       {balance.toFixed(2)} USDT
                     </span>
                   )}
@@ -379,7 +380,7 @@ export function Header() {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2">

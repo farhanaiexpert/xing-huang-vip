@@ -5,7 +5,7 @@ const STORAGE_KEY = 'oddschain_onboarding_seen';
 
 const STEPS = [
   {
-    icon: <Wallet className="h-6 w-6" />,
+    icon: <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />,
     color: '#00DFA9',
     bg: 'rgba(0,223,169,0.1)',
     border: 'rgba(0,223,169,0.2)',
@@ -14,7 +14,7 @@ const STEPS = [
     desc: 'Hit the green "Connect Wallet" button in the top-right corner to link your crypto wallet and fund your account.',
   },
   {
-    icon: <MousePointerClick className="h-6 w-6" />,
+    icon: <MousePointerClick className="h-5 w-5 sm:h-6 sm:w-6" />,
     color: '#38BDF8',
     bg: 'rgba(56,189,248,0.1)',
     border: 'rgba(56,189,248,0.2)',
@@ -23,7 +23,7 @@ const STEPS = [
     desc: 'Browse sports using the top carousel or the sidebar. Click any match to see all available markets.',
   },
   {
-    icon: <SlidersHorizontal className="h-6 w-6" />,
+    icon: <SlidersHorizontal className="h-5 w-5 sm:h-6 sm:w-6" />,
     color: '#FACC15',
     bg: 'rgba(250,204,21,0.1)',
     border: 'rgba(250,204,21,0.2)',
@@ -32,7 +32,7 @@ const STEPS = [
     desc: 'Tap any odds button — it turns mint green and lands straight in your Bet Slip on the right.',
   },
   {
-    icon: <Rocket className="h-6 w-6" />,
+    icon: <Rocket className="h-5 w-5 sm:h-6 sm:w-6" />,
     color: '#A78BFA',
     bg: 'rgba(167,139,250,0.1)',
     border: 'rgba(167,139,250,0.2)',
@@ -65,12 +65,12 @@ export function OnboardingGuide() {
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4"
       style={{ background: 'rgba(6,10,20,0.82)', backdropFilter: 'blur(6px)' }}
       onClick={dismiss}
     >
       <div
-        className="relative w-full max-w-2xl rounded-3xl overflow-hidden"
+        className="relative w-full max-w-2xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[92vh]"
         style={{
           background: 'linear-gradient(160deg, #0C1422 0%, #0D1117 60%, #091610 100%)',
           border: '1px solid rgba(255,255,255,0.07)',
@@ -79,17 +79,17 @@ export function OnboardingGuide() {
         onClick={e => e.stopPropagation()}
       >
         {/* Top shimmer line */}
-        <div className="absolute top-0 left-0 right-0 h-px"
+        <div className="absolute top-0 left-0 right-0 h-px shrink-0"
           style={{ background: 'linear-gradient(90deg, transparent, rgba(0,223,169,0.4), transparent)' }} />
 
         {/* Header */}
-        <div className="flex items-start justify-between px-7 pt-7 pb-5">
+        <div className="flex items-start justify-between px-4 pt-5 pb-4 sm:px-7 sm:pt-7 sm:pb-5 shrink-0">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#00DFA9]/60">New here?</span>
             </div>
-            <h2 className="text-[22px] font-black text-[#F8FAFC] leading-tight">How to place your first bet</h2>
-            <p className="text-sm text-[#94A3B8]/50 mt-1">Four simple steps — takes less than a minute.</p>
+            <h2 className="text-[18px] sm:text-[22px] font-black text-[#F8FAFC] leading-tight">How to place your first bet</h2>
+            <p className="text-xs sm:text-sm text-[#94A3B8]/50 mt-1">Four simple steps — takes less than a minute.</p>
           </div>
           <button
             onClick={dismiss}
@@ -100,42 +100,44 @@ export function OnboardingGuide() {
         </div>
 
         {/* Divider */}
-        <div className="mx-7 h-px bg-white/[0.05]" />
+        <div className="mx-4 sm:mx-7 h-px bg-white/[0.05] shrink-0" />
 
-        {/* Steps grid */}
-        <div className="grid grid-cols-2 gap-3 p-7">
-          {STEPS.map(step => (
-            <div
-              key={step.num}
-              className="rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200"
-              style={{ background: step.bg, border: `1px solid ${step.border}` }}
-            >
-              <div className="flex items-center justify-between">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: `${step.color}18`, color: step.color, border: `1px solid ${step.color}30` }}
-                >
-                  {step.icon}
+        {/* Steps grid — scrollable area */}
+        <div className="overflow-y-auto flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 sm:p-7">
+            {STEPS.map(step => (
+              <div
+                key={step.num}
+                className="rounded-xl sm:rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 transition-all duration-200"
+                style={{ background: step.bg, border: `1px solid ${step.border}` }}
+              >
+                <div className="flex items-center justify-between">
+                  <div
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: `${step.color}18`, color: step.color, border: `1px solid ${step.color}30` }}
+                  >
+                    {step.icon}
+                  </div>
+                  <span
+                    className="text-[24px] sm:text-[28px] font-black leading-none tabular-nums"
+                    style={{ color: `${step.color}20` }}
+                  >
+                    {step.num}
+                  </span>
                 </div>
-                <span
-                  className="text-[28px] font-black leading-none tabular-nums"
-                  style={{ color: `${step.color}20` }}
-                >
-                  {step.num}
-                </span>
+                <div>
+                  <p className="text-[13px] font-bold text-[#F8FAFC] mb-1" style={{ color: step.color }}>{step.title}</p>
+                  <p className="text-[12px] text-[#94A3B8]/60 leading-relaxed">{step.desc}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[13px] font-bold text-[#F8FAFC] mb-1" style={{ color: step.color }}>{step.title}</p>
-                <p className="text-[12px] text-[#94A3B8]/60 leading-relaxed">{step.desc}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="px-7 pb-7 flex items-center justify-between gap-4">
+        <div className="px-4 pb-4 sm:px-7 sm:pb-7 pt-0 flex flex-wrap items-center justify-between gap-3 shrink-0 border-t border-white/[0.04]">
           <p className="text-[11px] text-[#94A3B8]/30">
-            You can revisit this guide anytime from the <span className="text-[#94A3B8]/50">Help</span> page.
+            Revisit anytime from the <span className="text-[#94A3B8]/50">Help</span> page.
           </p>
           <button
             onClick={dismiss}
