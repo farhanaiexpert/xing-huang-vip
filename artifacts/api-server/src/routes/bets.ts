@@ -70,17 +70,17 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     if (new Date(lim.resetAt) < now) {
       // Lazily reset the expired window so limits stay continuously enforceable
       await db.update(userLimitsTable)
-        .set({ currentUsage: "0", resetAt: nextResetAt(lim.period), pendingAmountUsdt: null, pendingEffectiveAt: null })
+        .set({ currentUsage: "0", resetAt: nextResetAt(lim.period), pendingAmountUsdt: "0", pendingEffectiveAt: null })
         .where(eq(userLimitsTable.id, lim.id));
       continue;
     }
 
     // Lazily promote a matured pending increase
     let effectiveLimit = parseFloat(lim.amountUsdt);
-    if (lim.pendingAmountUsdt && lim.pendingEffectiveAt && new Date(lim.pendingEffectiveAt) <= now) {
+    if (parseFloat(lim.pendingAmountUsdt) > 0 && lim.pendingEffectiveAt && new Date(lim.pendingEffectiveAt) <= now) {
       effectiveLimit = parseFloat(lim.pendingAmountUsdt);
       await db.update(userLimitsTable)
-        .set({ amountUsdt: lim.pendingAmountUsdt, pendingAmountUsdt: null, pendingEffectiveAt: null })
+        .set({ amountUsdt: lim.pendingAmountUsdt, pendingAmountUsdt: "0", pendingEffectiveAt: null })
         .where(eq(userLimitsTable.id, lim.id));
     }
 

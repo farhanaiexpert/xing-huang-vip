@@ -56,7 +56,7 @@ router.post("/admin/boosts", authenticate, requireAdmin, async (req, res): Promi
     selectionName: d.selectionName,
     originalOdds:  String(d.originalOdds),
     boostedOdds:   String(d.boostedOdds),
-    maxStake:      d.maxStake ? String(d.maxStake) : null,
+    maxStake:      d.maxStake ? String(d.maxStake) : "0",
     expiresAt:     d.expiresAt ? new Date(d.expiresAt) : null,
     createdBy:     req.user?.userId ?? null,
     isActive:      true,

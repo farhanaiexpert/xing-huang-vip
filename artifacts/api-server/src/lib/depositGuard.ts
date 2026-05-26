@@ -95,7 +95,7 @@ export async function checkDepositLimits(userId: number, amount: number): Promis
         .set({
           currentUsage: "0",
           resetAt: newResetAt,
-          pendingAmountUsdt: null,
+          pendingAmountUsdt: "0",
           pendingEffectiveAt: null,
         })
         .where(eq(userLimitsTable.id, lim.id));
@@ -105,10 +105,10 @@ export async function checkDepositLimits(userId: number, amount: number): Promis
 
     // ── Lazily promote a matured pending increase ───────────────────────────
     let effectiveLimit = parseFloat(lim.amountUsdt);
-    if (lim.pendingAmountUsdt && lim.pendingEffectiveAt && new Date(lim.pendingEffectiveAt) <= limNow) {
+    if (parseFloat(lim.pendingAmountUsdt) > 0 && lim.pendingEffectiveAt && new Date(lim.pendingEffectiveAt) <= limNow) {
       effectiveLimit = parseFloat(lim.pendingAmountUsdt);
       await db.update(userLimitsTable)
-        .set({ amountUsdt: lim.pendingAmountUsdt, pendingAmountUsdt: null, pendingEffectiveAt: null })
+        .set({ amountUsdt: lim.pendingAmountUsdt, pendingAmountUsdt: "0", pendingEffectiveAt: null })
         .where(eq(userLimitsTable.id, lim.id));
     }
 

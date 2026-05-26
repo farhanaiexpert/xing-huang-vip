@@ -316,7 +316,7 @@ async function settleBetsForEvent(
           if (new Date(lim.resetAt) < now) {
             // Lazily reset expired window inline so limits stay continuously enforceable
             await tx.update(userLimitsTable)
-              .set({ currentUsage: "0", resetAt: nextResetAt(lim.period), pendingAmountUsdt: null, pendingEffectiveAt: null })
+              .set({ currentUsage: "0", resetAt: nextResetAt(lim.period), pendingAmountUsdt: "0", pendingEffectiveAt: null })
               .where(eq(userLimitsTable.id, lim.id));
             continue;
           }

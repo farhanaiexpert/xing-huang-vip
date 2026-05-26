@@ -107,7 +107,7 @@ router.post("/rg/limits", authenticate, async (req, res): Promise<void> => {
   if (isTightening) {
     // Tightening: apply immediately, clear any pending loosening
     const [updated] = await db.update(userLimitsTable)
-      .set({ amountUsdt: amountUsdt.toString(), resetAt, updatedAt: new Date(), pendingAmountUsdt: null, pendingEffectiveAt: null })
+      .set({ amountUsdt: amountUsdt.toString(), resetAt, updatedAt: new Date(), pendingAmountUsdt: "0", pendingEffectiveAt: null })
       .where(eq(userLimitsTable.id, existing.id))
       .returning();
     res.json({ ...updated, effectiveAt: null });

@@ -14,7 +14,7 @@ export const userLimitsTable = pgTable("user_limits", {
   // Pending increase support: a loosening (higher limit) is deferred 24 h.
   // While pendingEffectiveAt is in the future, enforcement uses amountUsdt (the lower active limit).
   // After pendingEffectiveAt passes, amountUsdt is lazily promoted on next read.
-  pendingAmountUsdt: numeric("pending_amount_usdt", { precision: 20, scale: 8 }),
+  pendingAmountUsdt: numeric("pending_amount_usdt", { precision: 20, scale: 8 }).notNull().default("0"),
   pendingEffectiveAt: timestamp("pending_effective_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
