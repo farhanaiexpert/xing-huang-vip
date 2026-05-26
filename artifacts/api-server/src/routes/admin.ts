@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, sql, count, sum, and, or, ilike, like, inArray } from "drizzle-orm";
+import { eq, desc, gte, lte, sql, count, sum, and, or, ilike, like, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import {
@@ -1520,7 +1520,7 @@ router.post("/admin/settlement/settle", async (req, res): Promise<void> => {
 // ── Settlement Log ────────────────────────────────────────────────────────────
 
 router.get("/admin/settlement/log", async (req, res): Promise<void> => {
-  const { page = "1", limit = "20", source, sport } = req.query as Record<string, string>;
+  const { page = "1", limit = "20", source, sport, dateFrom, dateTo } = req.query as Record<string, string>;
   const pageNum = Math.max(1, parseInt(page, 10));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
   const offset = (pageNum - 1) * limitNum;
@@ -1528,6 +1528,8 @@ router.get("/admin/settlement/log", async (req, res): Promise<void> => {
   const conditions = [];
   if (source && source !== "all") conditions.push(eq(settlementLogTable.source, source));
   if (sport && sport !== "all")   conditions.push(eq(settlementLogTable.sport, sport));
+  if (dateFrom) conditions.push(gte(settlementLogTable.settledAt, new Date(dateFrom)));
+  if (dateTo)   conditions.push(lte(settlementLogTable.settledAt, new Date(dateTo)));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const [logs, [{ total }]] = await Promise.all([
@@ -1591,6 +1593,156 @@ router.post("/admin/bets/:id/reopen", async (req, res): Promise<void> => {
   await logAdminAction(req.user!.userId, "reopen_bet", "bet", id, { previousStatus });
   const [updated] = await db.select().from(betsTable).where(eq(betsTable.id, id)).limit(1);
   res.json({ bet: updated, message: `Bet #${id} reopened from status '${previousStatus}'` });
+});
+
+// ── All selections for an event (regardless of status) ────────────────────────
+
+router.get("/admin/settlement/events/:eventId/selections", async (req, res): Promise<void> => {
+  const eventId = req.params.eventId;
+  const rows = await db.execute(sql`
+    SELECT DISTINCT market_type, selection
+    FROM bet_selections
+    WHERE event_id = ${eventId}
+    ORDER BY market_type, selection
+  `);
+  const meta = await db.execute(sql`
+    SELECT event_name, sport FROM bet_selections WHERE event_id = ${eventId} LIMIT 1
+  `);
+  res.json({
+    eventId,
+    eventName: (meta.rows[0] as Record<string, unknown>)?.event_name ?? eventId,
+    sport:     (meta.rows[0] as Record<string, unknown>)?.sport ?? "",
+    selections: rows.rows,
+  });
+});
+
+// ── Settlement override: reopen + re-settle in one atomic operation ────────────
+
+router.post("/admin/settlement/override", async (req, res): Promise<void> => {
+  const schema = z.object({
+    eventId: z.string().min(1),
+    outcomes: z.array(z.object({
+      marketType: z.string().min(1),
+      selection: z.string().min(1),
+      result: z.enum(["won", "lost", "void"]),
+    })).min(1),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() }); return; }
+  const { eventId, outcomes } = parsed.data;
+
+  let totalSettled = 0, totalWon = 0, totalLost = 0, totalVoided = 0, totalPaidOut = 0;
+
+  await db.transaction(async (tx) => {
+    // Step 1: Find all non-open bets tied to this event; reverse payouts/refunds
+    const settled = await tx.execute(sql`
+      SELECT DISTINCT b.id, b.user_id, b.status, b.potential_return, b.stake
+      FROM bets b
+      JOIN bet_selections bs ON bs.bet_id = b.id
+      WHERE bs.event_id = ${eventId} AND b.status != 'open'
+    `);
+
+    for (const row of settled.rows as { id: number; user_id: number; status: string; potential_return: string; stake: string }[]) {
+      const { id: betId, user_id: userId, status: prevStatus, potential_return: potReturn, stake } = row;
+
+      if (prevStatus === "won") {
+        const payout = parseFloat(String(potReturn));
+        if (payout > 0) {
+          await tx.execute(sql`UPDATE wallets SET balance_usdt = GREATEST(0, balance_usdt - ${payout.toFixed(8)}) WHERE user_id = ${userId}`);
+          await tx.insert(transactionsTable).values({ userId, type: "debit", amount: payout.toFixed(8), status: "completed", notes: `Bet #${betId} override — prior payout reversed` });
+        }
+      } else if (prevStatus === "void") {
+        const refund = parseFloat(String(stake));
+        if (refund > 0) {
+          await tx.execute(sql`UPDATE wallets SET balance_usdt = GREATEST(0, balance_usdt - ${refund.toFixed(8)}) WHERE user_id = ${userId}`);
+          await tx.insert(transactionsTable).values({ userId, type: "debit", amount: refund.toFixed(8), status: "completed", notes: `Bet #${betId} override — prior void refund reversed` });
+        }
+      }
+      await tx.update(betsTable).set({ status: "open", settledAt: null }).where(eq(betsTable.id, betId));
+    }
+
+    // Step 2: Reset ALL bet_selections for this event to 'open'
+    await tx.execute(sql`UPDATE bet_selections SET status = 'open' WHERE event_id = ${eventId}`);
+
+    // Step 3: Apply new outcomes
+    const affectedBetIds = new Set<number>();
+    for (const { marketType, selection, result } of outcomes) {
+      const updated = await tx.execute(sql`
+        UPDATE bet_selections
+        SET status = ${result}
+        WHERE event_id = ${eventId} AND market_type = ${marketType} AND selection = ${selection} AND status = 'open'
+        RETURNING bet_id
+      `);
+      for (const r of updated.rows as { bet_id: number }[]) affectedBetIds.add(r.bet_id);
+    }
+
+    // Step 4: Evaluate bets — only resolve if all legs settled
+    for (const betId of affectedBetIds) {
+      const [bet] = await tx.select().from(betsTable).where(eq(betsTable.id, betId)).limit(1);
+      if (!bet || bet.status !== "open") continue;
+      const allSelections = await tx.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, betId));
+      if (allSelections.some(s => s.status === "open")) continue;
+
+      const hasLost = allSelections.some(s => s.status === "lost");
+      const allVoid  = allSelections.every(s => s.status === "void");
+      const wonLegs  = allSelections.filter(s => s.status === "won");
+
+      let newStatus: string;
+      let payout = 0;
+      if (hasLost) { newStatus = "lost"; totalLost++; }
+      else if (allVoid) { newStatus = "void"; payout = parseFloat(String(bet.stake)); totalVoided++; }
+      else {
+        newStatus = "won";
+        const adjustedOdds = wonLegs.reduce((acc, s) => acc * parseFloat(String(s.odds)), 1);
+        payout = parseFloat(String(bet.stake)) * adjustedOdds;
+        totalWon++;
+      }
+
+      await tx.update(betsTable).set({ status: newStatus, settledAt: new Date() }).where(eq(betsTable.id, betId));
+      totalSettled++;
+
+      if (payout > 0) {
+        totalPaidOut += payout;
+        const txType = newStatus === "void" ? "refund" : "win";
+        await tx.insert(transactionsTable).values({
+          userId: bet.userId,
+          type: txType,
+          amount: payout.toFixed(8),
+          status: "completed",
+          notes: newStatus === "void" ? `Bet #${betId} override-voided — stake refunded` : `Bet #${betId} override-won — payout $${payout.toFixed(2)}`,
+        });
+        await tx.execute(sql`UPDATE wallets SET balance_usdt = balance_usdt + ${payout.toFixed(8)} WHERE user_id = ${bet.userId}`);
+      }
+    }
+  });
+
+  await logAdminAction(req.user!.userId, "override_settle", "event", 0, {
+    eventId, outcomes: outcomes.length, settled: totalSettled, won: totalWon, lost: totalLost, voided: totalVoided,
+  });
+
+  // Write settlement_log with source = 'manual_override'
+  if (totalSettled > 0) {
+    const eventMeta = await db.execute(sql`SELECT event_name, sport FROM bet_selections WHERE event_id = ${eventId} LIMIT 1`);
+    const meta = (eventMeta.rows[0] as Record<string, string> | undefined) ?? {};
+    await db.insert(settlementLogTable).values({
+      eventId,
+      eventName: meta.event_name ?? eventId,
+      sport: meta.sport ?? "",
+      result: "manual",
+      homeTeam: "",
+      awayTeam: "",
+      homeScore: "",
+      awayScore: "",
+      betsSettled: totalSettled,
+      betsWon: totalWon,
+      betsLost: totalLost,
+      betsVoided: totalVoided,
+      totalPayout: totalPaidOut.toFixed(8),
+      source: "manual_override",
+    });
+  }
+
+  res.json({ settled: totalSettled, won: totalWon, lost: totalLost, voided: totalVoided, totalPaidOut: totalPaidOut.toFixed(2) });
 });
 
 export default router;
