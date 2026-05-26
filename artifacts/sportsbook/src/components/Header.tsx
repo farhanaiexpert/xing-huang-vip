@@ -258,7 +258,7 @@ export function Header() {
             <NavItem href="/help"               label="Help"              />
             <NavItem href="/account/referrals"  label="Affiliate"         />
             <WinSpinNavItem />
-            <NavItem href="/"                   label="In-Play" disabled soon />
+            <LiveNavItem />
           </nav>
 
           {/* Right */}
@@ -447,6 +447,47 @@ function MenuAction({ icon, label, onClick, danger, href }: { icon: React.ReactN
       {icon}
       {label}
     </button>
+  );
+}
+
+function LiveNavItem() {
+  const [location] = useLocation();
+  const [count, setCount] = useState<number | null>(null);
+  const isActive = location.startsWith('/live');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/live/events')
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { count?: number } | null) => {
+        if (!cancelled && d && typeof d.count === 'number') setCount(d.count);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const base = "relative flex items-center gap-1.5 px-3.5 h-16 text-[13px] font-medium transition-all duration-150 select-none";
+  return (
+    <Link
+      href="/live"
+      className={cn(
+        base,
+        isActive ? 'text-[#F8FAFC] font-semibold' : 'text-[#94A3B8]/60 hover:text-[#F8FAFC] hover:bg-white/[0.04] rounded-lg'
+      )}
+    >
+      <span className="relative flex items-center gap-1.5">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+        <span className="font-semibold">LIVE</span>
+        {count !== null && count > 0 && (
+          <span className="text-[9px] font-bold bg-[#EF4444] text-white px-1.5 py-0.5 rounded-full leading-none tabular-nums">
+            {count}
+          </span>
+        )}
+      </span>
+      {isActive && (
+        <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-transparent via-[#EF4444] to-transparent shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+      )}
+    </Link>
   );
 }
 

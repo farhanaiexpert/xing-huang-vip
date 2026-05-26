@@ -118,8 +118,21 @@ function BetCard({ bet }: { bet: PlacedBet }) {
               )}>
                 <div className="w-1.5 h-1.5 rounded-full bg-[#00DFA9]/50 mt-1.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-[#F8FAFC]">{sel.selectionName}</p>
-                  <p className="text-[10px] text-[#64748B] mt-0.5">{sel.matchName} · {sel.marketName}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[12px] font-semibold text-[#F8FAFC]">{sel.selectionName}</p>
+                    {sel.isLive && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#EF4444]/12 border border-[#EF4444]/25 text-[#EF4444] text-[9px] font-bold uppercase tracking-wider">
+                        <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
+                        LIVE
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[#64748B] mt-0.5">
+                    {sel.matchName} · {sel.marketName}
+                    {sel.scoreAtPlacement && (
+                      <span className="ml-1.5 text-[#EF4444]/70">({sel.scoreAtPlacement})</span>
+                    )}
+                  </p>
                 </div>
                 <span className="text-[12px] font-bold text-[#FACC15] shrink-0">{formatOdds(sel.odds, format)}</span>
               </div>

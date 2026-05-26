@@ -25,6 +25,8 @@ interface ApiBetSelection {
   selection: string;
   odds: string;
   status: string;
+  isLive?: boolean;
+  scoreAtPlacement?: string | null;
 }
 
 interface ApiBet {
@@ -59,6 +61,8 @@ function mapApiBet(b: ApiBet): PlacedBet {
     selectionType: s.selection,
     selectionName: s.selection,
     odds: parseFloat(s.odds),
+    isLive: s.isLive ?? false,
+    scoreAtPlacement: s.scoreAtPlacement ?? undefined,
   }));
   return {
     betId:           `#BET-${b.id}`,

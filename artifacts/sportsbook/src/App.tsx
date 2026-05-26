@@ -12,6 +12,7 @@ import { Privacy } from "@/pages/Privacy";
 import { AMLPolicy } from "@/pages/AMLPolicy";
 import { WinSpinPage } from "@/pages/WinSpinPage";
 import { PredictionPools } from "@/pages/PredictionPools";
+import { LivePage } from "@/pages/LivePage";
 import { AccountLayout } from "@/pages/account/AccountLayout";
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/aml"               component={AMLPolicy}       />
       <Route path="/winspin"           component={WinSpinPage}     />
       <Route path="/prediction-pools"  component={PredictionPools} />
+      <Route path="/live"              component={LivePage}        />
       {/* Legacy redirects */}
       <Route path="/bet-history">
         {() => <Redirect to="/account/bets" />}

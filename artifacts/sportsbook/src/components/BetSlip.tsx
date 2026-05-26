@@ -50,12 +50,14 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     try {
       const apiType = betType === 'acca' ? 'accumulator' : 'single';
       const apiSelections = selections.map(s => ({
-        eventId:    s.matchId,
-        eventName:  s.matchName,
-        sport:      s.sportId ?? "",
-        marketType: s.marketName,
-        selection:  s.selectionName,
-        odds:       s.odds,
+        eventId:          s.matchId,
+        eventName:        s.matchName,
+        sport:            s.sportId ?? "",
+        marketType:       s.marketName,
+        selection:        s.selectionName,
+        odds:             s.odds,
+        isLive:           s.isLive ?? false,
+        scoreAtPlacement: s.scoreAtPlacement,
       }));
 
       const placed_bet = await api.post<{ id: number }>('/bets', {
