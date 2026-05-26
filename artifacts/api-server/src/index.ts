@@ -44,7 +44,7 @@ async function runMigrations() {
 
   try {
     await db.execute(sql`
-      ALTER TABLE bets ADD COLUMN IF NOT EXISTS settled_payout numeric(20,8) DEFAULT NULL
+      ALTER TABLE bets ADD COLUMN IF NOT EXISTS settled_payout numeric(20,8) NOT NULL DEFAULT '0'
     `);
     logger.info("DB migration v5 applied (bets.settled_payout)");
   } catch (err) {
@@ -91,7 +91,7 @@ async function runMigrations() {
   try {
     await db.execute(sql`
       ALTER TABLE sport_controls
-        ADD COLUMN IF NOT EXISTS margin_override numeric(5,2)
+        ADD COLUMN IF NOT EXISTS margin_override numeric(5,2) NOT NULL DEFAULT '0'
     `);
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS market_liability (

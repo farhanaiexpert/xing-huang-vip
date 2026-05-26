@@ -141,7 +141,7 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
 
   // Effective margin: per-sport override > global
   const globalMargin = await getGlobalMarginPct();
-  const effectiveMargin = control?.marginOverride != null
+  const effectiveMargin = control?.marginOverride && parseFloat(control.marginOverride) > 0
     ? Math.max(0, Math.min(100, parseFloat(control.marginOverride)))
     : globalMargin;
   const multiplier = control ? parseFloat(control.oddsMultiplier) : 1;
@@ -253,7 +253,7 @@ router.get("/live/events", async (_req, res): Promise<void> => {
           (ev.bookmakers as unknown[]).length > 0
         );
 
-        const effectiveMargin = ctrl?.marginOverride != null
+        const effectiveMargin = ctrl?.marginOverride && parseFloat(ctrl.marginOverride) > 0
           ? Math.max(0, parseFloat(ctrl.marginOverride))
           : globalMargin;
         const multiplier = ctrl ? parseFloat(ctrl.oddsMultiplier) : 1;

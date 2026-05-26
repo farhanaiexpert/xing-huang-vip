@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS "bets" (
         "potential_return" numeric(20, 8) NOT NULL,
         "status" text DEFAULT 'open' NOT NULL,
         "settled_at" timestamp with time zone,
-        "settled_payout" numeric(20, 8),
+        "settled_payout" numeric(20, 8) DEFAULT '0' NOT NULL,
         "created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS "sport_controls" (
         "is_enabled" boolean DEFAULT true NOT NULL,
         "is_suspended" boolean DEFAULT false NOT NULL,
         "odds_multiplier" numeric(10, 4) DEFAULT '1.0000' NOT NULL,
-        "margin_override" numeric(5, 2),
+        "margin_override" numeric(5, 2) DEFAULT '0' NOT NULL,
         "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

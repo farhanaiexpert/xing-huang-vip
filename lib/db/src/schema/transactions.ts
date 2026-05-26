@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { pgTable, serial, integer, numeric, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -10,15 +9,15 @@ export const transactionsTable = pgTable("transactions", {
   type: text("type").notNull(),
   amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
   status: text("status").notNull().default("pending"),
-  reference: text("reference").default(sql`NULL`),
-  notes: text("notes").default(sql`NULL`),
-  txHash: text("tx_hash").default(sql`NULL`),
+  reference: text("reference"),
+  notes: text("notes"),
+  txHash: text("tx_hash"),
   network: text("network").default("TRC-20"),
-  walletAddress: text("wallet_address").default(sql`NULL`),
+  walletAddress: text("wallet_address"),
   verified: boolean("verified").default(false),
-  verificationNote: text("verification_note").default(sql`NULL`),
-  nowpaymentsPaymentId: text("nowpayments_payment_id").default(sql`NULL`),
-  nowpaymentsStatus: text("nowpayments_status").default(sql`NULL`),
+  verificationNote: text("verification_note"),
+  nowpaymentsPaymentId: text("nowpayments_payment_id"),
+  nowpaymentsStatus: text("nowpayments_status"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

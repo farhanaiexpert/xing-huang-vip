@@ -984,7 +984,7 @@ router.patch("/admin/markets/:id", async (req, res): Promise<void> => {
     isEnabled: z.boolean().optional(),
     isSuspended: z.boolean().optional(),
     oddsMultiplier: z.string().optional(),
-    marginOverride: z.string().nullable().optional(),
+    marginOverride: z.string().optional(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
@@ -1557,14 +1557,14 @@ router.post("/admin/bets/:id/reopen", async (req, res): Promise<void> => {
   const previousStatus = bet.status;
 
   await db.transaction(async (tx) => {
-    await tx.update(betsTable).set({ status: "open", settledAt: null, settledPayout: null }).where(eq(betsTable.id, id));
+    await tx.update(betsTable).set({ status: "open", settledAt: null, settledPayout: "0" }).where(eq(betsTable.id, id));
     await tx.execute(sql`UPDATE bet_selections SET status = 'open' WHERE bet_id = ${id}`);
 
     // Reverse any payout/refund that was already credited.
     // Use settled_payout (exact amount paid) not potential_return, which can differ
     // for accumulators with void legs (adjusted odds = product of won legs only).
     if (previousStatus === "won") {
-      const payout = parseFloat(String(bet.settledPayout ?? bet.potentialReturn));
+      const payout = parseFloat(bet.settledPayout) > 0 ? parseFloat(bet.settledPayout) : parseFloat(String(bet.potentialReturn));
       if (payout > 0) {
         await tx.execute(sql`
           UPDATE wallets SET balance_usdt = GREATEST(0, balance_usdt - ${String(payout.toFixed(8))})
@@ -1666,7 +1666,7 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
           await tx.insert(transactionsTable).values({ userId, type: "debit", amount: refund.toFixed(8), status: "completed", notes: `Bet #${betId} override — prior void refund reversed` });
         }
       }
-      await tx.update(betsTable).set({ status: "open", settledAt: null, settledPayout: null }).where(eq(betsTable.id, betId));
+      await tx.update(betsTable).set({ status: "open", settledAt: null, settledPayout: "0" }).where(eq(betsTable.id, betId));
     }
 
     // Step 2: Reset ALL bet_selections for this event to 'open'

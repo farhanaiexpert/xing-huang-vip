@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { pgTable, serial, integer, numeric, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -12,8 +11,8 @@ export const betsTable = pgTable("bets", {
   totalOdds: numeric("total_odds", { precision: 10, scale: 4 }).notNull(),
   potentialReturn: numeric("potential_return", { precision: 20, scale: 8 }).notNull(),
   status: text("status").notNull().default("open"),
-  settledAt: timestamp("settled_at", { withTimezone: true }).default(sql`NULL`),
-  settledPayout: numeric("settled_payout", { precision: 20, scale: 8 }).default(sql`NULL`),
+  settledAt: timestamp("settled_at", { withTimezone: true }),
+  settledPayout: numeric("settled_payout", { precision: 20, scale: 8 }).notNull().default("0"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -28,7 +27,7 @@ export const betSelectionsTable = pgTable("bet_selections", {
   odds: numeric("odds", { precision: 10, scale: 4 }).notNull(),
   status: text("status").notNull().default("open"),
   isLive: boolean("is_live").notNull().default(false),
-  scoreAtPlacement: text("score_at_placement").default(sql`NULL`),
+  scoreAtPlacement: text("score_at_placement"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
