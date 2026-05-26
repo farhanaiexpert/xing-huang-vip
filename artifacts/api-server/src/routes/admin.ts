@@ -1758,32 +1758,36 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
 // ── GET /admin/reports/book-balance ── Book balance: open stakes vs payouts vs settled ──
 router.get("/admin/reports/book-balance", async (_req, res): Promise<void> => {
   const [openResult, settledResult, platformResult] = await Promise.all([
-    // Open bets: grouped by sport
+    // Open bets: grouped by sport — scalar subquery avoids parlay double-counting
     db.execute(sql`
       SELECT
-        bs.sport,
-        COUNT(DISTINCT b.id)::int                         AS open_bets,
-        SUM(b.stake)::numeric                             AS total_staked,
-        SUM(b.potential_return)::numeric                  AS potential_payout
+        COALESCE(
+          (SELECT bs2.sport FROM bet_selections bs2 WHERE bs2.bet_id = b.id ORDER BY bs2.id LIMIT 1),
+          'Unknown'
+        )                                                   AS sport,
+        COUNT(b.id)::int                                    AS open_bets,
+        SUM(b.stake)::numeric                               AS total_staked,
+        SUM(b.potential_return)::numeric                    AS potential_payout
       FROM bets b
-      JOIN bet_selections bs ON bs.bet_id = b.id
       WHERE b.status = 'open'
-      GROUP BY bs.sport
+      GROUP BY 1
       ORDER BY total_staked DESC
     `),
-    // Settled bets: grouped by sport
+    // Settled bets: grouped by sport — scalar subquery avoids parlay double-counting
     db.execute(sql`
       SELECT
-        bs.sport,
-        COUNT(DISTINCT b.id) FILTER (WHERE b.status = 'won')::int   AS bets_won,
-        COUNT(DISTINCT b.id) FILTER (WHERE b.status = 'lost')::int  AS bets_lost,
-        COUNT(DISTINCT b.id) FILTER (WHERE b.status = 'void')::int  AS bets_voided,
+        COALESCE(
+          (SELECT bs2.sport FROM bet_selections bs2 WHERE bs2.bet_id = b.id ORDER BY bs2.id LIMIT 1),
+          'Unknown'
+        )                                                             AS sport,
+        COUNT(b.id) FILTER (WHERE b.status = 'won')::int            AS bets_won,
+        COUNT(b.id) FILTER (WHERE b.status = 'lost')::int           AS bets_lost,
+        COUNT(b.id) FILTER (WHERE b.status = 'void')::int           AS bets_voided,
         SUM(b.stake)::numeric                                        AS total_staked,
         COALESCE(SUM(b.settled_payout), 0)::numeric                 AS total_paid_out
       FROM bets b
-      JOIN bet_selections bs ON bs.bet_id = b.id
       WHERE b.status IN ('won', 'lost', 'void')
-      GROUP BY bs.sport
+      GROUP BY 1
       ORDER BY total_staked DESC
     `),
     // Platform totals across all statuses

@@ -20,6 +20,7 @@ import {
   userLimitsTable,
 } from "@workspace/db";
 import { logger } from "./logger.js";
+import { nextResetAt } from "./depositGuard.js";
 
 const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
@@ -311,7 +312,13 @@ async function settleBetsForEvent(
             ),
           );
         for (const lim of lossLimits) {
-          if (new Date(lim.resetAt) < now) continue;
+          if (new Date(lim.resetAt) < now) {
+            // Lazily reset expired window inline so limits stay continuously enforceable
+            await tx.update(userLimitsTable)
+              .set({ currentUsage: "0", resetAt: nextResetAt(lim.period), pendingAmountUsdt: null, pendingEffectiveAt: null })
+              .where(eq(userLimitsTable.id, lim.id));
+            continue;
+          }
           await tx
             .update(userLimitsTable)
             .set({ currentUsage: sql`current_usage + ${String(bet.stake)}` })

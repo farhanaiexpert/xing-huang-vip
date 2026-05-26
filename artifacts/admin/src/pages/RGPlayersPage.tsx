@@ -41,6 +41,9 @@ function timeLeft(endsAt: string | null): string {
 export default function RGPlayersPage() {
   const qc = useQueryClient();
   const [lifting, setLifting] = useState<number | null>(null);
+  const [extendId, setExtendId] = useState<number | null>(null);
+  const [extendHours, setExtendHours] = useState<string>("24");
+  const [extending, setExtending] = useState<number | null>(null);
 
   const { data = [], isLoading, refetch } = useQuery<RGPlayer[]>({
     queryKey: ["admin-rg-players"],
@@ -55,6 +58,18 @@ export default function RGPlayersPage() {
       toast.success("Exclusion lifted");
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const extendMut = useMutation({
+    mutationFn: ({ id, hours }: { id: number; hours: number }) =>
+      api.patch(`/admin/rg/exclusions/${id}`, { action: "extend", extendHours: hours }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-rg-players"] });
+      toast.success("Exclusion extended");
+      setExtendId(null);
+      setExtending(null);
+    },
+    onError: (e: Error) => { toast.error(e.message); setExtending(null); },
   });
 
   const excluded = data.filter(p => p.exclusion && !p.exclusion.liftedAt);
@@ -117,7 +132,7 @@ export default function RGPlayersPage() {
                   <p className="text-[#64748B] text-xs">{player.email}</p>
                 </div>
                 {player.exclusion && !player.exclusion.liftedAt && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className={cn(
                       "text-[10px] font-medium px-2 py-0.5 rounded-full border",
                       player.exclusion.isPermanent
@@ -133,6 +148,46 @@ export default function RGPlayersPage() {
                         <Clock className="w-3 h-3" /> {timeLeft(player.exclusion.endsAt)}
                       </span>
                     )}
+
+                    {/* Extend inline UI */}
+                    {!player.exclusion.isPermanent && extendId === player.exclusion.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min={1}
+                          value={extendHours}
+                          onChange={e => setExtendHours(e.target.value)}
+                          className="w-16 text-xs px-2 py-1 rounded-lg bg-white/5 border border-white/15 text-white focus:outline-none focus:border-[#38BDF8]/60"
+                          placeholder="hrs"
+                        />
+                        <span className="text-[10px] text-[#64748B]">h</span>
+                        <button
+                          disabled={extending === player.exclusion.id}
+                          onClick={() => {
+                            const h = parseInt(extendHours, 10);
+                            if (!h || h < 1) { toast.error("Enter a valid number of hours"); return; }
+                            setExtending(player.exclusion!.id);
+                            extendMut.mutate({ id: player.exclusion!.id, hours: h });
+                          }}
+                          className="text-xs px-2.5 py-1 rounded-lg border border-[#38BDF8]/40 text-[#38BDF8] hover:bg-[#38BDF8]/10 transition-colors disabled:opacity-50">
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setExtendId(null)}
+                          className="text-xs px-2 py-1 rounded-lg border border-white/10 text-[#94A3B8] hover:bg-white/5 transition-colors">
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      !player.exclusion.isPermanent && (
+                        <button
+                          onClick={() => { setExtendId(player.exclusion!.id); setExtendHours("24"); }}
+                          className="text-xs px-2.5 py-1 rounded-lg border border-[#38BDF8]/40 text-[#38BDF8] hover:bg-[#38BDF8]/10 transition-colors">
+                          Extend
+                        </button>
+                      )
+                    )}
+
                     <button
                       disabled={lifting === player.exclusion.id}
                       onClick={() => {

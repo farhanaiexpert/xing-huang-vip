@@ -27,10 +27,33 @@ import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
 import { useTransactionNotifications } from "@/hooks/useTransactionNotifications";
+import { Link } from "wouter";
 
 function TransactionNotifier() {
   useTransactionNotifications();
   return null;
+}
+
+function RGFooterBanner() {
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0B0F14]/95 border-t border-white/8 py-2 px-4 flex items-center justify-center gap-3 text-[11px] text-[#64748B] md:pb-2 pb-[calc(0.5rem+56px)]">
+      <span className="text-[#FACC15]">18+</span>
+      <span>Play responsibly.</span>
+      <Link href="/account/responsible-gambling"
+        className="text-[#00DFA9] hover:underline">
+        Set limits &amp; self-exclude
+      </Link>
+      <span className="hidden sm:inline">·</span>
+      <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer"
+        className="hidden sm:inline hover:text-white transition-colors">
+        BeGambleAware.org
+      </a>
+      <a href="https://www.gamstop.co.uk" target="_blank" rel="noopener noreferrer"
+        className="hidden sm:inline hover:text-white transition-colors">
+        GamStop
+      </a>
+    </div>
+  );
 }
 
 const queryClient = new QueryClient();
@@ -86,6 +109,7 @@ function App() {
                           <OnboardingGuide />
                           <PromoPopup />
                           <TransactionNotifier />
+                          <RGFooterBanner />
                           <Toaster />
                         </BetSlipProvider>
                       </BetHistoryProvider>

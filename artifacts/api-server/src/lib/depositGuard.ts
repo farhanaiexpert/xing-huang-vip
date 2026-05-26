@@ -19,7 +19,7 @@ import { logger } from "./logger.js";
 
 // ── Period reset helper ───────────────────────────────────────────────────────
 
-function nextResetAt(period: string): Date {
+export function nextResetAt(period: string): Date {
   const now = new Date();
   if (period === "daily") {
     const d = new Date(now);

@@ -115,7 +115,7 @@ export function ResponsibleGamblingPage() {
       await api.post('/api/rg/exclusion', {
         durationHours: selExclusion ?? undefined,
         isPermanent: selExclusion === null,
-        isTakeABreak: selExclusion !== null && selExclusion <= 168,
+        isTakeABreak: selExclusion !== null && selExclusion <= 24,
       });
       const updated = await api.get<RGStatus>('/api/rg/status');
       setStatus(updated);

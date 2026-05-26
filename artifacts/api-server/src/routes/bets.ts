@@ -7,6 +7,7 @@ import {
   platformSettingsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
+import { nextResetAt } from "../lib/depositGuard.js";
 
 const router = Router();
 
@@ -66,7 +67,13 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     .where(and(eq(userLimitsTable.userId, userId), eq(userLimitsTable.limitType, "loss")));
 
   for (const lim of lossLimits) {
-    if (new Date(lim.resetAt) < now) continue; // expired, skip
+    if (new Date(lim.resetAt) < now) {
+      // Lazily reset the expired window so limits stay continuously enforceable
+      await db.update(userLimitsTable)
+        .set({ currentUsage: "0", resetAt: nextResetAt(lim.period), pendingAmountUsdt: null, pendingEffectiveAt: null })
+        .where(eq(userLimitsTable.id, lim.id));
+      continue;
+    }
 
     // Lazily promote a matured pending increase
     let effectiveLimit = parseFloat(lim.amountUsdt);
