@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { eq, sql, and, gt } from "drizzle-orm";
-import { db, walletsTable, transactionsTable, userLimitsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
+import { db, walletsTable, transactionsTable } from "@workspace/db";
+import { checkDepositLimits, recordDepositUsage, isSelfExcludedFromDeposits } from "../lib/depositGuard.js";
 import { verifyIpnSignature, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
 import { logger } from "../lib/logger.js";
 
@@ -57,31 +58,27 @@ router.post("/webhooks/nowpayments", async (req, res): Promise<void> => {
   // ── 4. Credit wallet when payment finishes ─────────────────────────────────
   if (FINISHED_STATUSES.has(paymentStatus) && txn.status !== "completed") {
     const depositAmount = parseFloat(txn.amount);
-    const now = new Date();
 
-    // Check deposit limit before crediting
-    const [depositLimit] = await db.select().from(userLimitsTable)
-      .where(and(
-        eq(userLimitsTable.userId, txn.userId),
-        eq(userLimitsTable.limitType, "deposit"),
-        gt(userLimitsTable.resetAt, now),
-      ))
-      .limit(1);
+    // Self-exclusion check — excluded users are blocked from depositing
+    const exclMsg = await isSelfExcludedFromDeposits(txn.userId);
+    if (exclMsg) {
+      await db.update(transactionsTable)
+        .set({ status: "rejected", verificationNote: "Deposit rejected: account is self-excluded" })
+        .where(eq(transactionsTable.id, txn.id));
+      logger.warn({ paymentId, userId: txn.userId }, "NOWPayments deposit rejected: self-excluded");
+      res.status(200).json({ received: true });
+      return;
+    }
 
-    if (depositLimit) {
-      const effectiveLimit = depositLimit.pendingAmountUsdt && depositLimit.pendingEffectiveAt && new Date(depositLimit.pendingEffectiveAt) <= now
-        ? parseFloat(depositLimit.pendingAmountUsdt)
-        : parseFloat(depositLimit.amountUsdt);
-      const used = parseFloat(depositLimit.currentUsage ?? "0");
-      if (used + depositAmount > effectiveLimit) {
-        // Over limit — reject the credit and mark as rejected
-        await db.update(transactionsTable)
-          .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
-          .where(eq(transactionsTable.id, txn.id));
-        logger.warn({ paymentId, userId: txn.userId, depositAmount, used, effectiveLimit }, "NOWPayments deposit rejected: deposit limit exceeded");
-        res.status(200).json({ received: true });
-        return;
-      }
+    // Deposit limit check across ALL active periods (daily/weekly/monthly)
+    const limitCheck = await checkDepositLimits(txn.userId, depositAmount);
+    if (limitCheck.blocked) {
+      await db.update(transactionsTable)
+        .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
+        .where(eq(transactionsTable.id, txn.id));
+      logger.warn({ paymentId, userId: txn.userId, depositAmount }, "NOWPayments deposit rejected: deposit limit exceeded");
+      res.status(200).json({ received: true });
+      return;
     }
 
     await db.update(transactionsTable)
@@ -92,12 +89,8 @@ router.post("/webhooks/nowpayments", async (req, res): Promise<void> => {
       .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
       .where(eq(walletsTable.userId, txn.userId));
 
-    // Update deposit limit usage
-    if (depositLimit) {
-      await db.update(userLimitsTable)
-        .set({ currentUsage: sql`current_usage + ${txn.amount}` })
-        .where(eq(userLimitsTable.id, depositLimit.id));
-    }
+    // Record usage across all matching deposit limit windows
+    await recordDepositUsage(txn.userId, txn.amount);
 
     logger.info({ paymentId, userId: txn.userId, amount: txn.amount }, "NOWPayments deposit credited to wallet");
   }

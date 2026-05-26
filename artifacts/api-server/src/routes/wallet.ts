@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { eq, desc, and, gt } from "drizzle-orm";
+import { eq, desc, and, gt, or, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
-import { db, walletsTable, transactionsTable, userLimitsTable } from "@workspace/db";
+import { db, walletsTable, transactionsTable, userLimitsTable, selfExclusionsTable } from "@workspace/db";
+import { checkDepositLimits, recordDepositUsage, isSelfExcludedFromDeposits } from "../lib/depositGuard.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { verifyTronDeposit } from "../lib/tronVerify.js";
 import { createPayment, getPaymentStatus, getMinimumPaymentAmount, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
@@ -67,36 +68,18 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
   const { amount, txHash, network } = parsed.data;
   const userId = req.user!.userId;
 
-  // ── Deposit limit enforcement ─────────────────────────────────────────────────
-  const now = new Date();
-  const [depositLimit] = await db.select().from(userLimitsTable)
-    .where(and(
-      eq(userLimitsTable.userId, userId),
-      eq(userLimitsTable.limitType, "deposit"),
-      gt(userLimitsTable.resetAt, now),
-    ))
-    .limit(1);
-  if (depositLimit) {
-    // Lazily promote a matured pending increase
-    let effectiveLimit = parseFloat(depositLimit.amountUsdt);
-    if (depositLimit.pendingAmountUsdt && depositLimit.pendingEffectiveAt && new Date(depositLimit.pendingEffectiveAt) <= now) {
-      effectiveLimit = parseFloat(depositLimit.pendingAmountUsdt);
-      await db.update(userLimitsTable)
-        .set({ amountUsdt: depositLimit.pendingAmountUsdt, pendingAmountUsdt: null, pendingEffectiveAt: null })
-        .where(eq(userLimitsTable.id, depositLimit.id));
-    }
-    const usedAmt = parseFloat(depositLimit.currentUsage ?? "0");
-    if (usedAmt + amount > effectiveLimit) {
-      const remaining = Math.max(0, effectiveLimit - usedAmt);
-      res.status(403).json({
-        error: `Deposit limit exceeded. You can deposit up to ${remaining.toFixed(2)} USDT in this ${depositLimit.period}.`,
-        code: "DEPOSIT_LIMIT_EXCEEDED",
-        remaining,
-        limit: effectiveLimit,
-        used: usedAmt,
-      });
-      return;
-    }
+  // ── Self-exclusion blocks deposits (withdrawals still allowed) ───────────────
+  const exclusionMsg = await isSelfExcludedFromDeposits(userId);
+  if (exclusionMsg) {
+    res.status(403).json({ error: exclusionMsg, code: "SELF_EXCLUDED" });
+    return;
+  }
+
+  // ── Deposit limit enforcement (all active periods: daily/weekly/monthly) ─────
+  const limitCheck = await checkDepositLimits(userId, amount);
+  if (limitCheck.blocked) {
+    res.status(403).json({ error: limitCheck.reason, code: limitCheck.code, remaining: limitCheck.remaining });
+    return;
   }
 
   // ── Prevent duplicate TxHash submissions ─────────────────────────────────────
@@ -134,12 +117,8 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
       .set({ balanceUsdt: sql`balance_usdt + ${amount.toString()}` })
       .where(eq(walletsTable.userId, userId));
 
-    // Update deposit limit usage
-    if (depositLimit) {
-      await db.update(userLimitsTable)
-        .set({ currentUsage: sql`current_usage + ${amount.toString()}` })
-        .where(eq(userLimitsTable.id, depositLimit.id));
-    }
+    // Record deposit usage across all active limit windows
+    await recordDepositUsage(userId, amount.toString());
 
     logger.info({ txHash, amount, userId }, "Deposit auto-approved and balance credited");
 
@@ -277,26 +256,22 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
       const depositAmt = parseFloat(txn.amount);
       const pollNow = new Date();
 
-      // Enforce deposit limit before crediting
-      const [dlimit] = await db.select().from(userLimitsTable)
-        .where(and(
-          eq(userLimitsTable.userId, txn.userId),
-          eq(userLimitsTable.limitType, "deposit"),
-          gt(userLimitsTable.resetAt, pollNow),
-        ))
-        .limit(1);
-      if (dlimit) {
-        const effLimit = dlimit.pendingAmountUsdt && dlimit.pendingEffectiveAt && new Date(dlimit.pendingEffectiveAt) <= pollNow
-          ? parseFloat(dlimit.pendingAmountUsdt)
-          : parseFloat(dlimit.amountUsdt);
-        const used = parseFloat(dlimit.currentUsage ?? "0");
-        if (used + depositAmt > effLimit) {
-          await db.update(transactionsTable)
-            .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
-            .where(eq(transactionsTable.id, txn.id));
-          res.json({ status: "rejected", nowpaymentsStatus: payment.paymentStatus, credited: false, error: "Deposit limit exceeded" });
-          return;
-        }
+        // Self-exclusion and deposit limit checks before crediting
+      const pollExclMsg = await isSelfExcludedFromDeposits(txn.userId);
+      if (pollExclMsg) {
+        await db.update(transactionsTable)
+          .set({ status: "rejected", verificationNote: "Deposit rejected: account is self-excluded" })
+          .where(eq(transactionsTable.id, txn.id));
+        res.json({ status: "rejected", nowpaymentsStatus: payment.paymentStatus, credited: false, error: "Self-excluded" });
+        return;
+      }
+      const pollLimitCheck = await checkDepositLimits(txn.userId, depositAmt);
+      if (pollLimitCheck.blocked) {
+        await db.update(transactionsTable)
+          .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
+          .where(eq(transactionsTable.id, txn.id));
+        res.json({ status: "rejected", nowpaymentsStatus: payment.paymentStatus, credited: false, error: "Deposit limit exceeded" });
+        return;
       }
 
       await db.update(transactionsTable)
@@ -305,11 +280,7 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
       await db.update(walletsTable)
         .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
         .where(eq(walletsTable.userId, txn.userId));
-      if (dlimit) {
-        await db.update(userLimitsTable)
-          .set({ currentUsage: sql`current_usage + ${txn.amount}` })
-          .where(eq(userLimitsTable.id, dlimit.id));
-      }
+      await recordDepositUsage(txn.userId, txn.amount);
       logger.info({ paymentId, userId: txn.userId }, "NOWPayments deposit credited via polling fallback");
       res.json({ status: payment.paymentStatus, nowpaymentsStatus: payment.paymentStatus, credited: true });
       return;
