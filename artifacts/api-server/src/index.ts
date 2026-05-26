@@ -154,12 +154,27 @@ async function runMigrations() {
   try {
     await db.execute(sql`
       ALTER TABLE user_limits
-        ADD COLUMN IF NOT EXISTS pending_amount_usdt  NUMERIC(20,8),
+        ADD COLUMN IF NOT EXISTS pending_amount_usdt  NUMERIC(20,8) NOT NULL DEFAULT '0',
         ADD COLUMN IF NOT EXISTS pending_effective_at  TIMESTAMPTZ
     `);
     logger.info("DB migration v8 applied (user_limits: pending_amount_usdt, pending_effective_at)");
   } catch (err) {
     logger.warn({ err }, "Migration v8 skipped");
+  }
+
+  // v9: fix pending_amount_usdt nullability for existing DBs where v8 ran before the NOT NULL fix
+  try {
+    await db.execute(sql`
+      UPDATE user_limits SET pending_amount_usdt = '0' WHERE pending_amount_usdt IS NULL
+    `);
+    await db.execute(sql`
+      ALTER TABLE user_limits
+        ALTER COLUMN pending_amount_usdt SET DEFAULT '0',
+        ALTER COLUMN pending_amount_usdt SET NOT NULL
+    `);
+    logger.info("DB migration v9 applied (user_limits.pending_amount_usdt NOT NULL DEFAULT 0)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v9 skipped");
   }
 }
 
