@@ -12,6 +12,7 @@ export const betsTable = pgTable("bets", {
   potentialReturn: numeric("potential_return", { precision: 20, scale: 8 }).notNull(),
   status: text("status").notNull().default("open"),
   settledAt: timestamp("settled_at", { withTimezone: true }),
+  settledPayout: numeric("settled_payout", { precision: 20, scale: 8 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -1454,7 +1454,7 @@ router.post("/admin/settlement/settle", async (req, res): Promise<void> => {
         totalWon++;
       }
 
-      await tx.update(betsTable).set({ status: newStatus, settledAt: new Date() }).where(eq(betsTable.id, betId));
+      await tx.update(betsTable).set({ status: newStatus, settledAt: new Date(), settledPayout: String(payout.toFixed(8)) }).where(eq(betsTable.id, betId));
       totalSettled++;
 
       if (payout > 0) {
@@ -1553,12 +1553,14 @@ router.post("/admin/bets/:id/reopen", async (req, res): Promise<void> => {
   const previousStatus = bet.status;
 
   await db.transaction(async (tx) => {
-    await tx.update(betsTable).set({ status: "open", settledAt: null }).where(eq(betsTable.id, id));
+    await tx.update(betsTable).set({ status: "open", settledAt: null, settledPayout: null }).where(eq(betsTable.id, id));
     await tx.execute(sql`UPDATE bet_selections SET status = 'open' WHERE bet_id = ${id}`);
 
-    // Reverse any payout/refund that was already credited
+    // Reverse any payout/refund that was already credited.
+    // Use settled_payout (exact amount paid) not potential_return, which can differ
+    // for accumulators with void legs (adjusted odds = product of won legs only).
     if (previousStatus === "won") {
-      const payout = parseFloat(String(bet.potentialReturn));
+      const payout = parseFloat(String(bet.settledPayout ?? bet.potentialReturn));
       if (payout > 0) {
         await tx.execute(sql`
           UPDATE wallets SET balance_usdt = GREATEST(0, balance_usdt - ${String(payout.toFixed(8))})
@@ -1636,17 +1638,19 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
   await db.transaction(async (tx) => {
     // Step 1: Find all non-open bets tied to this event; reverse payouts/refunds
     const settled = await tx.execute(sql`
-      SELECT DISTINCT b.id, b.user_id, b.status, b.potential_return, b.stake
+      SELECT DISTINCT b.id, b.user_id, b.status, b.potential_return, b.settled_payout, b.stake
       FROM bets b
       JOIN bet_selections bs ON bs.bet_id = b.id
       WHERE bs.event_id = ${eventId} AND b.status != 'open'
     `);
 
-    for (const row of settled.rows as { id: number; user_id: number; status: string; potential_return: string; stake: string }[]) {
-      const { id: betId, user_id: userId, status: prevStatus, potential_return: potReturn, stake } = row;
+    for (const row of settled.rows as { id: number; user_id: number; status: string; potential_return: string; settled_payout: string | null; stake: string }[]) {
+      const { id: betId, user_id: userId, status: prevStatus, potential_return: potReturn, settled_payout: settledPayoutStr, stake } = row;
 
       if (prevStatus === "won") {
-        const payout = parseFloat(String(potReturn));
+        // Use settled_payout (exact amount credited), not potential_return which can
+        // be higher than actual payout for accumulators with void legs.
+        const payout = parseFloat(String(settledPayoutStr ?? potReturn));
         if (payout > 0) {
           await tx.execute(sql`UPDATE wallets SET balance_usdt = GREATEST(0, balance_usdt - ${payout.toFixed(8)}) WHERE user_id = ${userId}`);
           await tx.insert(transactionsTable).values({ userId, type: "debit", amount: payout.toFixed(8), status: "completed", notes: `Bet #${betId} override — prior payout reversed` });
@@ -1658,7 +1662,7 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
           await tx.insert(transactionsTable).values({ userId, type: "debit", amount: refund.toFixed(8), status: "completed", notes: `Bet #${betId} override — prior void refund reversed` });
         }
       }
-      await tx.update(betsTable).set({ status: "open", settledAt: null }).where(eq(betsTable.id, betId));
+      await tx.update(betsTable).set({ status: "open", settledAt: null, settledPayout: null }).where(eq(betsTable.id, betId));
     }
 
     // Step 2: Reset ALL bet_selections for this event to 'open'
@@ -1698,7 +1702,7 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
         totalWon++;
       }
 
-      await tx.update(betsTable).set({ status: newStatus, settledAt: new Date() }).where(eq(betsTable.id, betId));
+      await tx.update(betsTable).set({ status: newStatus, settledAt: new Date(), settledPayout: String(payout.toFixed(8)) }).where(eq(betsTable.id, betId));
       totalSettled++;
 
       if (payout > 0) {

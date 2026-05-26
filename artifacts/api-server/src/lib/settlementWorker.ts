@@ -190,7 +190,7 @@ async function settleBetsForEvent(
 
       await tx
         .update(betsTable)
-        .set({ status: newStatus, settledAt: new Date() })
+        .set({ status: newStatus, settledAt: new Date(), settledPayout: String(payout.toFixed(8)) })
         .where(eq(betsTable.id, betId));
       totalSettled++;
 

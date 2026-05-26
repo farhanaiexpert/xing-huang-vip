@@ -44,6 +44,15 @@ async function runMigrations() {
 
   try {
     await db.execute(sql`
+      ALTER TABLE bets ADD COLUMN IF NOT EXISTS settled_payout numeric(20,8) DEFAULT NULL
+    `);
+    logger.info("DB migration v5 applied (bets.settled_payout)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v5 skipped");
+  }
+
+  try {
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS settlement_log (
         id             SERIAL PRIMARY KEY,
         event_id       TEXT NOT NULL,
