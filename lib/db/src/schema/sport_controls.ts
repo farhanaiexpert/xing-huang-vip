@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { pgTable, serial, text, boolean, numeric, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -9,7 +10,7 @@ export const sportControlsTable = pgTable("sport_controls", {
   isEnabled: boolean("is_enabled").notNull().default(true),
   isSuspended: boolean("is_suspended").notNull().default(false),
   oddsMultiplier: numeric("odds_multiplier", { precision: 10, scale: 4 }).notNull().default("1.0000"),
-  marginOverride: numeric("margin_override", { precision: 5, scale: 2 }),
+  marginOverride: numeric("margin_override", { precision: 5, scale: 2 }).default(sql`NULL`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 

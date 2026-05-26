@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { pgTable, serial, numeric, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -12,11 +13,11 @@ export const priceBoostsTable = pgTable("price_boosts", {
   selectionName: text("selection_name").notNull(),
   originalOdds:  numeric("original_odds",  { precision: 10, scale: 4 }).notNull(),
   boostedOdds:   numeric("boosted_odds",   { precision: 10, scale: 4 }).notNull(),
-  maxStake:      numeric("max_stake",      { precision: 20, scale: 8 }),
+  maxStake:      numeric("max_stake",      { precision: 20, scale: 8 }).default(sql`NULL`),
   isActive:      boolean("is_active").notNull().default(true),
-  expiresAt:     timestamp("expires_at",   { withTimezone: true }),
+  expiresAt:     timestamp("expires_at",   { withTimezone: true }).default(sql`NULL`),
   createdAt:     timestamp("created_at",   { withTimezone: true }).notNull().defaultNow(),
-  createdBy:     integer("created_by"),
+  createdBy:     integer("created_by").default(sql`NULL`),
 });
 
 export const insertPriceBoostSchema = createInsertSchema(priceBoostsTable).omit({ id: true, createdAt: true });

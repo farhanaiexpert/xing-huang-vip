@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { pgTable, serial, integer, numeric, text, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -8,12 +9,12 @@ export const promotionsTable = pgTable("promotions", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   type: text("type").notNull().default("welcome"),
-  bonusAmount: numeric("bonus_amount", { precision: 20, scale: 8 }),
-  minDeposit: numeric("min_deposit", { precision: 20, scale: 8 }),
+  bonusAmount: numeric("bonus_amount", { precision: 20, scale: 8 }).default(sql`NULL`),
+  minDeposit: numeric("min_deposit", { precision: 20, scale: 8 }).default(sql`NULL`),
   eligibility: text("eligibility").notNull().default("all"),
-  maxClaims: integer("max_claims"),
+  maxClaims: integer("max_claims").default(sql`NULL`),
   isActive: boolean("is_active").notNull().default(true),
-  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).default(sql`NULL`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
