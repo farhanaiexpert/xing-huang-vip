@@ -81,9 +81,13 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
       addBet(placed);
       setConfirmation(placed);
     } catch (err) {
+      const raw = err instanceof Error ? err.message : 'Could not place bet';
+      const isAuthErr = /authorization|unauthorized|401/i.test(raw);
       toast({
         title: 'Bet failed',
-        description: err instanceof Error ? err.message : 'Could not place bet',
+        description: isAuthErr
+          ? 'Your session has expired. Please log in again to place bets.'
+          : raw,
         variant: 'destructive',
       });
     } finally {

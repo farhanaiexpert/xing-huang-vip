@@ -28,12 +28,13 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
   const { email, username, password, referralCode } = parsed.data;
 
-  const existing = await db.select({ id: usersTable.id })
+  const existing = await db.select({ id: usersTable.id, field: usersTable.email })
     .from(usersTable)
-    .where(eq(usersTable.email, email))
+    .where(or(eq(usersTable.email, email), eq(usersTable.username, username)))
     .limit(1);
   if (existing.length > 0) {
-    res.status(409).json({ error: "Email already in use" });
+    const conflict = existing[0].field === email ? "Email" : "Username";
+    res.status(409).json({ error: `${conflict} already in use` });
     return;
   }
 

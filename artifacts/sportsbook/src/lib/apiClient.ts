@@ -15,6 +15,7 @@ export function setTokens(access: string, refresh: string) {
 export function clearTokens() {
   sessionStorage.removeItem(ACCESS_KEY);
   localStorage.removeItem(REFRESH_KEY);
+  window.dispatchEvent(new Event('cb:session-expired'));
 }
 
 async function refreshAccessToken(): Promise<string | null> {

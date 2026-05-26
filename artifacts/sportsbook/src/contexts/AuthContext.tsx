@@ -85,6 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     restore();
   }, []);
 
+  // When the API client detects an unrecoverable 401 (refresh failed),
+  // it fires 'cb:session-expired'. We sync that into React state here.
+  useEffect(() => {
+    const handleExpired = () => setUser(null);
+    window.addEventListener('cb:session-expired', handleExpired);
+    return () => window.removeEventListener('cb:session-expired', handleExpired);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const data = await api.post<AuthResponse>('/auth/login', { email, password });
     setTokens(data.accessToken, data.refreshToken);
