@@ -5,6 +5,7 @@ import { ConnectWalletModal } from './ConnectWalletModal';
 import { NotificationBell } from './NotificationBell';
 import { useWallet } from '../hooks/useWallet';
 import { useAuth } from '../contexts/AuthContext';
+import { useBetHistory } from '../hooks/useBetHistory';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { useOddsFormat } from '../hooks/useOddsFormat';
@@ -254,7 +255,7 @@ export function Header() {
             <NavItem href="/"                   label="All Sports"        />
             <NavItem href="/promotions"         label="Promotions"        />
             <NavItem href="/prediction-pools"   label="Predict & Win"     />
-            <NavItem href="/account/bets"      label="Bet History"       />
+            <BetHistoryNavItem />
             <NavItem href="/help"               label="Help"              />
             <NavItem href="/account/referrals"  label="Affiliate"         />
             <WinSpinNavItem />
@@ -447,6 +448,36 @@ function MenuAction({ icon, label, onClick, danger, href }: { icon: React.ReactN
       {icon}
       {label}
     </button>
+  );
+}
+
+function BetHistoryNavItem() {
+  const [location] = useLocation();
+  const { openBetsCount } = useBetHistory();
+  const isActive = location.startsWith('/account/bets');
+  const base = "relative flex items-center gap-1.5 px-3.5 h-16 text-[13px] font-medium transition-all duration-150 select-none";
+  return (
+    <Link
+      href="/account/bets"
+      className={cn(
+        base,
+        isActive
+          ? 'text-[#F8FAFC] font-semibold'
+          : 'text-[#94A3B8]/60 hover:text-[#F8FAFC] hover:bg-white/[0.04] rounded-lg'
+      )}
+    >
+      <span className="relative">
+        Bet History
+        {openBetsCount > 0 && (
+          <span className="absolute -top-2.5 -right-3 min-w-[16px] h-4 rounded-full bg-[#38BDF8] text-white text-[8px] font-bold flex items-center justify-center px-1 tabular-nums shadow-[0_0_8px_rgba(56,189,248,0.5)]">
+            {openBetsCount > 9 ? '9+' : openBetsCount}
+          </span>
+        )}
+      </span>
+      {isActive && (
+        <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-transparent via-[#00DFA9] to-transparent shadow-[0_0_10px_rgba(0,223,169,0.8)]" />
+      )}
+    </Link>
   );
 }
 

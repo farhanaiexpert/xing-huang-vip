@@ -95,6 +95,15 @@ function BetCard({ bet }: { bet: PlacedBet }) {
           <p className="text-[12px] text-[#94A3B8]/70 truncate">
             {bet.selections.map(s => s.selectionName || s.matchName).join(' · ')}
           </p>
+          {k === 'open' && (
+            <p className="text-[10px] mt-0.5 flex items-center gap-1">
+              {bet.selections.some(s => s.isLive) ? (
+                <><span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse inline-block" /><span className="text-[#EF4444]/80">In play</span></>
+              ) : (
+                <span className="text-[#64748B]">⏱ Placed {fmtDate(bet.placedAt)}</span>
+              )}
+            </p>
+          )}
         </div>
 
         {/* Right */}

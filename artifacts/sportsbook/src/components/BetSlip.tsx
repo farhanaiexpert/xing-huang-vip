@@ -421,20 +421,15 @@ function SingleView({
                         )}
                       </div>
                     </div>
-                    {/* Quick-stake chips */}
+                    {/* Quick-stake chips — each adds to current value */}
                     <div className="flex gap-1">
-                      {[5, 10, 25].map(amt => (
+                      {[5, 10, 25, 50].map(amt => (
                         <button
                           key={amt}
-                          onClick={() => setSingleStake(sel.id, String(amt))}
-                          className={cn(
-                            'flex-1 h-6 rounded-md text-[10px] font-semibold border transition-all duration-150',
-                            parseFloat(singleStakes[sel.id] || '0') === amt
-                              ? 'bg-[#00DFA9]/10 border-[#00DFA9]/40 text-[#00DFA9]'
-                              : 'bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80'
-                          )}
+                          onClick={() => setSingleStake(sel.id, String(parseFloat(singleStakes[sel.id] || '0') + amt))}
+                          className="flex-1 h-6 rounded-md text-[10px] font-semibold border bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80 transition-all duration-150"
                         >
-                          ${amt}
+                          +${amt}
                         </button>
                       ))}
                       <button
@@ -593,20 +588,15 @@ function AccaView({
               onChange={e => setStake(e.target.value)}
             />
           </div>
-          {/* Quick stake presets */}
+          {/* Quick stake presets — each adds to current value */}
           <div className="grid grid-cols-5 gap-1">
             {[5, 10, 25, 50].map(amt => (
               <button
                 key={amt}
-                onClick={() => setStake(String(amt))}
-                className={cn(
-                  'h-7 rounded-lg text-[11px] font-semibold border transition-all duration-150',
-                  stake === String(amt)
-                    ? 'bg-[#00DFA9]/10 border-[#00DFA9]/40 text-[#00DFA9]'
-                    : 'bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80'
-                )}
+                onClick={() => setStake(String(parseFloat(stake || '0') + amt))}
+                className="h-7 rounded-lg text-[11px] font-semibold border bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80 transition-all duration-150"
               >
-                ${amt}
+                +${amt}
               </button>
             ))}
             <button
@@ -704,6 +694,15 @@ function SelectionCard({
       )}>
         {sel.selectionName || sel.selectionType}
       </p>
+
+      {/* Row 4 — kickoff timing (only in full card mode) */}
+      {!compact && (
+        <p className="text-[9px] text-[#94A3B8]/40 mt-0.5 leading-none">
+          {sel.isLive
+            ? <span className="text-[#EF4444]/70">● In play</span>
+            : sel.kickoffTime ?? 'TBC'}
+        </p>
+      )}
 
       {extra}
 

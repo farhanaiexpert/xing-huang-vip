@@ -19,6 +19,8 @@ export type Selection = {
   isLive?: boolean;
   /** Score at time of placement, e.g. "1-0" */
   scoreAtPlacement?: string;
+  /** Formatted kickoff time, e.g. "Today, 20:00" or "Sat, 15:30" */
+  kickoffTime?: string;
 };
 
 export type Match = {

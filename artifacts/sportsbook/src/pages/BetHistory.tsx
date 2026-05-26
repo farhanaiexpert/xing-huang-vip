@@ -281,9 +281,19 @@ function BetCard({ bet }: { bet: PlacedBet }) {
               {bet.betId}
             </span>
           </div>
-          <div className="flex items-center gap-1 shrink-0 px-2 py-1 rounded-lg text-xs font-semibold text-[#FACC15] bg-[#FACC15]/5">
-            <Clock className="h-3.5 w-3.5" />
-            Active
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-[#FACC15] bg-[#FACC15]/5">
+              <Clock className="h-3.5 w-3.5" />
+              Active
+            </div>
+            {bet.selections.some(s => s.isLive) ? (
+              <span className="flex items-center gap-0.5 text-[9px] text-[#EF4444]/80">
+                <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse inline-block" />
+                In play
+              </span>
+            ) : (
+              <span className="text-[9px] text-[#64748B]">Awaiting result</span>
+            )}
           </div>
         </div>
 
