@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, sportControlsTable } from "@workspace/db";
 
 const router = Router();
@@ -22,6 +22,17 @@ const LIVE_SPORTS = [
   "tennis_atp_french_open",
   "cricket_test_match",
 ];
+
+// ─── Returns the merged set of live sport keys (seed + DB-enabled) ────────────
+async function getActiveLiveSports(): Promise<string[]> {
+  try {
+    const controls = await db.select().from(sportControlsTable);
+    const dbKeys = controls.filter(c => c.isEnabled && !c.isSuspended).map(c => c.sportKey);
+    return [...new Set([...LIVE_SPORTS, ...dbKeys])];
+  } catch {
+    return [...LIVE_SPORTS];
+  }
+}
 
 // ─── Upsert sport control row (auto-register sports on first fetch) ────────────
 async function upsertSportControl(sportKey: string, leagueName: string) {
@@ -168,10 +179,13 @@ router.get("/live/events", async (_req, res): Promise<void> => {
     const controls = await db.select().from(sportControlsTable);
     const controlMap = new Map(controls.map(c => [c.sportKey, c]));
 
+    // Merge seed list with any additional enabled sports from DB
+    const activeSports = await getActiveLiveSports();
+
     const now = new Date().toISOString();
 
     const results = await Promise.allSettled(
-      LIVE_SPORTS.map(async (sportKey) => {
+      activeSports.map(async (sportKey) => {
         const ctrl = controlMap.get(sportKey);
         if (ctrl && (!ctrl.isEnabled || ctrl.isSuspended)) return [];
 
@@ -227,8 +241,9 @@ router.get("/live/scores", async (_req, res): Promise<void> => {
   }
 
   try {
+    const activeSports = await getActiveLiveSports();
     const results = await Promise.allSettled(
-      LIVE_SPORTS.map(async (sportKey) => {
+      activeSports.map(async (sportKey) => {
         const url = `${ODDS_API_BASE}/sports/${sportKey}/scores?apiKey=${ODDS_API_KEY}&daysFrom=1&dateFormat=iso`;
         const response = await fetch(url);
         if (!response.ok) return [];

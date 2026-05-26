@@ -4,7 +4,7 @@ import {
   Home, Grid3X3, Receipt, Gift, MoreHorizontal,
   History, HelpCircle, Star, FileText, ShieldCheck,
   Landmark, ChevronRight, Wallet, X, Zap, Check,
-  TrendingUp, Share2, UserCircle,
+  TrendingUp, Share2, UserCircle, Radio,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useWallet } from '../hooks/useWallet';
@@ -21,6 +21,7 @@ const ODDS_FORMATS = [
 ] as const;
 
 const QUICK_ACTIONS = [
+  { icon: Radio,      label: 'Live Betting',sub: 'In-play markets',    href: '/live',               color: '#EF4444', bg: 'rgba(239,68,68,0.08)',    border: 'rgba(239,68,68,0.18)' },
   { icon: History,    label: 'Bet History', sub: 'View your bets',     href: '/account/bets',      color: '#38BDF8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.18)' },
   { icon: Star,       label: 'WinSpin',     sub: 'Spin & win',         href: '/winspin',            color: '#F59E0B', bg: 'rgba(245,158,11,0.08)',   border: 'rgba(245,158,11,0.18)' },
   { icon: HelpCircle, label: 'Help & Rules',sub: 'Learn how to bet',   href: '/help',               color: '#A78BFA', bg: 'rgba(167,139,250,0.08)',  border: 'rgba(167,139,250,0.18)' },

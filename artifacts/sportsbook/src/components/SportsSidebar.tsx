@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { ScrollArea } from './ui/scroll-area';
 import { SPORTS } from '../data/mockData';
 import { useFavorites } from '../hooks/useFavorites';
@@ -94,7 +94,7 @@ function TrendBar({ count }: { count: number }) {
 
 export function SportsSidebar({ selectedSportId, onSelectSport, className }: SportsSidebarProps) {
   const [showAllAZ, setShowAllAZ] = useState(false);
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { favSports, recentMatches, toggleFavSport, isFavSport } = useFavorites();
 
   const popularSports  = SPORTS.filter(s => s.isPopular);
@@ -111,6 +111,29 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
     )}>
       <ScrollArea className="flex-1">
         <div className="py-3">
+
+          {/* ── Live Now ─────────────────────────────────────────────────── */}
+          <Link
+            href="/live"
+            className={cn(
+              'flex items-center gap-2.5 px-4 xl:px-5 py-2.5 mx-2 mb-1 rounded-xl transition-all duration-150',
+              location === '/live'
+                ? 'bg-[#EF4444]/10 border border-[#EF4444]/25'
+                : 'hover:bg-[#121821]/80 border border-transparent'
+            )}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.8)] shrink-0" />
+            <span className={cn(
+              'text-[12px] font-bold flex-1',
+              location === '/live' ? 'text-[#EF4444]' : 'text-[#94A3B8]'
+            )}>
+              Live Now
+            </span>
+            <span className="text-[9px] font-black uppercase tracking-wider bg-[#EF4444] text-white px-1.5 py-0.5 rounded-md leading-none">
+              LIVE
+            </span>
+          </Link>
+          <SectionDivider />
 
           {/* ── Pinned / Favourites ─────────────────────────────────────── */}
           {pinnedSports.length > 0 && (
