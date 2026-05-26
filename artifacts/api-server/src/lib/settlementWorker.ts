@@ -84,9 +84,21 @@ function determineMatchOutcome(event: CompletedEvent): MatchOutcome {
   return "draw";
 }
 
+/** Extract numeric home/away scores from a completed event. Returns null if scores are missing/invalid. */
+function getNumericScores(event: CompletedEvent): { home: number; away: number } | null {
+  if (!event.scores || event.scores.length < 2) return null;
+  const homeEntry = event.scores.find((s) => s.name === event.home_team);
+  const awayEntry = event.scores.find((s) => s.name === event.away_team);
+  if (!homeEntry || !awayEntry) return null;
+  const home = parseFloat(homeEntry.score);
+  const away = parseFloat(awayEntry.score);
+  if (isNaN(home) || isNaN(away)) return null;
+  return { home, away };
+}
+
 /**
- * Maps a single selection string to won/lost/void based on the match result.
- * Handles h2h selections (team name or "Draw").
+ * Maps a single h2h selection to won/lost/void based on the match result.
+ * Handles team-name, numeric (1/2/X), and keyword (home/away/draw) formats.
  */
 function mapSelectionOutcome(
   selection: string,
@@ -120,6 +132,80 @@ function mapSelectionOutcome(
   if (outcome === "away" && away.split(" ").some((w) => sel.includes(w) && w.length > 2)) return "won";
 
   return "void";
+}
+
+/**
+ * Settles a totals (over/under) selection.
+ * Expected selection format: "Over 2.5" | "Under 2.5"
+ * Returns void on push (exact line) or unrecognised format.
+ */
+function mapTotalsOutcome(
+  selection: string,
+  homeScore: number,
+  awayScore: number,
+): "won" | "lost" | "void" {
+  const lower = selection.toLowerCase().trim();
+  const total = homeScore + awayScore;
+
+  const overMatch  = lower.match(/^over\s+(\d+(?:\.\d+)?)$/);
+  const underMatch = lower.match(/^under\s+(\d+(?:\.\d+)?)$/);
+
+  if (overMatch) {
+    const line = parseFloat(overMatch[1]);
+    if (isNaN(line)) return "void";
+    if (total > line) return "won";
+    if (total < line) return "lost";
+    return "void"; // push
+  }
+  if (underMatch) {
+    const line = parseFloat(underMatch[1]);
+    if (isNaN(line)) return "void";
+    if (total < line) return "won";
+    if (total > line) return "lost";
+    return "void"; // push
+  }
+  return "void"; // unrecognised format
+}
+
+/**
+ * Settles a spreads (point-spread / handicap) selection.
+ * Expected selection format: "Team Name +1.5" | "Team Name -1.5"
+ * Returns void on push (margin exactly zero) or unrecognised format.
+ */
+function mapSpreadsOutcome(
+  selection: string,
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: number,
+  awayScore: number,
+): "won" | "lost" | "void" {
+  const lower = selection.toLowerCase().trim();
+  const home  = homeTeam.toLowerCase().trim();
+  const away  = awayTeam.toLowerCase().trim();
+
+  // Expect "<team name> [+-]<number>" at end of string
+  const spreadMatch = lower.match(/^(.+?)\s*([+-]\d+(?:\.\d+)?)$/);
+  if (!spreadMatch) return "void";
+
+  const teamPart = spreadMatch[1].trim();
+  const spread   = parseFloat(spreadMatch[2]);
+  if (isNaN(spread)) return "void";
+
+  const isHome =
+    teamPart === home || home.split(" ").some((w) => teamPart.includes(w) && w.length > 2);
+  const isAway =
+    teamPart === away || away.split(" ").some((w) => teamPart.includes(w) && w.length > 2);
+
+  if (!isHome && !isAway) return "void";
+
+  // margin > 0 → this team covered; < 0 → didn't cover; = 0 → push
+  const margin = isHome
+    ? homeScore + spread - awayScore
+    : awayScore + spread - homeScore;
+
+  if (margin > 0) return "won";
+  if (margin < 0) return "lost";
+  return "void"; // push
 }
 
 // ─── DB settlement transaction ────────────────────────────────────────────────
@@ -277,19 +363,24 @@ async function processSettlement(): Promise<void> {
 
         if (openSelectionsResult.rows.length === 0) continue;
 
-        // Build outcome list — h2h auto-resolved; non-h2h voided for admin review
+        // Resolve every open selection deterministically.
+        // h2h → match-winner logic, totals → over/under, spreads → point-spread.
+        // Only truly unrecognised market types fall through to void.
+        const numericScores = getNumericScores(event);
         const outcomes: EventOutcome[] = [];
         for (const row of openSelectionsResult.rows as { market_type: string; selection: string }[]) {
+          let result: "won" | "lost" | "void";
           if (row.market_type === "h2h") {
-            outcomes.push({
-              marketType: row.market_type,
-              selection: row.selection,
-              result: mapSelectionOutcome(row.selection, matchOutcome, event.home_team, event.away_team),
-            });
+            result = mapSelectionOutcome(row.selection, matchOutcome, event.home_team, event.away_team);
+          } else if (row.market_type === "totals" && numericScores) {
+            result = mapTotalsOutcome(row.selection, numericScores.home, numericScores.away);
+          } else if (row.market_type === "spreads" && numericScores) {
+            result = mapSpreadsOutcome(row.selection, event.home_team, event.away_team, numericScores.home, numericScores.away);
           } else {
-            // Non-h2h markets (totals, spreads) — void; admin can override
-            outcomes.push({ marketType: row.market_type, selection: row.selection, result: "void" });
+            // Scores unavailable or market type not yet supported — void for admin review
+            result = "void";
           }
+          outcomes.push({ marketType: row.market_type, selection: row.selection, result });
         }
 
         if (outcomes.length === 0) continue;
