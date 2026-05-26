@@ -53,6 +53,17 @@ async function runMigrations() {
 
   try {
     await db.execute(sql`
+      ALTER TABLE bet_selections
+        ADD COLUMN IF NOT EXISTS is_live boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS score_at_placement text
+    `);
+    logger.info("DB migration v6 applied (bet_selections.is_live, score_at_placement)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v6 skipped");
+  }
+
+  try {
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS settlement_log (
         id             SERIAL PRIMARY KEY,
         event_id       TEXT NOT NULL,

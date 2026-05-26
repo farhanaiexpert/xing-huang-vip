@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, numeric, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, numeric, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -26,6 +26,8 @@ export const betSelectionsTable = pgTable("bet_selections", {
   selection: text("selection").notNull(),
   odds: numeric("odds", { precision: 10, scale: 4 }).notNull(),
   status: text("status").notNull().default("open"),
+  isLive: boolean("is_live").notNull().default(false),
+  scoreAtPlacement: text("score_at_placement"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

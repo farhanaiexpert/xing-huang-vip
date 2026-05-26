@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { db, betsTable, betSelectionsTable, walletsTable, transactionsTable } from "@workspace/db";
+import { db, betsTable, betSelectionsTable, walletsTable, transactionsTable, sportControlsTable } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 
 const router = Router();
@@ -13,6 +13,8 @@ const SelectionSchema = z.object({
   marketType: z.string(),
   selection: z.string(),
   odds: z.number().positive(),
+  isLive: z.boolean().default(false),
+  scoreAtPlacement: z.string().optional(),
 });
 
 const PlaceBetBody = z.object({
@@ -28,6 +30,20 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     return;
   }
   const { type, stake, selections } = parsed.data;
+
+  // ── Suspension check for live bets ────────────────────────────────────────
+  const liveSports = [...new Set(selections.filter(s => s.isLive).map(s => s.sport).filter(Boolean))];
+  if (liveSports.length > 0) {
+    const controls = await db
+      .select()
+      .from(sportControlsTable)
+      .where(inArray(sportControlsTable.sportKey, liveSports));
+    const suspended = controls.find(c => c.isSuspended);
+    if (suspended) {
+      res.status(403).json({ error: `Live betting is suspended for ${suspended.leagueName}` });
+      return;
+    }
+  }
 
   const [wallet] = await db.select().from(walletsTable)
     .where(eq(walletsTable.userId, req.user!.userId)).limit(1);
@@ -58,6 +74,8 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
       selection: s.selection,
       odds: s.odds.toFixed(4),
       status: "open",
+      isLive: s.isLive ?? false,
+      scoreAtPlacement: s.scoreAtPlacement ?? null,
     }))
   );
 

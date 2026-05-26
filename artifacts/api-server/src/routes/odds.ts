@@ -9,6 +9,19 @@ const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
 const CACHE_TTL = 60 * 60 * 1000;
+const LIVE_CACHE_TTL = 30 * 1000;
+
+const LIVE_SPORTS = [
+  "soccer_epl",
+  "soccer_uefa_champs_league",
+  "soccer_spain_la_liga",
+  "soccer_germany_bundesliga",
+  "americanfootball_nfl",
+  "basketball_nba",
+  "mma_mixed_martial_arts",
+  "tennis_atp_french_open",
+  "cricket_test_match",
+];
 
 // ─── Upsert sport control row (auto-register sports on first fetch) ────────────
 async function upsertSportControl(sportKey: string, leagueName: string) {
@@ -133,6 +146,114 @@ router.get("/odds/sports/list", async (_req, res): Promise<void> => {
     res.json({ data, cached: false });
   } catch {
     res.status(500).json({ error: "Failed to fetch sports" });
+  }
+});
+
+// ─── Live Events — polls curated sports for in-play events (30s server cache) ──
+router.get("/live/events", async (_req, res): Promise<void> => {
+  if (!ODDS_API_KEY) {
+    res.status(503).json({ error: "Odds API not configured" });
+    return;
+  }
+
+  const cacheKey = "live_events";
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    res.json(cached.data);
+    return;
+  }
+
+  try {
+    // Load all sport controls for multipliers + suspension status
+    const controls = await db.select().from(sportControlsTable);
+    const controlMap = new Map(controls.map(c => [c.sportKey, c]));
+
+    const now = new Date().toISOString();
+
+    const results = await Promise.allSettled(
+      LIVE_SPORTS.map(async (sportKey) => {
+        const ctrl = controlMap.get(sportKey);
+        if (ctrl && (!ctrl.isEnabled || ctrl.isSuspended)) return [];
+
+        const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h&oddsFormat=decimal&dateFormat=iso`;
+        const response = await fetch(url);
+        if (!response.ok) return [];
+        const data = (await response.json()) as Record<string, unknown>[];
+        if (!Array.isArray(data)) return [];
+
+        // Filter: commenced (commence_time in past) and has bookmakers
+        const liveEvents = data.filter(ev =>
+          typeof ev.commence_time === "string" &&
+          ev.commence_time < now &&
+          Array.isArray(ev.bookmakers) &&
+          (ev.bookmakers as unknown[]).length > 0
+        );
+
+        const multiplier = ctrl ? parseFloat(ctrl.oddsMultiplier) : 1;
+        return (applyMultiplier(liveEvents, multiplier) as Record<string, unknown>[]).map(ev => ({
+          ...ev,
+          sport_key: sportKey,
+        }));
+      })
+    );
+
+    const events: Record<string, unknown>[] = [];
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        events.push(...result.value);
+      }
+    }
+
+    const payload = { events, count: events.length, cached: false };
+    cache.set(cacheKey, { data: payload, expiresAt: Date.now() + LIVE_CACHE_TTL });
+    res.json(payload);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch live events" });
+  }
+});
+
+// ─── Live Scores — in-progress match scores (30s server cache) ───────────────
+router.get("/live/scores", async (_req, res): Promise<void> => {
+  if (!ODDS_API_KEY) {
+    res.status(503).json({ error: "Odds API not configured" });
+    return;
+  }
+
+  const cacheKey = "live_scores";
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    res.json(cached.data);
+    return;
+  }
+
+  try {
+    const results = await Promise.allSettled(
+      LIVE_SPORTS.map(async (sportKey) => {
+        const url = `${ODDS_API_BASE}/sports/${sportKey}/scores?apiKey=${ODDS_API_KEY}&daysFrom=1&dateFormat=iso`;
+        const response = await fetch(url);
+        if (!response.ok) return [];
+        const data = (await response.json()) as Record<string, unknown>[];
+        if (!Array.isArray(data)) return [];
+
+        // Only in-progress (not completed, has scores)
+        return data
+          .filter(ev => !ev.completed && Array.isArray(ev.scores) && (ev.scores as unknown[]).length > 0)
+          .map(ev => ({ ...ev, sport_key: sportKey }));
+      })
+    );
+
+    const scores: Record<string, unknown>[] = [];
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        scores.push(...result.value);
+      }
+    }
+
+    const payload = { scores, count: scores.length, cached: false };
+    cache.set(cacheKey, { data: payload, expiresAt: Date.now() + LIVE_CACHE_TTL });
+    res.json(payload);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch live scores" });
   }
 });
 

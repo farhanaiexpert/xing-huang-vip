@@ -15,6 +15,10 @@ export type Selection = {
   odds: number;
   /** The Odds API sport key, e.g. "soccer_epl" */
   sportId?: string;
+  /** True when this selection was added from the live betting page */
+  isLive?: boolean;
+  /** Score at time of placement, e.g. "1-0" */
+  scoreAtPlacement?: string;
 };
 
 export type Match = {
