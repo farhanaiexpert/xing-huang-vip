@@ -29,14 +29,22 @@ function statusKey(status?: string): Filter {
 
 function StatusBadge({ status }: { status?: string }) {
   const k = statusKey(status);
-  const cfg: Record<Filter, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {
-    open: { label: 'Open',  color: '#38BDF8', bg: 'rgba(56,189,248,0.12)',   icon: Clock        },
+  if (k === 'open') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border"
+        style={{ color: '#38BDF8', background: 'rgba(56,189,248,0.12)', borderColor: 'rgba(56,189,248,0.30)' }}>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-pulse" />
+        Open
+      </span>
+    );
+  }
+  const cfg: Partial<Record<Filter, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }>> = {
     won:  { label: 'Won',   color: '#00DFA9', bg: 'rgba(0,223,169,0.12)',    icon: CheckCircle2 },
     lost: { label: 'Lost',  color: '#EF4444', bg: 'rgba(239,68,68,0.12)',    icon: XCircle      },
     void: { label: 'Void',  color: '#94A3B8', bg: 'rgba(148,163,184,0.12)', icon: Clock        },
     all:  { label: 'All',   color: '#94A3B8', bg: 'rgba(148,163,184,0.12)', icon: Clock        },
   };
-  const c = cfg[k];
+  const c = cfg[k] ?? cfg['all']!;
   const Icon = c.icon;
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border"
@@ -92,10 +100,12 @@ function BetCard({ bet }: { bet: PlacedBet }) {
         {/* Right */}
         <div className="text-right shrink-0 min-w-[80px]">
           <p className="text-[13px] font-bold text-[#F8FAFC]">${bet.stake.toFixed(2)}</p>
-          {settled ? (
-            <p className={cn('text-[11px] font-semibold', profit >= 0 ? 'text-[#00DFA9]' : 'text-[#EF4444]')}>
-              {profit >= 0 ? '+' : ''}${Math.abs(k === 'won' ? profit : bet.stake).toFixed(2)}
-            </p>
+          {k === 'won' ? (
+            <p className="text-[11px] font-bold text-[#00DFA9]">🏆 +${profit.toFixed(2)}</p>
+          ) : k === 'lost' ? (
+            <p className="text-[11px] font-bold text-[#EF4444]">-${bet.stake.toFixed(2)}</p>
+          ) : k === 'void' ? (
+            <p className="text-[11px] font-semibold text-[#94A3B8]">Refunded</p>
           ) : (
             <p className="text-[11px] text-[#64748B]">Pot ${bet.estimatedPayout.toFixed(2)}</p>
           )}

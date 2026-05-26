@@ -319,6 +319,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               totalSingleStaked={totalSingleStaked}
               totalSingleReturn={totalSingleReturn}
               isConnected={isConnected}
+              isAuthenticated={isAuthenticated}
               balance={balance}
               canPlace={canPlaceSingle}
               onConnectWallet={() => setDepositOpen(true)}
@@ -333,6 +334,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               setStake={setStake}
               accaReturn={accaReturn}
               isConnected={isConnected}
+              isAuthenticated={isAuthenticated}
               balance={balance}
               canPlace={canPlaceAcca}
               readyToStake={readyToStake}
@@ -356,7 +358,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 // ────────────────────────────────────────────────────────────────
 function SingleView({
   selections, singleStakes, setSingleStake, removeSelection,
-  totalSingleStaked, totalSingleReturn, isConnected, balance, canPlace,
+  totalSingleStaked, totalSingleReturn, isConnected, isAuthenticated, balance, canPlace,
   onConnectWallet, onPlaceBet,
 }: {
   selections: Selection[];
@@ -366,11 +368,23 @@ function SingleView({
   totalSingleStaked: number;
   totalSingleReturn: number;
   isConnected: boolean;
+  isAuthenticated: boolean;
   balance: number;
   canPlace: boolean;
   onConnectWallet: () => void;
   onPlaceBet: () => void;
 }) {
+  const totalProfit = totalSingleReturn - totalSingleStaked;
+
+  // Compute why Place Bet is disabled (for the helper hint)
+  let disabledHint: string | null = null;
+  if (!canPlace) {
+    if (!isAuthenticated) disabledHint = 'Log in to place bets';
+    else if (totalSingleStaked <= 0) disabledHint = 'Enter a stake for at least one selection';
+    else if (balance === 0) disabledHint = 'Insufficient balance — top up to bet';
+    else if (totalSingleStaked > balance) disabledHint = `Total stake exceeds your balance ($${balance.toFixed(2)})`;
+  }
+
   return (
     <>
       <ScrollArea className="flex-1 min-h-0 px-3">
@@ -378,28 +392,58 @@ function SingleView({
           {selections.map(sel => {
             const st  = parseFloat(singleStakes[sel.id] || '0');
             const ret = st > 0 ? (st * sel.odds).toFixed(2) : null;
+            const profit = st > 0 ? (st * (sel.odds - 1)).toFixed(2) : null;
             return (
               <SelectionCard
                 key={sel.id}
                 sel={sel}
                 onRemove={() => removeSelection(sel.id)}
                 extra={
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="relative flex-1">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#94A3B8] z-10 pointer-events-none">$</span>
-                      <Input
-                        type="number"
-                        placeholder="Stake"
-                        className="pl-6 pr-2 h-8 rounded-lg text-xs bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50"
-                        value={singleStakes[sel.id] || ''}
-                        onChange={e => setSingleStake(sel.id, e.target.value)}
-                      />
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#94A3B8] z-10 pointer-events-none">$</span>
+                        <Input
+                          type="number"
+                          placeholder="Stake"
+                          className="pl-6 pr-2 h-8 rounded-lg text-xs bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50"
+                          value={singleStakes[sel.id] || ''}
+                          onChange={e => setSingleStake(sel.id, e.target.value)}
+                        />
+                      </div>
+                      <div className="text-right shrink-0 w-[72px]">
+                        <p className="text-[9px] text-[#94A3B8]/60 leading-none mb-0.5">Return · Profit</p>
+                        <p className={cn('text-xs font-bold leading-none', ret ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40')}>
+                          {ret ? `$${ret}` : '—'}
+                        </p>
+                        {profit && (
+                          <p className="text-[9px] font-semibold text-[#00DFA9] leading-none mt-0.5">+${profit}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right shrink-0 w-[64px]">
-                      <p className="text-[9px] text-[#94A3B8]/60 leading-none mb-0.5">Return</p>
-                      <p className={cn('text-xs font-bold leading-none', ret ? 'text-[#22C55E]' : 'text-[#94A3B8]/40')}>
-                        {ret ? `$${ret}` : '—'}
-                      </p>
+                    {/* Quick-stake chips */}
+                    <div className="flex gap-1">
+                      {[5, 10, 25].map(amt => (
+                        <button
+                          key={amt}
+                          onClick={() => setSingleStake(sel.id, String(amt))}
+                          className={cn(
+                            'flex-1 h-6 rounded-md text-[10px] font-semibold border transition-all duration-150',
+                            parseFloat(singleStakes[sel.id] || '0') === amt
+                              ? 'bg-[#00DFA9]/10 border-[#00DFA9]/40 text-[#00DFA9]'
+                              : 'bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80'
+                          )}
+                        >
+                          ${amt}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => balance > 0 && setSingleStake(sel.id, balance.toFixed(2))}
+                        disabled={balance <= 0}
+                        className="flex-1 h-6 rounded-md text-[10px] font-semibold border bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#FACC15]/30 hover:text-[#FACC15]/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
+                      >
+                        Max
+                      </button>
                     </div>
                   </div>
                 }
@@ -420,10 +464,19 @@ function SingleView({
           <div className="h-px bg-[#253241]" />
           <div className="flex justify-between items-center">
             <span className="text-[11px] text-[#94A3B8]">Total Return</span>
-            <span className={cn('text-sm font-bold', totalSingleReturn > 0 ? 'text-[#22C55E]' : 'text-[#94A3B8]/40')}>
+            <span className={cn('text-sm font-bold', totalSingleReturn > 0 ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40')}>
               {totalSingleReturn > 0 ? `$${totalSingleReturn.toFixed(2)}` : '—'}
             </span>
           </div>
+          {totalProfit > 0 && (
+            <>
+              <div className="h-px bg-[#253241]" />
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-[#94A3B8]">Profit if Win</span>
+                <span className="text-sm font-bold text-[#00DFA9]">+${totalProfit.toFixed(2)}</span>
+              </div>
+            </>
+          )}
         </div>
         {isConnected && totalSingleStaked > 0 && balance === 0 && (
           <p className="text-[10px] text-[#EF4444] bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-lg px-2.5 py-1.5 text-center leading-snug">
@@ -442,6 +495,9 @@ function SingleView({
           onPlaceBet={onPlaceBet}
           hasStake={totalSingleStaked > 0}
         />
+        {disabledHint && (
+          <p className="text-[10px] text-[#94A3B8]/50 text-center leading-snug -mt-1">{disabledHint}</p>
+        )}
       </div>
     </>
   );
@@ -452,7 +508,7 @@ function SingleView({
 // ────────────────────────────────────────────────────────────────
 function AccaView({
   selections, removeSelection, totalOdds, stake, setStake,
-  accaReturn, isConnected, balance, canPlace, readyToStake, onConnectWallet, onPlaceBet,
+  accaReturn, isConnected, isAuthenticated, balance, canPlace, readyToStake, onConnectWallet, onPlaceBet,
 }: {
   selections: Selection[];
   removeSelection: (id: string) => void;
@@ -461,6 +517,7 @@ function AccaView({
   setStake: (v: string) => void;
   accaReturn: number;
   isConnected: boolean;
+  isAuthenticated: boolean;
   balance: number;
   canPlace: boolean;
   readyToStake: boolean;
@@ -468,6 +525,16 @@ function AccaView({
   onPlaceBet: () => void;
 }) {
   const stakeNum = parseFloat(stake || '0');
+
+  // Compute why Place Bet is disabled
+  let disabledHint: string | null = null;
+  if (!canPlace) {
+    if (!isAuthenticated) disabledHint = 'Log in to place bets';
+    else if (stakeNum <= 0) disabledHint = 'Enter a stake amount to continue';
+    else if (balance === 0) disabledHint = 'Insufficient balance — top up to bet';
+    else if (stakeNum > balance) disabledHint = `Stake exceeds your balance ($${balance.toFixed(2)})`;
+    else if (selections.length < 2) disabledHint = 'Add at least 2 selections for an accumulator';
+  }
   return (
     <>
       {/* Bet type label */}
@@ -497,11 +564,20 @@ function AccaView({
           </div>
           <div className="h-px bg-[#253241]" />
           <div className="flex justify-between items-center">
-            <span className="text-[11px] text-[#94A3B8]">Potential Returns</span>
-            <span className={cn('text-sm font-bold transition-colors', accaReturn > 0 ? 'text-[#22C55E]' : 'text-[#94A3B8]/40')}>
+            <span className="text-[11px] text-[#94A3B8]">Potential Return</span>
+            <span className={cn('text-sm font-bold transition-colors', accaReturn > 0 ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40')}>
               {accaReturn > 0 ? `$${accaReturn.toFixed(2)}` : '—'}
             </span>
           </div>
+          {accaReturn > 0 && stakeNum > 0 && (
+            <>
+              <div className="h-px bg-[#253241]" />
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-[#94A3B8]">Profit if Win</span>
+                <span className="text-sm font-bold text-[#00DFA9]">+${(accaReturn - stakeNum).toFixed(2)}</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Stake */}
@@ -518,7 +594,7 @@ function AccaView({
             />
           </div>
           {/* Quick stake presets */}
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-5 gap-1">
             {[5, 10, 25, 50].map(amt => (
               <button
                 key={amt}
@@ -533,6 +609,13 @@ function AccaView({
                 ${amt}
               </button>
             ))}
+            <button
+              onClick={() => balance > 0 && setStake(balance.toFixed(2))}
+              disabled={balance <= 0}
+              className="h-7 rounded-lg text-[11px] font-semibold border bg-[#0B0F14] border-[#253241] text-[#94A3B8] hover:border-[#FACC15]/30 hover:text-[#FACC15]/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
+            >
+              Max
+            </button>
           </div>
         </div>
 
@@ -553,6 +636,9 @@ function AccaView({
           onPlaceBet={onPlaceBet}
           hasStake={stakeNum > 0}
         />
+        {disabledHint && (
+          <p className="text-[10px] text-[#94A3B8]/50 text-center leading-snug -mt-1">{disabledHint}</p>
+        )}
       </div>
     </>
   );
@@ -584,11 +670,19 @@ function SelectionCard({
         </p>
       )}
 
-      {/* Row 2 — match name + odds/remove pinned right */}
+      {/* Row 2 — match name + live badge + odds/remove pinned right */}
       <div className="flex items-start justify-between gap-2 mb-1">
-        <p className="flex-1 min-w-0 text-[11px] text-[#94A3B8] leading-snug break-words [overflow-wrap:anywhere]">
-          {sel.matchName}
-        </p>
+        <div className="flex-1 min-w-0 flex items-start gap-1.5 flex-wrap">
+          <p className="text-[11px] text-[#94A3B8] leading-snug break-words [overflow-wrap:anywhere]">
+            {sel.matchName}
+          </p>
+          {sel.isLive && (
+            <span className="shrink-0 inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-[#EF4444]/12 border border-[#EF4444]/25 text-[#EF4444] text-[8px] font-bold uppercase tracking-wider leading-none mt-px">
+              <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
+              LIVE
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1 shrink-0 self-start">
           <span className={cn('font-black text-[#FACC15] leading-none tabular-nums', compact ? 'text-sm' : 'text-base')}>
             {formatOdds(sel.odds, format)}

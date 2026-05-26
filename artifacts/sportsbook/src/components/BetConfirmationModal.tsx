@@ -158,6 +158,16 @@ export function BetConfirmationModal({ confirmation, onClose }: BetConfirmationM
           </div>
         </div>
 
+        {/* What happens next */}
+        <div className="mx-5 mb-4 rounded-xl bg-[#0B0F14] border border-[#253241]/60 px-4 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 mb-2">What happens next</p>
+          <div className="space-y-1.5 text-[11px] text-[#94A3B8]/70 leading-snug">
+            <p className="flex items-start gap-1.5"><span className="text-[#00DFA9] shrink-0">✓</span> Your bet is live and stake has been reserved</p>
+            <p className="flex items-start gap-1.5"><span className="text-[#00DFA9] shrink-0">✓</span> Settles automatically once the match ends</p>
+            <p className="flex items-start gap-1.5"><span className="text-[#00DFA9] shrink-0">✓</span> Winnings credited instantly to your wallet</p>
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="px-5 pb-5 flex flex-col gap-2">
           <Link href="/bet-history" onClick={onClose}>

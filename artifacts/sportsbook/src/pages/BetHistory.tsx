@@ -68,6 +68,7 @@ export function BetHistory() {
 
   const totalStake  = bets.reduce((acc, b) => acc + b.stake, 0);
   const potReturn   = bets.reduce((acc, b) => acc + b.estimatedPayout, 0);
+  const openCount   = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
 
   if (!isConnected) {
     return (
@@ -134,7 +135,7 @@ export function BetHistory() {
             />
             <StatCard
               label="Open Bets"
-              value={String(bets.length)}
+              value={String(openCount)}
               sub="awaiting result"
               icon={<Clock className="h-4 w-4" />}
               color="amber"

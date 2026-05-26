@@ -7,6 +7,7 @@ import {
   TrendingUp, Share2, UserCircle, Radio,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
+import { useBetHistory } from '../hooks/useBetHistory';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from './ui/drawer';
@@ -42,6 +43,7 @@ const MORE_PAGES = [
 export function MobileBottomNav() {
   const [location, setLocation] = useLocation();
   const { selections } = useBetSlip();
+  const { openBetsCount } = useBetHistory();
   const { isConnected, shortAddress, connect } = useWallet();
   const { format, setFormat } = useOddsFormat();
   const [betSlipOpen, setBetSlipOpen] = useState(false);
@@ -119,7 +121,14 @@ export function MobileBottomNav() {
               'flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150',
               isAccount && !isMoreTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
             )}>
-            <UserCircle className="h-5 w-5" />
+            <div className="relative">
+              <UserCircle className="h-5 w-5" />
+              {openBetsCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] rounded-full bg-[#38BDF8] border border-[#0B0F14] text-white text-[8px] font-bold flex items-center justify-center px-0.5 tabular-nums">
+                  {openBetsCount > 9 ? '9+' : openBetsCount}
+                </span>
+              )}
+            </div>
             <span>Account</span>
           </Link>
 

@@ -1,10 +1,11 @@
 import {
-  createContext, useContext, useState, useCallback, useEffect,
+  createContext, useContext, useState, useCallback, useEffect, useRef,
   ReactNode, createElement,
 } from 'react';
 import { Selection } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
+import { useToast } from './use-toast';
 
 export interface PlacedBet {
   betId:           string;
@@ -41,10 +42,11 @@ interface ApiBet {
 }
 
 interface BetHistoryState {
-  bets:     PlacedBet[];
-  isLoading: boolean;
-  addBet:   (bet: PlacedBet) => void;
-  refresh:  () => Promise<void>;
+  bets:          PlacedBet[];
+  isLoading:     boolean;
+  openBetsCount: number;
+  addBet:        (bet: PlacedBet) => void;
+  refresh:       () => Promise<void>;
 }
 
 const BetHistoryContext = createContext<BetHistoryState | null>(null);
@@ -76,33 +78,113 @@ function mapApiBet(b: ApiBet): PlacedBet {
   };
 }
 
+function isOpenStatus(s?: string) {
+  return !s || s === 'open' || s === 'pending';
+}
+
 export function BetHistoryProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [bets, setBets]         = useState<PlacedBet[]>([]);
   const [isLoading, setLoading] = useState(false);
+
+  // Track previous bet statuses so we can detect settlements
+  const prevStatusRef = useRef<Record<string, string | undefined>>({});
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated) { setBets([]); return; }
     setLoading(true);
     try {
       const data = await api.get<ApiBet[]>('/bets');
-      setBets(data.map(mapApiBet));
+      const mapped = data.map(mapApiBet);
+
+      // Detect status changes → settlement toasts
+      const prev = prevStatusRef.current;
+      for (const bet of mapped) {
+        const oldStatus = prev[bet.betId];
+        const newStatus = bet.status ?? 'open';
+        if (oldStatus && isOpenStatus(oldStatus) && !isOpenStatus(newStatus)) {
+          const profit = bet.estimatedPayout - bet.stake;
+          if (newStatus === 'won' || newStatus === 'settled') {
+            toast({
+              title: '🎉 Bet Won!',
+              description: `${bet.betId} settled — you won $${profit.toFixed(2)}`,
+            });
+          } else if (newStatus === 'lost') {
+            toast({
+              title: 'Bet Settled — Lost',
+              description: `${bet.betId} — stake of $${bet.stake.toFixed(2)} lost`,
+              variant: 'destructive',
+            });
+          } else if (newStatus === 'void' || newStatus === 'voided') {
+            toast({
+              title: 'Bet Voided',
+              description: `${bet.betId} — stake of $${bet.stake.toFixed(2)} refunded`,
+            });
+          }
+        }
+      }
+
+      // Update previous status map
+      const newPrev: Record<string, string | undefined> = {};
+      for (const bet of mapped) newPrev[bet.betId] = bet.status;
+      prevStatusRef.current = newPrev;
+
+      setBets(mapped);
     } catch {
       setBets([]);
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, toast]);
 
+  // Initial load
   useEffect(() => {
     refresh();
   }, [refresh]);
 
+  // Auto-poll every 30s when tab is visible and there are open bets
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    function startPolling() {
+      intervalId = setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        // Only poll if there are open bets
+        const hasOpen = bets.some(b => isOpenStatus(b.status));
+        if (!hasOpen) return;
+        refresh();
+      }, 30_000);
+    }
+
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        refresh();
+      }
+    }
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isAuthenticated, bets, refresh]);
+
   const addBet = useCallback((bet: PlacedBet) => {
     setBets(prev => [bet, ...prev]);
+    // Register in prev status so next poll can detect changes
+    prevStatusRef.current[bet.betId] = bet.status ?? 'open';
   }, []);
 
-  return createElement(BetHistoryContext.Provider, { value: { bets, isLoading, addBet, refresh }, children });
+  const openBetsCount = bets.filter(b => isOpenStatus(b.status)).length;
+
+  return createElement(BetHistoryContext.Provider, {
+    value: { bets, isLoading, openBetsCount, addBet, refresh },
+    children,
+  });
 }
 
 export function useBetHistory(): BetHistoryState {
