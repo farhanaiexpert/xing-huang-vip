@@ -6,7 +6,7 @@ import { Header } from '@/components/Header';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Wallet, Receipt, ArrowLeftRight,
-  Users, Gift, Star, Trophy, Settings, LogOut, Shield,
+  Users, Gift, Star, Trophy, Settings, LogOut, Shield, BarChart2,
 } from 'lucide-react';
 import { OverviewPage }              from './OverviewPage';
 import { WalletPage }               from './WalletPage';
@@ -19,12 +19,14 @@ import { PoolsPage }                from './PoolsPage';
 import { SettingsPage }             from './SettingsPage';
 import { ResponsibleGamblingPage }  from './ResponsibleGamblingPage';
 import { VIPPage }                  from './VIPPage';
+import { MyStatsPage }              from './MyStatsPage';
 import { Crown } from 'lucide-react';
 
 const NAV = [
   { id: 'overview',     label: 'Overview',           icon: LayoutDashboard },
   { id: 'wallet',       label: 'Wallet',              icon: Wallet },
   { id: 'bets',         label: 'My Bets',             icon: Receipt },
+  { id: 'stats',        label: 'My Stats',            icon: BarChart2 },
   { id: 'transactions', label: 'Transactions',        icon: ArrowLeftRight },
   { id: 'referrals',    label: 'Referrals',           icon: Users },
   { id: 'promotions',   label: 'Promotions',          icon: Gift },
@@ -41,6 +43,7 @@ const PAGES: Record<SectionId, React.ComponentType> = {
   overview:     OverviewPage,
   wallet:       WalletPage,
   bets:         BetsPage,
+  stats:        MyStatsPage,
   transactions: TransactionsPage,
   referrals:    ReferralsPage,
   promotions:   PromotionsPage,

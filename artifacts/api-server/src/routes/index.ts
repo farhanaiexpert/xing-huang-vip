@@ -14,6 +14,7 @@ import webhooksRouter from "./webhooks.js";
 import rgRouter from "./rg.js";
 import boostsRouter from "./boosts.js";
 import loyaltyRouter from "./loyalty.js";
+import statsRouter from "./stats.js";
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use(webhooksRouter);
 router.use(rgRouter);
 router.use(boostsRouter);
 router.use(loyaltyRouter);
+router.use(statsRouter);
 
 export default router;
