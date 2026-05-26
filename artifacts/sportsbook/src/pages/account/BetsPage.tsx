@@ -63,6 +63,42 @@ function fmtDate(d: Date) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
 }
 
+/**
+ * Parse formatted kickoff strings like "Today, 20:00" / "Tomorrow, 15:30" / "Sat, 15:30"
+ * and return a countdown string like "Kicks off in 2h 30m" or "Kicks off in 45m".
+ * Returns null when the time has already passed (treat as in-progress).
+ */
+function kickoffCountdown(kt: string): string | null {
+  if (!kt) return null;
+  const [dayPart, timePart] = kt.split(', ');
+  if (!timePart) return null;
+  const [hStr, mStr] = timePart.split(':');
+  const h = parseInt(hStr, 10), m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return null;
+
+  const now = new Date();
+  const target = new Date(now);
+  if (dayPart === 'Today') {
+    target.setHours(h, m, 0, 0);
+  } else if (dayPart === 'Tomorrow') {
+    target.setDate(target.getDate() + 1);
+    target.setHours(h, m, 0, 0);
+  } else {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const idx = days.indexOf(dayPart);
+    if (idx === -1) return null;
+    const diff = ((idx - now.getDay() + 7) % 7) || 7;
+    target.setDate(target.getDate() + diff);
+    target.setHours(h, m, 0, 0);
+  }
+
+  const diffMins = Math.round((target.getTime() - now.getTime()) / 60000);
+  if (diffMins <= 0) return null; // match in progress or past
+  if (diffMins < 60) return `Kicks off in ${diffMins}m`;
+  const hrs = Math.floor(diffMins / 60), mins = diffMins % 60;
+  return mins > 0 ? `Kicks off in ${hrs}h ${mins}m` : `Kicks off in ${hrs}h`;
+}
+
 const PAGE_SIZE = 10;
 
 function BetCard({ bet }: { bet: PlacedBet }) {
@@ -99,11 +135,15 @@ function BetCard({ bet }: { bet: PlacedBet }) {
             <p className="text-[10px] mt-0.5 flex items-center gap-1">
               {bet.selections.some(s => s.isLive) ? (
                 <><span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse inline-block" /><span className="text-[#EF4444]/80">In play</span></>
-              ) : bet.selections[0]?.kickoffTime ? (
-                <span className="text-[#FACC15]/70">🕐 Kicks off {bet.selections[0].kickoffTime}</span>
-              ) : (
-                <span className="text-[#64748B]">⏱ Placed {fmtDate(bet.placedAt)}</span>
-              )}
+              ) : (() => {
+                const kt = bet.selections[0]?.kickoffTime;
+                const countdown = kt ? kickoffCountdown(kt) : null;
+                return countdown
+                  ? <span className="text-[#FACC15]/70">🕐 {countdown}</span>
+                  : kt
+                    ? <span className="text-[#94A3B8]/60">🕐 {kt}</span>
+                    : <span className="text-[#64748B]">⏱ Placed {fmtDate(bet.placedAt)}</span>;
+              })()}
             </p>
           )}
         </div>

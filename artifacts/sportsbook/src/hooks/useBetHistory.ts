@@ -143,47 +143,28 @@ export function BetHistoryProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
-  // Track open-bet presence in a ref so the interval callback always sees fresh value
-  const openBetsRef = useRef(false);
+  // Derived boolean — true when there is at least one open/pending bet
+  const hasOpenBets = bets.some(b => isOpenStatus(b.status));
+
+  // Auto-poll every 30s while tab is visible AND there are open bets.
+  // Effect re-runs whenever hasOpenBets flips, starting or stopping the interval.
   useEffect(() => {
-    openBetsRef.current = bets.some(b => isOpenStatus(b.status));
-  }, [bets]);
+    if (!isAuthenticated || !hasOpenBets) return;
 
-  // Auto-poll every 30s when tab is visible and there are open bets.
-  // The interval clears itself once openBetsRef goes false.
-  useEffect(() => {
-    if (!isAuthenticated) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') refresh();
+    }, 30_000);
 
-    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
 
-    function startInterval() {
-      if (intervalId) return;
-      intervalId = setInterval(() => {
-        if (document.visibilityState !== 'visible') return;
-        if (!openBetsRef.current) {
-          clearInterval(intervalId!);
-          intervalId = null;
-          return;
-        }
-        refresh();
-      }, 30_000);
-    }
-
-    function handleVisibility() {
-      if (document.visibilityState === 'visible') {
-        refresh();
-        if (openBetsRef.current) startInterval();
-      }
-    }
-
-    // Start immediately only if there are open bets
-    if (openBetsRef.current) startInterval();
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      clearInterval(id);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [isAuthenticated, refresh]);
+  }, [isAuthenticated, hasOpenBets, refresh]);
 
   const addBet = useCallback((bet: PlacedBet) => {
     setBets(prev => [bet, ...prev]);

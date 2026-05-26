@@ -827,10 +827,24 @@ function EmptyState() {
         ))}
       </div>
 
-      <p className="text-[10px] text-[#94A3B8]/40 flex items-center gap-1.5">
+      <p className="text-[10px] text-[#94A3B8]/40 flex items-center gap-1.5 mb-4">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_5px_rgba(0,223,169,0.8)]" />
         Click any odds button to add
       </p>
+
+      {/* Disabled Place Bet — visible when slip is empty so user sees the blocked reason */}
+      <div className="w-full">
+        <button
+          disabled
+          className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-[#1E2A38] text-[#94A3B8]/40 cursor-not-allowed"
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Place Bet
+        </button>
+        <p className="text-[10px] text-[#94A3B8]/40 text-center mt-1.5 leading-snug">
+          Add a selection to begin
+        </p>
+      </div>
 
     </div>
   );

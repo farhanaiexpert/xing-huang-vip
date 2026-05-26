@@ -255,6 +255,35 @@ function StatCard({ label, value, sub, icon, color }: {
   );
 }
 
+function kickoffCountdown(kt: string): string | null {
+  if (!kt) return null;
+  const [dayPart, timePart] = kt.split(', ');
+  if (!timePart) return null;
+  const [hStr, mStr] = timePart.split(':');
+  const h = parseInt(hStr, 10), m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return null;
+  const now = new Date();
+  const target = new Date(now);
+  if (dayPart === 'Today') {
+    target.setHours(h, m, 0, 0);
+  } else if (dayPart === 'Tomorrow') {
+    target.setDate(target.getDate() + 1);
+    target.setHours(h, m, 0, 0);
+  } else {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const idx = days.indexOf(dayPart);
+    if (idx === -1) return null;
+    const diff = ((idx - now.getDay() + 7) % 7) || 7;
+    target.setDate(target.getDate() + diff);
+    target.setHours(h, m, 0, 0);
+  }
+  const diffMins = Math.round((target.getTime() - now.getTime()) / 60000);
+  if (diffMins <= 0) return null;
+  if (diffMins < 60) return `Kicks off in ${diffMins}m`;
+  const hrs = Math.floor(diffMins / 60), mins = diffMins % 60;
+  return mins > 0 ? `Kicks off in ${hrs}h ${mins}m` : `Kicks off in ${hrs}h`;
+}
+
 // ────────────────────────────────────────────────────────────────
 // BET CARD
 // ────────────────────────────────────────────────────────────────
@@ -291,9 +320,13 @@ function BetCard({ bet }: { bet: PlacedBet }) {
                 <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse inline-block" />
                 In play
               </span>
-            ) : (
-              <span className="text-[9px] text-[#64748B]">Awaiting result</span>
-            )}
+            ) : (() => {
+              const kt = bet.selections[0]?.kickoffTime;
+              const cd = kt ? kickoffCountdown(kt) : null;
+              return cd
+                ? <span className="text-[9px] text-[#FACC15]/70">🕐 {cd}</span>
+                : <span className="text-[9px] text-[#64748B]">Awaiting result</span>;
+            })()}
           </div>
         </div>
 
