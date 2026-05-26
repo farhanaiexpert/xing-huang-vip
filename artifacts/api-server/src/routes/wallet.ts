@@ -13,7 +13,8 @@ const router = Router();
 
 // ── Platform deposit config ───────────────────────────────────────────────────
 export const PLATFORM_DEPOSIT = {
-  address: process.env.DEPOSIT_WALLET_ADDRESS ?? "PASTE_YOUR_TRC20_WALLET_ADDRESS_HERE",
+  address:       process.env.DEPOSIT_WALLET_ADDRESS        ?? "PASTE_YOUR_TRC20_WALLET_ADDRESS_HERE",
+  addressErc20:  process.env.DEPOSIT_WALLET_ADDRESS_ERC20  ?? "PASTE_YOUR_ERC20_WALLET_ADDRESS_HERE",
   network: "TRC-20",
   qrImageUrl: "https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Farhan-QR.png",
   minDeposit: 10,
@@ -23,10 +24,11 @@ export const PLATFORM_DEPOSIT = {
 // ── GET /wallet/deposit-info ─── public, no auth needed ──────────────────────
 router.get("/wallet/deposit-info", (_req, res): void => {
   res.json({
-    address: PLATFORM_DEPOSIT.address,
-    network: PLATFORM_DEPOSIT.network,
-    qrImageUrl: PLATFORM_DEPOSIT.qrImageUrl,
-    minDeposit: PLATFORM_DEPOSIT.minDeposit,
+    address:      PLATFORM_DEPOSIT.address,
+    addressErc20: PLATFORM_DEPOSIT.addressErc20,
+    network:      PLATFORM_DEPOSIT.network,
+    qrImageUrl:   PLATFORM_DEPOSIT.qrImageUrl,
+    minDeposit:   PLATFORM_DEPOSIT.minDeposit,
     processingTime: PLATFORM_DEPOSIT.processingTime,
     currency: "USDT",
   });
@@ -56,7 +58,7 @@ router.get("/wallet/transactions", authenticate, async (req, res): Promise<void>
 const DepositBody = z.object({
   amount:  z.number().positive().min(PLATFORM_DEPOSIT.minDeposit, `Minimum deposit is ${PLATFORM_DEPOSIT.minDeposit} USDT`),
   txHash:  z.string().min(10, "Please enter a valid transaction hash"),
-  network: z.string().default("TRC-20"),
+  network: z.enum(["TRC-20", "ERC-20"]).default("TRC-20"),
 });
 
 router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => {
@@ -143,9 +145,11 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
 });
 
 // ── POST /wallet/deposit/nowpayments/create ───────────────────────────────────
+const ALLOWED_NPP_CURRENCIES = ["usdttrc20", "usdterc20"] as const;
+
 const NppCreateBody = z.object({
   amount:   z.number().positive().min(10, "Minimum deposit is 10 USDT"),
-  currency: z.string().default("usdttrc20"),
+  currency: z.enum(ALLOWED_NPP_CURRENCIES).default("usdttrc20"),
 });
 
 router.post("/wallet/deposit/nowpayments/create", authenticate, async (req, res): Promise<void> => {
@@ -188,7 +192,7 @@ router.post("/wallet/deposit/nowpayments/create", authenticate, async (req, res)
       type: "deposit",
       amount: amount.toString(),
       status: "pending",
-      network: currency === "usdttrc20" ? "TRC-20" : currency.toUpperCase(),
+      network: currency === "usdttrc20" ? "TRC-20" : "ERC-20",
       nowpaymentsPaymentId: payment.paymentId,
       nowpaymentsStatus: payment.paymentStatus,
       verificationNote: `NOWPayments payment ${payment.paymentId}`,

@@ -11,6 +11,7 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface DepositInfo {
   address: string;
+  addressErc20?: string;
   network: string;
   qrImageUrl: string;
   minDeposit: number;
@@ -97,6 +98,7 @@ export function WalletPage() {
     sessionStorage.removeItem('cupbett_deposit_method');
     return (hint === 'manual' ? 'manual' : 'nowpayments') as 'nowpayments' | 'manual';
   });
+  const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20'>('TRC-20');
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
   const [nppAmount, setNppAmount]     = useState('');
   const [nppCurrency, setNppCurrency] = useState('usdttrc20');
@@ -131,7 +133,10 @@ export function WalletPage() {
 
   function copyAddress() {
     if (!depositInfo) return;
-    navigator.clipboard.writeText(depositInfo.address);
+    const addr = manualNetwork === 'ERC-20'
+      ? (depositInfo.addressErc20 ?? depositInfo.address)
+      : depositInfo.address;
+    navigator.clipboard.writeText(addr);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -144,7 +149,7 @@ export function WalletPage() {
     if (!depTxHash.trim()) { setDepError('Enter your transaction hash / TxID'); return; }
     setDepSubmitting(true);
     try {
-      const result = await api.post<{ autoVerified?: boolean }>('/wallet/deposit', { amount, txHash: depTxHash.trim(), network: 'TRC-20' });
+      const result = await api.post<{ autoVerified?: boolean }>('/wallet/deposit', { amount, txHash: depTxHash.trim(), network: manualNetwork });
       setDepAutoVerified(result?.autoVerified === true);
       setDepSuccess(true);
       setDepAmount('');
@@ -344,7 +349,7 @@ export function WalletPage() {
                   <QrCode className="w-4.5 h-4.5 text-[#00DFA9]" />
                 </div>
                 <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">USDT Manual</p>
-                <p className="text-[9px] text-[#00DFA9] font-semibold">TRC-20</p>
+                <p className="text-[9px] text-[#00DFA9] font-semibold">TRC-20 / ERC-20</p>
                 <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.3)' }}>Manual</span>
               </button>
 
@@ -603,49 +608,94 @@ export function WalletPage() {
             </div>
           )}
 
-          {/* ── Manual TRC-20 flow ──────────────────────────────────────── */}
+          {/* ── Manual USDT flow (TRC-20 or ERC-20) ────────────────────── */}
           {depositMethod === 'manual' && (
             <>
+              {/* Network selector */}
+              <div className="flex gap-2">
+                {(['TRC-20', 'ERC-20'] as const).map(net => {
+                  const active = manualNetwork === net;
+                  const isTrc = net === 'TRC-20';
+                  const color = isTrc ? '#00DFA9' : '#38BDF8';
+                  const label = isTrc ? 'USDT TRC-20 · Tron' : 'USDT ERC-20 · Ethereum';
+                  const sub   = isTrc ? 'Auto-verified' : 'Manual review';
+                  return (
+                    <button
+                      key={net}
+                      onClick={() => { setManualNetwork(net); setCopied(false); setDepSuccess(false); setDepError(''); }}
+                      className="relative flex-1 rounded-xl p-3 flex flex-col items-center gap-1 transition-all"
+                      style={{
+                        background: active ? `rgba(${isTrc ? '0,223,169' : '56,189,248'},0.10)` : 'rgba(255,255,255,0.03)',
+                        border: `2px solid ${active ? color + '80' : 'rgba(255,255,255,0.07)'}`,
+                        boxShadow: active ? `0 0 16px ${color}18` : 'none',
+                      }}
+                    >
+                      {active && (
+                        <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color }} />
+                      )}
+                      <p className="text-[12px] font-black" style={{ color: active ? color : '#64748B' }}>{net}</p>
+                      <p className="text-[10px] font-semibold text-[#94A3B8]">{label}</p>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full mt-0.5"
+                        style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}>{sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* QR + Address card */}
               <div className="rounded-2xl border border-white/[0.09] bg-[#0E1520] overflow-hidden">
                 <div className="px-4 py-3 border-b border-white/[0.06]">
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-md bg-[#00DFA9]/15 flex items-center justify-center">
-                      <span className="text-[9px] font-black text-[#00DFA9]">1</span>
+                    <div className="w-5 h-5 rounded-md flex items-center justify-center"
+                      style={{ background: manualNetwork === 'TRC-20' ? 'rgba(0,223,169,0.15)' : 'rgba(56,189,248,0.15)' }}>
+                      <span className="text-[9px] font-black" style={{ color: manualNetwork === 'TRC-20' ? '#00DFA9' : '#38BDF8' }}>1</span>
                     </div>
                     <p className="text-[12px] font-bold text-[#F8FAFC]">Send USDT to this address</p>
-                    <span className="ml-auto text-[10px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 border border-[#00DFA9]/20 px-2 py-0.5 rounded-full">TRC-20</span>
+                    <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        color: manualNetwork === 'TRC-20' ? '#00DFA9' : '#38BDF8',
+                        background: manualNetwork === 'TRC-20' ? 'rgba(0,223,169,0.10)' : 'rgba(56,189,248,0.10)',
+                        border: `1px solid ${manualNetwork === 'TRC-20' ? 'rgba(0,223,169,0.20)' : 'rgba(56,189,248,0.20)'}`,
+                      }}>
+                      {manualNetwork}
+                    </span>
                   </div>
                 </div>
 
             <div className="p-4 flex flex-col sm:flex-row items-center gap-5">
-              {/* QR Code */}
-              <div className="relative flex-shrink-0">
-                <div className="p-2.5 rounded-xl bg-white" style={{ boxShadow: '0 0 0 1px rgba(0,223,169,0.2), 0 4px 24px rgba(0,0,0,0.4)' }}>
-                  {depositInfo?.qrImageUrl ? (
-                    <img
-                      src={depositInfo.qrImageUrl}
-                      alt="USDT TRC-20 deposit address QR code"
-                      className="w-[130px] h-[130px] object-contain"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  ) : (
-                    <div className="w-[130px] h-[130px] flex items-center justify-center bg-white rounded">
-                      <p className="text-[10px] text-gray-400 text-center px-2">QR Code<br/>Loading...</p>
-                    </div>
-                  )}
+              {/* QR Code — only shown for TRC-20 (has a configured QR image) */}
+              {manualNetwork === 'TRC-20' && (
+                <div className="relative flex-shrink-0">
+                  <div className="p-2.5 rounded-xl bg-white" style={{ boxShadow: '0 0 0 1px rgba(0,223,169,0.2), 0 4px 24px rgba(0,0,0,0.4)' }}>
+                    {depositInfo?.qrImageUrl ? (
+                      <img
+                        src={depositInfo.qrImageUrl}
+                        alt="USDT TRC-20 deposit address QR code"
+                        className="w-[130px] h-[130px] object-contain"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="w-[130px] h-[130px] flex items-center justify-center bg-white rounded">
+                        <p className="text-[10px] text-gray-400 text-center px-2">QR Code<br/>Loading...</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold text-[#00DFA9] bg-[#0B0F14] px-2 rounded-full border border-[#00DFA9]/30 whitespace-nowrap">
+                    Scan to deposit
+                  </div>
                 </div>
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold text-[#00DFA9] bg-[#0B0F14] px-2 rounded-full border border-[#00DFA9]/30 whitespace-nowrap">
-                  Scan to deposit
-                </div>
-              </div>
+              )}
 
               {/* Address */}
               <div className="flex-1 w-full">
-                <p className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">Wallet Address</p>
+                <p className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+                  {manualNetwork === 'TRC-20' ? 'Tron (TRC-20) Wallet Address' : 'Ethereum (ERC-20) Wallet Address'}
+                </p>
                 <div className="flex items-center gap-2 bg-[#0B0F14] border border-white/[0.08] rounded-xl p-3">
                   <p className="flex-1 text-[11px] font-mono text-[#94A3B8] break-all leading-relaxed select-all">
-                    {depositInfo?.address ?? '—'}
+                    {manualNetwork === 'ERC-20'
+                      ? (depositInfo?.addressErc20 ?? '—')
+                      : (depositInfo?.address ?? '—')}
                   </p>
                   <button onClick={copyAddress}
                     className={cn(
@@ -666,7 +716,9 @@ export function WalletPage() {
                 <div className="mt-3 flex items-start gap-2 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-xl p-3">
                   <AlertCircle className="h-3.5 w-3.5 text-[#FACC15] shrink-0 mt-0.5" />
                   <p className="text-[10px] text-[#FACC15]/80 leading-relaxed">
-                    Only send <strong>USDT on TRC-20 (Tron)</strong> network. Sending other coins or using a different network will result in permanent loss of funds.
+                    {manualNetwork === 'TRC-20'
+                      ? <>Only send <strong>USDT on TRC-20 (Tron)</strong> to this address. Sending on ERC-20/Ethereum or any other network will result in permanent loss of funds.</>
+                      : <>Only send <strong>USDT on ERC-20 (Ethereum)</strong> to this address. Sending on TRC-20/Tron or any other network will result in permanent loss of funds. ERC-20 deposits go to manual review (5–30 min).</>}
                   </p>
                 </div>
               </div>
@@ -724,14 +776,16 @@ export function WalletPage() {
 
                   <div>
                     <p className="text-[16px] font-black text-[#F8FAFC] tracking-tight">Verifying on-chain…</p>
-                    <p className="text-[11px] text-[#64748B] mt-1">Checking your transaction on the Tron blockchain</p>
+                    <p className="text-[11px] text-[#64748B] mt-1">
+                      {manualNetwork === 'TRC-20' ? 'Checking your transaction on the Tron blockchain' : 'Checking your transaction on the Ethereum blockchain'}
+                    </p>
                   </div>
 
                   {/* Animated step list */}
                   <div className="w-full max-w-xs space-y-2">
                     {[
                       'Looking up transaction hash',
-                      'Confirming USDT TRC-20 transfer',
+                      `Confirming USDT ${manualNetwork} transfer`,
                       'Validating recipient & amount',
                     ].map((step, i) => (
                       <div key={step}
