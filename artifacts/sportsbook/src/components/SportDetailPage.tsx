@@ -6,9 +6,10 @@
  *           InPlay, MatchCoupon, MatchLists.
  */
 import { useState, useMemo } from 'react';
+import { useLocation } from 'wouter';
 import {
   ArrowLeft, RefreshCw, ChevronRight, Trophy, Tag, Star,
-  Flame, Zap, ChevronDown, MonitorPlay, Gamepad2,
+  Flame, Zap, ChevronDown, MonitorPlay, Gamepad2, BarChart2,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { League } from '../types';
@@ -42,13 +43,48 @@ function flag(cc: string): string {
   } catch { return '🌐'; }
 }
 
+// ── Derived secondary market odds ─────────────────────────────────────────────
+
+function deriveMarkets(odds1: number, oddsDraw: number | null | undefined, odds2: number) {
+  const clamp = (n: number) => Math.max(1.01, Math.round(n * 100) / 100);
+  const i1 = 1 / odds1;
+  const id = oddsDraw ? 1 / oddsDraw : 0;
+  const i2 = 1 / odds2;
+  const tot = i1 + id + i2;
+  const ph = i1 / tot;
+  const pd = id / tot;
+  const pa = i2 / tot;
+
+  const ou25O = clamp(1.88 * (1 + (pd - 0.28) * 0.45));
+  const ou25U = clamp(1.92 * (1 - (pd - 0.28) * 0.45));
+
+  const bttsY = clamp(1.62 + pd * 0.7);
+  const bttsN = clamp(2.18 - pd * 0.5);
+
+  const fairLine = (ph - pa) * 3.5;
+  const dist = 0 - fairLine;
+  const adjF = Math.exp(dist * 0.35);
+  const hcpIsFavHome = ph > 0.52;
+  const hcpIsFavAway = pa > 0.52;
+  const hLine = hcpIsFavHome ? '-1' : hcpIsFavAway ? '+1' : '0';
+  const aLine = hcpIsFavHome ? '+1' : hcpIsFavAway ? '-1' : '0';
+  const hcpH  = clamp(1.90 * adjF);
+  const hcpA  = clamp(1.90 / adjF);
+
+  const dnbH = clamp(1 / (ph / (ph + pa)) * 1.06);
+  const dnbA = clamp(1 / (pa / (ph + pa)) * 1.06);
+
+  return { ou25O, ou25U, bttsY, bttsN, hLine, aLine, hcpH, hcpA, dnbH, dnbA };
+}
+
 // ── Odds button ───────────────────────────────────────────────────────────────
 
 function OddsButton({
-  label, odds, selectionId, marketId, matchId, matchName, leagueName, selectionName,
+  label, odds, selectionId, marketId, matchId, matchName, leagueName, selectionName, marketName,
 }: {
   label: string; odds: number; selectionId: string; marketId: string;
   matchId: string; matchName: string; leagueName: string; selectionName: string;
+  marketName?: string;
 }) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const active = hasSelection(selectionId);
@@ -57,7 +93,7 @@ function OddsButton({
     if (active) removeSelection(selectionId);
     else addSelection({
       id: selectionId, marketId, matchId, matchName, leagueName,
-      marketName: 'Match Result', selectionType: label, selectionName, odds,
+      marketName: marketName ?? 'Match Result', selectionType: label, selectionName, odds,
     });
   }
 
@@ -79,9 +115,72 @@ function OddsButton({
 
 // ── Match card ────────────────────────────────────────────────────────────────
 
+type MarketTabId = 'h2h' | 'ou25' | 'btts' | 'hcp' | 'dnb';
+
+const MARKET_TABS: { id: MarketTabId; label: string; hasDraw: boolean }[] = [
+  { id: 'h2h',  label: '1X2',   hasDraw: true  },
+  { id: 'ou25', label: 'O/U',   hasDraw: false },
+  { id: 'btts', label: 'BTTS',  hasDraw: false },
+  { id: 'hcp',  label: 'HCP',   hasDraw: false },
+  { id: 'dnb',  label: 'DNB',   hasDraw: false },
+];
+
 function MatchCard({ match, leagueName }: { match: MockMatchCard; leagueName: string }) {
-  const marketId  = `${match.id}_h2h`;
+  const [activeTab, setActiveTab] = useState<MarketTabId>('h2h');
+  const [, navigate] = useLocation();
+  const hasDraw   = match.oddsDraw != null;
   const matchName = `${match.team1} v ${match.team2}`;
+
+  const sec = useMemo(
+    () => deriveMarkets(match.odds1, match.oddsDraw, match.odds2),
+    [match.odds1, match.oddsDraw, match.odds2],
+  );
+
+  type OddsEntry = { label: string; selId: string; marketId: string; selName: string; odds: number; marketName: string };
+
+  const oddsRow: OddsEntry[] = useMemo(() => {
+    const base = `${match.id}`;
+    if (activeTab === 'h2h') {
+      const mid = `${base}_h2h`;
+      const rows: OddsEntry[] = [
+        { label: '1', selId: `${base}_1`, marketId: mid, selName: match.team1, odds: match.odds1,    marketName: hasDraw ? 'Match Result' : 'Match Winner' },
+        { label: '2', selId: `${base}_2`, marketId: mid, selName: match.team2, odds: match.odds2,    marketName: hasDraw ? 'Match Result' : 'Match Winner' },
+      ];
+      if (hasDraw) rows.splice(1, 0, { label: 'X', selId: `${base}_x`, marketId: mid, selName: 'Draw', odds: match.oddsDraw!, marketName: 'Match Result' });
+      return rows;
+    }
+    if (activeTab === 'ou25') {
+      const mid = `${base}_ou25`;
+      return [
+        { label: 'O 2.5', selId: `${base}_ou25_o`, marketId: mid, selName: 'Over 2.5',  odds: sec.ou25O, marketName: 'Over/Under 2.5 Goals' },
+        { label: 'U 2.5', selId: `${base}_ou25_u`, marketId: mid, selName: 'Under 2.5', odds: sec.ou25U, marketName: 'Over/Under 2.5 Goals' },
+      ];
+    }
+    if (activeTab === 'btts') {
+      const mid = `${base}_btts`;
+      return [
+        { label: 'Yes', selId: `${base}_btts_y`, marketId: mid, selName: 'Yes', odds: sec.bttsY, marketName: 'Both Teams to Score' },
+        { label: 'No',  selId: `${base}_btts_n`, marketId: mid, selName: 'No',  odds: sec.bttsN, marketName: 'Both Teams to Score' },
+      ];
+    }
+    if (activeTab === 'hcp') {
+      const mid = `${base}_hcp`;
+      return [
+        { label: `H ${sec.hLine}`, selId: `${base}_hcp_h`, marketId: mid, selName: `${match.team1} ${sec.hLine}`, odds: sec.hcpH, marketName: `Asian Handicap ${sec.hLine}` },
+        { label: `A ${sec.aLine}`, selId: `${base}_hcp_a`, marketId: mid, selName: `${match.team2} ${sec.aLine}`, odds: sec.hcpA, marketName: `Asian Handicap ${sec.hLine}` },
+      ];
+    }
+    if (activeTab === 'dnb') {
+      const mid = `${base}_dnb`;
+      return [
+        { label: match.team1.split(' ')[0], selId: `${base}_dnb_h`, marketId: mid, selName: match.team1, odds: sec.dnbH, marketName: 'Draw No Bet' },
+        { label: match.team2.split(' ')[0], selId: `${base}_dnb_a`, marketId: mid, selName: match.team2, odds: sec.dnbA, marketName: 'Draw No Bet' },
+      ];
+    }
+    return [];
+  }, [activeTab, match, sec, hasDraw]);
+
+  const visibleTabs = hasDraw ? MARKET_TABS : MARKET_TABS.map(t => t.id === 'h2h' ? { ...t, label: 'MW' } : t);
 
   return (
     <div className={cn(
@@ -90,7 +189,7 @@ function MatchCard({ match, leagueName }: { match: MockMatchCard; leagueName: st
         ? 'border-[#EF4444]/30 shadow-[0_0_12px_rgba(239,68,68,0.07)]'
         : 'border-[#253241] hover:border-[#2E3D50]'
     )}>
-      {/* Live / score bar */}
+      {/* Live bar */}
       {match.isLive && (
         <div className="px-3 pt-2.5 pb-0 flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse shrink-0" />
@@ -103,27 +202,16 @@ function MatchCard({ match, leagueName }: { match: MockMatchCard; leagueName: st
 
       {/* Teams */}
       <div className="px-3 pt-3 pb-2 flex-1">
-        {/* Team 1 */}
         <div className="flex items-center gap-1.5 mb-1.5">
-          {match.team1Country && (
-            <span className="text-sm leading-none shrink-0">{flag(match.team1Country)}</span>
-          )}
+          {match.team1Country && <span className="text-sm leading-none shrink-0">{flag(match.team1Country)}</span>}
           <p className="text-[13px] font-semibold text-[#F8FAFC] leading-tight truncate">{match.team1}</p>
-          {match.score1 && (
-            <span className="ml-auto text-[12px] font-bold text-[#F8FAFC] tabular-nums shrink-0">{match.score1}</span>
-          )}
+          {match.score1 && <span className="ml-auto text-[12px] font-bold text-[#F8FAFC] tabular-nums shrink-0">{match.score1}</span>}
         </div>
-        {/* Team 2 */}
         <div className="flex items-center gap-1.5">
-          {match.team2Country && (
-            <span className="text-sm leading-none shrink-0">{flag(match.team2Country)}</span>
-          )}
+          {match.team2Country && <span className="text-sm leading-none shrink-0">{flag(match.team2Country)}</span>}
           <p className="text-[13px] font-semibold text-[#F8FAFC] leading-tight truncate">{match.team2}</p>
-          {match.score2 && (
-            <span className="ml-auto text-[12px] font-bold text-[#F8FAFC] tabular-nums shrink-0">{match.score2}</span>
-          )}
+          {match.score2 && <span className="ml-auto text-[12px] font-bold text-[#F8FAFC] tabular-nums shrink-0">{match.score2}</span>}
         </div>
-        {/* Date */}
         {!match.isLive && (
           <p className="text-[11px] text-[#94A3B8]/50 mt-2 flex items-center gap-1">
             <span className="inline-block w-1 h-1 rounded-full bg-[#38BDF8]/40" />
@@ -132,26 +220,51 @@ function MatchCard({ match, leagueName }: { match: MockMatchCard; leagueName: st
         )}
       </div>
 
-      {/* Odds */}
-      <div className="px-3 pb-3 flex gap-2">
-        <OddsButton
-          label="1" odds={match.odds1} selectionId={`${match.id}_1`}
-          marketId={marketId} matchId={match.id} matchName={matchName}
-          leagueName={leagueName} selectionName={match.team1}
-        />
-        {match.oddsDraw != null && (
-          <OddsButton
-            label="X" odds={match.oddsDraw} selectionId={`${match.id}_x`}
-            marketId={marketId} matchId={match.id} matchName={matchName}
-            leagueName={leagueName} selectionName="Draw"
-          />
-        )}
-        <OddsButton
-          label="2" odds={match.odds2} selectionId={`${match.id}_2`}
-          marketId={marketId} matchId={match.id} matchName={matchName}
-          leagueName={leagueName} selectionName={match.team2}
-        />
+      {/* Market tab strip */}
+      <div className="px-3 pb-1.5 flex items-center gap-1 border-t border-[#1E2A38]">
+        <div className="flex items-center gap-1 flex-1 overflow-x-auto scrollbar-none pt-1.5">
+          {visibleTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'shrink-0 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide transition-all duration-100 border',
+                activeTab === tab.id
+                  ? 'bg-[#00DFA9]/15 border-[#00DFA9]/40 text-[#00DFA9]'
+                  : 'bg-transparent border-[#253241]/60 text-[#94A3B8]/50 hover:text-[#94A3B8] hover:border-[#253241]'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Odds row */}
+      <div className="px-3 pb-2.5 flex gap-2">
+        {oddsRow.map(entry => (
+          <OddsButton
+            key={entry.selId}
+            label={entry.label} odds={entry.odds} selectionId={entry.selId}
+            marketId={entry.marketId} matchId={match.id} matchName={matchName}
+            leagueName={leagueName} selectionName={entry.selName} marketName={entry.marketName}
+          />
+        ))}
+      </div>
+
+      {/* More markets footer */}
+      <button
+        onClick={() => navigate(`/match/${match.id}`)}
+        className="mx-3 mb-3 flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#0F1620] border border-[#1E2A38] hover:border-[#2E3D50] hover:bg-[#18212B] transition-all duration-150 group"
+      >
+        <div className="flex items-center gap-1.5">
+          <BarChart2 className="h-3 w-3 text-[#38BDF8]/60 group-hover:text-[#38BDF8] transition-colors" />
+          <span className="text-[10px] font-semibold text-[#94A3B8]/50 group-hover:text-[#94A3B8] transition-colors">
+            All markets
+          </span>
+        </div>
+        <ChevronRight className="h-3 w-3 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/70 transition-colors" />
+      </button>
     </div>
   );
 }
