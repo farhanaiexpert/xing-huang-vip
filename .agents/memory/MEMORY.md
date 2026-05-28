@@ -1,0 +1,1 @@
+- [Settlement dual-source](settlement-dual-source.md) — Odds API primary + API-Football fallback + 12h auto-void; cron runs every 1 min with isRunning mutex.

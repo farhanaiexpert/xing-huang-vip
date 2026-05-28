@@ -179,13 +179,13 @@ async function runMigrations() {
 }
 
 runMigrations().then(() => {
-  // ── Auto-settlement cron: every 5 minutes ─────────────────────────────────
-  cron.schedule("*/5 * * * *", () => {
+  // ── Auto-settlement cron: every 1 minute ──────────────────────────────────
+  cron.schedule("*/1 * * * *", () => {
     runSettlementWorker().catch((err) =>
       logger.error({ err }, "Settlement cron: unhandled error"),
     );
   });
-  logger.info("Auto-settlement cron started (every 5 minutes)");
+  logger.info("Auto-settlement cron started (every 1 minute — dual source: Odds API + API-Football)");
 
   app.listen(PORT, "0.0.0.0", () => {
     logger.info({ port: PORT }, "CupBett API server started");
