@@ -144,19 +144,34 @@ export interface AdminReferralsResponse {
   topReferrersByCommission: TopReferrer[];
 }
 
+export interface PromoRequirement {
+  id: number;
+  promotionId: number;
+  taskType: string;
+  targetValue: string;
+  description: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface AdminPromotion {
   id: number;
   title: string;
   description: string;
   type: string;
+  rewardType: string;
   bonusAmount: string | null;
+  poolAmount: string | null;
   minDeposit: string | null;
+  wageringRequirement: string | null;
+  bannerColor: string | null;
   eligibility: string;
   maxClaims: number | null;
   isActive: boolean;
   expiresAt: string | null;
   createdAt: string;
   claimCount: number;
+  requirements: PromoRequirement[];
 }
 
 export interface AdminPool {

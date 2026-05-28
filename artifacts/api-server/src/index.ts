@@ -176,6 +176,31 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v9 skipped");
   }
+
+  // v10: promotions engine — new columns + promotion_requirements table
+  try {
+    await db.execute(sql`
+      ALTER TABLE promotions
+        ADD COLUMN IF NOT EXISTS reward_type         TEXT NOT NULL DEFAULT 'flat_bonus',
+        ADD COLUMN IF NOT EXISTS pool_amount         NUMERIC(20,8),
+        ADD COLUMN IF NOT EXISTS wagering_requirement NUMERIC(5,2) NOT NULL DEFAULT '1',
+        ADD COLUMN IF NOT EXISTS banner_color        TEXT NOT NULL DEFAULT '#00DFA9'
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS promotion_requirements (
+        id           SERIAL PRIMARY KEY,
+        promotion_id INTEGER NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+        task_type    TEXT NOT NULL,
+        target_value NUMERIC(20,8) NOT NULL,
+        description  TEXT NOT NULL,
+        sort_order   INTEGER NOT NULL DEFAULT 0,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    logger.info("DB migration v10 applied (promotions: reward_type, pool_amount, wagering_requirement, banner_color; promotion_requirements table)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v10 skipped");
+  }
 }
 
 runMigrations().then(() => {

@@ -13,6 +13,7 @@ import {
   commissionsTable,
   promotionsTable,
   promotionClaimsTable,
+  promotionRequirementsTable,
   predictionPoolsTable,
   poolEntriesTable,
   adminLogsTable,
@@ -672,8 +673,12 @@ router.get("/admin/promotions", async (req, res): Promise<void> => {
       title: promotionsTable.title,
       description: promotionsTable.description,
       type: promotionsTable.type,
+      rewardType: promotionsTable.rewardType,
       bonusAmount: promotionsTable.bonusAmount,
+      poolAmount: promotionsTable.poolAmount,
       minDeposit: promotionsTable.minDeposit,
+      wageringRequirement: promotionsTable.wageringRequirement,
+      bannerColor: promotionsTable.bannerColor,
       eligibility: promotionsTable.eligibility,
       maxClaims: promotionsTable.maxClaims,
       isActive: promotionsTable.isActive,
@@ -684,17 +689,28 @@ router.get("/admin/promotions", async (req, res): Promise<void> => {
     .from(promotionsTable)
     .orderBy(desc(promotionsTable.createdAt));
 
-  res.json(promos);
+  const allReqs = await db.select().from(promotionRequirementsTable).orderBy(promotionRequirementsTable.sortOrder);
+  const reqsByPromo = new Map<number, typeof allReqs>();
+  for (const r of allReqs) {
+    if (!reqsByPromo.has(r.promotionId)) reqsByPromo.set(r.promotionId, []);
+    reqsByPromo.get(r.promotionId)!.push(r);
+  }
+
+  res.json(promos.map(p => ({ ...p, requirements: reqsByPromo.get(p.id) ?? [] })));
 });
 
 const PromotionBody = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   type: z.string().default("welcome"),
+  rewardType: z.string().default("flat_bonus"),
   bonusAmount: z.string().optional(),
+  poolAmount: z.string().optional(),
   minDeposit: z.string().optional(),
+  wageringRequirement: z.string().optional(),
+  bannerColor: z.string().optional(),
   eligibility: z.string().default("all"),
-  maxClaims: z.number().optional(),
+  maxClaims: z.number().optional().nullable(),
   isActive: z.boolean().default(true),
   expiresAt: z.string().datetime().optional(),
 });
@@ -731,6 +747,82 @@ router.delete("/admin/promotions/:id", async (req, res): Promise<void> => {
   await db.delete(promotionsTable).where(eq(promotionsTable.id, id));
   await logAdminAction(req.user!.userId, "delete_promotion", "promotion", id, {});
   res.sendStatus(204);
+});
+
+// ─── Promotion Requirements CRUD ──────────────────────────────────────────────
+const ReqBody = z.object({
+  taskType: z.enum(["place_bets", "min_deposit", "refer_friends", "min_stake_bets", "min_odds_bets"]),
+  targetValue: z.string().regex(/^\d+(\.\d+)?$/, "Must be a positive number"),
+  description: z.string().min(1),
+  sortOrder: z.number().int().default(0),
+});
+
+router.get("/admin/promotions/:id/requirements", async (req, res): Promise<void> => {
+  const promoId = parseInt(req.params.id);
+  const reqs = await db
+    .select()
+    .from(promotionRequirementsTable)
+    .where(eq(promotionRequirementsTable.promotionId, promoId))
+    .orderBy(promotionRequirementsTable.sortOrder);
+  res.json(reqs);
+});
+
+router.post("/admin/promotions/:id/requirements", async (req, res): Promise<void> => {
+  const promoId = parseInt(req.params.id);
+  const parsed = ReqBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [req2] = await db
+    .insert(promotionRequirementsTable)
+    .values({ promotionId: promoId, ...parsed.data })
+    .returning();
+
+  await logAdminAction(req.user!.userId, "add_promo_requirement", "promotion", promoId, parsed.data as Record<string, unknown>);
+  res.status(201).json(req2);
+});
+
+router.delete("/admin/promotions/requirements/:reqId", async (req, res): Promise<void> => {
+  const reqId = parseInt(req.params.reqId);
+  await db.delete(promotionRequirementsTable).where(eq(promotionRequirementsTable.id, reqId));
+  await logAdminAction(req.user!.userId, "delete_promo_requirement", "promotion", reqId, {});
+  res.sendStatus(204);
+});
+
+// Pool-split settlement: distribute poolAmount equally among all claimants
+router.post("/admin/promotions/:id/pool-settle", async (req, res): Promise<void> => {
+  const promoId = parseInt(req.params.id);
+
+  const [promo] = await db.select().from(promotionsTable).where(eq(promotionsTable.id, promoId));
+  if (!promo) { res.status(404).json({ error: "Promotion not found" }); return; }
+  if (promo.rewardType !== "pool_split") { res.status(400).json({ error: "Only pool_split promotions can be settled this way" }); return; }
+
+  const pool = parseFloat(promo.poolAmount ?? "0");
+  if (pool <= 0) { res.status(400).json({ error: "Pool amount is 0 — set it before settling" }); return; }
+
+  const claims = await db
+    .select({ userId: promotionClaimsTable.userId })
+    .from(promotionClaimsTable)
+    .where(eq(promotionClaimsTable.promotionId, promoId));
+
+  if (claims.length === 0) { res.status(400).json({ error: "No claimants to distribute to" }); return; }
+
+  const share = (pool / claims.length).toFixed(8);
+
+  for (const claim of claims) {
+    await db.execute(sql`
+      UPDATE wallets SET balance_usdt = balance_usdt + ${share}::numeric WHERE user_id = ${claim.userId}
+    `);
+    await db.insert(transactionsTable).values({
+      userId: claim.userId,
+      type: "credit",
+      amount: share,
+      status: "completed",
+      reference: `pool_settle_promo_${promoId}`,
+    });
+  }
+
+  await logAdminAction(req.user!.userId, "pool_settle", "promotion", promoId, { claimants: claims.length, shareEach: share, totalPool: pool });
+  res.json({ settled: true, claimants: claims.length, shareEach: share, totalPool: pool });
 });
 
 // ─── Prediction Pools ─────────────────────────────────────────────────────────
