@@ -10,6 +10,7 @@ import { useBetSlip } from '../hooks/useBetSlip';
 import { useBetHistory } from '../hooks/useBetHistory';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
+import { useI18n } from '../contexts/I18nContext';
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from './ui/drawer';
 import { BetSlip } from './BetSlip';
 import { SPORTS } from '../data/mockData';
@@ -46,6 +47,7 @@ export function MobileBottomNav() {
   const { openBetsCount } = useBetHistory();
   const { isConnected, shortAddress, connect } = useWallet();
   const { format, setFormat } = useOddsFormat();
+  const { t } = useI18n();
   const [betSlipOpen, setBetSlipOpen] = useState(false);
   const [sportsOpen,  setSportsOpen]  = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
@@ -86,7 +88,7 @@ export function MobileBottomNav() {
                 ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
             )}>
             <Home className="h-5 w-5" />
-            <span>Home</span>
+            <span>{t('Home')}</span>
           </Link>
 
           <button
@@ -96,7 +98,7 @@ export function MobileBottomNav() {
               isSportsTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
             )}>
             <Grid3X3 className="h-5 w-5" />
-            <span>Sports</span>
+            <span>{t('Sports')}</span>
           </button>
 
           {/* Bet Slip — centre accent tab */}
@@ -129,7 +131,7 @@ export function MobileBottomNav() {
                 </span>
               )}
             </div>
-            <span>Account</span>
+            <span>{t('Account')}</span>
           </Link>
 
           <button
@@ -139,7 +141,7 @@ export function MobileBottomNav() {
               isMoreTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
             )}>
             <MoreHorizontal className="h-5 w-5" />
-            <span>More</span>
+            <span>{t('More')}</span>
           </button>
 
         </div>

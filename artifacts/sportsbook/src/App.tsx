@@ -23,6 +23,7 @@ import { OddsFormatProvider } from "@/hooks/useOddsFormat";
 import { OddsDataProvider } from "@/hooks/useOddsData";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
+import { I18nProvider } from "@/contexts/I18nContext";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
@@ -72,32 +73,34 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <NotificationsProvider>
-            <OddsFormatProvider>
-              <OddsSimulationProvider>
-                <OddsDataProvider>
-                  <FavoritesProvider>
-                    <WalletProvider>
-                      <BetHistoryProvider>
-                        <BetSlipProvider>
-                          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-                            <Router />
-                            <PromoPopup />
-                          </WouterRouter>
-                          <MobileBottomNav />
-                          <OnboardingGuide />
-                          <TransactionNotifier />
-                          <Toaster />
-                        </BetSlipProvider>
-                      </BetHistoryProvider>
-                    </WalletProvider>
-                  </FavoritesProvider>
-                </OddsDataProvider>
-              </OddsSimulationProvider>
-            </OddsFormatProvider>
-          </NotificationsProvider>
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <NotificationsProvider>
+              <OddsFormatProvider>
+                <OddsSimulationProvider>
+                  <OddsDataProvider>
+                    <FavoritesProvider>
+                      <WalletProvider>
+                        <BetHistoryProvider>
+                          <BetSlipProvider>
+                            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                              <Router />
+                              <PromoPopup />
+                            </WouterRouter>
+                            <MobileBottomNav />
+                            <OnboardingGuide />
+                            <TransactionNotifier />
+                            <Toaster />
+                          </BetSlipProvider>
+                        </BetHistoryProvider>
+                      </WalletProvider>
+                    </FavoritesProvider>
+                  </OddsDataProvider>
+                </OddsSimulationProvider>
+              </OddsFormatProvider>
+            </NotificationsProvider>
+          </AuthProvider>
+        </I18nProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

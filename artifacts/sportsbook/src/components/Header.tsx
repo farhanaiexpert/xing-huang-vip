@@ -10,6 +10,7 @@ import { useState, useRef, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
+import { useI18n } from '../contexts/I18nContext';
 
 const LANGUAGES = [
   { code: 'ar',    label: 'Arabic',     flag: '🇸🇦', short: 'AR' },
@@ -77,8 +78,8 @@ export function Header() {
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
   const [showSearch,       setShowSearch]       = useState(false);
 
+  const { lang: currentLang, setLang, t } = useI18n();
   const [showLang,         setShowLang]         = useState(false);
-  const [currentLang,      setCurrentLang]      = useState('en');
   const [searchQuery,      setSearchQuery]      = useState('');
   const [copied,           setCopied]           = useState(false);
   const menuRef   = useRef<HTMLDivElement>(null);
@@ -86,7 +87,7 @@ export function Header() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   function handleSelectLanguage(code: string) {
-    setCurrentLang(code);
+    setLang(code);
     setShowLang(false);
     triggerTranslate(code);
   }
@@ -252,12 +253,12 @@ export function Header() {
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-0.5 flex-1">
-            <NavItem href="/"                   label="All Sports"        />
-            <NavItem href="/promotions"         label="Promotions"        />
-            <NavItem href="/prediction-pools"   label="Predict & Win"     />
+            <NavItem href="/"                   label={t('All Sports')}    />
+            <NavItem href="/promotions"         label={t('Promotions')}    />
+            <NavItem href="/prediction-pools"   label={t('Predict & Win')} />
             <BetHistoryNavItem />
-            <NavItem href="/help"               label="Help"              />
-            <NavItem href="/account/referrals"  label="Affiliate"         />
+            <NavItem href="/help"               label={t('Help')}          />
+            <NavItem href="/account/referrals"  label={t('Affiliate')}     />
             <WinSpinNavItem />
             <LiveNavItem />
           </nav>
