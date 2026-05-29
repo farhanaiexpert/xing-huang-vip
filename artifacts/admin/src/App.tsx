@@ -8,6 +8,8 @@ import OverviewPage from "@/pages/OverviewPage";
 import UsersPage from "@/pages/UsersPage";
 import BetsPage from "@/pages/BetsPage";
 import TransactionsPage from "@/pages/TransactionsPage";
+import DepositsPage from "@/pages/DepositsPage";
+import WithdrawalsPage from "@/pages/WithdrawalsPage";
 import ReferralsPage from "@/pages/ReferralsPage";
 import PromotionsPage from "@/pages/PromotionsPage";
 import PoolsPage from "@/pages/PoolsPage";
@@ -45,6 +47,8 @@ function Router() {
       <Route path="/users" component={() => <ProtectedRoute component={UsersPage} />} />
       <Route path="/bets" component={() => <ProtectedRoute component={BetsPage} />} />
       <Route path="/transactions" component={() => <ProtectedRoute component={TransactionsPage} />} />
+      <Route path="/deposits" component={() => <ProtectedRoute component={DepositsPage} />} />
+      <Route path="/withdrawals" component={() => <ProtectedRoute component={WithdrawalsPage} />} />
       <Route path="/referrals" component={() => <ProtectedRoute component={ReferralsPage} />} />
       <Route path="/promotions" component={() => <ProtectedRoute component={PromotionsPage} />} />
       <Route path="/pools" component={() => <ProtectedRoute component={PoolsPage} />} />

@@ -1,12 +1,13 @@
 import { useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { clearToken, getStoredUser } from "@/lib/api";
+import { clearToken, getStoredUser, api, PendingTotals, isTokenStored } from "@/lib/api";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
   Shield, ShieldCheck, Zap, Globe, BarChart2, Settings, CheckCheck,
-  Activity, DollarSign, TrendingUp,
+  Activity, DollarSign, TrendingUp, ArrowDownCircle, ArrowUpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useAdminNotifications(handleCountChange);
 
+  const { data: pendingTotals } = useQuery<PendingTotals>({
+    queryKey: ["admin-txns-pending-totals"],
+    queryFn: () => api.get("/admin/transactions/pending-totals"),
+    refetchInterval: 30_000,
+    enabled: isTokenStored(),
+  });
+  const depositBadge = pendingTotals?.pendingDepositCount ?? 0;
+  const withdrawalBadge = pendingTotals?.pendingWithdrawalCount ?? 0;
+
   function logout() {
     clearToken();
     setLocation("/login");
@@ -31,18 +41,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     {
       label: "Platform",
       items: [
-        { href: "/",             icon: LayoutDashboard, label: "Overview",      badge: 0 },
-        { href: "/users",        icon: Users,           label: "Users",         badge: 0 },
-        { href: "/bets",         icon: Receipt,         label: "Bets",          badge: 0 },
-        { href: "/settlement",   icon: CheckCheck,      label: "Settlement",    badge: 0 },
-        { href: "/transactions", icon: CreditCard,      label: "Transactions",  badge: pendingCount },
+        { href: "/",           icon: LayoutDashboard, label: "Overview",    badge: 0 },
+        { href: "/users",      icon: Users,           label: "Users",       badge: 0 },
+        { href: "/bets",       icon: Receipt,         label: "Bets",        badge: 0 },
+        { href: "/settlement", icon: CheckCheck,      label: "Settlement",  badge: 0 },
       ],
     },
     {
       label: "Finance",
       items: [
-        { href: "/referrals",  icon: Share2, label: "Referrals",  badge: 0 },
-        { href: "/promotions", icon: Gift,   label: "Promotions", badge: 0 },
+        { href: "/deposits",     icon: ArrowDownCircle, label: "Deposits",     badge: depositBadge },
+        { href: "/withdrawals",  icon: ArrowUpCircle,   label: "Withdrawals",  badge: withdrawalBadge },
+        { href: "/transactions", icon: CreditCard,      label: "Transactions", badge: 0 },
+        { href: "/referrals",    icon: Share2,          label: "Referrals",    badge: 0 },
+        { href: "/promotions",   icon: Gift,            label: "Promotions",   badge: 0 },
       ],
     },
     {
