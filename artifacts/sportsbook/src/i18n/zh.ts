@@ -22,7 +22,7 @@ export const zh: Record<string, string> = {
   "Predict & Win":    "预测赢奖",
   "Bet History":      "投注历史",
   "Help":             "帮助",
-  "Affiliate":        "推广联盟",
+  "Refer":            "推广联盟",
   "WinSpin":          "幸运转盘",
   "Account":          "账户",
   "More":             "更多",

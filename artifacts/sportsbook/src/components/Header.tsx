@@ -140,7 +140,7 @@ export function Header() {
     { label: 'Promotions',      href: '/promotions' },
     { label: 'Predict & Win',   href: '/prediction-pools' },
     { label: 'Bet History',     href: '/account/bets' },
-    { label: 'Affiliate',       href: '/account/referrals' },
+    { label: 'Refer',            href: '/account/referrals' },
     { label: 'Help & Rules',    href: '/help' },
     { label: 'Soccer',          href: '/' },
     { label: 'Tennis',          href: '/' },
@@ -258,7 +258,7 @@ export function Header() {
             <NavItem href="/prediction-pools"   label={t('Predict & Win')} />
             <BetHistoryNavItem />
             <NavItem href="/help"               label={t('Help')}          />
-            <NavItem href="/account/referrals"  label={t('Affiliate')}     />
+            <NavItem href="/account/referrals"  label={t('Refer')}         />
             <WinSpinNavItem />
             <LiveNavItem />
           </nav>

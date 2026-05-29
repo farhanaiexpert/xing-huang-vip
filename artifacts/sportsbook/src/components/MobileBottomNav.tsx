@@ -28,7 +28,7 @@ const QUICK_ACTIONS = [
   { icon: Star,       label: 'WinSpin',     sub: 'Spin & win',         href: '/winspin',            color: '#F59E0B', bg: 'rgba(245,158,11,0.08)',   border: 'rgba(245,158,11,0.18)' },
   { icon: HelpCircle, label: 'Help & Rules',sub: 'Learn how to bet',   href: '/help',               color: '#A78BFA', bg: 'rgba(167,139,250,0.08)',  border: 'rgba(167,139,250,0.18)' },
   { icon: TrendingUp, label: 'Promotions',  sub: 'Bonuses & offers',   href: '/promotions',         color: '#00DFA9', bg: 'rgba(0,223,169,0.08)',    border: 'rgba(0,223,169,0.18)' },
-  { icon: Share2,     label: 'Affiliate',   sub: 'Earn referral USDT', href: '/account/referrals',  color: '#FACC15', bg: 'rgba(250,204,21,0.08)',   border: 'rgba(250,204,21,0.18)' },
+  { icon: Share2,     label: 'Refer',       sub: 'Earn referral USDT', href: '/account/referrals',  color: '#FACC15', bg: 'rgba(250,204,21,0.08)',   border: 'rgba(250,204,21,0.18)' },
 ];
 
 const LEGAL_LINKS = [
