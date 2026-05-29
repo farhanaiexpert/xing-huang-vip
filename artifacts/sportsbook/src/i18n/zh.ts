@@ -371,5 +371,254 @@ export const zh: Record<string, string> = {
   "Permanently close betting": "永久关闭投注",
   "Short cooling-off break": "短暂冷静期",
   "Three-month exclusion": "三个月排除",
+  "Responsible Gambling": "负责任博彩",
+  "Tools to help you stay in control. All limits take effect immediately.":
+                          "帮助您保持控制的工具。所有限额立即生效。",
+  "Spend Limits":         "消费限额",
+  "active limit":         "条有效限额",
+  "active limits":        "条有效限额",
+  "Set daily, weekly, or monthly caps on deposits or losses →":
+                          "设置每日、每周或每月的存款或亏损上限 →",
+  "Take a break or permanently exclude yourself →":
+                          "暂停博彩或永久自我排除 →",
+  "Not excluded":         "未排除",
+  "Break active":         "休息中",
+  "Permanently excluded": "已永久排除",
+  "Cooling-off break active": "冷静期已激活",
+  "Account permanently excluded": "账户已永久排除",
+  "Self-exclusion active": "自我排除已生效",
+  "Betting is disabled. Contact support to discuss options.":
+                          "投注已禁用，请联系客服。",
+  "Betting is temporarily blocked.": "投注已暂时封锁。",
+  "Betting is blocked.":  "投注已封锁。",
+  "Support Resources":    "支持资源",
+  "If you feel your gambling may be out of control, please reach out for help:":
+                          "如果您感到赌博已失控，请寻求帮助：",
+  "Set a New Limit":      "设置新限额",
+  "Limit Type":           "限额类型",
+  "Period":               "周期",
+  "loss":                 "亏损",
+  "deposit":              "存款",
+  "daily":                "每日",
+  "weekly":               "每周",
+  "monthly":              "每月",
+  "Self-Exclude":         "自我排除",
+  "Limit removed":        "限额已移除",
+  "Enter a valid amount": "请输入有效金额",
+  "Select an exclusion period": "请选择排除期限",
+  "Please confirm you understand by checking the box":
+                          "请勾选确认框以确认您已了解",
+  "I understand this action will restrict my betting access":
+                          "我了解此操作将限制我的投注权限",
+
+  // ── Help page — section summaries ─────────────────────────────────────────
+  "Odds represent the probability of an outcome and determine your potential return.":
+    "赔率代表结果的概率，并决定您的潜在回报。",
+  "Click any odds button to add a selection to your Bet Slip.":
+    "点击任意赔率按钮即可将选项添加到投注单。",
+  "The Bet Slip on the right side of the screen is where you review and place your bets.":
+    "屏幕右侧的投注单是您查看和下注的地方。",
+  "An accumulator (acca) combines multiple selections into one bet with multiplied odds.":
+    "串关（Acca）将多个选项合并为一注，赔率相乘。",
+  "You need to connect a Web3 wallet before placing any bets.":
+    "下注前需要先连接 Web3 钱包。",
+
+  // ── Help page — section headings ──────────────────────────────────────────
+  "What are odds?":              "什么是赔率？",
+  "Decimal odds (default)":      "小数赔率（默认）",
+  "Fractional odds":             "分数赔率",
+  "American odds":               "美式赔率",
+  "Odds movement":               "赔率变动",
+  "Click to add":                "点击添加",
+  "Click again to remove":       "再次点击可移除",
+  "Match rows vs Event page":    "比赛列表与赛事页面",
+  "Market depth on the Event page": "赛事页面的市场深度",
+  "Suspended markets":           "暂停市场",
+  "Adding selections":           "添加选项",
+  "Single vs Accumulator":       "单注 vs 串关",
+  "Entering a stake":            "输入赌注",
+  "Removing selections":         "移除选项",
+  "Mobile bet slip":             "手机投注单",
+  "How accas work":              "串关如何运作",
+  "All legs must win":           "所有关卡必须赢",
+  "Building an acca":            "构建串关",
+  "Minimum legs":                "最少关卡数",
+  "Why a wallet?":               "为什么需要钱包？",
+  "How to connect":              "如何连接",
+  "What happens after connection": "连接后会发生什么",
+  "Browsing without a wallet":   "无钱包浏览",
+  "Disconnecting":               "断开连接",
+
+  // ── Help page — FAQ questions ─────────────────────────────────────────────
+  "Are the odds updated in real time?":
+    "赔率是否实时更新？",
+  "Can I change my stake after adding it?":
+    "添加后我可以更改赌注吗？",
+  "What does \"Suspended\" mean on a market?":
+    "市场上的"暂停"是什么意思？",
+  "How do I switch between Decimal, Fractional and American odds?":
+    "如何在小数、分数和美式赔率之间切换？",
+  "What sports are available?":
+    "提供哪些体育项目？",
+  "Can I place a bet from the Event page?":
+    "我可以在赛事页面下注吗？",
+
+  // ── Help page — FAQ answers ───────────────────────────────────────────────
+  "Yes. Live match odds update continuously. On the home page and event pages, odds buttons will flash green (drifting) or red (shortening) when they move.":
+    "是的。现场比赛赔率持续更新。在首页和赛事页面，赔率按钮上涨时会闪绿，下降时会闪红。",
+  "Yes. Just clear the stake field and type a new amount. The potential return recalculates instantly.":
+    "是的。清空赌注输入框并输入新金额，潜在回报会立即重新计算。",
+  "A suspended market is temporarily locked for betting — usually because a goal, break of serve, or other key event is being verified. The market will reopen shortly with updated odds.":
+    "暂停的市场暂时锁定投注——通常是因为进球、发球局中断或其他关键事件正在核实。市场将在短时间内以更新的赔率重新开放。",
+  "Use the DEC / FRAC / US toggle in the top header. Your preference is saved and all odds across the entire platform update instantly.":
+    "使用顶部标题栏的 小数/分数/美式 切换按钮。您的偏好会被保存，平台上所有赔率即时更新。",
+  "Football (soccer), tennis, basketball (NBA), cricket, esports (CS2, LoL), horse racing, IPL, Formula 1, boxing, MMA, golf, darts, and more are available or coming soon.":
+    "足球、网球、篮球（NBA）、板球、电竞（CS2、LoL）、赛马、IPL、一级方程式、拳击、综合格斗、高尔夫、飞镖等已上线或即将推出。",
+  "Yes. Click any odds button on the full event page to add it to your Bet Slip. All markets work the same way regardless of which page you're on.":
+    "是的。点击完整赛事页面上的任意赔率按钮即可添加到投注单。无论在哪个页面，所有市场的操作方式相同。",
+  "CupBett · All odds subject to change · 18+":
+    "CupBett · 所有赔率可能随时变动 · 18岁以上",
+
+  // ── Promotions page — subtitles & descriptions ────────────────────────────
+  "Up to +50% on winning accumulators": "赢得串关最高额外 +50%",
+  "10 USDT free bet, every single week": "每周 10 USDT 免费投注",
+  "25 USDT for you, 25 USDT for them":   "您和好友各得 25 USDT",
+  "10% back on live bet losses":         "现场投注亏损返还 10%",
+  "Bet 20 USDT, get a 5 USDT free bet":  "投注 20 USDT，获赠 5 USDT 免费投注",
+  "Bet & Get — Premier League":          "投注赠注 — 英超",
+  "Make your first deposit and we'll match it 100%, giving you double the funds to explore the markets. Min. deposit 20 USDT. 5× wagering requirement.":
+    "首次存款我们匹配 100%，资金翻倍探索市场。最低存款 20 USDT，5 倍流水要求。",
+  "Win more on your accumulators. 4 selections: +10% · 5 selections: +20% · 6 selections: +35% · 7+: +50%. Applied automatically to qualifying bets.":
+    "赢得更多串关奖励。4关：+10% · 5关：+20% · 6关：+35% · 7关+：+50%。自动适用于符合条件的投注。",
+  "Place at least 25 USDT in total bets Mon–Thu and receive a 10 USDT free bet credited to your account every Friday at 09:00 UTC. No opt-in required.":
+    "周一至周四总投注至少 25 USDT，每周五 09:00 UTC 自动获得 10 USDT 免费投注。无需报名。",
+  "Share your unique referral link. When your friend signs up and deposits 50 USDT+, you both receive a 25 USDT free bet. No limit on referrals.":
+    "分享您的专属推荐链接。好友注册并存款 50 USDT+，双方各获 25 USDT 免费投注。推荐人数不限。",
+  "Lost on an in-play bet? We'll return 10% of your net in-play losses as a free bet credit every Monday, up to a maximum of 50 USDT per week.":
+    "现场投注有亏损？我们每周一返还净亏损的 10% 作为免费投注额度，每周最高 50 USDT。",
+  "Place any 20 USDT+ single on a Premier League match this weekend and receive a 5 USDT free bet instantly. Applies to pre-match bets only at odds of 1.50+.":
+    "本周末在英超比赛上投注任意 20 USDT+ 单注，立即获得 5 USDT 免费投注。仅适用于赔率 1.50+ 的赛前投注。",
+  "Ends Sun 23:59 UTC":  "周日 23:59 UTC 截止",
+  "Earn 1 loyalty point for every 1 USDT wagered. Points unlock higher tiers with better multipliers, faster withdrawals, and exclusive perks — automatically.":
+    "每投注 1 USDT 赚取 1 忠诚积分。积分解锁更高等级，享更高倍数、更快提款及独家福利——全自动。",
+
+  // ── Promotions — toast messages ───────────────────────────────────────────
+  "Bonus activated!":    "奖金已激活！",
+  "Your 100% welcome bonus is ready. Make your first deposit to unlock it.":
+    "您的 100% 欢迎奖金已就绪，首次存款即可解锁。",
+  "Bet 25+ USDT Mon–Thu and your 10 USDT free bet lands every Friday at 09:00 UTC automatically.":
+    "周一至周四投注 25+ USDT，每周五 09:00 UTC 自动到账 10 USDT 免费投注。",
+  "Referral link copied!": "推荐链接已复制！",
+  "Share it with friends. You both get 25 USDT when they deposit 50+ USDT.":
+    "分享给好友。对方存款 50+ USDT 后，双方各获 25 USDT。",
+
+  // ── Promotions — loyalty tier perks ──────────────────────────────────────
+  "Weekly free bet eligibility":    "每周免费投注资格",
+  "Priority customer support":      "优先客服支持",
+  "Boosted acca percentages":       "加成串关百分比",
+  "Faster withdrawals (24 h)":      "更快提款（24小时）",
+  "Dedicated account manager":      "专属客户经理",
+  "Exclusive Gold promotions":      "专属金牌促销",
+  "Same-day withdrawals":           "当日提款",
+  "VIP events & hospitality":       "VIP 活动与接待",
+  "Custom bet limits on request":   "可申请自定义投注限额",
+  "Instant withdrawals":            "即时提款",
+  "Personal odds requests":         "个人赔率申请",
+
+  // ── Wallet page — additional labels & errors ──────────────────────────────
+  "Choose Deposit Method":           "选择存款方式",
+  "Quick Deposit via NOWPayments":   "通过 NOWPayments 快速存款",
+  "Enter amount → get unique address → pay → auto-credited":
+    "输入金额 → 获取专属地址 → 付款 → 自动到账",
+  "300+ coins":                      "300+ 种币",
+  "Auto Credit":                     "自动到账",
+  "No TxHash needed":                "无需交易哈希",
+  "~20 min window":                  "约 20 分钟窗口",
+  "TRC-20 Network":                  "TRC-20 网络",
+  "5–30 min":                        "5–30 分钟",
+  "No deposit fees":                 "无存款手续费",
+  "Secure":                          "安全",
+  "Fast":                            "快速",
+  "Auto":                            "自动",
+  "Manual":                          "手动",
+  "Soon":                            "即将推出",
+  "Binance Pay":                     "币安支付",
+  "WalletConnect":                   "WalletConnect",
+  "↓ Deposit":                       "↓ 存款",
+  "↑ Withdraw":                      "↑ 提款",
+  "📋 History":                       "📋 历史记录",
+  "deposit pending review":          "存款待审核",
+  "deposits pending review":         "笔存款待审核",
+  "withdrawal pending":              "提款待处理",
+  "withdrawals pending":             "笔提款待处理",
+  "Amount exceeds your available balance": "金额超出可用余额",
+  "Enter your USDT TRC-20 wallet address": "请输入您的 USDT TRC-20 钱包地址",
+  "Enter your transaction hash / TxID":    "请输入您的交易哈希 / TxID",
+  "Minimum deposit is 10 USDT":            "最低存款金额为 10 USDT",
+  "Submission failed":                     "提交失败",
+  "Failed to create payment":              "创建支付失败",
+
+  // ── Settings page — additional strings ───────────────────────────────────
+  "Username":                        "用户名",
+  "Enter new username":              "输入新用户名",
+  "Save Username":                   "保存用户名",
+  "Username must be at least 3 characters": "用户名至少需要 3 个字符",
+  "Enter your current password":     "请输入当前密码",
+  "New password must be at least 8 characters": "新密码至少需要 8 个字符",
+  "Passwords do not match":          "两次密码不一致",
+  "No change":                       "无更改",
+  "Username updated":                "用户名已更新",
+  "Password changed":                "密码已修改",
+  "Your password has been updated.": "您的密码已成功更新。",
+  "Failed to update username":       "更新用户名失败",
+  "Failed to change password":       "修改密码失败",
+  "Referral code copied!":           "推荐码已复制！",
+  "Your Referral Code":              "您的推荐码",
+
+  // ── Overview page ─────────────────────────────────────────────────────────
+  "Member since":        "注册于",
+  "Referral Earnings":   "推荐收益",
+  "referrals":           "位推荐人",
+  "earned":              "已赚取",
+  "View →":              "查看 →",
+
+  // ── Bets page — additional strings ───────────────────────────────────────
+  "Kicks off in":        "即将开赛：",
+  "Selections":          "选项",
+  "Bet ID":             "投注编号",
+  "Estimated Payout":   "预计派彩",
+  "Profit":             "盈利",
+
+  // ── VIP page — additional strings ────────────────────────────────────────
+  "1 free WinSpin per week":       "每周 1 次免费幸运转盘",
+  "Priority support tag":          "优先客服标签",
+  "3 free WinSpins per week":      "每周 3 次免费幸运转盘",
+  "1.05× acca odds boost":         "1.05× 串关赔率加成",
+  "Daily WinSpin":                 "每日幸运转盘",
+  "1.08× acca odds boost":         "1.08× 串关赔率加成",
+  "Dedicated support":             "专属客服",
+  "Early access to features":      "功能抢先体验",
+  "Unlimited WinSpins":            "无限幸运转盘",
+  "1.10× acca odds boost":         "1.10× 串关赔率加成",
+  "3% monthly cashback":           "每月 3% 返现",
+  "VIP account manager":           "VIP 客户经理",
+  "Exclusive promotions":          "专属促销活动",
+  "Monthly Leaderboard":           "月度排行榜",
+  "pts":                           "积分",
+
+  // ── Referrals page — additional strings ──────────────────────────────────
+  "You invite them":               "您邀请他们",
+  "Their referrals":               "他们的推荐",
+  "Three hops from you":           "距您三级",
+  "Level 1":                       "一级",
+  "Level 2":                       "二级",
+  "Level 3":                       "三级",
+  "Minimum 4 characters required": "最少需要 4 个字符",
+  "Maximum 16 characters allowed": "最多允许 16 个字符",
+  "Letters and numbers only":      "仅限字母和数字",
+  "Code updated!":                 "推荐码已更新！",
+  "Edit code":                     "编辑推荐码",
+  "Save code":                     "保存推荐码",
 
 };
+
