@@ -108,11 +108,12 @@ export function WalletPage() {
   const [nppAddrCopied, setNppAddrCopied] = useState(false);
 
   // Withdrawal form
-  const [wdAmount, setWdAmount]     = useState('');
-  const [wdAddress, setWdAddress]   = useState('');
+  const [wdAmount, setWdAmount]       = useState('');
+  const [wdAddress, setWdAddress]     = useState('');
+  const [wdNetwork, setWdNetwork]     = useState<'TRC-20' | 'ERC-20'>('TRC-20');
   const [wdSubmitting, setWdSubmitting] = useState(false);
-  const [wdError, setWdError]       = useState('');
-  const [wdSuccess, setWdSuccess]   = useState(false);
+  const [wdError, setWdError]         = useState('');
+  const [wdSuccess, setWdSuccess]     = useState(false);
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -165,11 +166,12 @@ export function WalletPage() {
     setWdError('');
     const amount = parseFloat(wdAmount);
     if (!wdAmount || isNaN(amount) || amount <= 0) { setWdError('Enter a valid amount'); return; }
+    if (amount < 100) { setWdError('Minimum withdrawal is 100 USDT'); return; }
     if (amount > balance) { setWdError('Amount exceeds your available balance'); return; }
-    if (!wdAddress.trim()) { setWdError('Enter your USDT TRC-20 wallet address'); return; }
+    if (!wdAddress.trim()) { setWdError(`Enter your USDT ${wdNetwork} wallet address`); return; }
     setWdSubmitting(true);
     try {
-      await api.post('/wallet/withdraw', { amount, walletAddress: wdAddress.trim(), network: 'TRC-20' });
+      await api.post('/wallet/withdraw', { amount, walletAddress: wdAddress.trim(), network: wdNetwork });
       setWdSuccess(true);
       setWdAmount('');
       setWdAddress('');
@@ -979,92 +981,210 @@ export function WalletPage() {
       {tab === 'withdraw' && (
         <div className="space-y-4">
 
-          {/* Balance available */}
-          <div className="rounded-xl border border-white/[0.07] bg-[#0E1520] p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center">
-              <Wallet className="h-4 w-4 text-[#00DFA9]" />
+          {/* Balance card */}
+          <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0E1520] to-[#0B1019] p-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-[#00DFA9]" />
+              </div>
+              <div>
+                <p className="text-[10px] text-[#64748B] font-semibold uppercase tracking-wider mb-0.5">Available Balance</p>
+                <p className="text-[22px] font-black text-[#F8FAFC] leading-none">
+                  {fmt(balance)} <span className="text-[13px] font-bold text-[#00DFA9]">USDT</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] text-[#64748B] font-semibold uppercase tracking-wider">Available to Withdraw</p>
-              <p className="text-[20px] font-black text-[#F8FAFC]">{fmt(balance)} <span className="text-[13px] font-bold text-[#00DFA9]">USDT</span></p>
-            </div>
+            {balance >= 100 && (
+              <div className="text-right">
+                <p className="text-[9px] text-[#64748B] uppercase tracking-wider">Withdrawable</p>
+                <p className="text-[11px] font-bold text-[#00DFA9]">✓ Eligible</p>
+              </div>
+            )}
+            {balance < 100 && balance > 0 && (
+              <div className="text-right">
+                <p className="text-[9px] text-[#FACC15] uppercase tracking-wider">Need</p>
+                <p className="text-[11px] font-bold text-[#FACC15]">{fmt(100 - balance)} more</p>
+              </div>
+            )}
           </div>
 
-          <div className="rounded-2xl border border-white/[0.09] bg-[#0E1520] overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06]">
-              <p className="text-[12px] font-bold text-[#F8FAFC]">Request Withdrawal</p>
-              <p className="text-[11px] text-[#64748B] mt-0.5">Processed within 24 hours after admin approval</p>
+          {/* Form card */}
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0E1520] overflow-hidden">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-white/[0.06] bg-gradient-to-r from-[#38BDF8]/5 to-transparent">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#38BDF8]/10 border border-[#38BDF8]/20 flex items-center justify-center">
+                  <ArrowUpRight className="h-3.5 w-3.5 text-[#38BDF8]" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-[#F8FAFC]">Request Withdrawal</p>
+                  <p className="text-[10px] text-[#64748B]">Admin reviews and sends manually within 24 hours</p>
+                </div>
+              </div>
             </div>
 
-            <div className="p-4">
+            <div className="p-5">
               {wdSuccess ? (
-                <div className="flex flex-col items-center py-6 gap-3 text-center">
-                  <div className="w-14 h-14 rounded-full bg-[#38BDF8]/15 border border-[#38BDF8]/30 flex items-center justify-center">
-                    <CheckCircle2 className="h-7 w-7 text-[#38BDF8]" />
+                /* ── Success state ── */
+                <div className="flex flex-col items-center py-8 gap-4 text-center">
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full bg-[#00DFA9]/10 border-2 border-[#00DFA9]/30 flex items-center justify-center">
+                      <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                      <span className="text-[8px] font-black text-[#0B0F14]">✓</span>
+                    </div>
                   </div>
                   <div>
-                    <p className="text-[15px] font-bold text-[#F8FAFC]">Withdrawal requested!</p>
-                    <p className="text-[12px] text-[#64748B] mt-0.5">
-                      Your withdrawal will be processed within 24 hours. You'll see the status update in History.
+                    <p className="text-[16px] font-bold text-[#F8FAFC]">Withdrawal Requested!</p>
+                    <p className="text-[12px] text-[#64748B] mt-1 max-w-[260px] mx-auto leading-relaxed">
+                      Your request is pending admin review. You'll receive your funds within 24 hours.
                     </p>
                   </div>
-                  <button onClick={() => { setWdSuccess(false); setTab('history'); }}
-                    className="px-4 py-2 rounded-xl text-[12px] font-bold text-[#38BDF8] border border-[#38BDF8]/30 hover:bg-[#38BDF8]/10 transition-all">
-                    View in History
-                  </button>
+                  <div className="flex gap-2 w-full max-w-xs">
+                    <button onClick={() => { setWdSuccess(false); setTab('history'); }}
+                      className="flex-1 py-2.5 rounded-xl text-[12px] font-bold text-[#38BDF8] border border-[#38BDF8]/30 hover:bg-[#38BDF8]/10 transition-all">
+                      View History
+                    </button>
+                    <button onClick={() => setWdSuccess(false)}
+                      className="flex-1 py-2.5 rounded-xl text-[12px] font-bold text-[#F8FAFC] bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] transition-all">
+                      New Request
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <form onSubmit={submitWithdrawal} className="space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Amount (USDT)</label>
-                      <button type="button"
-                        onClick={() => setWdAmount(Math.max(0, balance - 1).toFixed(2))}
-                        className="text-[10px] text-[#00DFA9] hover:underline">
-                        Max: ${fmt(balance)}
-                      </button>
-                    </div>
-                    <input
-                      type="number"
-                      min="10"
-                      max={balance}
-                      step="0.01"
-                      value={wdAmount}
-                      onChange={e => setWdAmount(e.target.value)}
-                      placeholder="Minimum 10 USDT"
-                      className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-3 py-2.5 text-[13px] text-[#F8FAFC] placeholder:text-[#374151] focus:outline-none focus:border-[#38BDF8]/50 transition-colors"
-                    />
-                  </div>
+                <form onSubmit={submitWithdrawal} className="space-y-5">
 
+                  {/* Step 1 — Network */}
                   <div>
-                    <label className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
-                      Your USDT Wallet Address (TRC-20)
-                    </label>
-                    <input
-                      type="text"
-                      value={wdAddress}
-                      onChange={e => setWdAddress(e.target.value)}
-                      placeholder="T... (your TRC-20 wallet address)"
-                      className="mt-1.5 w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-3 py-2.5 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#374151] focus:outline-none focus:border-[#38BDF8]/50 transition-colors"
-                    />
-                    <p className="text-[10px] text-[#64748B] mt-1 flex items-center gap-1">
-                      <Info className="h-2.5 w-2.5" />
-                      Double-check your address. Withdrawals to wrong addresses cannot be reversed.
-                    </p>
-                  </div>
-
-                  <div className="bg-[#38BDF8]/5 border border-[#38BDF8]/15 rounded-xl p-3">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Info className="h-3.5 w-3.5 text-[#38BDF8] shrink-0" />
-                      <p className="text-[11px] font-bold text-[#38BDF8]">Withdrawal Info</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">1</span>
+                      <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">Select Network</p>
                     </div>
-                    <ul className="space-y-1 ml-5">
-                      {['Minimum withdrawal: 10 USDT', 'Network: TRC-20 (Tron) only', 'Processing time: within 24 hours', 'No withdrawal fees charged by us'].map(t => (
-                        <li key={t} className="text-[10px] text-[#64748B] list-disc">{t}</li>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {([
+                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron Network', color: '#E84142', desc: 'Lower fees, faster' },
+                        { id: 'ERC-20', label: 'ERC-20', chain: 'Ethereum Network', color: '#627EEA', desc: 'Wider compatibility' },
+                      ] as const).map(net => (
+                        <button
+                          key={net.id}
+                          type="button"
+                          onClick={() => { setWdNetwork(net.id); setWdAddress(''); }}
+                          className={`relative p-3.5 rounded-xl border-2 text-left transition-all ${
+                            wdNetwork === net.id
+                              ? 'border-[#38BDF8] bg-[#38BDF8]/10'
+                              : 'border-white/[0.08] bg-[#0B0F14] hover:border-white/[0.15]'
+                          }`}
+                        >
+                          {wdNetwork === net.id && (
+                            <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#38BDF8] flex items-center justify-center">
+                              <span className="text-[7px] font-black text-[#0B0F14]">✓</span>
+                            </span>
+                          )}
+                          <div className="w-6 h-6 rounded-lg mb-2 flex items-center justify-center" style={{ backgroundColor: net.color + '22', border: `1px solid ${net.color}44` }}>
+                            <span className="text-[8px] font-black" style={{ color: net.color }}>{net.id.split('-')[0]}</span>
+                          </div>
+                          <p className="text-[12px] font-bold text-[#F8FAFC]">{net.label}</p>
+                          <p className="text-[10px] text-[#64748B]">{net.chain}</p>
+                          <p className="text-[9px] mt-1 font-medium" style={{ color: net.color }}>{net.desc}</p>
+                        </button>
                       ))}
-                    </ul>
+                    </div>
                   </div>
 
+                  {/* Step 2 — Amount */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">2</span>
+                      <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">Enter Amount</p>
+                      <span className="ml-auto text-[10px] text-[#64748B]">Min: <span className="text-[#FACC15] font-bold">100 USDT</span></span>
+                    </div>
+
+                    {/* Quick % buttons */}
+                    <div className="grid grid-cols-4 gap-1.5 mb-2">
+                      {[25, 50, 75, 100].map(pct => (
+                        <button
+                          key={pct}
+                          type="button"
+                          onClick={() => setWdAmount((balance * pct / 100).toFixed(2))}
+                          className="py-1.5 rounded-lg text-[10px] font-bold bg-[#0B0F14] border border-white/[0.08] text-[#64748B] hover:border-[#38BDF8]/40 hover:text-[#38BDF8] transition-all"
+                        >
+                          {pct === 100 ? 'MAX' : `${pct}%`}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="100"
+                        max={balance}
+                        step="0.01"
+                        value={wdAmount}
+                        onChange={e => setWdAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[18px] font-black text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/50 transition-colors pr-20"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#00DFA9]">USDT</span>
+                    </div>
+
+                    {wdAmount && parseFloat(wdAmount) > 0 && (
+                      <p className="text-[10px] text-[#64748B] mt-1.5">
+                        Remaining after withdrawal:{' '}
+                        <span className="text-[#F8FAFC] font-bold">
+                          {fmt(Math.max(0, balance - parseFloat(wdAmount)))} USDT
+                        </span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Step 3 — Wallet Address */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">3</span>
+                      <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">
+                        Your {wdNetwork} Wallet Address
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={wdAddress}
+                        onChange={e => setWdAddress(e.target.value)}
+                        placeholder={wdNetwork === 'TRC-20' ? 'T... (starts with T)' : '0x... (starts with 0x)'}
+                        className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/50 transition-colors"
+                      />
+                    </div>
+                    <div className="flex items-start gap-1.5 mt-2 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-2">
+                      <AlertCircle className="h-3 w-3 text-red-400 shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-red-400 leading-relaxed">
+                        Always double-check your address. Withdrawals sent to incorrect addresses are <strong>irreversible</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Info box */}
+                  <div className="bg-[#38BDF8]/[0.04] border border-[#38BDF8]/[0.12] rounded-xl p-3.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="h-3.5 w-3.5 text-[#38BDF8] shrink-0" />
+                      <p className="text-[11px] font-bold text-[#38BDF8]">Withdrawal Terms</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        ['Min. Amount', '100 USDT'],
+                        ['Network', wdNetwork],
+                        ['Processing', 'Within 24 hrs'],
+                        ['Fees', 'None from us'],
+                      ].map(([k, v]) => (
+                        <div key={k} className="flex items-center justify-between bg-[#0B0F14] rounded-lg px-2.5 py-1.5">
+                          <span className="text-[9px] text-[#64748B] font-semibold uppercase">{k}</span>
+                          <span className="text-[10px] font-bold text-[#F8FAFC]">{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Error */}
                   {wdError && (
                     <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
                       <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
@@ -1072,13 +1192,23 @@ export function WalletPage() {
                     </div>
                   )}
 
-                  <button type="submit" disabled={wdSubmitting || balance < 10}
-                    className="w-full py-3 rounded-xl font-bold text-[13px] border border-[#38BDF8]/30 text-[#38BDF8] bg-[#38BDF8]/10 hover:bg-[#38BDF8]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                  {/* Submit */}
+                  <button
+                    type="submit"
+                    disabled={wdSubmitting || balance < 100}
+                    className="w-full py-3.5 rounded-xl font-bold text-[13px] bg-gradient-to-r from-[#38BDF8] to-[#60A5FA] text-[#0B0F14] hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#38BDF8]/10"
+                  >
                     {wdSubmitting ? (
                       <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
+                        <Loader2 className="h-4 w-4 animate-spin" /> Submitting Request...
                       </span>
-                    ) : balance < 10 ? 'Insufficient Balance' : 'Request Withdrawal'}
+                    ) : balance < 100 ? (
+                      `Insufficient Balance (min 100 USDT)`
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <ArrowUpRight className="h-4 w-4" /> Request Withdrawal
+                      </span>
+                    )}
                   </button>
                 </form>
               )}

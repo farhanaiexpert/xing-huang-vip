@@ -305,9 +305,9 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
 
 // ── POST /wallet/withdraw ─────────────────────────────────────────────────────
 const WithdrawBody = z.object({
-  amount:        z.number().positive().min(10, "Minimum withdrawal is 10 USDT"),
+  amount:        z.number().positive().min(100, "Minimum withdrawal is 100 USDT"),
   walletAddress: z.string().min(10, "Please enter a valid USDT wallet address"),
-  network:       z.string().default("TRC-20"),
+  network:       z.enum(["TRC-20", "ERC-20"], { errorMap: () => ({ message: "Network must be TRC-20 or ERC-20" }) }),
 });
 
 router.post("/wallet/withdraw", authenticate, async (req, res): Promise<void> => {
