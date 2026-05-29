@@ -1063,7 +1063,7 @@ export function WalletPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2.5">
                       {([
-                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron Network', color: '#E84142', desc: 'Lower fees, faster' },
+                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron Network', color: '#00DFA9', desc: 'Lower fees, faster' },
                         { id: 'ERC-20', label: 'ERC-20', chain: 'Ethereum Network', color: '#627EEA', desc: 'Wider compatibility' },
                       ] as const).map(net => (
                         <button
@@ -1151,7 +1151,7 @@ export function WalletPage() {
                         type="text"
                         value={wdAddress}
                         onChange={e => setWdAddress(e.target.value)}
-                        placeholder={wdNetwork === 'TRC-20' ? 'T... (starts with T)' : '0x... (starts with 0x)'}
+                        placeholder={wdNetwork === 'TRC-20' ? 'e.g. TQn5m... Tron USDT address' : 'e.g. 0x742d... Ethereum USDT address'}
                         className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/50 transition-colors"
                       />
                     </div>
