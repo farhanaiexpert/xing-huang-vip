@@ -112,6 +112,7 @@ export function WalletPage() {
   const [wdAddress, setWdAddress]     = useState('');
   const [wdNetwork, setWdNetwork]     = useState<'TRC-20' | 'ERC-20'>('TRC-20');
   const [wdSubmitting, setWdSubmitting] = useState(false);
+  const [wdProcessing, setWdProcessing] = useState(false);
   const [wdError, setWdError]         = useState('');
   const [wdSuccess, setWdSuccess]     = useState(false);
 
@@ -172,13 +173,18 @@ export function WalletPage() {
     setWdSubmitting(true);
     try {
       await api.post('/wallet/withdraw', { amount, walletAddress: wdAddress.trim(), network: wdNetwork });
-      setWdSuccess(true);
+      setWdSubmitting(false);
+      setWdProcessing(true);
       setWdAmount('');
       setWdAddress('');
       loadData();
+      await new Promise(r => setTimeout(r, 2800));
+      setWdProcessing(false);
+      setWdSuccess(true);
     } catch (err: unknown) {
       setWdError(err instanceof Error ? err.message : 'Submission failed');
-    } finally { setWdSubmitting(false); }
+      setWdSubmitting(false);
+    }
   }
 
   // ── NOWPayments handlers ─────────────────────────────────────────────────────
@@ -1024,7 +1030,38 @@ export function WalletPage() {
             </div>
 
             <div className="p-5">
-              {wdSuccess ? (
+              {wdProcessing ? (
+                /* ── Processing animation ── */
+                <div className="flex flex-col items-center py-10 gap-5 text-center">
+                  <div className="relative w-20 h-20">
+                    {/* Outer spinning ring */}
+                    <svg className="absolute inset-0 animate-spin" viewBox="0 0 80 80" fill="none">
+                      <circle cx="40" cy="40" r="36" stroke="#38BDF8" strokeWidth="2.5" strokeDasharray="56 170" strokeLinecap="round"/>
+                    </svg>
+                    {/* Inner spinning ring (opposite direction) */}
+                    <svg className="absolute inset-0" style={{ animation: 'spin 1.4s linear infinite reverse' }} viewBox="0 0 80 80" fill="none">
+                      <circle cx="40" cy="40" r="27" stroke="#00DFA9" strokeWidth="2" strokeDasharray="36 133" strokeLinecap="round"/>
+                    </svg>
+                    {/* Center icon */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <ArrowUpRight className="h-7 w-7 text-[#38BDF8]" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[16px] font-bold text-[#F8FAFC]">Submitting Request…</p>
+                    <p className="text-[12px] text-[#64748B] mt-1">Securely sending your withdrawal request</p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2].map(i => (
+                      <span
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]"
+                        style={{ animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : wdSuccess ? (
                 /* ── Success state ── */
                 <div className="flex flex-col items-center py-8 gap-4 text-center">
                   <div className="relative">
