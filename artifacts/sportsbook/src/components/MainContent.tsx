@@ -956,7 +956,7 @@ function SiteFooter() {
         {/* ── Bottom bar ────────────────────────────────────────────────── */}
         <div className="pt-4 sm:border-t sm:border-[#253241]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p className="text-[10px] text-[#94A3B8]/30 leading-snug">
-            © 2021–2026 CupBett Ltd. All rights reserved.
+            © 2021–2026 <span translate="no">CupBett</span> Ltd. All rights reserved.
             <span className="hidden sm:inline">
               {" "}
               · 18+ · Gamble responsibly.
@@ -1063,7 +1063,7 @@ function TrustFooter() {
         ))}
         <div className="flex-1" />
         <p className="text-[9px] text-[#94A3B8]/25 leading-none whitespace-nowrap">
-          CupBett · For entertainment purposes
+          <span translate="no">CupBett</span> · For entertainment purposes
         </p>
       </div>
     </div>

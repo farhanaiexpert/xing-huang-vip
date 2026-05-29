@@ -81,7 +81,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
             {tab === 'login' ? 'Welcome back' : 'Create account'}
           </h2>
           <p className="text-xs text-[#94A3B8]/50 mt-1">
-            {tab === 'login' ? 'Sign in to your CupBett account' : 'Join CupBett and start betting'}
+            {tab === 'login' ? <>Sign in to your <span translate="no">CupBett</span> account</> : <>Join <span translate="no">CupBett</span> and start betting</>}
           </p>
         </div>
 

@@ -143,7 +143,7 @@ export function PromoPopup() {
           <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
             Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 99.99 USDT</span>
           </p>
-          <p className="text-[10px] text-[#64748B] hidden sm:block">Join 50,000+ players on CupBett Sports Trading</p>
+          <p className="text-[10px] text-[#64748B] hidden sm:block">Join 50,000+ players on <span translate="no">CupBett</span> Sports Trading</p>
         </div>
       </div>
 
@@ -317,7 +317,7 @@ export function PromoPopup() {
 
             <p className="text-[12px] sm:text-[13px] text-[#94A3B8] leading-relaxed mb-4">
               Join thousands of winning players on{' '}
-              <span className="text-[#00DFA9] font-semibold">CupBett Sports Trading</span>.
+              <span translate="no" className="text-[#00DFA9] font-semibold">CupBett Sports Trading</span>.
               Instant deposits · real-time odds · provably fair.
             </p>
 
