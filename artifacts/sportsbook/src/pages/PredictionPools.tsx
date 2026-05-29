@@ -7,7 +7,6 @@ import {
   X, ArrowRight, Mail, User, Wallet, ShieldCheck, Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useI18n } from '@/contexts/I18nContext';
 
 // ─── Wallet definitions (mirrored from ConnectWalletModal) ────────────────────
 const WALLETS = [
@@ -175,7 +174,6 @@ function EntryModal({
   const [name,  setName]  = useState(profile?.name  ?? '');
   const [email, setEmail] = useState(profile?.email ?? '');
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
-  const { t } = useI18n();
   const option = pool.options.find(o => o.id === optionId);
 
   function handleDetailsSubmit(e: React.FormEvent) {
@@ -252,7 +250,7 @@ function EntryModal({
                       {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : i + 1}
                     </div>
                     <span className={cn('text-[11px] font-semibold', active ? 'text-[#F8FAFC]' : done ? 'text-[#94A3B8]/45' : 'text-[#94A3B8]/30')}>
-                      {s === 'details' ? t('Your details') : t('Connect wallet')}
+                      {s === 'details' ? 'Your details' : 'Connect wallet'}
                     </span>
                   </div>
                   {i === 0 && (
@@ -267,14 +265,14 @@ function EntryModal({
           {step === 'details' && (
             <form onSubmit={handleDetailsSubmit} className="space-y-4">
               <div>
-                <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">{t('Who are you? 👋')}</h2>
+                <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">Who are you? 👋</h2>
                 <p className="text-[12px] text-[#94A3B8]/55 mt-1">
                   We need your name and email to notify you if your pick wins a prize.
                 </p>
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">{t('Full name')}</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">Full name</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]/30 pointer-events-none" />
                     <input
@@ -287,7 +285,7 @@ function EntryModal({
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">{t('Email address')}</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]/50 block mb-1.5">Email address</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]/30 pointer-events-none" />
                     <input
@@ -310,7 +308,7 @@ function EntryModal({
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[13px] transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-25 disabled:cursor-not-allowed"
                 style={{ background: pool.accent, color: '#0B0F14' }}
               >
-                {t('Continue')} <ArrowRight className="h-4 w-4" />
+                Continue <ArrowRight className="h-4 w-4" />
               </button>
             </form>
           )}
@@ -319,7 +317,7 @@ function EntryModal({
           {step === 'wallet' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">{t('Choose your wallet 💰')}</h2>
+                <h2 className="text-[17px] font-black text-[#F8FAFC] leading-tight">Choose your wallet 💰</h2>
                 <p className="text-[12px] text-[#94A3B8]/55 mt-1">
                   Select a wallet below to lock in your prediction and receive prizes.
                 </p>
@@ -390,7 +388,6 @@ function EntryModal({
 
 // ─── How to Play ──────────────────────────────────────────────────────────────
 function HowToPlayGuide() {
-  const { t } = useI18n();
   const steps = [
     {
       num: '1', emoji: '🎯',
@@ -425,7 +422,7 @@ function HowToPlayGuide() {
         <div className="w-6 h-6 rounded-md flex items-center justify-center bg-[#00DFA9]/15">
           <Star className="h-3.5 w-3.5 text-[#00DFA9]" />
         </div>
-        <span className="text-sm font-black text-[#F8FAFC]">{t('How it works')}</span>
+        <span className="text-sm font-black text-[#F8FAFC]">How it works</span>
         <span className="text-[10px] text-[#94A3B8]/35 font-medium">— 4 easy steps, completely free</span>
       </div>
 
@@ -638,7 +635,6 @@ export function PredictionPools() {
   });
   const [pendingPick, setPendingPick] = useState<{ poolId: string; optionId: string } | null>(null);
   const { toast } = useToast();
-  const { t } = useI18n();
 
   useEffect(() => { localStorage.setItem(LS_KEY_PICKS, JSON.stringify(picks)); }, [picks]);
   useEffect(() => { if (profile) localStorage.setItem(LS_KEY_PROFILE, JSON.stringify(profile)); }, [profile]);
@@ -766,7 +762,7 @@ export function PredictionPools() {
                   : 'bg-[#121821] text-[#94A3B8]/55 border-[#1E2A38] hover:border-[#253241] hover:text-[#94A3B8]/80',
               )}
             >
-              {t(cat)}
+              {cat}
             </button>
           ))}
         </div>

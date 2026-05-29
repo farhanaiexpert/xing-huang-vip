@@ -5,7 +5,6 @@ import { ConnectWalletModal } from '@/components/ConnectWalletModal';
 import { useWallet } from '@/hooks/useWallet';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, ArrowLeft, TrendingUp, TrendingDown, BarChart2, Wallet, ShieldCheck } from 'lucide-react';
-import { useI18n } from '@/contexts/I18nContext';
 
 // ────────────────────────────────────────────────────────────────
 // MOCK DATA
@@ -135,7 +134,6 @@ export function MyBets() {
   const [filter, setFilter] = useState<Filter>('all');
   const [walletOpen, setWalletOpen] = useState(false);
   const { isConnected } = useWallet();
-  const { t } = useI18n();
 
   const filtered = MOCK_BETS.filter(b => {
     if (filter === 'open')    return b.status === 'pending';
@@ -163,9 +161,9 @@ export function MyBets() {
               </div>
             </div>
 
-            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">{t('Connect your wallet')}</h2>
+            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">Connect your wallet</h2>
             <p className="text-sm text-[#94A3B8] leading-relaxed mb-8">
-              {t('Your bet history is linked to your wallet address. Connect to view your bets.')}
+              Your bet history is tied to your wallet. Connect to view your open and settled bets.
             </p>
 
             <button
@@ -201,7 +199,7 @@ export function MyBets() {
             </button>
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-[#F8FAFC] leading-none">{t('My Bets')}</h1>
+            <h1 className="text-xl font-bold text-[#F8FAFC] leading-none">My Bets</h1>
             <p className="text-xs text-[#94A3B8] mt-0.5">{MOCK_BETS.length} bets placed</p>
           </div>
         </div>
@@ -209,23 +207,23 @@ export function MyBets() {
         {/* ── Stats row ────────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <StatCard
-            label={t('Win Rate')}
+            label="Win Rate"
             value={`${winRate}%`}
-            sub={`${won.length} of ${settled.length} ${t('settled')}`}
+            sub={`${won.length} of ${settled.length} settled`}
             icon={<BarChart2 className="h-4 w-4" />}
             color="blue"
           />
           <StatCard
-            label={t('Net P&L')}
+            label="Net P&L"
             value={`${netPL >= 0 ? '+' : ''}${netPL.toFixed(2)} USDT`}
             sub={`${totalStake.toFixed(2)} USDT staked`}
             icon={netPL >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
             color={netPL >= 0 ? 'green' : 'red'}
           />
           <StatCard
-            label={t('Open Bets')}
+            label="Open Bets"
             value={String(MOCK_BETS.filter(b => b.status === 'pending').length)}
-            sub={t('awaiting result')}
+            sub="awaiting result"
             icon={<Clock className="h-4 w-4" />}
             color="amber"
           />
@@ -244,7 +242,7 @@ export function MyBets() {
                   : 'text-[#94A3B8]/60 hover:text-[#94A3B8]'
               )}
             >
-              {t(f)}
+              {f}
               {f === 'open' && (
                 <span className="ml-1.5 text-[9px] bg-[#FACC15]/15 text-[#FACC15] px-1.5 py-0.5 rounded-full font-bold">
                   {MOCK_BETS.filter(b => b.status === 'pending').length}
