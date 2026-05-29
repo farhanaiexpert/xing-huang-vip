@@ -9,6 +9,7 @@ import {
   ChevronRight, Star, CheckCircle2, Clock, Info, Copy, Check,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useI18n } from '@/contexts/I18nContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type PromoCategory = 'All' | 'Welcome' | 'Weekly' | 'Loyalty';
@@ -308,6 +309,7 @@ export function Promotions() {
   const { isConnected } = useWallet();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { t } = useI18n();
 
   const visible = active === 'Loyalty' ? [] : (
     active === 'All' ? PROMOS : PROMOS.filter((p) => p.category === active)
@@ -365,7 +367,7 @@ export function Promotions() {
               <div className="inline-flex items-center gap-1.5 bg-[#00DFA9]/15 border border-[#00DFA9]/30 px-3 py-1 rounded-full text-[10px] font-bold text-[#00DFA9] uppercase tracking-widest mb-3">
                 <Gift className="h-3 w-3" /> Welcome offer
               </div>
-              <h1 className="text-3xl font-black tracking-tight leading-tight">100% Match Bonus</h1>
+              <h1 className="text-3xl font-black tracking-tight leading-tight">{t('100% Match Bonus')}</h1>
               <p className="text-[#94A3B8]/70 text-sm mt-1.5 max-w-sm">
                 New to CupBett? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">500 USDT</span> in bonus funds.
               </p>
@@ -375,7 +377,7 @@ export function Promotions() {
               onClick={handleClaim}
               className="shrink-0 flex items-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3 rounded-xl transition-all duration-150"
             >
-              Claim 500 USDT Bonus <ChevronRight className="h-4 w-4" />
+              {t('Claim 500 USDT Bonus')} <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -393,7 +395,7 @@ export function Promotions() {
                   : 'bg-[#121821] text-[#94A3B8]/60 border-[#253241] hover:border-[#94A3B8]/30 hover:text-[#94A3B8]',
               )}
             >
-              {cat}
+              {t(cat)}
             </button>
           ))}
         </div>

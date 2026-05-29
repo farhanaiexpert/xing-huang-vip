@@ -6,6 +6,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { useReferral, COMMISSION_RATES } from '@/hooks/useReferral';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/I18nContext';
 import {
   ArrowLeft, Copy, Check, Users, Wallet, Share2,
   Clock, CheckCircle2, CircleDollarSign, Pencil,
@@ -69,6 +70,7 @@ export function Affiliate() {
   const ref = useReferral();
   const { toast } = useToast();
   const origin = useMemo(() => getOrigin(), []);
+  const { t } = useI18n();
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -144,10 +146,10 @@ export function Affiliate() {
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-3 text-[10px] font-bold uppercase tracking-widest"
                 style={{ background: 'rgba(0,223,169,0.1)', border: '1px solid rgba(0,223,169,0.2)', color: '#00DFA9' }}>
-                <Zap className="w-3 h-3" /> Earn Up To 5% Per Referral
+                <Zap className="w-3 h-3" /> {t('Earn Up To 5% Per Referral')}
               </div>
               <h1 className="text-[32px] sm:text-[38px] font-black text-[#F8FAFC] leading-tight tracking-tight mb-2">
-                Affiliate Program
+                {t('Affiliate Program')}
               </h1>
               <p className="text-[14px] text-[#64748B] max-w-md leading-relaxed">
                 Invite friends, build your network, and earn USDT commissions across <span className="text-[#00DFA9] font-semibold">3 referral levels</span> — forever.
@@ -157,9 +159,9 @@ export function Affiliate() {
             {/* Hero stats row */}
             <div className="flex gap-3 shrink-0">
               {[
-                { label: 'Total Earned',  value: ref.totalEarned,   suffix: 'USDT', color: '#00DFA9', decimals: 2 },
-                { label: 'Referrals',     value: ref.referrals.length, suffix: '',  color: '#38BDF8', decimals: 0 },
-                { label: 'Pending',       value: ref.pendingEarned, suffix: 'USDT', color: '#FACC15', decimals: 2 },
+                { label: t('Total Earned'),  value: ref.totalEarned,   suffix: 'USDT', color: '#00DFA9', decimals: 2 },
+                { label: t('Referrals'),     value: ref.referrals.length, suffix: '',  color: '#38BDF8', decimals: 0 },
+                { label: t('Pending'),       value: ref.pendingEarned, suffix: 'USDT', color: '#FACC15', decimals: 2 },
               ].map(({ label, value, suffix, color, decimals }) => (
                 <div key={label} className="text-center px-4 py-3 rounded-2xl border"
                   style={{ background: 'rgba(255,255,255,0.03)', borderColor: `${color}20` }}>
@@ -232,14 +234,14 @@ export function Affiliate() {
                     <LinkIcon className="w-5 h-5 text-[#00DFA9]" />
                   </div>
                   <div>
-                    <p className="text-[15px] font-bold text-[#F8FAFC]">Your Referral Link</p>
-                    <p className="text-[11px] text-[#64748B]">Share to earn USDT commissions automatically</p>
+                    <p className="text-[15px] font-bold text-[#F8FAFC]">{t('Your Referral Link')}</p>
+                    <p className="text-[11px] text-[#64748B]">{t('Share to earn USDT commissions automatically')}</p>
                   </div>
                 </div>
                 {!editingCode && (
                   <button onClick={startEdit} title="Customise code"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#64748B] border border-[#253241] bg-[#0A0E13] hover:text-[#38BDF8] hover:border-[#38BDF8]/40 transition-all cursor-pointer">
-                    <Pencil className="w-3 h-3" /> Custom
+                    <Pencil className="w-3 h-3" /> {t('Custom')}
                   </button>
                 )}
               </div>
@@ -250,7 +252,7 @@ export function Affiliate() {
                   <div className="flex items-center gap-3 px-4 py-4 rounded-2xl"
                     style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,223,169,0.2)', boxShadow: '0 0 20px rgba(0,223,169,0.06) inset' }}>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-[0.15em] mb-1">Referral Code</p>
+                      <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-[0.15em] mb-1">{t('Referral Code')}</p>
                       <p className="text-[22px] font-black text-[#00DFA9] font-mono tracking-[0.25em] leading-none"
                         style={{ textShadow: '0 0 20px rgba(0,223,169,0.4)' }}>
                         {ref.myCode}
@@ -283,18 +285,18 @@ export function Affiliate() {
                         boxShadow: '0 0 24px rgba(0,223,169,0.35)',
                       }}>
                       {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      {copiedLink ? 'Copied!' : 'Copy Link'}
+                      {copiedLink ? t('Copied!') : t('Copy Link')}
                     </button>
                   </div>
 
                   {/* How it works – compact inline */}
                   <div className="flex items-center gap-2 pt-2 flex-wrap">
                     {[
-                      { num: '1', text: 'Share link', color: '#00DFA9' },
+                      { num: '1', text: t('Share link'), color: '#00DFA9' },
                       { num: '→', text: '', color: '#253241' },
-                      { num: '2', text: 'They join & bet', color: '#38BDF8' },
+                      { num: '2', text: t('They join & bet'), color: '#38BDF8' },
                       { num: '→', text: '', color: '#253241' },
-                      { num: '3', text: 'You earn USDT', color: '#FACC15' },
+                      { num: '3', text: t('You earn USDT'), color: '#FACC15' },
                     ].map((s, i) => (
                       s.text
                         ? <span key={i} className="flex items-center gap-1.5">
@@ -311,7 +313,7 @@ export function Affiliate() {
                 <div className="space-y-3">
                   <p className="flex items-center gap-2 text-[12px] font-semibold text-[#F8FAFC]">
                     <Pencil className="w-3.5 h-3.5 text-[#38BDF8]" />
-                    Create a custom referral code
+                    {t('Create a custom referral code')}
                     <span className="text-[10px] text-[#64748B] font-normal">· 4–16 letters & numbers</span>
                   </p>
 
@@ -345,7 +347,7 @@ export function Affiliate() {
 
                   {/* Live preview */}
                   <div className="px-3 py-2.5 rounded-xl border border-[#1E2A38] bg-[#080C10]">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-[#64748B] mb-1">Live Preview</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-[#64748B] mb-1">{t('Live Preview')}</p>
                     <p className="text-[11px] font-mono text-[#475569] truncate">
                       {origin}/?ref=<span className="text-[#38BDF8] font-bold">{customDraft || '…'}</span>
                     </p>
@@ -355,11 +357,11 @@ export function Affiliate() {
                     <button onClick={saveCode} disabled={customDraft.length < 4}
                       className="flex-1 py-3 rounded-xl text-[13px] font-bold text-[#0B0F14] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition-all hover:scale-[1.01] active:scale-[0.98]"
                       style={{ background: 'linear-gradient(135deg, #38BDF8, #0EA5E9)', boxShadow: customDraft.length >= 4 ? '0 0 20px rgba(56,189,248,0.3)' : 'none' }}>
-                      Save Code
+                      {t('Save Code')}
                     </button>
                     <button onClick={cancelEdit}
                       className="px-5 py-3 rounded-xl text-[13px] font-semibold text-[#94A3B8] border border-[#253241] bg-[#0A0E13] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all cursor-pointer">
-                      Cancel
+                      {t('Cancel')}
                     </button>
                   </div>
                 </div>
@@ -370,12 +372,12 @@ export function Affiliate() {
           {/* ════ STATS ROW ════ */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {[
-              { label: 'Total Refs',   value: ref.referrals.length,  color: '#00DFA9', icon: Users,           decimals: 0, suffix: '' },
-              { label: 'Level 1',      value: ref.level1.length,     color: '#00DFA9', icon: Star,            decimals: 0, suffix: '' },
-              { label: 'Level 2',      value: ref.level2.length,     color: '#38BDF8', icon: Share2,          decimals: 0, suffix: '' },
-              { label: 'Level 3',      value: ref.level3.length,     color: '#FACC15', icon: TrendingUp,      decimals: 0, suffix: '' },
-              { label: 'Total Earned', value: ref.totalEarned,       color: '#00DFA9', icon: CircleDollarSign,decimals: 2, suffix: ' USDT' },
-              { label: 'Pending',      value: ref.pendingEarned,     color: '#FACC15', icon: Clock,           decimals: 2, suffix: ' USDT' },
+              { label: t('Total Refs'),   value: ref.referrals.length,  color: '#00DFA9', icon: Users,           decimals: 0, suffix: '' },
+              { label: t('Level 1'),      value: ref.level1.length,     color: '#00DFA9', icon: Star,            decimals: 0, suffix: '' },
+              { label: t('Level 2'),      value: ref.level2.length,     color: '#38BDF8', icon: Share2,          decimals: 0, suffix: '' },
+              { label: t('Level 3'),      value: ref.level3.length,     color: '#FACC15', icon: TrendingUp,      decimals: 0, suffix: '' },
+              { label: t('Total Earned'), value: ref.totalEarned,       color: '#00DFA9', icon: CircleDollarSign,decimals: 2, suffix: ' USDT' },
+              { label: t('Pending'),      value: ref.pendingEarned,     color: '#FACC15', icon: Clock,           decimals: 2, suffix: ' USDT' },
             ].map(({ label, value, color, icon: Icon, decimals, suffix }, idx) => (
               <div key={label}
                 className={cn('relative rounded-2xl p-4 border border-[#1E2A38] bg-[#0E1520] overflow-hidden group transition-all duration-200 hover:border-opacity-60',
@@ -427,8 +429,8 @@ export function Affiliate() {
             {/* Tab bar */}
             <div className="flex gap-1 p-1 rounded-xl bg-[#0A0E13] border border-[#1E2A38] mb-4 w-fit">
               {([
-                { key: 'commissions' as const, label: 'Commission History', count: ref.commissions.length, icon: CircleDollarSign },
-                { key: 'referrals'   as const, label: 'My Referrals',       count: ref.referrals.length,   icon: Users },
+                { key: 'commissions' as const, label: t('Commissions'), count: ref.commissions.length, icon: CircleDollarSign },
+                { key: 'referrals'   as const, label: t('Referrals'),  count: ref.referrals.length,   icon: Users },
               ]).map(({ key, label, count, icon: Icon }) => (
                 <button key={key} onClick={() => setActiveTab(key)}
                   className={cn(

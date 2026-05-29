@@ -7,6 +7,7 @@ import { useBetHistory, PlacedBet } from '@/hooks/useBetHistory';
 import { useOddsFormat } from '@/hooks/useOddsFormat';
 import { formatOdds } from '@/lib/oddsFormat';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/I18nContext';
 import {
   CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp,
   ArrowLeft, TrendingUp, TrendingDown, BarChart2,
@@ -48,6 +49,7 @@ export function BetHistory() {
   const [filter,     setFilter]     = useState<FilterKey>('all');
   const [search,     setSearch]     = useState('');
   const [walletOpen, setWalletOpen] = useState(false);
+  const { t } = useI18n();
 
   const filtered = useMemo(() => {
     let list = bets;
@@ -118,7 +120,7 @@ export function BetHistory() {
             </button>
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-[#F8FAFC] leading-none">Bet History</h1>
+            <h1 className="text-xl font-bold text-[#F8FAFC] leading-none">{t('Bet History')}</h1>
             <p className="text-xs text-[#94A3B8] mt-0.5">{bets.length} total bet{bets.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
@@ -127,30 +129,30 @@ export function BetHistory() {
         {bets.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <StatCard
-              label="Total Bets"
+              label={t('Total Bets')}
               value={String(bets.length)}
-              sub={`${bets.length} placed`}
+              sub={`${bets.length} ${t('placed')}`}
               icon={<Calendar className="h-4 w-4" />}
               color="purple"
             />
             <StatCard
-              label="Open Bets"
+              label={t('Open Bets')}
               value={String(openCount)}
-              sub="awaiting result"
+              sub={t('awaiting result')}
               icon={<Clock className="h-4 w-4" />}
               color="amber"
             />
             <StatCard
-              label="Total Staked"
+              label={t('Total Staked')}
               value={`${totalStake.toFixed(2)} USDT`}
-              sub="across all bets"
+              sub={t('across all bets')}
               icon={<BarChart2 className="h-4 w-4" />}
               color="blue"
             />
             <StatCard
-              label="Pot. Returns"
+              label={t('Pot. Returns')}
               value={`${potReturn.toFixed(2)} USDT`}
-              sub="if all win"
+              sub={t('if all win')}
               icon={<TrendingUp className="h-4 w-4" />}
               color="green"
             />
@@ -163,7 +165,7 @@ export function BetHistory() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/40 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search by Bet ID, team name or league…"
+              placeholder={t('Search by Bet ID, team name or league…')}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full h-10 bg-[#121821] border border-[#253241] rounded-xl pl-9 pr-10 text-sm text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus:outline-none focus:border-[#00DFA9]/50 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all"
@@ -195,7 +197,7 @@ export function BetHistory() {
                       : 'text-[#94A3B8]/60 hover:text-[#94A3B8]'
                   )}
                 >
-                  {f.label}
+                  {t(f.label)}
                   <span className={cn(
                     'text-[9px] px-1.5 py-0.5 rounded-full font-bold',
                     filter === f.key ? 'bg-[#253241] text-[#94A3B8]' : 'bg-[#253241]/50 text-[#94A3B8]/50'
@@ -290,6 +292,7 @@ function kickoffCountdown(kt: string): string | null {
 function BetCard({ bet }: { bet: PlacedBet }) {
   const [expanded, setExpanded] = useState(false);
   const { format } = useOddsFormat();
+  const { t } = useI18n();
   const isAcca  = bet.betType === 'acca';
   const mainSel = bet.selections[0];
 
@@ -313,19 +316,19 @@ function BetCard({ bet }: { bet: PlacedBet }) {
           <div className="flex flex-col items-end gap-1 shrink-0">
             <div className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-[#FACC15] bg-[#FACC15]/5">
               <Clock className="h-3.5 w-3.5" />
-              Active
+              {t('Active')}
             </div>
             {bet.selections.some(s => s.isLive) ? (
               <span className="flex items-center gap-0.5 text-[9px] text-[#EF4444]/80">
                 <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse inline-block" />
-                In play
+                {t('In play')}
               </span>
             ) : (() => {
               const kt = bet.selections[0]?.kickoffTime;
               const cd = kt ? kickoffCountdown(kt) : null;
               return cd
                 ? <span className="text-[9px] text-[#FACC15]/70">🕐 {cd}</span>
-                : <span className="text-[9px] text-[#64748B]">Awaiting result</span>;
+                : <span className="text-[9px] text-[#64748B]">{t('Awaiting result')}</span>;
             })()}
           </div>
         </div>
@@ -348,11 +351,11 @@ function BetCard({ bet }: { bet: PlacedBet }) {
 
         {/* Odds / Stake / Pot. Returns */}
         <div className="flex items-center gap-3 pt-2.5 border-t border-white/5 flex-wrap">
-          <DataPill label="Odds"        value={formatOdds(bet.totalOdds, format)} accent="yellow" />
+          <DataPill label={t('Odds')}        value={formatOdds(bet.totalOdds, format)} accent="yellow" />
           <div className="w-px h-6 bg-[#253241]" />
-          <DataPill label="Stake"       value={`${bet.stake.toFixed(2)} USDT`} />
+          <DataPill label={t('Stake')}       value={`${bet.stake.toFixed(2)} USDT`} />
           <div className="w-px h-6 bg-[#253241]" />
-          <DataPill label="Pot. Return" value={`${bet.estimatedPayout.toFixed(2)} USDT`} accent="green" />
+          <DataPill label={t('Pot. Return')} value={`${bet.estimatedPayout.toFixed(2)} USDT`} accent="green" />
           {isAcca && (
             <button
               onClick={() => setExpanded(v => !v)}
@@ -414,6 +417,7 @@ function DataPill({ label, value, accent }: {
 // EMPTY STATES
 // ────────────────────────────────────────────────────────────────
 function NoBetsState() {
+  const { t } = useI18n();
   return (
     <div className="text-center py-20 animate-in fade-in duration-200">
       <div className="relative mx-auto w-20 h-20 mb-6">
@@ -422,13 +426,13 @@ function NoBetsState() {
           <FileText className="h-8 w-8 text-[#94A3B8]/30" />
         </div>
       </div>
-      <p className="text-[17px] font-bold text-[#F8FAFC] mb-2">No bets placed yet</p>
+      <p className="text-[17px] font-bold text-[#F8FAFC] mb-2">{t('No bets placed yet')}</p>
       <p className="text-sm text-[#94A3B8]/60 leading-relaxed max-w-xs mx-auto">
-        Your placed bets will appear here. Head to the home page and pick your first selection!
+        {t('Your placed bets will appear here. Head to the home page and pick your first selection!')}
       </p>
       <Link href="/">
         <button className="mt-6 h-10 px-6 rounded-xl bg-[#00DFA9] text-[#0B0F14] text-sm font-bold hover:shadow-[0_0_20px_rgba(0,223,169,0.4)] hover:scale-[1.02] transition-all duration-200">
-          Browse Markets
+          {t('Browse Markets')}
         </button>
       </Link>
     </div>
@@ -436,6 +440,7 @@ function NoBetsState() {
 }
 
 function EmptySearchState({ search, onClear }: { search: string; onClear: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="text-center py-16 animate-in fade-in duration-200">
       <div className="relative mx-auto w-16 h-16 mb-4">
@@ -444,15 +449,15 @@ function EmptySearchState({ search, onClear }: { search: string; onClear: () => 
           <Search className="h-7 w-7 text-[#94A3B8]/30" />
         </div>
       </div>
-      <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1">No bets found</p>
+      <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1">{t('No bets found')}</p>
       <p className="text-sm text-[#94A3B8]/60 mb-4">
-        {search ? `No results for "${search}"` : 'No bets match this filter'}
+        {search ? `No results for "${search}"` : t('No bets match this filter')}
       </p>
       <button
         onClick={onClear}
         className="text-sm font-semibold text-[#00DFA9] hover:text-[#00DFA9]/80 transition-colors"
       >
-        Clear filters
+        {t('Clear filters')}
       </button>
     </div>
   );

@@ -9,6 +9,7 @@ import { formatOdds } from '@/lib/oddsFormat';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { playOddsAdd, playOddsRemove } from '@/lib/oddsSound';
+import { useI18n } from '@/contexts/I18nContext';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -302,6 +303,7 @@ function LiveMatchCard({
   simOdds: Record<string, number>;
   prevSimOdds: Record<string, number>;
 }) {
+  const { t } = useI18n();
   const probs = calcProbs(match.outcomes, simOdds);
 
   return (
@@ -363,7 +365,7 @@ function LiveMatchCard({
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[15px] font-black text-[#F8FAFC] leading-tight truncate">{match.homeTeam}</p>
               <p className="text-[10px] text-[#475569] mt-0.5 font-medium">
-                {match.sport === 'soccer' ? 'Home' : 'Home'}
+                {t('Home')}
               </p>
             </div>
             {/* Score */}
@@ -391,7 +393,7 @@ function LiveMatchCard({
             </div>
             <div className="flex-1 min-w-0 text-right">
               <p className="text-[15px] font-black text-[#F8FAFC] leading-tight truncate">{match.awayTeam}</p>
-              <p className="text-[10px] text-[#475569] mt-0.5 font-medium">Away</p>
+              <p className="text-[10px] text-[#475569] mt-0.5 font-medium">{t('Away')}</p>
             </div>
           </div>
         )}
@@ -401,7 +403,7 @@ function LiveMatchCard({
       <div className="px-4 pb-2">
         <div className="flex items-center gap-2">
           <div className="h-px flex-1 bg-white/[0.05]" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#475569]">Match Result · Win probability</span>
+          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#475569]">{t('Match Result · Win probability')}</span>
           <div className="h-px flex-1 bg-white/[0.05]" />
         </div>
       </div>
@@ -450,6 +452,7 @@ export function LivePage() {
   const [tick, setTick] = useState(0);
   const slipScrollRef = useRef<HTMLDivElement>(null);
   const [slipScrolled, setSlipScrolled] = useState(false);
+  const { t } = useI18n();
 
   // Scroll handler for BetSlip compact mode
   useEffect(() => {
@@ -497,7 +500,7 @@ export function LivePage() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
-                  <h1 className="text-[16px] font-black text-[#F8FAFC] tracking-tight">Live Betting</h1>
+                  <h1 className="text-[16px] font-black text-[#F8FAFC] tracking-tight">{t('Live Betting')}</h1>
                 </div>
                 <span className="text-[11px] font-bold bg-[#EF4444] text-white px-2 py-0.5 rounded-full tabular-nums shadow-[0_0_12px_rgba(239,68,68,0.4)]">
                   {BASE_MATCHES.length}
@@ -511,7 +514,7 @@ export function LivePage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Radio className="h-3 w-3 text-[#EF4444]" />
-                  <span className="text-[#94A3B8] font-medium">Odds update live</span>
+                  <span className="text-[#94A3B8] font-medium">{t('Odds update live')}</span>
                 </div>
               </div>
             </div>
@@ -524,10 +527,10 @@ export function LivePage() {
             <div className="mb-6 flex items-start gap-3">
               <div className="flex-1">
                 <h2 className="text-[13px] font-bold text-[#94A3B8]">
-                  Predict the outcome · Win USDT
+                  {t('Predict the outcome · Win USDT')}
                 </h2>
                 <p className="text-[11px] text-[#475569] mt-0.5">
-                  Tap any outcome to add it to your Bet Slip. Odds drift in real time — act fast.
+                  {t('Tap any outcome to add it to your Bet Slip. Odds drift in real time — act fast.')}
                 </p>
               </div>
               {/* Live update pill */}
@@ -561,15 +564,15 @@ export function LivePage() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-[10px] text-[#475569]">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
-                <span>Odds rising</span>
+                <span>{t('Odds rising')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#EF4444]" />
-                <span>Odds falling</span>
+                <span>{t('Odds falling')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#475569]" />
-                <span>Stable</span>
+                <span>{t('Stable')}</span>
               </div>
               <span>·</span>
               <span>All amounts in USDT · 18+ · Gamble Responsibly</span>
