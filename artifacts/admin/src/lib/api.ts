@@ -269,6 +269,15 @@ export interface DailyPnL {
   payouts: string;
 }
 
+export interface DailyMetricsRow {
+  day: string;
+  newUsers: number;
+  betAmount: string;
+  winLoss: string;
+  deposits: string;
+  withdrawals: string;
+}
+
 export interface UserProfileStats {
   user: AdminUser;
   wallet: { balance: string };

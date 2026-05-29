@@ -1160,6 +1160,70 @@ router.get("/admin/reports/top-bettors", async (_req, res): Promise<void> => {
   res.json(mapped);
 });
 
+router.get("/admin/reports/daily-metrics", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    WITH days AS (
+      SELECT generate_series(
+        date_trunc('day', now() AT TIME ZONE 'UTC') - interval '29 days',
+        date_trunc('day', now() AT TIME ZONE 'UTC'),
+        interval '1 day'
+      ) AS d
+    ),
+    new_users AS (
+      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC') AS d, COUNT(*)::int AS cnt
+      FROM users
+      WHERE created_at >= now() - interval '30 days'
+      GROUP BY 1
+    ),
+    bet_amounts AS (
+      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC') AS d,
+             COALESCE(SUM(stake), 0)::text AS total
+      FROM bets
+      WHERE created_at >= now() - interval '30 days'
+      GROUP BY 1
+    ),
+    win_loss AS (
+      SELECT date_trunc('day', settled_at AT TIME ZONE 'UTC') AS d,
+             COALESCE(SUM(stake) - SUM(settled_payout), 0)::text AS net
+      FROM bets
+      WHERE status IN ('won', 'lost')
+        AND settled_at >= now() - interval '30 days'
+      GROUP BY 1
+    ),
+    deps AS (
+      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC') AS d,
+             COALESCE(SUM(amount), 0)::text AS total
+      FROM transactions
+      WHERE type = 'deposit' AND status = 'approved'
+        AND created_at >= now() - interval '30 days'
+      GROUP BY 1
+    ),
+    wds AS (
+      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC') AS d,
+             COALESCE(SUM(amount), 0)::text AS total
+      FROM transactions
+      WHERE type = 'withdrawal' AND status = 'approved'
+        AND created_at >= now() - interval '30 days'
+      GROUP BY 1
+    )
+    SELECT
+      to_char(days.d, 'MM-DD') AS day,
+      COALESCE(new_users.cnt, 0) AS "newUsers",
+      COALESCE(bet_amounts.total, '0') AS "betAmount",
+      COALESCE(win_loss.net, '0') AS "winLoss",
+      COALESCE(deps.total, '0') AS deposits,
+      COALESCE(wds.total, '0') AS withdrawals
+    FROM days
+    LEFT JOIN new_users ON new_users.d = days.d
+    LEFT JOIN bet_amounts ON bet_amounts.d = days.d
+    LEFT JOIN win_loss ON win_loss.d = days.d
+    LEFT JOIN deps ON deps.d = days.d
+    LEFT JOIN wds ON wds.d = days.d
+    ORDER BY days.d
+  `);
+  res.json(rows.rows);
+});
+
 router.get("/admin/reports/daily-pnl", async (_req, res): Promise<void> => {
   const rows = await db.execute(sql`
     SELECT

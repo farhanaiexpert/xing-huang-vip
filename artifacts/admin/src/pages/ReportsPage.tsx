@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { api, RevenueBySport, TopBettor, DailyPnL } from "@/lib/api";
-import { BarChart2, Download, TrendingUp, Users, Trophy } from "lucide-react";
+import { api, RevenueBySport, TopBettor, DailyPnL, DailyMetricsRow } from "@/lib/api";
+import { BarChart2, Download, TrendingUp, Users, Trophy, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  LineChart, Line, Legend,
 } from "recharts";
 
 function fmt(n: string | number) {
@@ -67,6 +68,20 @@ export default function ReportsPage() {
     queryFn: () => api.get("/admin/reports/daily-pnl"),
   });
 
+  const { data: dailyMetrics = [], isLoading: loadingMetrics } = useQuery<DailyMetricsRow[]>({
+    queryKey: ["admin-reports-daily-metrics"],
+    queryFn: () => api.get("/admin/reports/daily-metrics"),
+  });
+
+  const metricsData = dailyMetrics.map(row => ({
+    day: row.day,
+    "New Users": row.newUsers,
+    "Bet Amount": parseFloat(row.betAmount),
+    "Win/Loss": parseFloat(row.winLoss),
+    "Deposits": parseFloat(row.deposits),
+    "Withdrawals": parseFloat(row.withdrawals),
+  }));
+
   const pnlData = pnl.map(row => ({
     day: row.day,
     GGR: Math.max(0, parseFloat(row.stakes) - parseFloat(row.payouts)),
@@ -127,6 +142,60 @@ export default function ReportsPage() {
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#00DFA9] inline-block" /> GGR (Revenue)</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#38BDF8]/20 inline-block" /> Total Stakes</span>
             </div>
+          )}
+        </div>
+      </Section>
+
+      {/* Daily Metrics */}
+      <Section title="Daily Metrics — last 30 days" icon={Activity} accent="text-[#A78BFA]">
+        <div className="p-5">
+          {loadingMetrics ? (
+            <div className="h-56 flex items-center justify-center text-[#475569] text-sm">Loading…</div>
+          ) : metricsData.length === 0 ? (
+            <div className="h-56 flex items-center justify-center text-[#475569] text-sm">No data yet</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={metricsData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+                <XAxis dataKey="day" tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tick={{ fill: "#475569", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={v => `$${v}`}
+                  yAxisId="usd"
+                />
+                <YAxis
+                  yAxisId="users"
+                  orientation="right"
+                  tick={{ fill: "#475569", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{ background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: "#94A3B8" }}
+                  formatter={(v: number, name: string) =>
+                    name === "New Users" ? [v, name] : [`$${v.toFixed(2)}`, name]
+                  }
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, color: "#94A3B8", paddingTop: 8 }}
+                  formatter={value => <span style={{ color: "#94A3B8" }}>{value}</span>}
+                />
+                <Line yAxisId="usd" type="monotone" dataKey="Bet Amount" stroke="#38BDF8" strokeWidth={2} dot={false} />
+                <Line yAxisId="usd" type="monotone" dataKey="Win/Loss" stroke="#00DFA9" strokeWidth={2} dot={false} />
+                <Line yAxisId="usd" type="monotone" dataKey="Deposits" stroke="#FACC15" strokeWidth={2} dot={false} />
+                <Line yAxisId="usd" type="monotone" dataKey="Withdrawals" stroke="#F87171" strokeWidth={2} dot={false} />
+                <Line yAxisId="users" type="monotone" dataKey="New Users" stroke="#A78BFA" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+          {metricsData.length > 0 && (
+            <p className="text-xs text-[#475569] mt-1">
+              Win/Loss = house profit from settled bets (stakes − payouts). New Users plotted on right axis.
+            </p>
           )}
         </div>
       </Section>
