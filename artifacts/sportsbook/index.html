@@ -69,5 +69,74 @@
       })();
     </script>
     <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+
+    <!-- Protect specific words from Google Translate -->
+    <script>
+      (function () {
+        var PROTECTED = ['CupBett', 'USDTs', 'USDT'];
+        var REGEX = /(CupBett|USDTs|USDT)/g;
+        var seen = new WeakSet();
+
+        function wrapNode(node) {
+          if (seen.has(node)) return;
+          var text = node.nodeValue || '';
+          if (!PROTECTED.some(function (w) { return text.indexOf(w) !== -1; })) return;
+          seen.add(node);
+
+          var parts = text.split(REGEX);
+          if (parts.length <= 1) return;
+
+          var frag = document.createDocumentFragment();
+          parts.forEach(function (part) {
+            if (PROTECTED.indexOf(part) !== -1) {
+              var span = document.createElement('span');
+              span.className = 'notranslate';
+              span.setAttribute('translate', 'no');
+              span.textContent = part;
+              frag.appendChild(span);
+            } else if (part) {
+              frag.appendChild(document.createTextNode(part));
+            }
+          });
+          if (node.parentNode) node.parentNode.replaceChild(frag, node);
+        }
+
+        function walk(root) {
+          var walker = document.createTreeWalker(
+            root,
+            NodeFilter.SHOW_TEXT,
+            {
+              acceptNode: function (n) {
+                var p = n.parentNode;
+                if (!p) return NodeFilter.FILTER_REJECT;
+                var tag = p.nodeName;
+                if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') return NodeFilter.FILTER_REJECT;
+                if (p.classList && p.classList.contains('notranslate')) return NodeFilter.FILTER_REJECT;
+                if (p.getAttribute && p.getAttribute('translate') === 'no') return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+              }
+            }
+          );
+          var nodes = [];
+          var n;
+          while ((n = walker.nextNode())) nodes.push(n);
+          nodes.forEach(wrapNode);
+        }
+
+        var observer = new MutationObserver(function (mutations) {
+          mutations.forEach(function (m) {
+            m.addedNodes.forEach(function (n) {
+              if (n.nodeType === 3) wrapNode(n);
+              else if (n.nodeType === 1) walk(n);
+            });
+          });
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+          walk(document.body);
+          observer.observe(document.body, { childList: true, subtree: true });
+        });
+      })();
+    </script>
   </body>
 </html>
