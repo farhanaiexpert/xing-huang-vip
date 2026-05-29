@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, RevenueBySport, TopBettor, DailyPnL, DailyMetricsRow } from "@/lib/api";
-import { BarChart2, Download, TrendingUp, Users, Trophy, Activity } from "lucide-react";
+import { BarChart2, Download, TrendingUp, Trophy, Activity, Calendar, RotateCcw, Users, Wallet, ArrowDownLeft, ArrowUpRight, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -8,7 +9,14 @@ import {
 } from "recharts";
 
 function fmt(n: string | number) {
-  return `$${parseFloat(String(n)).toFixed(2)}`;
+  const v = parseFloat(String(n));
+  return `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function fmtShort(n: number) {
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
+  return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function sportLabel(sport: string) {
@@ -35,24 +43,67 @@ async function downloadCSV(path: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function Section({ title, icon: Icon, accent, children }: {
+function Section({ title, icon: Icon, accent, headerRight, children }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   accent: string;
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="bg-[#111827] border border-white/8 rounded-xl overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-white/8 flex items-center gap-2">
-        <Icon className={cn("w-4 h-4", accent)} />
-        <span className="text-sm font-semibold text-white">{title}</span>
+      <div className="px-5 py-3.5 border-b border-white/8 flex items-center gap-2 flex-wrap">
+        <Icon className={cn("w-4 h-4 shrink-0", accent)} />
+        <span className="text-sm font-semibold text-white flex-1">{title}</span>
+        {headerRight}
       </div>
       {children}
     </div>
   );
 }
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+function defaultFromStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 29);
+  return d.toISOString().slice(0, 10);
+}
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bg: string;
+  positive?: boolean;
+}
+
+function StatCard({ label, value, icon: Icon, color, bg, positive }: StatCardProps) {
+  return (
+    <div className="flex items-center gap-3 bg-white/3 border border-white/6 rounded-lg px-4 py-3 min-w-0">
+      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", bg)}>
+        <Icon className={cn("w-4 h-4", color)} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] text-[#475569] uppercase tracking-wide truncate">{label}</p>
+        <p className={cn("text-sm font-bold tabular-nums truncate", positive === false ? "text-[#F87171]" : positive === true ? "text-[#00DFA9]" : "text-white")}>
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const inputCls = "bg-[#0B0F14] border border-white/10 text-white text-xs rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#A78BFA]/60 [color-scheme:dark]";
+
 export default function ReportsPage() {
+  const [from, setFrom] = useState(defaultFromStr);
+  const [to, setTo]     = useState(todayStr);
+
+  const isDefault = from === defaultFromStr() && to === todayStr();
+
   const { data: revBySport = [], isLoading: loadingSport } = useQuery<RevenueBySport[]>({
     queryKey: ["admin-reports-sport"],
     queryFn: () => api.get("/admin/reports/revenue-by-sport"),
@@ -69,24 +120,37 @@ export default function ReportsPage() {
   });
 
   const { data: dailyMetrics = [], isLoading: loadingMetrics } = useQuery<DailyMetricsRow[]>({
-    queryKey: ["admin-reports-daily-metrics"],
-    queryFn: () => api.get("/admin/reports/daily-metrics"),
+    queryKey: ["admin-reports-daily-metrics", from, to],
+    queryFn: () => api.get(`/admin/reports/daily-metrics?from=${from}&to=${to}`),
   });
-
-  const metricsData = dailyMetrics.map(row => ({
-    day: row.day,
-    "New Users": row.newUsers,
-    "Bet Amount": parseFloat(row.betAmount),
-    "Win/Loss": parseFloat(row.winLoss),
-    "Deposits": parseFloat(row.deposits),
-    "Withdrawals": parseFloat(row.withdrawals),
-  }));
 
   const pnlData = pnl.map(row => ({
     day: row.day,
     GGR: Math.max(0, parseFloat(row.stakes) - parseFloat(row.payouts)),
     Stakes: parseFloat(row.stakes),
   }));
+
+  const metricsData = dailyMetrics.map(row => ({
+    day: row.day,
+    "New Users":   Number(row.newUsers),
+    "Bet Amount":  parseFloat(row.betAmount),
+    "Win/Loss":    parseFloat(row.winLoss),
+    "Deposits":    parseFloat(row.deposits),
+    "Withdrawals": parseFloat(row.withdrawals),
+  }));
+
+  const totals = dailyMetrics.reduce(
+    (acc, row) => ({
+      newUsers:    acc.newUsers    + Number(row.newUsers),
+      betAmount:   acc.betAmount   + parseFloat(row.betAmount),
+      winLoss:     acc.winLoss     + parseFloat(row.winLoss),
+      deposits:    acc.deposits    + parseFloat(row.deposits),
+      withdrawals: acc.withdrawals + parseFloat(row.withdrawals),
+    }),
+    { newUsers: 0, betAmount: 0, winLoss: 0, deposits: 0, withdrawals: 0 },
+  );
+
+  const periodLabel = isDefault ? "Last 30 days" : `${from} → ${to}`;
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -126,11 +190,12 @@ export default function ReportsPage() {
               <BarChart data={pnlData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis dataKey="day" tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
+                <YAxis tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false}
+                  tickFormatter={v => `$${Number(v).toLocaleString("en-US")}`} />
                 <Tooltip
                   contentStyle={{ background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: "#94A3B8" }}
-                  formatter={(v: number) => [`$${v.toFixed(2)}`]}
+                  formatter={(v: number) => [fmt(v)]}
                 />
                 <Bar dataKey="Stakes" fill="#38BDF820" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="GGR" fill="#00DFA9" radius={[3, 3, 0, 0]} />
@@ -147,23 +212,111 @@ export default function ReportsPage() {
       </Section>
 
       {/* Daily Metrics */}
-      <Section title="Daily Metrics — last 30 days" icon={Activity} accent="text-[#A78BFA]">
-        <div className="p-5">
+      <Section
+        title="Daily Metrics"
+        icon={Activity}
+        accent="text-[#A78BFA]"
+        headerRight={
+          <div className="flex items-center gap-2">
+            <Calendar className="w-3.5 h-3.5 text-[#475569]" />
+            <input
+              type="date"
+              value={from}
+              max={to}
+              onChange={e => setFrom(e.target.value)}
+              className={inputCls}
+            />
+            <span className="text-[#475569] text-xs">→</span>
+            <input
+              type="date"
+              value={to}
+              min={from}
+              max={todayStr()}
+              onChange={e => setTo(e.target.value)}
+              className={inputCls}
+            />
+            {!isDefault && (
+              <button
+                onClick={() => { setFrom(defaultFromStr()); setTo(todayStr()); }}
+                className="p-1.5 rounded-md bg-white/5 border border-white/10 text-[#475569] hover:text-white transition-colors"
+                title="Reset to last 30 days"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        }
+      >
+        <div className="p-5 space-y-4">
+          {/* Period label */}
+          <p className="text-xs text-[#475569]">
+            Showing totals for: <span className="text-[#94A3B8] font-medium">{periodLabel}</span>
+          </p>
+
+          {/* Snapshot cards */}
+          {loadingMetrics ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-16 rounded-lg bg-white/3 border border-white/6 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              <StatCard
+                label="New Users"
+                value={totals.newUsers.toLocaleString("en-US")}
+                icon={Users}
+                color="text-[#A78BFA]"
+                bg="bg-[#A78BFA]/10"
+              />
+              <StatCard
+                label="Bet Amount"
+                value={fmtShort(totals.betAmount)}
+                icon={BarChart2}
+                color="text-[#38BDF8]"
+                bg="bg-[#38BDF8]/10"
+              />
+              <StatCard
+                label="Win / Loss"
+                value={fmtShort(totals.winLoss)}
+                icon={totals.winLoss >= 0 ? TrendingUp : TrendingDown}
+                color={totals.winLoss >= 0 ? "text-[#00DFA9]" : "text-[#F87171]"}
+                bg={totals.winLoss >= 0 ? "bg-[#00DFA9]/10" : "bg-[#F87171]/10"}
+                positive={totals.winLoss >= 0}
+              />
+              <StatCard
+                label="Deposits"
+                value={fmtShort(totals.deposits)}
+                icon={ArrowDownLeft}
+                color="text-[#FACC15]"
+                bg="bg-[#FACC15]/10"
+              />
+              <StatCard
+                label="Withdrawals"
+                value={fmtShort(totals.withdrawals)}
+                icon={ArrowUpRight}
+                color="text-[#F87171]"
+                bg="bg-[#F87171]/10"
+              />
+            </div>
+          )}
+
+          {/* Line chart */}
           {loadingMetrics ? (
             <div className="h-56 flex items-center justify-center text-[#475569] text-sm">Loading…</div>
           ) : metricsData.length === 0 ? (
-            <div className="h-56 flex items-center justify-center text-[#475569] text-sm">No data yet</div>
+            <div className="h-56 flex items-center justify-center text-[#475569] text-sm">No data for this period</div>
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={240}>
               <LineChart data={metricsData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis dataKey="day" tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis
+                  yAxisId="usd"
                   tick={{ fill: "#475569", fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={v => `$${v}`}
-                  yAxisId="usd"
+                  tickFormatter={v => `$${Number(v).toLocaleString("en-US")}`}
                 />
                 <YAxis
                   yAxisId="users"
@@ -177,26 +330,27 @@ export default function ReportsPage() {
                   contentStyle={{ background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: "#94A3B8" }}
                   formatter={(v: number, name: string) =>
-                    name === "New Users" ? [v, name] : [`$${v.toFixed(2)}`, name]
+                    name === "New Users"
+                      ? [v.toLocaleString("en-US"), name]
+                      : [fmt(v), name]
                   }
                 />
                 <Legend
-                  wrapperStyle={{ fontSize: 11, color: "#94A3B8", paddingTop: 8 }}
+                  wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                   formatter={value => <span style={{ color: "#94A3B8" }}>{value}</span>}
                 />
-                <Line yAxisId="usd" type="monotone" dataKey="Bet Amount" stroke="#38BDF8" strokeWidth={2} dot={false} />
-                <Line yAxisId="usd" type="monotone" dataKey="Win/Loss" stroke="#00DFA9" strokeWidth={2} dot={false} />
-                <Line yAxisId="usd" type="monotone" dataKey="Deposits" stroke="#FACC15" strokeWidth={2} dot={false} />
-                <Line yAxisId="usd" type="monotone" dataKey="Withdrawals" stroke="#F87171" strokeWidth={2} dot={false} />
-                <Line yAxisId="users" type="monotone" dataKey="New Users" stroke="#A78BFA" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+                <Line yAxisId="usd"   type="monotone" dataKey="Bet Amount"  stroke="#38BDF8" strokeWidth={2} dot={false} />
+                <Line yAxisId="usd"   type="monotone" dataKey="Win/Loss"    stroke="#00DFA9" strokeWidth={2} dot={false} />
+                <Line yAxisId="usd"   type="monotone" dataKey="Deposits"    stroke="#FACC15" strokeWidth={2} dot={false} />
+                <Line yAxisId="usd"   type="monotone" dataKey="Withdrawals" stroke="#F87171" strokeWidth={2} dot={false} />
+                <Line yAxisId="users" type="monotone" dataKey="New Users"   stroke="#A78BFA" strokeWidth={2} dot={false} strokeDasharray="4 2" />
               </LineChart>
             </ResponsiveContainer>
           )}
-          {metricsData.length > 0 && (
-            <p className="text-xs text-[#475569] mt-1">
-              Win/Loss = house profit from settled bets (stakes − payouts). New Users plotted on right axis.
-            </p>
-          )}
+
+          <p className="text-xs text-[#475569]">
+            Win/Loss = house profit from settled bets (stakes − payouts). New Users on right axis (dashed).
+          </p>
         </div>
       </Section>
 

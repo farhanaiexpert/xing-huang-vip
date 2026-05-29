@@ -1160,65 +1160,76 @@ router.get("/admin/reports/top-bettors", async (_req, res): Promise<void> => {
   res.json(mapped);
 });
 
-router.get("/admin/reports/daily-metrics", async (_req, res): Promise<void> => {
+router.get("/admin/reports/daily-metrics", async (req, res): Promise<void> => {
+  const { from, to } = req.query as Record<string, string>;
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  const fromDate: string | null = from && dateRe.test(from) ? from : null;
+  const toDate: string | null   = to   && dateRe.test(to)   ? to   : null;
+
   const rows = await db.execute(sql`
     WITH days AS (
       SELECT generate_series(
-        date_trunc('day', now() AT TIME ZONE 'UTC') - interval '29 days',
-        date_trunc('day', now() AT TIME ZONE 'UTC'),
+        COALESCE(${fromDate}::date, date_trunc('day', now() AT TIME ZONE 'UTC') - interval '29 days'),
+        COALESCE(${toDate}::date,   date_trunc('day', now() AT TIME ZONE 'UTC')),
         interval '1 day'
       ) AS d
     ),
+    range_start AS (
+      SELECT COALESCE(${fromDate}::date, (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '29 days'))::timestamptz AS ts
+    ),
+    range_end AS (
+      SELECT (COALESCE(${toDate}::date, date_trunc('day', now() AT TIME ZONE 'UTC')) + interval '1 day')::timestamptz AS ts
+    ),
     new_users AS (
-      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC') AS d, COUNT(*)::int AS cnt
-      FROM users
-      WHERE created_at >= now() - interval '30 days'
+      SELECT date_trunc('day', u.created_at AT TIME ZONE 'UTC') AS d, COUNT(*)::int AS cnt
+      FROM users u, range_start rs, range_end re
+      WHERE u.created_at >= rs.ts AND u.created_at < re.ts
       GROUP BY 1
     ),
     bet_amounts AS (
-      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC') AS d,
-             COALESCE(SUM(stake), 0)::text AS total
-      FROM bets
-      WHERE created_at >= now() - interval '30 days'
+      SELECT date_trunc('day', b.created_at AT TIME ZONE 'UTC') AS d,
+             COALESCE(SUM(b.stake), 0)::text AS total
+      FROM bets b, range_start rs, range_end re
+      WHERE b.created_at >= rs.ts AND b.created_at < re.ts
       GROUP BY 1
     ),
     win_loss AS (
-      SELECT date_trunc('day', settled_at AT TIME ZONE 'UTC') AS d,
-             COALESCE(SUM(stake) - SUM(settled_payout), 0)::text AS net
-      FROM bets
-      WHERE status IN ('won', 'lost')
-        AND settled_at >= now() - interval '30 days'
+      SELECT date_trunc('day', b.settled_at AT TIME ZONE 'UTC') AS d,
+             COALESCE(SUM(b.stake) - SUM(b.settled_payout), 0)::text AS net
+      FROM bets b, range_start rs, range_end re
+      WHERE b.status IN ('won', 'lost')
+        AND b.settled_at >= rs.ts AND b.settled_at < re.ts
       GROUP BY 1
     ),
     deps AS (
-      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC') AS d,
-             COALESCE(SUM(amount), 0)::text AS total
-      FROM transactions
-      WHERE type = 'deposit' AND status = 'approved'
-        AND created_at >= now() - interval '30 days'
+      SELECT date_trunc('day', t.created_at AT TIME ZONE 'UTC') AS d,
+             COALESCE(SUM(t.amount), 0)::text AS total
+      FROM transactions t, range_start rs, range_end re
+      WHERE t.type = 'deposit' AND t.status = 'approved'
+        AND t.created_at >= rs.ts AND t.created_at < re.ts
       GROUP BY 1
     ),
     wds AS (
-      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC') AS d,
-             COALESCE(SUM(amount), 0)::text AS total
-      FROM transactions
-      WHERE type = 'withdrawal' AND status = 'approved'
-        AND created_at >= now() - interval '30 days'
+      SELECT date_trunc('day', t.created_at AT TIME ZONE 'UTC') AS d,
+             COALESCE(SUM(t.amount), 0)::text AS total
+      FROM transactions t, range_start rs, range_end re
+      WHERE t.type = 'withdrawal' AND t.status = 'approved'
+        AND t.created_at >= rs.ts AND t.created_at < re.ts
       GROUP BY 1
     )
     SELECT
       to_char(days.d, 'MM-DD') AS day,
-      COALESCE(new_users.cnt, 0) AS "newUsers",
-      COALESCE(bet_amounts.total, '0') AS "betAmount",
-      COALESCE(win_loss.net, '0') AS "winLoss",
-      COALESCE(deps.total, '0') AS deposits,
-      COALESCE(wds.total, '0') AS withdrawals
+      COALESCE(new_users.cnt, 0)          AS "newUsers",
+      COALESCE(bet_amounts.total, '0')    AS "betAmount",
+      COALESCE(win_loss.net, '0')         AS "winLoss",
+      COALESCE(deps.total, '0')           AS deposits,
+      COALESCE(wds.total, '0')            AS withdrawals
     FROM days
-    LEFT JOIN new_users ON new_users.d = days.d
+    LEFT JOIN new_users   ON new_users.d   = days.d
     LEFT JOIN bet_amounts ON bet_amounts.d = days.d
-    LEFT JOIN win_loss ON win_loss.d = days.d
-    LEFT JOIN deps ON deps.d = days.d
-    LEFT JOIN wds ON wds.d = days.d
+    LEFT JOIN win_loss    ON win_loss.d    = days.d
+    LEFT JOIN deps        ON deps.d        = days.d
+    LEFT JOIN wds         ON wds.d         = days.d
     ORDER BY days.d
   `);
   res.json(rows.rows);
