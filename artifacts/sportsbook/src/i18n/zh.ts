@@ -455,7 +455,7 @@ export const zh: Record<string, string> = {
   "Can I change my stake after adding it?":
     "添加后我可以更改赌注吗？",
   "What does \"Suspended\" mean on a market?":
-    "市场上的"暂停"是什么意思？",
+    "市场上的「暂停」是什么意思？",
   "How do I switch between Decimal, Fractional and American odds?":
     "如何在小数、分数和美式赔率之间切换？",
   "What sports are available?":
