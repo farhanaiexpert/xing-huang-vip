@@ -29,6 +29,111 @@
       #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
       font[color] { color: inherit !important; }
     </style>
+
+    <!--
+      Word-protection script — runs as early as possible so MutationObserver
+      is active before React renders and before Google Translate fires.
+      Strategy:
+        1. Walk text nodes and wrap protected words in <span class="notranslate">
+        2. Re-scan via MutationObserver whenever new nodes are added (React nav, etc.)
+        3. Re-scan on a 500 ms interval for the first 30 s to catch GT's post-
+           translation DOM replacements (GT can destroy our spans when it writes
+           translated text back to the DOM)
+        4. Also re-scan whenever the <html lang> attribute changes (GT sets it
+           to the target language when translation completes)
+    -->
+    <script>
+      (function () {
+        var PROTECTED = ['CupBett', 'USDTs', 'USDT'];
+        // Longer tokens first so "USDTs" is matched before "USDT"
+        var REGEX = /(CupBett|USDTs|USDT)/g;
+
+        function protect(root) {
+          if (!root || root.nodeType !== 1) return;
+
+          var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+          var nodes = [];
+          var n;
+          while ((n = walker.nextNode())) {
+            var p = n.parentNode;
+            if (!p) continue;
+            var tag = p.nodeName;
+            if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'TEXTAREA') continue;
+            // Already inside a notranslate element — skip
+            if (p.classList && p.classList.contains('notranslate')) continue;
+            if (p.getAttribute && p.getAttribute('translate') === 'no') continue;
+            if (PROTECTED.some(function (w) { return (n.nodeValue || '').indexOf(w) !== -1; })) {
+              nodes.push(n);
+            }
+          }
+
+          nodes.forEach(function (node) {
+            if (!node.parentNode) return;
+            var text = node.nodeValue || '';
+            var parts = text.split(REGEX);
+            if (parts.length <= 1) return;
+
+            var frag = document.createDocumentFragment();
+            parts.forEach(function (part) {
+              if (PROTECTED.indexOf(part) !== -1) {
+                var span = document.createElement('span');
+                span.className = 'notranslate';
+                span.setAttribute('translate', 'no');
+                span.textContent = part;
+                frag.appendChild(span);
+              } else if (part) {
+                frag.appendChild(document.createTextNode(part));
+              }
+            });
+            node.parentNode.replaceChild(frag, node);
+          });
+        }
+
+        // MutationObserver — catches React renders and GT DOM rewrites
+        var observer = new MutationObserver(function (mutations) {
+          var roots = new Set();
+          mutations.forEach(function (m) {
+            m.addedNodes.forEach(function (n) {
+              if (n.nodeType === 1) roots.add(n);
+              else if (n.nodeType === 3 && n.parentNode && n.parentNode.nodeType === 1) roots.add(n.parentNode);
+            });
+          });
+          roots.forEach(protect);
+        });
+
+        function startObserver() {
+          if (document.body) {
+            protect(document.body);
+            observer.observe(document.body, { childList: true, subtree: true });
+          }
+        }
+
+        // Start as early as the body is available
+        if (document.body) {
+          startObserver();
+        } else {
+          document.addEventListener('DOMContentLoaded', startObserver);
+        }
+
+        // Periodic re-scan: fires every 500 ms for the first 30 s to catch
+        // any words that GT translated between our observer callbacks.
+        var elapsed = 0;
+        var interval = setInterval(function () {
+          elapsed += 500;
+          if (document.body) protect(document.body);
+          if (elapsed >= 30000) clearInterval(interval);
+        }, 500);
+
+        // Also re-scan whenever GT signals translation is done by changing <html lang>
+        var htmlObserver = new MutationObserver(function () {
+          if (document.body) protect(document.body);
+        });
+        htmlObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['lang', 'class']
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
@@ -51,11 +156,9 @@
       // and ensure the banner iframe stays hidden after translation kicks in.
       (function () {
         function suppressGoogleBar() {
-          // Force body back to top:0 whenever Google sets it
           if (document.body && document.body.style.top !== '0px') {
             document.body.style.setProperty('top', '0px', 'important');
           }
-          // Hide banner frame iframes
           document.querySelectorAll('.goog-te-banner-frame, .skiptranslate > iframe').forEach(function (el) {
             el.style.setProperty('display', 'none', 'important');
           });
@@ -69,74 +172,5 @@
       })();
     </script>
     <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
-
-    <!-- Protect specific words from Google Translate -->
-    <script>
-      (function () {
-        var PROTECTED = ['CupBett', 'USDTs', 'USDT'];
-        var REGEX = /(CupBett|USDTs|USDT)/g;
-        var seen = new WeakSet();
-
-        function wrapNode(node) {
-          if (seen.has(node)) return;
-          var text = node.nodeValue || '';
-          if (!PROTECTED.some(function (w) { return text.indexOf(w) !== -1; })) return;
-          seen.add(node);
-
-          var parts = text.split(REGEX);
-          if (parts.length <= 1) return;
-
-          var frag = document.createDocumentFragment();
-          parts.forEach(function (part) {
-            if (PROTECTED.indexOf(part) !== -1) {
-              var span = document.createElement('span');
-              span.className = 'notranslate';
-              span.setAttribute('translate', 'no');
-              span.textContent = part;
-              frag.appendChild(span);
-            } else if (part) {
-              frag.appendChild(document.createTextNode(part));
-            }
-          });
-          if (node.parentNode) node.parentNode.replaceChild(frag, node);
-        }
-
-        function walk(root) {
-          var walker = document.createTreeWalker(
-            root,
-            NodeFilter.SHOW_TEXT,
-            {
-              acceptNode: function (n) {
-                var p = n.parentNode;
-                if (!p) return NodeFilter.FILTER_REJECT;
-                var tag = p.nodeName;
-                if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') return NodeFilter.FILTER_REJECT;
-                if (p.classList && p.classList.contains('notranslate')) return NodeFilter.FILTER_REJECT;
-                if (p.getAttribute && p.getAttribute('translate') === 'no') return NodeFilter.FILTER_REJECT;
-                return NodeFilter.FILTER_ACCEPT;
-              }
-            }
-          );
-          var nodes = [];
-          var n;
-          while ((n = walker.nextNode())) nodes.push(n);
-          nodes.forEach(wrapNode);
-        }
-
-        var observer = new MutationObserver(function (mutations) {
-          mutations.forEach(function (m) {
-            m.addedNodes.forEach(function (n) {
-              if (n.nodeType === 3) wrapNode(n);
-              else if (n.nodeType === 1) walk(n);
-            });
-          });
-        });
-
-        document.addEventListener('DOMContentLoaded', function () {
-          walk(document.body);
-          observer.observe(document.body, { childList: true, subtree: true });
-        });
-      })();
-    </script>
   </body>
 </html>
