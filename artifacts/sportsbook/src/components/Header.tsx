@@ -13,19 +13,19 @@ import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 import { useI18n } from '../contexts/I18nContext';
 
 const LANGUAGES = [
-  { code: 'ar',    label: 'Arabic',     flag: '🇸🇦', short: 'AR' },
-  { code: 'zh-CN', label: 'Chinese',    flag: '🇨🇳', short: 'ZH' },
-  { code: 'en',    label: 'English',    flag: '🇬🇧', short: 'EN' },
-  { code: 'fr',    label: 'French',     flag: '🇫🇷', short: 'FR' },
-  { code: 'de',    label: 'German',     flag: '🇩🇪', short: 'DE' },
-  { code: 'hi',    label: 'Hindi',      flag: '🇮🇳', short: 'HI' },
-  { code: 'ja',    label: 'Japanese',   flag: '🇯🇵', short: 'JP' },
-  { code: 'ko',    label: 'Korean',     flag: '🇰🇷', short: 'KO' },
-  { code: 'pt',    label: 'Portuguese', flag: '🇧🇷', short: 'PT' },
-  { code: 'ru',    label: 'Russian',    flag: '🇷🇺', short: 'RU' },
-  { code: 'es',    label: 'Spanish',    flag: '🇪🇸', short: 'ES' },
-  { code: 'th',    label: 'Thai',       flag: '🇹🇭', short: 'TH' },
-  { code: 'vi',    label: 'Vietnamese', flag: '🇻🇳', short: 'VI' },
+  { code: 'ar',    label: 'Arabic',      native: 'العربية',    flag: '🇸🇦', short: 'AR' },
+  { code: 'zh-CN', label: 'Chinese',     native: '中文',        flag: '🇨🇳', short: 'ZH' },
+  { code: 'en',    label: 'English',     native: 'English',    flag: '🇬🇧', short: 'EN' },
+  { code: 'fr',    label: 'French',      native: 'Français',   flag: '🇫🇷', short: 'FR' },
+  { code: 'de',    label: 'German',      native: 'Deutsch',    flag: '🇩🇪', short: 'DE' },
+  { code: 'hi',    label: 'Hindi',       native: 'हिन्दी',      flag: '🇮🇳', short: 'HI' },
+  { code: 'ja',    label: 'Japanese',    native: '日本語',       flag: '🇯🇵', short: 'JP' },
+  { code: 'ko',    label: 'Korean',      native: '한국어',       flag: '🇰🇷', short: 'KO' },
+  { code: 'pt',    label: 'Portuguese',  native: 'Português',  flag: '🇧🇷', short: 'PT' },
+  { code: 'ru',    label: 'Russian',     native: 'Русский',    flag: '🇷🇺', short: 'RU' },
+  { code: 'es',    label: 'Spanish',     native: 'Español',    flag: '🇪🇸', short: 'ES' },
+  { code: 'th',    label: 'Thai',        native: 'ไทย',         flag: '🇹🇭', short: 'TH' },
+  { code: 'vi',    label: 'Vietnamese',  native: 'Tiếng Việt', flag: '🇻🇳', short: 'VI' },
 ];
 
 function triggerTranslate(langCode: string) {
@@ -291,7 +291,10 @@ export function Header() {
                         )}
                       >
                         <span className="text-[10px] font-bold tracking-wider opacity-50 shrink-0 w-6">{lang.short}</span>
-                        <span className="text-[12px] font-medium leading-none flex-1 text-left">{lang.label}</span>
+                        <span className="text-[12px] font-medium leading-none flex-1 text-left">
+                          {lang.label}
+                          <span className="opacity-50 ml-1">({lang.native})</span>
+                        </span>
                         {currentLang === lang.code && (
                           <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] shrink-0" />
                         )}
