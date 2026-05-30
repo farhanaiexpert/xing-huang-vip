@@ -25,6 +25,7 @@ import LiabilityPage from "@/pages/LiabilityPage";
 import RGPlayersPage from "@/pages/RGPlayersPage";
 import BookBalancePage from "@/pages/BookBalancePage";
 import BoostsPage from "@/pages/BoostsPage";
+import LoginHistoryPage from "@/pages/LoginHistoryPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -63,7 +64,8 @@ function Router() {
       <Route path="/liability"     component={() => <ProtectedRoute component={LiabilityPage}    />} />
       <Route path="/rg-players"   component={() => <ProtectedRoute component={RGPlayersPage}     />} />
       <Route path="/book-balance" component={() => <ProtectedRoute component={BookBalancePage}   />} />
-      <Route path="/boosts"      component={() => <ProtectedRoute component={BoostsPage}        />} />
+      <Route path="/boosts"         component={() => <ProtectedRoute component={BoostsPage}         />} />
+      <Route path="/login-history" component={() => <ProtectedRoute component={LoginHistoryPage}  />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );

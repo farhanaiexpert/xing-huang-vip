@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api, AdminStats, BetsChartRow, UsersChartRow, RevenueChartRow, RecentActivityItem } from "@/lib/api";
+import { api, AdminStats, BetsChartRow, UsersChartRow, RevenueChartRow, RecentActivityItem, UserGrowthRow } from "@/lib/api";
 import { fmt, fmtDate } from "@/lib/utils";
 import {
   Users, Receipt, CreditCard, Wallet, TrendingUp, Clock, Banknote,
@@ -89,6 +89,12 @@ export default function OverviewPage() {
     refetchInterval: 120_000,
   });
 
+  const { data: userGrowth = [] } = useQuery<UserGrowthRow[]>({
+    queryKey: ["admin-user-growth"],
+    queryFn: () => api.get<UserGrowthRow[]>("/admin/stats/user-growth"),
+    refetchInterval: 120_000,
+  });
+
   const { data: revenueChart = [] } = useQuery<RevenueChartRow[]>({
     queryKey: ["admin-revenue-chart"],
     queryFn: () => api.get<RevenueChartRow[]>("/admin/stats/revenue-chart"),
@@ -173,17 +179,24 @@ export default function OverviewPage() {
         </div>
 
         <div className="bg-[#0D1117] border border-white/8 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-white mb-4">New users — last 30 days</h2>
-          {usersChart.length === 0 ? (
-            <div className="flex items-center justify-center h-44 text-[#334155] text-sm">No user data yet</div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-white">New vs Returning — last 30 days</h2>
+            <div className="flex items-center gap-3 text-[10px] text-[#475569]">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#38BDF8] inline-block" />New</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#00DFA9] inline-block" />Returning</span>
+            </div>
+          </div>
+          {userGrowth.length === 0 ? (
+            <div className="flex items-center justify-center h-44 text-[#334155] text-sm">No data yet</div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={usersChart} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+              <LineChart data={userGrowth} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                 <XAxis dataKey="day" tick={{ fill: "#334155", fontSize: 10 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: "#334155", fontSize: 10 }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Line type="monotone" dataKey="count" stroke="#38BDF8" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="newUsers"        name="new"       stroke="#38BDF8" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="returningLogins" name="returning" stroke="#00DFA9" strokeWidth={2} dot={false} strokeDasharray="4 3" />
               </LineChart>
             </ResponsiveContainer>
           )}

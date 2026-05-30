@@ -371,3 +371,20 @@ export interface SettlementResult {
   voided: number;
   totalPaidOut: string;
 }
+
+export interface UserGrowthRow {
+  day: string;
+  newUsers: number;
+  returningLogins: number;
+}
+
+export interface LoginHistoryRow {
+  id: number;
+  walletAddress: string | null;
+  username: string | null;
+  email: string | null;
+  kycStatus: string;
+  country: string | null;
+  lastLogin: string | null;
+  sessionCount: number;
+}

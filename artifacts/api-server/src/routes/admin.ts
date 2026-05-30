@@ -127,6 +127,39 @@ router.get("/admin/stats/users-chart", async (req, res): Promise<void> => {
   res.json(rows.rows);
 });
 
+router.get("/admin/stats/user-growth", async (req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    WITH days AS (
+      SELECT generate_series(
+        date_trunc('day', now() AT TIME ZONE 'UTC') - interval '29 days',
+        date_trunc('day', now() AT TIME ZONE 'UTC'),
+        interval '1 day'
+      )::date AS d
+    ),
+    new_sigs AS (
+      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC')::date AS d, COUNT(*)::int AS cnt
+      FROM users
+      WHERE created_at >= now() - interval '30 days'
+      GROUP BY 1
+    ),
+    logins AS (
+      SELECT date_trunc('day', created_at AT TIME ZONE 'UTC')::date AS d, COUNT(*)::int AS cnt
+      FROM sessions
+      WHERE created_at >= now() - interval '30 days'
+      GROUP BY 1
+    )
+    SELECT
+      to_char(days.d, 'MM-DD')                                            AS day,
+      COALESCE(new_sigs.cnt, 0)                                           AS "newUsers",
+      GREATEST(0, COALESCE(logins.cnt, 0) - COALESCE(new_sigs.cnt, 0))   AS "returningLogins"
+    FROM days
+    LEFT JOIN new_sigs ON new_sigs.d = days.d
+    LEFT JOIN logins   ON logins.d   = days.d
+    ORDER BY days.d
+  `);
+  res.json(rows.rows);
+});
+
 router.get("/admin/stats/revenue-chart", async (req, res): Promise<void> => {
   const rows = await db.execute(sql`
     SELECT
@@ -1405,6 +1438,47 @@ router.post("/admin/users/:id/invalidate-sessions", async (req, res): Promise<vo
   await db.delete(sessionsTable).where(eq(sessionsTable.userId, id));
   await logAdminAction(req.user!.userId, "invalidate_sessions", "user", id, {});
   res.json({ success: true });
+});
+
+router.delete("/admin/users/:id/sessions/:sessionId", async (req, res): Promise<void> => {
+  const userId = parseInt(req.params.id);
+  const sessionId = parseInt(req.params.sessionId);
+  const deleted = await db.delete(sessionsTable)
+    .where(and(eq(sessionsTable.id, sessionId), eq(sessionsTable.userId, userId)))
+    .returning({ id: sessionsTable.id });
+  if (!deleted.length) { res.status(404).json({ error: "Session not found" }); return; }
+  await logAdminAction(req.user!.userId, "revoke_session", "user", userId, { sessionId });
+  res.json({ success: true });
+});
+
+// ─── Login history (platform-wide) ───────────────────────────────────────────
+router.get("/admin/login-history", async (req, res): Promise<void> => {
+  const { page = "1", limit = "50" } = req.query as Record<string, string>;
+  const pageNum = Math.max(1, parseInt(page));
+  const pageSize = Math.min(100, Math.max(1, parseInt(limit)));
+  const offset = (pageNum - 1) * pageSize;
+
+  const rows = await db.execute(sql`
+    SELECT
+      u.id,
+      u.wallet_address   AS "walletAddress",
+      u.username,
+      u.email,
+      u.kyc_status       AS "kycStatus",
+      u.country,
+      MAX(s.created_at)  AS "lastLogin",
+      COUNT(s.id)::int   AS "sessionCount"
+    FROM users u
+    LEFT JOIN sessions s ON s.user_id = u.id
+    GROUP BY u.id, u.wallet_address, u.username, u.email, u.kyc_status, u.country
+    ORDER BY MAX(s.created_at) DESC NULLS LAST
+    LIMIT ${pageSize} OFFSET ${offset}
+  `);
+
+  const totalRows = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM users`);
+  const total = Number((totalRows.rows[0] as { cnt: number }).cnt);
+
+  res.json({ rows: rows.rows, total });
 });
 
 // ─── User Profile: referral tree ─────────────────────────────────────────────

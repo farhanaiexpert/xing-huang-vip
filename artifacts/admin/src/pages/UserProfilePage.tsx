@@ -263,6 +263,12 @@ function SessionsTab({ userId }: { userId: number }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const revokeMut = useMutation({
+    mutationFn: (sessionId: number) => api.delete(`/admin/users/${userId}/sessions/${sessionId}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile-sessions", userId] }); toast.success("Session revoked"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const active = sessions.filter(s => s.isActive).length;
 
   return (
@@ -272,7 +278,7 @@ function SessionsTab({ userId }: { userId: number }) {
         <button onClick={() => invalidateMut.mutate()} disabled={invalidateMut.isPending || active === 0}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-[#EF4444]/10 text-[#EF4444] hover:bg-[#EF4444]/20 rounded-lg text-xs font-semibold disabled:opacity-40 transition-colors">
           <RefreshCw className="w-3.5 h-3.5" />
-          {invalidateMut.isPending ? "Invalidating…" : "Invalidate All Sessions"}
+          {invalidateMut.isPending ? "Invalidating…" : "Revoke All"}
         </button>
       </div>
 
@@ -284,19 +290,29 @@ function SessionsTab({ userId }: { userId: number }) {
         <div className="space-y-2">
           {sessions.map(s => (
             <div key={s.id} className="bg-[#0D1117] border border-white/8 rounded-xl px-4 py-3 flex items-center gap-3">
-              <div className={cn("w-2 h-2 rounded-full shrink-0", s.isActive ? "bg-[#00DFA9]" : "bg-[#334155]")} />
+              <div className={cn("w-2 h-2 rounded-full shrink-0 mt-0.5", s.isActive ? "bg-[#00DFA9]" : "bg-[#334155]")} />
               <div className="flex-1 min-w-0 text-xs">
                 <div className="flex items-center gap-2">
                   <span className={cn("px-1.5 py-0.5 rounded text-[11px] font-semibold", s.isActive ? "bg-[#00DFA9]/10 text-[#00DFA9]" : "bg-white/5 text-[#475569]")}>
                     {s.isActive ? "Active" : "Expired"}
                   </span>
-                  <span className="text-[#475569]">Session #{s.id}</span>
+                  <span className="text-[#475569] font-mono">#{s.id}</span>
                 </div>
                 <div className="flex gap-4 mt-1 text-[#334155]">
-                  <span>Login: {fmtDate(s.createdAt)}</span>
-                  <span>Expires: {fmtDate(s.expiresAt)}</span>
+                  <span>Login: <span className="text-[#475569]">{fmtDate(s.createdAt)}</span></span>
+                  <span>Expires: <span className="text-[#475569]">{fmtDate(s.expiresAt)}</span></span>
                 </div>
               </div>
+              {s.isActive && (
+                <button
+                  onClick={() => revokeMut.mutate(s.id)}
+                  disabled={revokeMut.isPending}
+                  title="Force disconnect this session"
+                  className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-[#EF4444]/8 text-[#EF4444] hover:bg-[#EF4444]/20 rounded-lg text-[11px] font-semibold disabled:opacity-40 transition-colors border border-[#EF4444]/15">
+                  <Trash2 className="w-3 h-3" />
+                  Disconnect
+                </button>
+              )}
             </div>
           ))}
         </div>

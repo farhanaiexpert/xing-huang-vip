@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
   Shield, ShieldCheck, Zap, Globe, BarChart2, Settings, CheckCheck,
-  Activity, DollarSign, TrendingUp, ArrowDownCircle, ArrowUpCircle,
+  Activity, DollarSign, TrendingUp, ArrowDownCircle, ArrowUpCircle, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -69,9 +69,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     {
       label: "Risk & Compliance",
       items: [
-        { href: "/liability",     icon: Activity,     label: "Liability",      badge: 0 },
-        { href: "/rg-players",   icon: Shield,       label: "RG Players",     badge: 0 },
-        { href: "/book-balance", icon: DollarSign,   label: "Book Balance",   badge: 0 },
+        { href: "/liability",      icon: Activity,     label: "Liability",       badge: 0 },
+        { href: "/rg-players",     icon: Shield,       label: "RG Players",      badge: 0 },
+        { href: "/book-balance",   icon: DollarSign,   label: "Book Balance",    badge: 0 },
+        { href: "/login-history",  icon: Clock,        label: "Login History",   badge: 0 },
       ],
     },
     {
