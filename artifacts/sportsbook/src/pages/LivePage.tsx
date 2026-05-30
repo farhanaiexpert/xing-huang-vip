@@ -592,16 +592,6 @@ export function LivePage() {
               </div>
             </div>
 
-            {/* No live events notice when real data is available but empty */}
-            {!liveLoading && !isRealData && realMatches.length === 0 && (
-              <div className="mb-5 px-4 py-3 rounded-xl bg-[#FACC15]/6 border border-[#FACC15]/20 flex items-center gap-3">
-                <Radio className="h-4 w-4 text-[#FACC15]/60 shrink-0" />
-                <p className="text-[11px] text-[#FACC15]/70">
-                  No in-play events right now — showing demo matches. Real events appear here automatically when matches kick off.
-                </p>
-              </div>
-            )}
-
             {/* ── Match cards grid ───────────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4">
               {displayMatches.map(match => (
