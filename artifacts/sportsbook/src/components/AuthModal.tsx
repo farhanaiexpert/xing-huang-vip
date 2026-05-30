@@ -270,8 +270,8 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             >
               <span className="text-[#00DFA9] shrink-0 font-bold mt-px">ℹ</span>
               <span>
-                First time? Connecting your wallet creates your account instantly —
-                no registration, email, or password needed.
+                New to CupBett? Your account is created automatically the moment
+                your wallet signs in — nothing else required.
               </span>
             </div>
           )}

@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
-import { shortAddress as toShortAddr, userDisplayLabel } from '../lib/utils';
+import { shortAddress as toShortAddr } from '../lib/utils';
 
 interface WalletState {
   isConnected:    boolean;
