@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { useOddsData } from "../hooks/useOddsData";
+import { REAL_DATA_SPORT_IDS } from "../lib/oddsApi";
 import type { League } from "../types";
 
 interface MainContentProps {
@@ -207,6 +208,7 @@ export function MainContent({
   // Real + mock leagues from global context (also powers MatchDetail page)
   const {
     allLeagues,
+    realLeagues,
     loading: oddsLoading,
     refreshing: oddsRefreshing,
     error: oddsError,
@@ -628,6 +630,7 @@ export function MainContent({
               {showFeatured && <LiveBetFeed />}
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
+              {showFeatured && hasRealData && <TopMatchesBanner leagues={realLeagues} />}
               {showFeatured && <SoccerHighlights />}
               {showFeatured && <TennisHighlights />}
               {showFeatured && <NBAHighlights />}
@@ -692,6 +695,7 @@ export function MainContent({
                 ) : selectedSportId !== "ucl-final" ? (
                   <NoResultsState
                     search={search}
+                    selectedSportId={selectedSportId}
                     onClear={clearSearch}
                     onReset={() => {
                       onSelectSport(null);
@@ -736,17 +740,116 @@ export function MainContent({
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// TOP MATCHES BANNER — 6-8 soonest upcoming matches across all real sports
+// ────────────────────────────────────────────────────────────────────────────
+const SPORT_EMOJI: Record<string, string> = {
+  sp_soccer: '⚽', sp_basketball: '🏀', sp_american_football: '🏈',
+  sp_tennis: '🎾', sp_cricket: '🏏', sp_baseball: '⚾',
+  sp_ice_hockey: '🏒', sp_rugby_league: '🏉', sp_rugby_union: '🏉',
+  sp_mma: '🥋', sp_boxing: '🥊', sp_golf: '⛳', sp_aussie_rules: '🏈',
+  sp_darts: '🎯', sp_handball: '🤾', sp_volleyball: '🏐', sp_ucl: '⚽',
+};
+
+function TopMatchesBanner({ leagues }: { leagues: League[] }) {
+  const topMatches = useMemo(() => {
+    const now = Date.now();
+    return leagues
+      .flatMap(l =>
+        l.matches.map(m => ({
+          ...m,
+          leagueName: l.name,
+          _sportId: l.sportId,
+        }))
+      )
+      .filter(
+        (m) =>
+          m.commenceIso &&
+          new Date(m.commenceIso).getTime() > now &&
+          !m.isLive,
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.commenceIso!).getTime() - new Date(b.commenceIso!).getTime(),
+      )
+      .slice(0, 8);
+  }, [leagues]);
+
+  if (topMatches.length === 0) return null;
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-center gap-2 mb-2.5">
+        <Zap className="w-3 h-3 text-[#38BDF8]/70" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-[#38BDF8]/70">
+          Next Up — All Sports
+        </span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[#38BDF8]/15 to-transparent" />
+      </div>
+      <div
+        className="rounded-xl overflow-hidden border border-[#253241]/60"
+        style={{ background: "rgba(18,24,33,0.6)" }}
+      >
+        {topMatches.map((match, i) => (
+          <div
+            key={match.id}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 hover:bg-[#1E2A38]/60 transition-colors cursor-pointer",
+              i > 0 && "border-t border-[#253241]/40",
+            )}
+          >
+            <span className="text-base shrink-0">
+              {SPORT_EMOJI[match._sportId] ?? "🏆"}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-[#F8FAFC] truncate leading-tight">
+                {match.team1}{" "}
+                <span className="text-[#64748B] font-normal">vs</span>{" "}
+                {match.team2}
+              </p>
+              <p className="text-[10px] text-[#64748B] truncate mt-0.5">
+                {match.leagueName} · {match.date}
+              </p>
+            </div>
+            {match.odds.home && match.odds.away && (
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[11px] font-bold text-[#F8FAFC] bg-[#253241] hover:bg-[#2E3D50] px-1.5 py-0.5 rounded cursor-pointer transition-colors">
+                  {match.odds.home.toFixed(2)}
+                </span>
+                {match.odds.draw && (
+                  <span className="text-[11px] font-bold text-[#F8FAFC] bg-[#253241] hover:bg-[#2E3D50] px-1.5 py-0.5 rounded cursor-pointer transition-colors">
+                    {match.odds.draw.toFixed(2)}
+                  </span>
+                )}
+                <span className="text-[11px] font-bold text-[#F8FAFC] bg-[#253241] hover:bg-[#2E3D50] px-1.5 py-0.5 rounded cursor-pointer transition-colors">
+                  {match.odds.away.toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // NO RESULTS STATE
 // ────────────────────────────────────────────────────────────────────────────
 function NoResultsState({
   search,
+  selectedSportId,
   onClear,
   onReset,
 }: {
   search: string;
+  selectedSportId: string | null;
   onClear: () => void;
   onReset: () => void;
 }) {
+  // Sport is selected but has no Odds API coverage → "Coming Soon"
+  const isCoveredSport =
+    !selectedSportId || REAL_DATA_SPORT_IDS.has(selectedSportId);
+
   return (
     <div className="flex flex-col items-center text-center py-16 px-6 bg-[#121821] rounded-xl border border-[#253241]">
       <div className="relative mb-5">
@@ -777,14 +880,31 @@ function NoResultsState({
             Clear search
           </button>
         </>
+      ) : !isCoveredSport ? (
+        <>
+          <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1.5">
+            Coming Soon
+          </p>
+          <p className="text-sm text-[#94A3B8]/70 mb-5 max-w-xs leading-relaxed">
+            Live odds for this sport are not yet available. Check back soon —
+            we're adding new markets regularly.
+          </p>
+          <button
+            onClick={onReset}
+            className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#121821] border border-[#253241] text-[#F8FAFC] text-sm font-semibold hover:bg-[#18212B] transition-all"
+          >
+            <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+            All Sports
+          </button>
+        </>
       ) : (
         <>
           <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1.5">
-            No events available
+            No upcoming fixtures
           </p>
           <p className="text-sm text-[#94A3B8]/70 mb-5 max-w-xs leading-relaxed">
-            There are no events matching your current filters. Try a different
-            date or sport.
+            No events match your current filters. Try removing a date filter or
+            switching sport.
           </p>
           <button
             onClick={onReset}

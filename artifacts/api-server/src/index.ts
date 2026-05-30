@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import cron from "node-cron";
 import { runSettlementWorker } from "./lib/settlementWorker.js";
+import { fetchAndCacheOdds, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
 
 const PORT = parseInt(process.env.PORT ?? "5000", 10);
 
@@ -234,6 +235,33 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v13 skipped");
   }
+
+  // v14: plisio payment gateway columns on transactions
+  try {
+    await db.execute(sql`
+      ALTER TABLE transactions
+        ADD COLUMN IF NOT EXISTS plisio_payment_id TEXT,
+        ADD COLUMN IF NOT EXISTS plisio_status TEXT
+    `);
+    logger.info("DB migration v14 applied (transactions.plisio_payment_id, plisio_status)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v14 skipped");
+  }
+
+  // v15: odds_cache — PostgreSQL-backed pre-match odds cache (survives restarts)
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS odds_cache (
+        sport_key  TEXT PRIMARY KEY,
+        data       JSONB NOT NULL,
+        fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+    logger.info("DB migration v15 applied (odds_cache table)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v15 skipped");
+  }
 }
 
 runMigrations().then(() => {
@@ -244,6 +272,38 @@ runMigrations().then(() => {
     );
   });
   logger.info("Auto-settlement cron started (every 1 minute — dual source: Odds API + API-Football)");
+
+  // ── Odds refresh cron: every 5 min, triggers full batch every 25-35 min ──
+  let isOddsRefreshing = false;
+  let lastOddsRefreshAt = 0;
+  // Randomise first interval so restart doesn't always fetch immediately
+  let nextIntervalMs = (25 + Math.floor(Math.random() * 11)) * 60 * 1000;
+
+  cron.schedule("*/5 * * * *", async () => {
+    if (isOddsRefreshing) return;
+    const now = Date.now();
+    if (now - lastOddsRefreshAt < nextIntervalMs) return;
+
+    isOddsRefreshing = true;
+    // Randomise next interval: 25–35 minutes
+    nextIntervalMs = (25 + Math.floor(Math.random() * 11)) * 60 * 1000;
+    logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length, nextIntervalMin: Math.round(nextIntervalMs / 60000) }, "Odds refresh cron: starting full batch");
+
+    try {
+      for (const sportKey of ALL_ODDS_SPORT_KEYS) {
+        await fetchAndCacheOdds(sportKey);
+        // 300ms gap between requests to avoid rate-limit bursts
+        await new Promise(r => setTimeout(r, 300));
+      }
+      lastOddsRefreshAt = Date.now();
+      logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron: batch complete");
+    } catch (err) {
+      logger.error({ err }, "Odds refresh cron: unhandled error");
+    } finally {
+      isOddsRefreshing = false;
+    }
+  });
+  logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron started (every 25-35 minutes — PostgreSQL-backed cache)");
 
   app.listen(PORT, "0.0.0.0", () => {
     logger.info({ port: PORT }, "CupBett API server started");
