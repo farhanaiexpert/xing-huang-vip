@@ -17,7 +17,8 @@ export function shortAddress(addr: string | null | undefined): string | null {
 
 /**
  * Derive the best display label for a wallet user.
- * Priority: displayName → shortened walletAddress → username.
+ * Priority: shortened walletAddress → displayName → username.
+ * Wallet address always wins so identity is consistently crypto-native.
  */
 export function userDisplayLabel(user: {
   displayName?: string | null;
@@ -25,9 +26,9 @@ export function userDisplayLabel(user: {
   username?: string | null;
 } | null | undefined): string {
   if (!user) return '';
-  if (user.displayName) return user.displayName;
   const short = shortAddress(user.walletAddress);
   if (short) return short;
+  if (user.displayName) return user.displayName;
   return user.username ?? '';
 }
 

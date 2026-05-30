@@ -69,7 +69,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Prefer walletAddress → displayName → username for display
   const fullAddress  = user?.walletAddress ?? null;
-  const shortAddress = user ? (user.displayName || toShortAddr(user.walletAddress)) : null;
+  const shortAddress = user ? (toShortAddr(user.walletAddress) || user.displayName || null) : null;
   const walletName   = isAuthenticated ? 'CupBett Account' : null;
 
   // address field: full wallet address, or username fallback for legacy admin accounts

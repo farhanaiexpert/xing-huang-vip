@@ -270,8 +270,8 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             >
               <span className="text-[#00DFA9] shrink-0 font-bold mt-px">ℹ</span>
               <span>
-                First time? Your account is created automatically when you sign in.
-                No email or password required.
+                First time? Connecting your wallet creates your account instantly —
+                no registration, email, or password needed.
               </span>
             </div>
           )}

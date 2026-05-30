@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
+import { shortAddress } from '../lib/utils';
 
 export const COMMISSION_RATES: Record<1 | 2 | 3, number> = { 1: 0.05, 2: 0.03, 3: 0.01 };
 
@@ -98,7 +99,7 @@ export function useReferral(): ReferralState {
 
         const referrals: ReferralUser[] = networkData.tier1.map(r => ({
           id: String(r.userId),
-          address: r.username,
+          address: shortAddress(r.username) ?? r.username,
           level: 1 as const,
           joinedAt: r.createdAt,
           referredByCode: user!.referralCode ?? '',
