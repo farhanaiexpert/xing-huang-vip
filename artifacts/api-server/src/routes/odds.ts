@@ -239,7 +239,7 @@ router.get("/live/events", async (_req, res): Promise<void> => {
         const ctrl = controlMap.get(sportKey);
         if (ctrl && (!ctrl.isEnabled || ctrl.isSuspended)) return [];
 
-        const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h&oddsFormat=decimal&dateFormat=iso`;
+        const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h,totals,btts&oddsFormat=decimal&dateFormat=iso`;
         const response = await fetch(url);
         if (!response.ok) return [];
         const data = (await response.json()) as Record<string, unknown>[];

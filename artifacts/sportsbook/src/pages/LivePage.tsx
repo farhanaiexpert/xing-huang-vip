@@ -106,6 +106,98 @@ const BASE_MATCHES: LiveMatch[] = [
   },
 ];
 
+// ─── Market generators for Goals and Corners tabs ────────────────────────────
+
+interface MarketLine {
+  key: string;
+  label: string;
+  name: string;
+  baseOdds: number;
+}
+
+interface LiveMarketGroup {
+  marketKey: string;
+  marketName: string;
+  label: string;
+  lines: MarketLine[];
+}
+
+function rnd(n: number): number { return Math.max(1.05, Math.round(n * 100) / 100); }
+
+function generateGoalsMarkets(match: LiveMatch): LiveMarketGroup[] {
+  const h = match.outcomes.find(o => o.key === 'home')?.baseOdds ?? 2.0;
+  const d = match.outcomes.find(o => o.key === 'draw')?.baseOdds ?? 3.2;
+  const a = match.outcomes.find(o => o.key === 'away')?.baseOdds ?? 3.5;
+  const tot = 1/h + 1/d + 1/a;
+  const pd  = (1/d) / tot;
+
+  return [
+    {
+      marketKey: 'btts', marketName: 'Both Teams to Score', label: 'Both Teams to Score',
+      lines: [
+        { key: 'btts_y', label: 'Yes', name: 'BTTS — Yes', baseOdds: rnd(1.62 + pd * 0.7) },
+        { key: 'btts_n', label: 'No',  name: 'BTTS — No',  baseOdds: rnd(2.18 - pd * 0.5) },
+      ],
+    },
+    {
+      marketKey: 'ou25', marketName: 'Over/Under 2.5 Goals', label: 'Over / Under 2.5 Goals',
+      lines: [
+        { key: 'ou25_o', label: 'Over 2.5',  name: 'Over 2.5 Goals',  baseOdds: rnd(1.88) },
+        { key: 'ou25_u', label: 'Under 2.5', name: 'Under 2.5 Goals', baseOdds: rnd(1.92) },
+      ],
+    },
+    {
+      marketKey: 'ou15', marketName: 'Over/Under 1.5 Goals', label: 'Over / Under 1.5 Goals',
+      lines: [
+        { key: 'ou15_o', label: 'Over 1.5',  name: 'Over 1.5 Goals',  baseOdds: rnd(1.30) },
+        { key: 'ou15_u', label: 'Under 1.5', name: 'Under 1.5 Goals', baseOdds: rnd(3.40) },
+      ],
+    },
+    {
+      marketKey: 'ou35', marketName: 'Over/Under 3.5 Goals', label: 'Over / Under 3.5 Goals',
+      lines: [
+        { key: 'ou35_o', label: 'Over 3.5',  name: 'Over 3.5 Goals',  baseOdds: rnd(3.20) },
+        { key: 'ou35_u', label: 'Under 3.5', name: 'Under 3.5 Goals', baseOdds: rnd(1.33) },
+      ],
+    },
+  ];
+}
+
+function generateCornersMarkets(match: LiveMatch): LiveMarketGroup[] {
+  const hLabel = (match.homeTeam.split(' ').pop() ?? match.homeTeam).slice(0, 9);
+  const aLabel = (match.awayTeam.split(' ').pop() ?? match.awayTeam).slice(0, 9);
+  return [
+    {
+      marketKey: 'c95',  marketName: 'Total Corners — Over/Under 9.5',  label: 'Over / Under 9.5 Corners',
+      lines: [
+        { key: 'c95_o',  label: 'Over 9.5',  name: 'Over 9.5 Corners',  baseOdds: 2.10 },
+        { key: 'c95_u',  label: 'Under 9.5', name: 'Under 9.5 Corners', baseOdds: 1.72 },
+      ],
+    },
+    {
+      marketKey: 'c105', marketName: 'Total Corners — Over/Under 10.5', label: 'Over / Under 10.5 Corners',
+      lines: [
+        { key: 'c105_o', label: 'Over 10.5',  name: 'Over 10.5 Corners',  baseOdds: 3.20 },
+        { key: 'c105_u', label: 'Under 10.5', name: 'Under 10.5 Corners', baseOdds: 1.35 },
+      ],
+    },
+    {
+      marketKey: 'c85',  marketName: 'Total Corners — Over/Under 8.5',  label: 'Over / Under 8.5 Corners',
+      lines: [
+        { key: 'c85_o',  label: 'Over 8.5',  name: 'Over 8.5 Corners',  baseOdds: 1.90 },
+        { key: 'c85_u',  label: 'Under 8.5', name: 'Under 8.5 Corners', baseOdds: 1.90 },
+      ],
+    },
+    {
+      marketKey: 'first_corner', marketName: 'First Team to Take a Corner', label: 'First Corner',
+      lines: [
+        { key: 'ftc_h', label: hLabel, name: `${match.homeTeam} — First Corner`, baseOdds: 1.58 },
+        { key: 'ftc_a', label: aLabel, name: `${match.awayTeam} — First Corner`, baseOdds: 2.22 },
+      ],
+    },
+  ];
+}
+
 // ─── Probability helpers ──────────────────────────────────────────────────────
 
 function calcProbs(outcomes: Outcome[], simOdds: Record<string, number>): Record<string, number> {
@@ -128,6 +220,12 @@ function buildInitialSim(matches: LiveMatch[]): SimState {
   for (const m of matches) {
     state[m.id] = {};
     for (const o of m.outcomes) state[m.id][o.key] = o.baseOdds;
+    if (m.sport === 'soccer') {
+      for (const grp of generateGoalsMarkets(m))
+        for (const l of grp.lines) state[m.id][l.key] = l.baseOdds;
+      for (const grp of generateCornersMarkets(m))
+        for (const l of grp.lines) state[m.id][l.key] = l.baseOdds;
+    }
   }
   return state;
 }
@@ -136,10 +234,10 @@ function nudgeOdds(prev: SimState, matches: LiveMatch[]): SimState {
   const next: SimState = {};
   for (const m of matches) {
     next[m.id] = { ...(prev[m.id] ?? {}) };
-    for (const o of m.outcomes) {
-      const curr = next[m.id][o.key] ?? o.baseOdds;
+    for (const key of Object.keys(next[m.id])) {
+      const curr = next[m.id][key];
       const delta = (Math.random() - 0.5) * 0.08;
-      next[m.id][o.key] = Math.max(1.05, Math.round((curr + delta) * 100) / 100);
+      next[m.id][key] = Math.max(1.05, Math.round((curr + delta) * 100) / 100);
     }
   }
   return next;
@@ -153,19 +251,23 @@ function OutcomeRow({
   prob,
   currentOdds,
   prevOdds,
+  marketKey,
+  marketName,
 }: {
   match: LiveMatch;
   outcome: Outcome;
   prob: number;
   currentOdds: number;
   prevOdds: number;
+  marketKey: string;
+  marketName: string;
 }) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const { format } = useOddsFormat();
 
-  const selectionId = `live_${match.id}_h2h_${outcome.key}`;
+  const selectionId = `live_${match.id}_${marketKey}_${outcome.key}`;
   const isSelected = hasSelection(selectionId);
   const direction: 'up' | 'down' | 'stable' =
     currentOdds > prevOdds ? 'up' : currentOdds < prevOdds ? 'down' : 'stable';
@@ -194,11 +296,11 @@ function OutcomeRow({
     } else {
       addSelection({
         id: selectionId,
-        marketId: `live_${match.id}_h2h`,
+        marketId: `live_${match.id}_${marketKey}`,
         matchId: match.id,
         matchName: `${match.homeTeam} vs ${match.awayTeam}`,
         leagueName: match.league,
-        marketName: 'Match Result',
+        marketName,
         selectionType: outcome.label,
         selectionName: outcome.name,
         odds: currentOdds,
@@ -292,6 +394,107 @@ function OutcomeRow({
   );
 }
 
+// ─── OddsButton (compact button for Goals / Corners tabs) ────────────────────
+
+function OddsButton({
+  match,
+  line,
+  marketKey,
+  marketName,
+  currentOdds,
+  prevOdds,
+}: {
+  match: LiveMatch;
+  line: MarketLine;
+  marketKey: string;
+  marketName: string;
+  currentOdds: number;
+  prevOdds: number;
+}) {
+  const { addSelection, removeSelection, hasSelection } = useBetSlip();
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const { format } = useOddsFormat();
+
+  const selectionId = `live_${match.id}_${marketKey}_${line.key}`;
+  const isSelected  = hasSelection(selectionId);
+  const direction: 'up' | 'down' | 'stable' =
+    currentOdds > prevOdds ? 'up' : currentOdds < prevOdds ? 'down' : 'stable';
+
+  const [flashing, setFlashing] = useState(false);
+  const prevRef = useRef(prevOdds);
+  useEffect(() => {
+    if (prevRef.current !== currentOdds) {
+      setFlashing(true);
+      const t = setTimeout(() => setFlashing(false), 700);
+      prevRef.current = currentOdds;
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [currentOdds]);
+
+  function handleClick() {
+    if (!isAuthenticated) {
+      window.dispatchEvent(new Event('openLoginModal'));
+      return;
+    }
+    if (isSelected) {
+      removeSelection(selectionId);
+      playOddsRemove();
+    } else {
+      addSelection({
+        id: selectionId,
+        marketId: `live_${match.id}_${marketKey}`,
+        matchId: match.id,
+        matchName: `${match.homeTeam} vs ${match.awayTeam}`,
+        leagueName: match.league,
+        marketName,
+        selectionType: line.label,
+        selectionName: line.name,
+        odds: currentOdds,
+        sportId: match.sport,
+        isLive: true,
+      });
+      playOddsAdd();
+      toast({
+        title: `${line.name} added`,
+        description: `${match.homeTeam} vs ${match.awayTeam} @ ${formatOdds(currentOdds, format)}`,
+        duration: 2500,
+      });
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className={cn(
+        'flex-1 flex flex-col items-center gap-1.5 py-2.5 px-2 rounded-xl border transition-all duration-200',
+        isSelected
+          ? 'bg-[#00DFA9]/10 border-[#00DFA9]/40 shadow-[0_0_10px_rgba(0,223,169,0.12)]'
+          : 'bg-white/[0.02] hover:bg-white/[0.04] border-white/[0.06] hover:border-[#38BDF8]/25',
+      )}
+    >
+      <span className={cn(
+        'text-[10px] font-semibold leading-none text-center',
+        isSelected ? 'text-[#00DFA9]' : 'text-[#64748B]',
+      )}>
+        {line.label}
+      </span>
+      <span className={cn(
+        'text-[15px] font-black tabular-nums leading-none transition-colors duration-300',
+        isSelected                                         ? 'text-[#00DFA9]'  : 'text-[#F8FAFC]',
+        flashing && direction === 'up'   && !isSelected   && 'text-[#22C55E]',
+        flashing && direction === 'down' && !isSelected   && 'text-[#EF4444]',
+      )}>
+        {formatOdds(currentOdds, format)}
+      </span>
+      {isSelected && (
+        <span className="text-[8px] font-black uppercase tracking-widest text-[#00DFA9]/60">Added</span>
+      )}
+    </button>
+  );
+}
+
 // ─── LiveMatchCard ────────────────────────────────────────────────────────────
 
 function LiveMatchCard({
@@ -303,7 +506,11 @@ function LiveMatchCard({
   simOdds: Record<string, number>;
   prevSimOdds: Record<string, number>;
 }) {
-  const probs = calcProbs(match.outcomes, simOdds);
+  const isSoccer       = match.sport === 'soccer';
+  const [activeTab, setActiveTab] = useState<'result' | 'goals' | 'corners'>('result');
+  const probs          = calcProbs(match.outcomes, simOdds);
+  const goalsMarkets   = useMemo(() => isSoccer ? generateGoalsMarkets(match)   : [], [match, isSoccer]);
+  const cornersMarkets = useMemo(() => isSoccer ? generateCornersMarkets(match) : [], [match, isSoccer]);
 
   return (
     <div
@@ -398,28 +605,132 @@ function LiveMatchCard({
         )}
       </div>
 
-      {/* Market header */}
-      <div className="px-4 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="h-px flex-1 bg-white/[0.05]" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#475569]">Match Result · Win probability</span>
-          <div className="h-px flex-1 bg-white/[0.05]" />
-        </div>
-      </div>
+      {/* Market section — tabs for soccer, plain result for other sports */}
+      {isSoccer ? (
+        <>
+          {/* Tab strip */}
+          <div className="px-3 pt-1 pb-2.5 flex gap-1.5 border-t border-white/[0.04]">
+            {(['result', 'goals', 'corners'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200',
+                  activeTab === tab
+                    ? 'bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/30'
+                    : 'text-[#475569] hover:text-[#94A3B8] border border-transparent',
+                )}
+              >
+                {tab === 'result' ? '1 X 2' : tab === 'goals' ? '⚽ Goals' : '🚩 Corners'}
+              </button>
+            ))}
+          </div>
 
-      {/* Outcome rows */}
-      <div className="px-2 pb-3 space-y-0.5">
-        {match.outcomes.map(outcome => (
-          <OutcomeRow
-            key={outcome.key}
-            match={match}
-            outcome={outcome}
-            prob={probs[outcome.key] ?? 0}
-            currentOdds={simOdds[outcome.key] ?? outcome.baseOdds}
-            prevOdds={prevSimOdds[outcome.key] ?? outcome.baseOdds}
-          />
-        ))}
-      </div>
+          {/* Result tab */}
+          {activeTab === 'result' && (
+            <>
+              <div className="px-4 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-white/[0.05]" />
+                  <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#475569]">Match Result · Win probability</span>
+                  <div className="h-px flex-1 bg-white/[0.05]" />
+                </div>
+              </div>
+              <div className="px-2 pb-3 space-y-0.5">
+                {match.outcomes.map(outcome => (
+                  <OutcomeRow
+                    key={outcome.key}
+                    match={match}
+                    outcome={outcome}
+                    prob={probs[outcome.key] ?? 0}
+                    currentOdds={simOdds[outcome.key] ?? outcome.baseOdds}
+                    prevOdds={prevSimOdds[outcome.key] ?? outcome.baseOdds}
+                    marketKey="h2h"
+                    marketName="Match Result"
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Goals tab */}
+          {activeTab === 'goals' && (
+            <div className="px-3 pb-4 pt-0.5 space-y-3">
+              {goalsMarkets.map(mkt => (
+                <div key={mkt.marketKey}>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#475569] mb-1.5 px-1">
+                    {mkt.label}
+                  </p>
+                  <div className="flex gap-1.5">
+                    {mkt.lines.map(line => (
+                      <OddsButton
+                        key={line.key}
+                        match={match}
+                        line={line}
+                        marketKey={mkt.marketKey}
+                        marketName={mkt.marketName}
+                        currentOdds={simOdds[line.key] ?? line.baseOdds}
+                        prevOdds={prevSimOdds[line.key] ?? line.baseOdds}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Corners tab */}
+          {activeTab === 'corners' && (
+            <div className="px-3 pb-4 pt-0.5 space-y-3">
+              {cornersMarkets.map(mkt => (
+                <div key={mkt.marketKey}>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#475569] mb-1.5 px-1">
+                    {mkt.label}
+                  </p>
+                  <div className="flex gap-1.5">
+                    {mkt.lines.map(line => (
+                      <OddsButton
+                        key={line.key}
+                        match={match}
+                        line={line}
+                        marketKey={mkt.marketKey}
+                        marketName={mkt.marketName}
+                        currentOdds={simOdds[line.key] ?? line.baseOdds}
+                        prevOdds={prevSimOdds[line.key] ?? line.baseOdds}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        /* Non-soccer: plain result rows, no tabs */
+        <>
+          <div className="px-4 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="h-px flex-1 bg-white/[0.05]" />
+              <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#475569]">Match Result · Win probability</span>
+              <div className="h-px flex-1 bg-white/[0.05]" />
+            </div>
+          </div>
+          <div className="px-2 pb-3 space-y-0.5">
+            {match.outcomes.map(outcome => (
+              <OutcomeRow
+                key={outcome.key}
+                match={match}
+                outcome={outcome}
+                prob={probs[outcome.key] ?? 0}
+                currentOdds={simOdds[outcome.key] ?? outcome.baseOdds}
+                prevOdds={prevSimOdds[outcome.key] ?? outcome.baseOdds}
+                marketKey="h2h"
+                marketName="Match Result"
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Footer: volume + bettors */}
       <div
