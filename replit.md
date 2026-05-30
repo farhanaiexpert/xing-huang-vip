@@ -25,10 +25,9 @@ A premium frontend-only sportsbook dashboard built with React, Vite, and Tailwin
 
 ## Architecture decisions
 
-- Fully frontend-only: all state lives in localStorage or React context
-- No backend, no database, no API server
+- Backend: Express 5 API server + PostgreSQL database (odds cache, users, bets, wallet)
 - All wallet interactions are mocked (no real Web3)
-- Real match odds fetched via The Odds API (VITE_ODDS_API_KEY), cached 24h in localStorage
+- Real match odds fetched via The Odds API (ODDS_API_KEY), cached in PostgreSQL odds_cache table; server cron refreshes every 25–35 min; client localStorage TTL 35 min
 - Google Translate used for multi-language support (no i18n library)
 
 ## Product
