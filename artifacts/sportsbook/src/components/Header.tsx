@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft } from 'lucide-react';
+import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft, Clock } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { NotificationBell } from './NotificationBell';
@@ -11,6 +11,32 @@ import { cn } from '../lib/utils';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 import { useI18n } from '../contexts/I18nContext';
+
+const NPP_PENDING_KEY = 'npp_pending_deposit';
+
+function usePendingNppDeposit() {
+  const [pending, setPending] = useState<{ paymentId: string; amount: number } | null>(null);
+  useEffect(() => {
+    function check() {
+      const raw = localStorage.getItem(NPP_PENDING_KEY);
+      if (!raw) { setPending(null); return; }
+      try {
+        const data = JSON.parse(raw) as { paymentId: string; amount: number; expiresAt: string };
+        if (data.expiresAt && new Date(data.expiresAt) < new Date()) {
+          localStorage.removeItem(NPP_PENDING_KEY);
+          setPending(null);
+        } else {
+          setPending({ paymentId: data.paymentId, amount: data.amount });
+        }
+      } catch { setPending(null); }
+    }
+    check();
+    window.addEventListener('storage', check);
+    const id = setInterval(check, 15_000);
+    return () => { window.removeEventListener('storage', check); clearInterval(id); };
+  }, []);
+  return pending;
+}
 
 const LANGUAGES = [
   { code: 'ar',    label: 'Arabic',      native: 'العربية',    flag: '🇸🇦', short: 'AR' },
@@ -58,6 +84,7 @@ export function Header() {
   const { isConnected, shortAddress, fullAddress, walletName, balance } = useWallet();
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const { logout, user } = useAuth();
+  const pendingDeposit = usePendingNppDeposit();
   const [, setLocation] = useLocation();
   const { format, setFormat } = useOddsFormat();
 
@@ -344,10 +371,17 @@ export function Header() {
                   onClick={() => setIsPaymentOpen(true)}
                   className="relative group flex items-center gap-1.5 h-8 px-3 rounded-xl text-[#0B0F14] text-xs font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
                   style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
+                  title={pendingDeposit ? `Pending deposit: $${pendingDeposit.amount} USDT` : undefined}
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{ boxShadow: '0 0 16px rgba(0,223,169,0.5)' }} />
                   <span className="relative">+ Deposit</span>
+                  {pendingDeposit && (
+                    <span className="relative flex items-center gap-1 pl-1 border-l border-[#0B0F14]/20">
+                      <Clock className="w-3 h-3" />
+                      <span className="text-[9px] font-black">1</span>
+                    </span>
+                  )}
                 </button>
                 {/* Wallet address button — hidden on mobile (visible in More drawer) */}
                 <div className="relative hidden sm:block" ref={menuRef}>

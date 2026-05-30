@@ -12,34 +12,93 @@ import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
 
-function TxHashCell({ hash, network }: { hash: string | null; network: string | null }) {
+function CopyableId({ id, label, color }: { id: string; label: string; color: string }) {
   const [copied, setCopied] = useState(false);
-  if (!hash) return <span className="text-[#334155] text-xs">—</span>;
+  function doCopy() {
+    navigator.clipboard.writeText(id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="font-mono text-[10px]" style={{ color }}>
+        {id.slice(0, 8)}…{id.slice(-6)}
+      </span>
+      <button onClick={doCopy} className="text-[#475569] hover:text-[#94A3B8] transition-colors" title={`Copy ${label}`}>
+        {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+      </button>
+    </div>
+  );
+}
 
-  const url = (network ?? "TRC-20") === "ERC-20"
-    ? `https://etherscan.io/tx/${hash}`
-    : `https://tronscan.org/#/transaction/${hash}`;
+const NPP_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  waiting:      { bg: 'rgba(250,204,21,0.08)',  text: '#FACC15',  border: 'rgba(250,204,21,0.20)',  label: 'Waiting' },
+  confirming:   { bg: 'rgba(56,189,248,0.08)',  text: '#38BDF8',  border: 'rgba(56,189,248,0.20)',  label: 'Confirming' },
+  confirmed:    { bg: 'rgba(0,223,169,0.08)',   text: '#00DFA9',  border: 'rgba(0,223,169,0.20)',   label: 'Confirmed' },
+  finished:     { bg: 'rgba(0,223,169,0.08)',   text: '#00DFA9',  border: 'rgba(0,223,169,0.20)',   label: 'Finished ✓' },
+  failed:       { bg: 'rgba(239,68,68,0.08)',   text: '#F87171',  border: 'rgba(239,68,68,0.20)',   label: 'Failed' },
+  refunded:     { bg: 'rgba(239,68,68,0.08)',   text: '#F87171',  border: 'rgba(239,68,68,0.20)',   label: 'Refunded' },
+  expired:      { bg: 'rgba(100,116,139,0.10)', text: '#94A3B8',  border: 'rgba(100,116,139,0.20)', label: 'Expired' },
+  partially_paid: { bg: 'rgba(250,204,21,0.08)', text: '#FACC15', border: 'rgba(250,204,21,0.20)', label: 'Partial' },
+};
+
+function NppStatusBadge({ status }: { status: string | null }) {
+  if (!status) return null;
+  const cfg = NPP_STATUS_COLORS[status] ?? {
+    bg: 'rgba(100,116,139,0.10)', text: '#94A3B8', border: 'rgba(100,116,139,0.20)', label: status,
+  };
+  return (
+    <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+      style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
+      ⚡ {cfg.label}
+    </span>
+  );
+}
+
+function TxHashCell({ hash, network, nowpaymentsPaymentId, nowpaymentsStatus }: {
+  hash: string | null;
+  network: string | null;
+  nowpaymentsPaymentId: string | null;
+  nowpaymentsStatus: string | null;
+}) {
+  const [copied, setCopied] = useState(false);
 
   function copyHash() {
-    navigator.clipboard.writeText(hash!);
+    if (!hash) return;
+    navigator.clipboard.writeText(hash);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const url = hash ? ((network ?? "TRC-20") === "ERC-20"
+    ? `https://etherscan.io/tx/${hash}`
+    : `https://tronscan.org/#/transaction/${hash}`) : null;
+
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono text-xs text-[#94A3B8]">
-          {hash.slice(0, 10)}…{hash.slice(-6)}
-        </span>
-        <button onClick={copyHash} className="text-[#475569] hover:text-[#94A3B8] transition-colors" title="Copy hash">
-          {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
-        </button>
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          className="text-[#38BDF8] hover:text-[#7DD3FC] transition-colors" title="View on explorer">
-          <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
+      {hash ? (
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-xs text-[#94A3B8]">
+            {hash.slice(0, 10)}…{hash.slice(-6)}
+          </span>
+          <button onClick={copyHash} className="text-[#475569] hover:text-[#94A3B8] transition-colors" title="Copy hash">
+            {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+          </button>
+          {url && (
+            <a href={url} target="_blank" rel="noopener noreferrer"
+              className="text-[#38BDF8] hover:text-[#7DD3FC] transition-colors" title="View on explorer">
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
+      ) : null}
+      {nowpaymentsPaymentId && (
+        <div className="flex flex-col gap-0.5">
+          <CopyableId id={nowpaymentsPaymentId} label="NOWPay ID" color="#38BDF8" />
+          {nowpaymentsStatus && <NppStatusBadge status={nowpaymentsStatus} />}
+        </div>
+      )}
+      {!hash && !nowpaymentsPaymentId && <span className="text-[#334155] text-xs">—</span>}
     </div>
   );
 }
@@ -259,14 +318,14 @@ export default function DepositsPage() {
                     <NetworkBadge network={txn.network} />
                   </td>
 
-                  {/* TxHash */}
+                  {/* TxHash / NOWPay */}
                   <td className="px-4 py-3">
-                    <TxHashCell hash={txn.txHash} network={txn.network} />
-                    {txn.nowpaymentsPaymentId && (
-                      <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-1.5 py-0.5 rounded-full">
-                        ⚡ NOWPay
-                      </span>
-                    )}
+                    <TxHashCell
+                      hash={txn.txHash}
+                      network={txn.network}
+                      nowpaymentsPaymentId={txn.nowpaymentsPaymentId}
+                      nowpaymentsStatus={txn.nowpaymentsStatus}
+                    />
                   </td>
 
                   {/* Verification */}
