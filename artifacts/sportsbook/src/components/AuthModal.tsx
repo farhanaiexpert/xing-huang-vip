@@ -441,7 +441,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
           {step === 'idle' && (
             <button
               onClick={handleConnectWallet}
-              className="relative w-full h-[54px] rounded-xl font-black text-[14px] tracking-tight flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] overflow-hidden group"
+              className="relative w-full h-[54px] rounded-xl font-black text-[14px] tracking-tight flex items-center justify-between px-5 transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] overflow-hidden group"
               style={{
                 background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 55%,#00A882 100%)',
                 boxShadow: '0 0 40px rgba(0,223,169,0.18), 0 4px 20px rgba(0,0,0,0.4)',
@@ -450,11 +450,13 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             >
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                 style={{ background: 'linear-gradient(135deg,#12F0C4 0%,#00DFA9 55%,#00C49A 100%)' }} />
+              {/* Left icon — balances the chevron on the right */}
               <Wallet className="relative w-[18px] h-[18px] shrink-0" />
-              <span className="relative">
-                {isConnected && address ? 'Sign & Log In' : 'Connect Wallet & Log In'}
+              {/* Centred label */}
+              <span className="relative flex-1 text-center">
+                {isConnected && address ? 'Log In with Wallet' : 'Connect Wallet & Log In'}
               </span>
-              <ChevronRight className="relative w-4 h-4 ml-auto shrink-0 opacity-70" />
+              <ChevronRight className="relative w-[18px] h-[18px] shrink-0 opacity-60" />
             </button>
           )}
 
