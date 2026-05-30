@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBetHistory } from '@/hooks/useBetHistory';
 import { Header } from '@/components/Header';
-import { cn } from '@/lib/utils';
+import { cn, userDisplayLabel, shortAddress, addressInitials } from '@/lib/utils';
 import {
   LayoutDashboard, Wallet, Receipt, ArrowLeftRight,
   Users, Gift, Star, Trophy, Settings, LogOut, Shield, BarChart2,
@@ -88,8 +88,8 @@ export function AccountLayout() {
   }
   if (!isAuthenticated || !user) return null;
 
-  const displayLabel = user.displayName || user.walletAddress?.slice(0, 8) || user.username || '';
-  const initials = displayLabel.replace('0x', '').slice(0, 2).toUpperCase() || '??';
+  const displayLabel = userDisplayLabel(user);
+  const initials     = addressInitials(displayLabel);
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-20 xl:pb-0">
@@ -139,7 +139,7 @@ export function AccountLayout() {
                   <p className="text-[13px] font-bold text-[#F8FAFC] truncate">{displayLabel}</p>
                   {user.walletAddress && (
                     <p className="text-[10px] text-[#00DFA9]/60 font-mono truncate">
-                      {user.walletAddress.slice(0, 6)}…{user.walletAddress.slice(-4)}
+                      {shortAddress(user.walletAddress)}
                     </p>
                   )}
                 </div>

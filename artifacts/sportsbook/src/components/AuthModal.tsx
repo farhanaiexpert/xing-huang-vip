@@ -4,6 +4,7 @@ import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react
 import { useSignMessage } from 'wagmi';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import { api, setTokens } from '../lib/apiClient';
+import { shortAddress } from '../lib/utils';
 
 interface AuthModalProps {
   open: boolean;
@@ -43,9 +44,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   // Track whether user explicitly triggered wallet connection from this modal
   const waitingForConnect = useRef(false);
 
-  const addrShort = address
-    ? address.slice(0, 6) + '…' + address.slice(-4)
-    : '';
+  const addrShort = shortAddress(address) ?? '';
   const { copied, copy } = useCopy(address ?? '');
 
   // Reset when modal closes

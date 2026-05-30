@@ -11,6 +11,7 @@ import {
   Calendar, ShieldCheck, TrendingUp, Activity,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { userDisplayLabel, addressInitials } from '@/lib/utils';
 
 function fmtDate(iso?: string) {
   if (!iso) return '—';
@@ -29,8 +30,8 @@ export function OverviewPage() {
   const openBets  = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
   const totalWagered = bets.reduce((s, b) => s + b.stake, 0);
   const winRate   = bets.length > 0 ? Math.round((wonBets / bets.length) * 100) : 0;
-  const displayLabel = user?.displayName || user?.walletAddress?.slice(0, 8) || user?.username || '';
-  const initials     = displayLabel.replace('0x', '').slice(0, 2).toUpperCase() || '??';
+  const displayLabel = userDisplayLabel(user);
+  const initials     = addressInitials(displayLabel);
 
   function handleCopyRef() {
     if (!user?.referralCode) return;
@@ -120,7 +121,11 @@ export function OverviewPage() {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <h1 className="text-[22px] font-black text-[#F8FAFC] leading-tight">{displayLabel}</h1>
-              {user?.email && <p className="text-[13px] text-[#94A3B8]/60 mt-0.5">{user.email}</p>}
+              {user?.walletAddress && (
+                <p className="text-[11px] font-mono text-[#00DFA9]/50 mt-0.5 truncate">
+                  {user.walletAddress}
+                </p>
+              )}
 
               <div className="flex flex-wrap items-center gap-3 mt-3">
                 {/* Member since */}

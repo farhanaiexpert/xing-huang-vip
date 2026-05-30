@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
+import { shortAddress as toShortAddr, userDisplayLabel } from '../lib/utils';
 
 interface WalletState {
   isConnected:    boolean;
@@ -68,7 +69,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Prefer walletAddress → displayName → username for display
   const fullAddress  = user?.walletAddress ?? null;
-  const shortAddress = user ? (user.displayName || (user.walletAddress ? user.walletAddress.slice(0, 6) + '…' + user.walletAddress.slice(-4) : null)) : null;
+  const shortAddress = user ? (user.displayName || toShortAddr(user.walletAddress)) : null;
   const walletName   = isAuthenticated ? 'CupBett Account' : null;
 
   // address field: full wallet address, or username fallback for legacy admin accounts
