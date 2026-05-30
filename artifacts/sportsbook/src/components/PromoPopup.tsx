@@ -188,60 +188,94 @@ export function PromoPopup() {
   // Only show on the homepage
   if (location !== '/') return null;
 
-  // Sticky claim bar — always in DOM after popup dismissed, shown/hidden via CSS transform
+  // Sticky claim bar — desktop: fixed bottom strip; mobile: slim top notice below header
   const StickyBar = dismissed && !barStopped ? (
-    <div
-      className="fixed bottom-0 left-0 right-0 xl:right-[260px] z-[9998] flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5"
-      style={{
-        background: 'linear-gradient(90deg,#061A14 0%,#091820 50%,#061A14 100%)',
-        borderTop: '1px solid rgba(0,223,169,0.25)',
-        boxShadow: '0 -6px 36px rgba(0,223,169,0.14)',
-        transform: barVisible ? 'translateY(0)' : 'translateY(110%)',
-        opacity: barVisible ? 1 : 0,
-        transition: 'transform 0.55s cubic-bezier(.16,1,.3,1), opacity 0.45s ease',
-        pointerEvents: barVisible ? 'all' : 'none',
-      }}
-    >
+    <>
       <style>{`
         @keyframes pCTAPulse { 0%,100%{box-shadow:0 0 18px rgba(0,223,169,.35)} 50%{box-shadow:0 0 30px rgba(0,223,169,.6)} }
         @keyframes pShimmer  { from{transform:translateX(-120%)} to{transform:translateX(120%)} }
       `}</style>
 
-      {/* Left: pulse dot + text */}
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="w-2.5 h-2.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
-        <div className="min-w-0">
-          <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
-            Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 99.99 USDT</span>
-          </p>
-          <p className="text-[10px] text-[#64748B] hidden sm:block">Join 50,000+ players on <span translate="no">CupBett</span> Sports Trading</p>
+      {/* ── Desktop (xl+): fixed bottom bar ── */}
+      <div
+        className="hidden xl:flex fixed bottom-0 left-0 right-[260px] z-[9998] items-center justify-between gap-3 px-6 py-3.5"
+        style={{
+          background: 'linear-gradient(90deg,#061A14 0%,#091820 50%,#061A14 100%)',
+          borderTop: '1px solid rgba(0,223,169,0.25)',
+          boxShadow: '0 -6px 36px rgba(0,223,169,0.14)',
+          transform: barVisible ? 'translateY(0)' : 'translateY(110%)',
+          opacity: barVisible ? 1 : 0,
+          transition: 'transform 0.55s cubic-bezier(.16,1,.3,1), opacity 0.45s ease',
+          pointerEvents: barVisible ? 'all' : 'none',
+        }}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
+              Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 120 USDT</span>
+            </p>
+            <p className="text-[10px] text-[#64748B]">Join 50,000+ players on <span translate="no">CupBett</span> Sports Trading</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={handleClaim}
+            disabled={claiming || alreadyClaimed}
+            className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-bold text-[#0B0F14] overflow-hidden transition-transform hover:scale-[1.03] active:scale-[0.97] cursor-pointer disabled:opacity-60"
+            style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', animation: 'pCTAPulse 2.4s ease-in-out infinite' }}
+          >
+            <Gift className="w-3.5 h-3.5 shrink-0" />
+            {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : 'Claim Now'}
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.2) 50%,transparent 62%)', animation: 'pShimmer 2.8s ease-in-out infinite' }} />
+          </button>
+          <button
+            onClick={dismissBar}
+            title="Dismiss"
+            className="flex items-center justify-center w-9 h-9 rounded-xl border border-[#253241] bg-[#0D1520] text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1E2A38] hover:border-[#2E3D50] transition-all duration-150 cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Right: CTA + close */}
-      <div className="flex items-center gap-3 shrink-0">
-        <button
-          onClick={handleClaim}
-          disabled={claiming || alreadyClaimed}
-          className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] sm:text-[13px] font-bold text-[#0B0F14] overflow-hidden transition-transform hover:scale-[1.03] active:scale-[0.97] cursor-pointer disabled:opacity-60"
-          style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', animation: 'pCTAPulse 2.4s ease-in-out infinite' }}
-        >
-          <Gift className="w-3.5 h-3.5 shrink-0" />
-          {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : 'Claim Now'}
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.2) 50%,transparent 62%)', animation: 'pShimmer 2.8s ease-in-out infinite' }} />
-        </button>
-
-        {/* Prominent close button */}
-        <button
-          onClick={dismissBar}
-          title="Dismiss"
-          className="flex items-center justify-center w-9 h-9 rounded-xl border border-[#253241] bg-[#0D1520] text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1E2A38] hover:border-[#2E3D50] transition-all duration-150 cursor-pointer shrink-0"
-        >
-          <X className="w-4 h-4" />
-        </button>
+      {/* ── Mobile (below xl): slim top notice just below the header ── */}
+      <div
+        className="xl:hidden fixed top-14 left-0 right-0 z-[9998] flex items-center justify-between gap-2 px-3 py-2"
+        style={{
+          background: 'linear-gradient(90deg,rgba(6,26,20,0.97) 0%,rgba(9,24,32,0.97) 100%)',
+          borderBottom: '1px solid rgba(0,223,169,0.18)',
+          backdropFilter: 'blur(10px)',
+          transform: barVisible ? 'translateY(0)' : 'translateY(-110%)',
+          opacity: barVisible ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(.16,1,.3,1), opacity 0.35s ease',
+          pointerEvents: barVisible ? 'all' : 'none',
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <Gift className="w-3.5 h-3.5 text-[#00DFA9] shrink-0" />
+          <p className="text-[11px] font-semibold text-[#F8FAFC] leading-none truncate">
+            Claim <span className="text-[#FACC15] font-black">FREE 120 USDT</span> welcome bonus
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={handleClaim}
+            disabled={claiming || alreadyClaimed}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[#0B0F14] bg-[#00DFA9] hover:brightness-110 active:scale-95 transition-all disabled:opacity-60 cursor-pointer"
+          >
+            {alreadyClaimed ? 'Claimed ✓' : claiming ? '…' : 'Claim'}
+          </button>
+          <button
+            onClick={dismissBar}
+            className="flex items-center justify-center w-6 h-6 rounded-lg text-[#64748B] hover:text-[#94A3B8] transition-colors cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   ) : null;
 
   if (!visible) return <>{StickyBar}</>;
@@ -456,7 +490,7 @@ export function PromoPopup() {
                 style={{ background: 'rgba(250,204,21,0.08)', animation: 'pPillPulse 2.2s ease-in-out infinite' }}
               >
                 <span className="text-[#FACC15] text-[11px]">✦</span>
-                <span className="text-[12px] font-black text-[#FACC15] tracking-wide">WELCOME BONUS — FREE 99.99 USDT</span>
+                <span className="text-[12px] font-black text-[#FACC15] tracking-wide">WELCOME BONUS — FREE 120 USDT</span>
               </div>
             </div>
 
@@ -466,7 +500,7 @@ export function PromoPopup() {
               <span style={{ background: 'linear-gradient(90deg,#00DFA9 0%,#38BDF8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Claim FREE
               </span>{' '}
-              <span className="text-[#FACC15]">99.99 USDT</span>
+              <span className="text-[#FACC15]">120 USDT</span>
             </h2>
 
             <p className="text-[12px] sm:text-[13px] text-[#94A3B8] leading-relaxed mb-4">
@@ -526,7 +560,7 @@ export function PromoPopup() {
                 style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
               >
                 <Gift className="w-4 h-4 shrink-0" />
-                {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : isAuthenticated ? 'Claim Now — Get 99.99 USDT' : 'Sign Up & Claim 99.99 USDT'}
+                {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : isAuthenticated ? 'Claim Now — Get 120 USDT' : 'Sign Up & Claim 120 USDT'}
                 <div className="absolute inset-0 pointer-events-none"
                   style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
               </button>

@@ -472,7 +472,7 @@ export function Promotions() {
               disabled={claiming || alreadyClaimed}
               className="shrink-0 flex items-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3 rounded-xl transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {alreadyClaimed ? '✓ Bonus Claimed' : claiming ? 'Claiming…' : 'Claim Now — 99.99 USDT Free'}
+              {alreadyClaimed ? '✓ Bonus Claimed' : claiming ? 'Claiming…' : 'Claim Now — 120 USDT Free'}
               {!alreadyClaimed && !claiming && <ChevronRight className="h-4 w-4" />}
             </button>
           </div>
