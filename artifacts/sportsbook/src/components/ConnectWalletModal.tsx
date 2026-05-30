@@ -10,9 +10,11 @@ import {
 import { AuthModal } from './AuthModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react';
-import { useChainId, useWriteContract, useDisconnect } from 'wagmi';
+import { useChainId, useWriteContract, useDisconnect, useConfig } from 'wagmi';
+import { waitForTransactionReceipt } from 'wagmi/actions';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../lib/apiClient';
+import { useToast } from '@/hooks/use-toast';
 
 const ERC20_ADDRESS = (import.meta.env.VITE_PLATFORM_ERC20_ADDRESS as string) || '';
 const TRC20_ADDRESS = (import.meta.env.VITE_PLATFORM_TRC20_ADDRESS as string) || '';
@@ -50,7 +52,7 @@ function toBaseUnits(amount: number, decimals: number): bigint {
   return BigInt(whole + frac.padEnd(decimals, '0').slice(0, decimals));
 }
 
-type DepositPhase = 'idle' | 'sending' | 'submitting' | 'success' | 'error';
+type DepositPhase = 'idle' | 'sending' | 'confirming' | 'submitting' | 'success' | 'error';
 
 interface DepositResult { autoVerified: boolean; txHash: string }
 
@@ -110,11 +112,13 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { refreshBalance } = useWallet();
+  const { toast } = useToast();
   const { open: openReown } = useAppKit();
   const { address, isConnected } = useAppKitAccount();
   const { open: reownModalOpen } = useAppKitState();
   const { disconnect } = useDisconnect();
   const chainId = useChainId();
+  const wagmiConfig = useConfig();
   const { writeContractAsync } = useWriteContract();
 
   const [connecting, setConnecting] = useState(false);
@@ -191,8 +195,15 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
       setDepositResult({ autoVerified: result.autoVerified, txHash });
       setDepositPhase('success');
       await refreshBalance();
+      toast({
+        title: result.autoVerified ? '✅ Deposit verified!' : '⏳ Deposit submitted',
+        description: result.autoVerified
+          ? `$${amount} USDT has been credited to your account.`
+          : `$${amount} USDT is under review and will be credited shortly.`,
+      });
     } catch (err) {
-      setDepositError(err instanceof Error ? err.message : 'Deposit submission failed. Please contact support.');
+      const msg = err instanceof Error ? err.message : 'Deposit submission failed. Please contact support.';
+      setDepositError(msg);
       setDepositPhase('error');
     }
   }
@@ -221,6 +232,11 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
         functionName: 'transfer',
         args: [ERC20_ADDRESS as `0x${string}`, rawAmount],
       });
+
+      // Wait for on-chain confirmation before submitting to backend
+      setDepositPhase('confirming');
+      await waitForTransactionReceipt(wagmiConfig, { hash: txHash, confirmations: 1 });
+
       await submitToBackend(txHash, amount, chainCfg.network);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -233,6 +249,21 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
       }
       setDepositPhase('error');
     }
+  }
+
+  /** Poll TronGrid until the tx appears in a block (confirmed). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function waitForTronConfirmation(tronWeb: any, txHash: string): Promise<void> {
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const info = await tronWeb.trx.getTransactionInfo(txHash);
+        if (info?.blockNumber) return;
+      } catch {
+        // keep polling
+      }
+    }
+    throw new Error('Transaction confirmation timed out. Your funds are safe — please use Manual Deposit and paste the TxHash.');
   }
 
   async function handleTronDeposit() {
@@ -260,6 +291,11 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
         feeLimit: 10_000_000,
         callValue: 0,
       });
+
+      // Wait for on-chain confirmation before submitting to backend
+      setDepositPhase('confirming');
+      await waitForTronConfirmation(tronWeb, txHash as string);
+
       await submitToBackend(txHash as string, amount, 'TRC-20');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -273,7 +309,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   }
 
   const chainCfg = chainId ? EVM_CHAINS[chainId] : null;
-  const isProcessing = depositPhase === 'sending' || depositPhase === 'submitting';
+  const isProcessing = depositPhase === 'sending' || depositPhase === 'confirming' || depositPhase === 'submitting';
 
   if (!isVisible && !authOpen) return null;
 
@@ -514,6 +550,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               >
                                 {depositPhase === 'sending' ? (
                                   <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Approve in wallet…</>
+                                ) : depositPhase === 'confirming' ? (
+                                  <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Waiting for confirmation…</>
                                 ) : depositPhase === 'submitting' ? (
                                   <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Verifying on-chain…</>
                                 ) : (
@@ -537,6 +575,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               >
                                 {depositPhase === 'sending' ? (
                                   <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Approve in TronLink…</>
+                                ) : depositPhase === 'confirming' ? (
+                                  <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Waiting for confirmation…</>
                                 ) : depositPhase === 'submitting' ? (
                                   <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Verifying on-chain…</>
                                 ) : (

@@ -54,9 +54,16 @@ interface EthLog {
 
 interface EthReceipt {
   status: string;
+  blockNumber: string; // hex
   from: string;
   logs: EthLog[];
 }
+
+const MIN_CONFIRMATIONS: Record<string, number> = {
+  ETH:     6,
+  BSC:     3,
+  POLYGON: 3,
+};
 
 async function rpcCall(rpcUrl: string, method: string, params: unknown[]): Promise<unknown> {
   const controller = new AbortController();
@@ -130,6 +137,27 @@ export async function verifyEvmDeposit(
 
   if (receipt.status !== "0x1") {
     return { verified: false, note: "Transaction failed on-chain (reverted) — no funds were transferred" };
+  }
+
+  // ── Confirmation depth check ──────────────────────────────────────────────
+  const minConfs = MIN_CONFIRMATIONS[network.toUpperCase()] ?? 6;
+  let latestBlock = 0n;
+  for (const rpcUrl of cfg.rpcUrls) {
+    try {
+      const raw = await rpcCall(rpcUrl, "eth_blockNumber", []) as string;
+      latestBlock = BigInt(raw);
+      break;
+    } catch {
+      // try next RPC
+    }
+  }
+  const txBlock = BigInt(receipt.blockNumber);
+  const confirmations = latestBlock > txBlock ? Number(latestBlock - txBlock) : 0;
+  if (confirmations < minConfs) {
+    return {
+      verified: false,
+      note: `Transaction has ${confirmations}/${minConfs} confirmations — deposit moved to manual review. It will be credited shortly.`,
+    };
   }
 
   const paddedPlatform = addressToTopic(platformAddress);
