@@ -89,7 +89,10 @@ const LIVE_SPORTS = [
   // Rugby League
   'rugbyleague_nrl', 'rugbyleague_super_league',
   // Rugby Union
-  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations', 'rugbyunion_world_cup',
+  // Futures/outright-winner keys (icehockey_nhl_championship_winner,
+  // rugbyleague_nrl_premiership_winner, golf_*_winner) are intentionally
+  // excluded — they have no in-play match events, only pre-tournament markets.
   // Handball
   'handball_ehf_champions_league',
   // Volleyball

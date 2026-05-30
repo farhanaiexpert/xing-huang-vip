@@ -1,11 +1,12 @@
 /**
- * useOddsApi — fetches real pre-match odds from The Odds API.
+ * useOddsApi — fetches real pre-match odds from The Odds API (via API server).
  *
- * Cache strategy (free-tier friendly):
- *  - localStorage: persists 24 h across page reloads / new tabs
- *  - Module-level: instant hydration within the same session
- *  - No automatic polling — user can manually refresh any time
- *  - 24 h TTL means ~360 API requests / month (well inside free quota)
+ * Cache strategy (server-cron aligned):
+ *  - Server cron refreshes the PostgreSQL odds_cache every 25–35 minutes.
+ *  - Client localStorage TTL matches the server cron max (35 min) so users
+ *    always see data at most one cron-cycle stale without a manual refresh.
+ *  - Module-level cache provides instant hydration within the same session.
+ *  - Server responses are served from DB cache (no extra Odds API credits).
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { League } from '../types';
@@ -14,9 +15,9 @@ import { normalizeEvents, buildLeague } from '../lib/normalizeOdds';
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v1';
+const STORAGE_KEY  = 'oddschain_v2'; // bumped from v1 to force cold hydration after TTL change
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL_MS = 35 * 60 * 1000; // 35 min — matches server cron max interval
 
 interface StoredEntry {
   leagues:   League[];
