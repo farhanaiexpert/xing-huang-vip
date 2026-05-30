@@ -3,8 +3,10 @@ import { api, setTokens, clearTokens, getRefreshToken, getAccessToken } from '..
 
 export interface AuthUser {
   id: number;
-  email: string;
-  username: string;
+  walletAddress: string | null;
+  displayName: string;
+  email: string | null;
+  username: string | null;
   role: string;
   referralCode: string | null;
   createdAt?: string;
@@ -15,8 +17,8 @@ interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, username: string, password: string, referralCode?: string) => Promise<void>;
+  /** Called by AuthModal after successful wallet verify — stores tokens + user */
+  loginWithWallet: (accessToken: string, refreshToken: string, user: AuthUser) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateUser: (partial: Partial<AuthUser>) => void;
@@ -24,14 +26,8 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: AuthUser;
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]       = useState<AuthUser | null>(null);
+  const [user, setUser]         = useState<AuthUser | null>(null);
   const [isLoading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
@@ -47,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(prev => prev ? { ...prev, ...partial } : prev);
   }, []);
 
-  // On mount: try to restore session from refresh token
+  // On mount: restore session from stored tokens
   useEffect(() => {
     async function restore() {
       const refresh = getRefreshToken();
@@ -85,25 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     restore();
   }, []);
 
-  // When the API client detects an unrecoverable 401 (refresh failed),
-  // it fires 'cb:session-expired'. We sync that into React state here.
+  // When the API client detects an unrecoverable 401, sync to React state
   useEffect(() => {
     const handleExpired = () => setUser(null);
     window.addEventListener('cb:session-expired', handleExpired);
     return () => window.removeEventListener('cb:session-expired', handleExpired);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const data = await api.post<AuthResponse>('/auth/login', { email, password });
-    setTokens(data.accessToken, data.refreshToken);
-    setUser(data.user);
-  }, []);
-
-  const register = useCallback(async (email: string, username: string, password: string, referralCode?: string) => {
-    const body = referralCode ? { email, username, password, referralCode } : { email, username, password };
-    const data = await api.post<AuthResponse>('/auth/register', body);
-    setTokens(data.accessToken, data.refreshToken);
-    setUser(data.user);
+  const loginWithWallet = useCallback((accessToken: string, refreshToken: string, authedUser: AuthUser) => {
+    setTokens(accessToken, refreshToken);
+    setUser(authedUser);
   }, []);
 
   const logout = useCallback(async () => {
@@ -116,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout, refreshUser, updateUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, loginWithWallet, logout, refreshUser, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

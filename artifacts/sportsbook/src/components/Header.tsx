@@ -55,7 +55,7 @@ function triggerTranslate(langCode: string) {
 
 
 export function Header() {
-  const { isConnected, shortAddress, walletName, balance } = useWallet();
+  const { isConnected, shortAddress, fullAddress, walletName, balance } = useWallet();
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const { logout, user } = useAuth();
   const [, setLocation] = useLocation();
@@ -124,8 +124,9 @@ export function Header() {
   }, []);
 
   function handleCopy() {
-    if (shortAddress) {
-      navigator.clipboard.writeText(shortAddress).catch(() => {});
+    const toCopy = fullAddress ?? shortAddress;
+    if (toCopy) {
+      navigator.clipboard.writeText(toCopy).catch(() => {});
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -380,7 +381,7 @@ export function Header() {
                     <div className="py-1">
                       <MenuAction href="/account" icon={<User className="h-3.5 w-3.5" />} label="My Account" onClick={() => setShowAddressMenu(false)} />
                       <MenuAction href="/account/wallet" icon={<ArrowDownLeft className="h-3.5 w-3.5" />} label="Deposit" onClick={() => setShowAddressMenu(false)} />
-                      <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Username'} onClick={handleCopy} />
+                      <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Address'} onClick={handleCopy} />
                       <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Sign Out" onClick={handleDisconnect} danger />
                     </div>
                   </div>

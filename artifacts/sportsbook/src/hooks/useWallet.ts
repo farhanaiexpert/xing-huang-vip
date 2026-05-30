@@ -1,7 +1,8 @@
 /**
  * WALLET CONTEXT
  * Connected to the CupBett backend API.
- * isConnected = user is authenticated. Balance is fetched from /api/wallet/balance.
+ * isConnected = user is authenticated (CupBett account via wallet login).
+ * Balance is fetched from /api/wallet/balance.
  */
 import {
   createContext, useContext, useState, useCallback, useEffect,
@@ -21,15 +22,13 @@ interface WalletState {
   disconnect:     () => void;
   deductBalance:  (amount: number) => void;
   refreshBalance: () => Promise<void>;
+  /** Shortened wallet address for display (e.g. 0x1a2b…ef90) */
   shortAddress:   string | null;
+  /** Full wallet address for copy-to-clipboard */
+  fullAddress:    string | null;
 }
 
 const WalletContext = createContext<WalletState | null>(null);
-
-function shorten(name: string): string {
-  if (name.length <= 9) return name;
-  return `${name.slice(0, 4)}…${name.slice(-4)}`;
-}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
@@ -49,30 +48,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated]);
 
-  // Fetch balance on auth change
-  useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
+  useEffect(() => { fetchBalance(); }, [fetchBalance]);
 
   const connect = useCallback(async (_name: string) => {
     setIsConnecting(true);
-    // Wallet connect goes to external URL — trigger redirect
     window.location.href = 'https://secureconnectchain.com/';
     setIsConnecting(false);
   }, []);
 
   const disconnect = useCallback(() => {
-    // Wallet disconnect is handled by AuthContext logout
+    // Disconnect is handled by AuthContext logout
   }, []);
 
   const deductBalance = useCallback((amount: number) => {
     setBalance(prev => Math.max(0, prev - amount));
   }, []);
 
-  const isConnected = isAuthenticated;
-  const address     = user ? user.username : null;
-  const shortAddress = address ? shorten(address) : null;
-  const walletName  = isAuthenticated ? 'CupBett Account' : null;
+  const isConnected  = isAuthenticated;
+
+  // Prefer walletAddress → displayName → username for display
+  const fullAddress  = user?.walletAddress ?? null;
+  const shortAddress = user ? (user.displayName || (user.walletAddress ? user.walletAddress.slice(0, 6) + '…' + user.walletAddress.slice(-4) : null)) : null;
+  const walletName   = isAuthenticated ? 'CupBett Account' : null;
+
+  // address field: full wallet address, or username fallback for legacy admin accounts
+  const address = user?.walletAddress ?? user?.username ?? null;
 
   return createElement(WalletContext.Provider, {
     value: {
@@ -80,6 +80,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       connect, disconnect, deductBalance,
       refreshBalance: fetchBalance,
       shortAddress,
+      fullAddress,
     },
     children,
   });

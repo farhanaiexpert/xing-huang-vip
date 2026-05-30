@@ -88,7 +88,8 @@ export function AccountLayout() {
   }
   if (!isAuthenticated || !user) return null;
 
-  const initials = user.username.slice(0, 2).toUpperCase();
+  const displayLabel = user.displayName || user.walletAddress?.slice(0, 8) || user.username || '';
+  const initials = displayLabel.replace('0x', '').slice(0, 2).toUpperCase() || '??';
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-20 xl:pb-0">
@@ -100,7 +101,7 @@ export function AccountLayout() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0">
             <span className="text-[9px] font-black text-[#00DFA9]">{initials}</span>
           </div>
-          <p className="text-[12px] font-bold text-[#F8FAFC] truncate">{user.username}</p>
+          <p className="text-[12px] font-bold text-[#F8FAFC] truncate">{displayLabel}</p>
         </div>
         <div className="flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {NAV.map(item => {
