@@ -268,7 +268,7 @@ export function useLiveOdds(): UseLiveOddsResult {
       const normalized = (eventsData.events ?? [])
         .map(ev => normalizeEvent(ev, scoreMap))
         .filter((m): m is NormalizedLiveMatch => m !== null)
-        .slice(0, 12); // cap at 12 cards
+        .slice(0, 25); // cap at 25 cards (more sports visible in filter)
 
       setMatches(normalized);
       setError(null);
