@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Radio, Users, Flame, TrendingUp, TrendingDown, Minus, Zap } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Radio, Users, Flame, TrendingUp, TrendingDown, Minus, Zap, Wifi } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { BetSlip } from '@/components/BetSlip';
 import { useBetSlip } from '@/hooks/useBetSlip';
@@ -9,6 +9,7 @@ import { formatOdds } from '@/lib/oddsFormat';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { playOddsAdd, playOddsRemove } from '@/lib/oddsSound';
+import { useLiveOdds } from '@/hooks/useLiveOdds';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ interface Outcome {
 
 interface LiveMatch {
   id: string;
-  sport: 'soccer' | 'basketball' | 'tennis';
+  sport: string;
   icon: string;
   league: string;
   stage: string;
@@ -122,21 +123,21 @@ function calcProbs(outcomes: Outcome[], simOdds: Record<string, number>): Record
 
 type SimState = Record<string, Record<string, number>>; // matchId -> outcomeKey -> odds
 
-function buildInitialSim(): SimState {
+function buildInitialSim(matches: LiveMatch[]): SimState {
   const state: SimState = {};
-  for (const m of BASE_MATCHES) {
+  for (const m of matches) {
     state[m.id] = {};
     for (const o of m.outcomes) state[m.id][o.key] = o.baseOdds;
   }
   return state;
 }
 
-function nudgeOdds(prev: SimState): SimState {
+function nudgeOdds(prev: SimState, matches: LiveMatch[]): SimState {
   const next: SimState = {};
-  for (const m of BASE_MATCHES) {
-    next[m.id] = { ...prev[m.id] };
+  for (const m of matches) {
+    next[m.id] = { ...(prev[m.id] ?? {}) };
     for (const o of m.outcomes) {
-      const curr = next[m.id][o.key];
+      const curr = next[m.id][o.key] ?? o.baseOdds;
       const delta = (Math.random() - 0.5) * 0.08;
       next[m.id][o.key] = Math.max(1.05, Math.round((curr + delta) * 100) / 100);
     }
@@ -445,9 +446,39 @@ function LiveMatchCard({
 // ─── LivePage ─────────────────────────────────────────────────────────────────
 
 export function LivePage() {
-  const [simOdds, setSimOdds] = useState<SimState>(buildInitialSim);
-  const [prevSimOdds, setPrevSimOdds] = useState<SimState>(buildInitialSim);
+  // ── Real live data ──────────────────────────────────────────────────────────
+  const { matches: realMatches, loading: liveLoading, isRealData, lastUpdated } = useLiveOdds();
+
+  // Use real data when available; fall back to demo matches otherwise
+  const displayMatches = useMemo<LiveMatch[]>(
+    () => (realMatches.length > 0 ? realMatches as LiveMatch[] : BASE_MATCHES),
+    [realMatches],
+  );
+
+  // Stable key derived from match IDs — used to detect when the set changes
+  const matchKey = useMemo(() => displayMatches.map(m => m.id).join(','), [displayMatches]);
+
+  // ── Simulation state ────────────────────────────────────────────────────────
+  const [simOdds,     setSimOdds]     = useState<SimState>(() => buildInitialSim(BASE_MATCHES));
+  const [prevSimOdds, setPrevSimOdds] = useState<SimState>(() => buildInitialSim(BASE_MATCHES));
   const [tick, setTick] = useState(0);
+
+  // Re-seed sim whenever the match list changes (real data arrived or changed)
+  const prevMatchKeyRef = useRef('');
+  useEffect(() => {
+    if (prevMatchKeyRef.current !== matchKey) {
+      prevMatchKeyRef.current = matchKey;
+      const fresh = buildInitialSim(displayMatches);
+      setSimOdds(fresh);
+      setPrevSimOdds(fresh);
+    }
+  }, [matchKey, displayMatches]);
+
+  // Keep a ref so the drift timer always sees the latest matches without
+  // being recreated every time displayMatches changes.
+  const displayMatchesRef = useRef(displayMatches);
+  displayMatchesRef.current = displayMatches;
+
   const slipScrollRef = useRef<HTMLDivElement>(null);
   const [slipScrolled, setSlipScrolled] = useState(false);
 
@@ -460,13 +491,13 @@ export function LivePage() {
     return () => el.removeEventListener('scroll', handler);
   }, []);
 
-  // Odds drift every 9–14 seconds
-  const driftRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Odds drift every 9–14 seconds (continues even on real data, for visual life)
+  const driftRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleNextDrift = useCallback(() => {
     const delay = 9000 + Math.random() * 5000;
     driftRef.current = setTimeout(() => {
       setPrevSimOdds(s => ({ ...s }));
-      setSimOdds(prev => nudgeOdds(prev));
+      setSimOdds(prev => nudgeOdds(prev, displayMatchesRef.current));
       setTick(t => t + 1);
       scheduleNextDrift();
     }, delay);
@@ -478,7 +509,7 @@ export function LivePage() {
   }, [scheduleNextDrift]);
 
   // Total stats
-  const totalBettors = BASE_MATCHES.reduce((s, m) => s + m.bettors, 0);
+  const totalBettors = displayMatches.reduce((s, m) => s + m.bettors, 0);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white overflow-hidden">
@@ -500,7 +531,7 @@ export function LivePage() {
                   <h1 className="text-[16px] font-black text-[#F8FAFC] tracking-tight">Live Betting</h1>
                 </div>
                 <span className="text-[11px] font-bold bg-[#EF4444] text-white px-2 py-0.5 rounded-full tabular-nums shadow-[0_0_12px_rgba(239,68,68,0.4)]">
-                  {BASE_MATCHES.length}
+                  {liveLoading && !isRealData ? '…' : displayMatches.length}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-[11px] text-[#64748B]">
@@ -509,10 +540,22 @@ export function LivePage() {
                   <span className="font-semibold text-[#94A3B8]">{totalBettors.toLocaleString()}</span>
                   <span>active</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Radio className="h-3 w-3 text-[#EF4444]" />
-                  <span className="text-[#94A3B8] font-medium">Odds update live</span>
-                </div>
+                {/* Real data badge */}
+                {isRealData ? (
+                  <div className="flex items-center gap-1.5">
+                    <Wifi className="h-3 w-3 text-[#00DFA9]" />
+                    <span className="text-[#00DFA9] font-semibold">
+                      {lastUpdated
+                        ? `Live · ${Math.floor((Date.now() - lastUpdated.getTime()) / 1000)}s ago`
+                        : 'Live odds'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <Radio className="h-3 w-3 text-[#EF4444]" />
+                    <span className="text-[#94A3B8] font-medium">Odds update live</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -527,27 +570,41 @@ export function LivePage() {
                   Predict the outcome · Win USDT
                 </h2>
                 <p className="text-[11px] text-[#475569] mt-0.5">
-                  Tap any outcome to add it to your Bet Slip. Odds drift in real time — act fast.
+                  {isRealData
+                    ? 'Real in-play events — odds refresh every 30 s. Act fast.'
+                    : 'Tap any outcome to add it to your Bet Slip. Odds drift in real time — act fast.'}
                 </p>
               </div>
-              {/* Live update pill */}
+              {/* Live / demo pill */}
               <div
                 className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold"
-                style={{
-                  background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#EF4444',
-                }}
+                style={isRealData
+                  ? { background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.25)', color: '#00DFA9' }
+                  : { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',  color: '#EF4444'  }
+                }
                 key={tick}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-ping" />
-                Live
+                <span
+                  className="w-1.5 h-1.5 rounded-full animate-ping"
+                  style={{ background: isRealData ? '#00DFA9' : '#EF4444' }}
+                />
+                {isRealData ? 'Real Odds' : 'Live'}
               </div>
             </div>
 
+            {/* No live events notice when real data is available but empty */}
+            {!liveLoading && !isRealData && realMatches.length === 0 && (
+              <div className="mb-5 px-4 py-3 rounded-xl bg-[#FACC15]/6 border border-[#FACC15]/20 flex items-center gap-3">
+                <Radio className="h-4 w-4 text-[#FACC15]/60 shrink-0" />
+                <p className="text-[11px] text-[#FACC15]/70">
+                  No in-play events right now — showing demo matches. Real events appear here automatically when matches kick off.
+                </p>
+              </div>
+            )}
+
             {/* ── Match cards grid ───────────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4">
-              {BASE_MATCHES.map(match => (
+              {displayMatches.map(match => (
                 <LiveMatchCard
                   key={match.id}
                   match={match}
