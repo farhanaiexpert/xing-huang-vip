@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { X, Zap, Shield, Users, TrendingUp, Star } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { X, Zap, Shield, Users, TrendingUp, Star, Gift, PartyPopper } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { ConnectWalletModal } from './ConnectWalletModal';
+import { useAuth } from '../contexts/AuthContext';
+import { useWallet } from '../hooks/useWallet';
+import { api } from '../lib/apiClient';
 
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp';
 const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/ronaldo11.webp';
@@ -16,6 +18,36 @@ const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
   op: Math.random() * 0.35 + 0.08,
   gold: i < 7,
 }));
+
+const COINS = Array.from({ length: 22 }, (_, i) => ({
+  id: i,
+  x: 5 + Math.random() * 90,
+  delay: Math.random() * 1.4,
+  dur: 1.6 + Math.random() * 1.4,
+  size: 14 + Math.random() * 20,
+  rot: Math.random() * 360,
+  drift: (Math.random() - 0.5) * 80,
+}));
+
+function useCounter(target: number, active: boolean, duration = 1800) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!active) { setValue(0); return; }
+    const start = Date.now();
+    let raf: number;
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setValue(parseFloat((target * ease).toFixed(2)));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+      else setValue(target);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active, target, duration]);
+  return value;
+}
 
 const AVATARS = [
   'https://randomuser.me/api/portraits/men/32.jpg',
@@ -41,16 +73,28 @@ const IMG_BASE: React.CSSProperties = {
 };
 
 export function PromoPopup() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+  const { isAuthenticated } = useAuth();
+  const { refreshBalance } = useWallet();
+
   const [visible,   setVisible]   = useState(false);
   const [closing,   setClosing]   = useState(false);
   const [hovered,    setHovered]    = useState(false);
   const [showAlt,    setShowAlt]    = useState(false);
-  const [dismissed,  setDismissed]  = useState(false); // popup was closed → start bar loop
-  const [barVisible, setBarVisible] = useState(false); // controls slide in/out
-  const [barStopped, setBarStopped] = useState(false); // user manually X'd the bar
-  const initRef  = useRef<ReturnType<typeof setTimeout>  | null>(null);
-  const loopRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [dismissed,  setDismissed]  = useState(false);
+  const [barVisible, setBarVisible] = useState(false);
+  const [barStopped, setBarStopped] = useState(false);
+
+  // Claim state
+  const [claiming,       setClaiming]       = useState(false);
+  const [claimError,     setClaimError]     = useState('');
+  const [alreadyClaimed, setAlreadyClaimed] = useState(false);
+  const [showCongrats,   setShowCongrats]   = useState(false);
+
+  const initRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const counterVal = useCounter(99.99, showCongrats);
 
   // Show popup after 3 s
   useEffect(() => {
@@ -68,21 +112,16 @@ export function PromoPopup() {
   // Sticky bar loop: appears 600ms after popup close, visible 30s, hidden 15s, repeats
   useEffect(() => {
     if (!dismissed || barStopped) return;
-
-    // Recursive scheduler — 30s while visible, 15s while hidden
     const schedule = (nextVisible: boolean, delay: number) => {
       loopRef.current = setTimeout(() => {
         setBarVisible(nextVisible);
         schedule(!nextVisible, nextVisible ? 30000 : 15000);
       }, delay);
     };
-
-    // Show quickly after popup close
     initRef.current = setTimeout(() => {
       setBarVisible(true);
-      schedule(false, 30000); // after 30s visible, hide for 15s, repeat
+      schedule(false, 30000);
     }, 600);
-
     return () => {
       if (initRef.current) clearTimeout(initRef.current);
       if (loopRef.current) clearTimeout(loopRef.current);
@@ -90,6 +129,7 @@ export function PromoPopup() {
   }, [dismissed, barStopped]);
 
   function close() {
+    if (showCongrats) return;
     setClosing(true);
     setTimeout(() => {
       setVisible(false);
@@ -98,18 +138,36 @@ export function PromoPopup() {
     }, 360);
   }
 
-  const [paymentOpen, setPaymentOpen] = useState(false);
-
-  function handleConnect() {
-    setPaymentOpen(true);
-  }
+  const handleClaim = useCallback(async () => {
+    setClaimError('');
+    if (!isAuthenticated) {
+      close();
+      navigate('/login');
+      return;
+    }
+    setClaiming(true);
+    try {
+      await api.post('/wallet/bonus/welcome', {});
+      await refreshBalance();
+      setShowCongrats(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.toLowerCase().includes('already')) {
+        setAlreadyClaimed(true);
+        setClaimError('You have already claimed this bonus!');
+      } else {
+        setClaimError(msg || 'Failed to claim bonus. Please try again.');
+      }
+    } finally {
+      setClaiming(false);
+    }
+  }, [isAuthenticated, refreshBalance, navigate]);
 
   function dismissBar() {
-    // Stop loop and slide bar out permanently
     setBarStopped(true);
     setBarVisible(false);
-    if (initRef.current)  clearTimeout(initRef.current);
-    if (loopRef.current)  clearInterval(loopRef.current);
+    if (initRef.current) clearTimeout(initRef.current);
+    if (loopRef.current) clearTimeout(loopRef.current);
   }
 
   const altVisible = hovered || showAlt;
@@ -150,12 +208,13 @@ export function PromoPopup() {
       {/* Right: CTA + close */}
       <div className="flex items-center gap-3 shrink-0">
         <button
-          onClick={handleConnect}
-          className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] sm:text-[13px] font-bold text-[#0B0F14] overflow-hidden transition-transform hover:scale-[1.03] active:scale-[0.97] cursor-pointer"
+          onClick={handleClaim}
+          disabled={claiming || alreadyClaimed}
+          className="relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] sm:text-[13px] font-bold text-[#0B0F14] overflow-hidden transition-transform hover:scale-[1.03] active:scale-[0.97] cursor-pointer disabled:opacity-60"
           style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', animation: 'pCTAPulse 2.4s ease-in-out infinite' }}
         >
-          <Zap className="w-3.5 h-3.5 shrink-0" />
-          Connect Wallet
+          <Gift className="w-3.5 h-3.5 shrink-0" />
+          {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : 'Claim Now'}
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.2) 50%,transparent 62%)', animation: 'pShimmer 2.8s ease-in-out infinite' }} />
         </button>
@@ -172,7 +231,7 @@ export function PromoPopup() {
     </div>
   ) : null;
 
-  if (!visible) return <>{StickyBar}{paymentOpen && <ConnectWalletModal open={paymentOpen} onOpenChange={setPaymentOpen} />}</>;
+  if (!visible) return <>{StickyBar}</>;
 
   return (
     <>
@@ -190,13 +249,18 @@ export function PromoPopup() {
         @keyframes pPillPulse  { 0%,100%{opacity:1} 50%{opacity:.72} }
         @keyframes pCTAPulse   { 0%,100%{box-shadow:0 0 28px rgba(0,223,169,.4),0 4px 14px rgba(0,0,0,.5)} 50%{box-shadow:0 0 44px rgba(0,223,169,.62),0 4px 18px rgba(0,0,0,.5)} }
         @keyframes pShimmer    { from{transform:translateX(-120%)} to{transform:translateX(120%)} }
+        @keyframes coinFall    { 0%{transform:translateY(-60px) rotate(0deg) translateX(0);opacity:1} 100%{transform:translateY(520px) rotate(var(--rot)) translateX(var(--drift));opacity:0} }
+        @keyframes congratsIn  { from{opacity:0;transform:scale(.82) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes goldPulse   { 0%,100%{text-shadow:0 0 30px rgba(250,204,21,.5)} 50%{text-shadow:0 0 60px rgba(250,204,21,.9)} }
+        @keyframes popIn       { 0%{transform:scale(0)} 70%{transform:scale(1.15)} 100%{transform:scale(1)} }
+        @keyframes ringPulse   { 0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,.5)} 50%{box-shadow:0 0 0 18px rgba(250,204,21,0)} }
       `}</style>
 
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80"
         style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
-        onClick={close}
+        onClick={showCongrats ? undefined : close}
       />
 
       {/* Floating particles */}
@@ -216,8 +280,85 @@ export function PromoPopup() {
         ))}
       </div>
 
-      {/* Modal */}
-      <div
+      {/* ── CONGRATULATIONS OVERLAY ─────────────────────────────────────── */}
+      {showCongrats && (
+        <div
+          className="relative w-full max-w-[480px] overflow-hidden flex flex-col items-center text-center px-6 py-10 sm:py-14"
+          style={{
+            borderRadius: '20px',
+            background: 'linear-gradient(160deg,#0A100A 0%,#0D1A10 55%,#0A0F10 100%)',
+            border: '1px solid rgba(250,204,21,0.35)',
+            boxShadow: '0 0 80px rgba(250,204,21,0.15), 0 40px 100px rgba(0,0,0,0.9)',
+            animation: 'congratsIn 0.5s cubic-bezier(.16,1,.3,1) forwards',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Coin rain */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {COINS.map(c => (
+              <div
+                key={c.id}
+                className="absolute rounded-full flex items-center justify-center font-black text-[#0B0F14] select-none"
+                style={{
+                  left: `${c.x}%`,
+                  top: '-40px',
+                  width: c.size,
+                  height: c.size,
+                  fontSize: c.size * 0.55,
+                  background: 'radial-gradient(circle at 35% 35%,#FFE066,#FACC15 55%,#B8960C)',
+                  boxShadow: '0 2px 8px rgba(250,204,21,0.5)',
+                  ['--rot' as string]: `${c.rot}deg`,
+                  ['--drift' as string]: `${c.drift}px`,
+                  animation: `coinFall ${c.dur}s ${c.delay}s ease-in forwards`,
+                }}
+              >
+                $
+              </div>
+            ))}
+          </div>
+          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent" />
+          <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full"
+            style={{ background: 'radial-gradient(circle,rgba(250,204,21,0.12) 0%,transparent 70%)' }} />
+          <div
+            className="relative mb-5 w-20 h-20 rounded-full flex items-center justify-center"
+            style={{ background: 'radial-gradient(circle,#FACC15 0%,#B8960C 100%)', animation: 'popIn 0.5s 0.2s cubic-bezier(.16,1,.3,1) both, ringPulse 2s 0.7s ease-in-out infinite' }}
+          >
+            <PartyPopper className="w-9 h-9 text-[#0B0F14]" />
+          </div>
+          <h2 className="text-[26px] sm:text-[32px] font-black text-[#FACC15] leading-tight mb-2"
+            style={{ animation: 'goldPulse 2s ease-in-out infinite' }}>
+            Congratulations! 🎉
+          </h2>
+          <p className="text-[13px] sm:text-[14px] text-[#94A3B8] mb-6 leading-relaxed">
+            Your welcome bonus has been credited to your account
+          </p>
+          <div className="mb-8 px-8 py-5 rounded-2xl border border-[#FACC15]/30 w-full"
+            style={{ background: 'rgba(250,204,21,0.07)' }}>
+            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest mb-1">Bonus Balance</p>
+            <div className="flex items-baseline justify-center gap-2">
+              <span className="text-[48px] sm:text-[56px] font-black text-[#FACC15] leading-none tabular-nums"
+                style={{ textShadow: '0 0 40px rgba(250,204,21,0.4)' }}>
+                {counterVal.toFixed(2)}
+              </span>
+              <span className="text-[20px] font-bold text-[#FACC15]/80">USDT</span>
+            </div>
+            <p className="text-[10px] text-[#64748B] mt-2">Non-withdrawable · Used for betting only</p>
+          </div>
+          <button
+            onClick={() => { setShowCongrats(false); close(); }}
+            className="relative w-full flex items-center justify-center gap-2 py-4 px-6 rounded-xl font-bold text-[14px] text-[#071210] overflow-hidden transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
+          >
+            <Zap className="w-4 h-4 shrink-0" />
+            Start Playing →
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
+          </button>
+        </div>
+      )}
+
+      {/* ── MAIN MODAL ──────────────────────────────────────────────────── */}
+      {!showCongrats && <div
         className="relative w-full max-w-[860px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
         style={{
           borderRadius: '16px',
@@ -308,7 +449,7 @@ export function PromoPopup() {
 
             {/* Headline */}
             <h2 className="text-[19px] sm:text-[24px] font-black text-[#F8FAFC] leading-[1.2] mb-2">
-              Connect Your Wallet &amp;{' '}
+              Sign Up &amp;{' '}
               <span style={{ background: 'linear-gradient(90deg,#00DFA9 0%,#38BDF8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Claim FREE
               </span>{' '}
@@ -346,22 +487,30 @@ export function PromoPopup() {
               </div>
             </div>
 
+            {/* Error */}
+            {claimError && (
+              <div className="mb-3 px-3 py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 text-[12px] text-red-400">
+                {claimError}
+              </div>
+            )}
+
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-2.5 mb-5">
               <button
-                onClick={handleConnect}
-                className="relative flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-bold text-[13px] sm:text-[14px] text-[#071210] overflow-hidden transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                onClick={handleClaim}
+                disabled={claiming || alreadyClaimed}
+                className="relative flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-bold text-[13px] sm:text-[14px] text-[#071210] overflow-hidden transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
                 style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
               >
-                <Zap className="w-4 h-4 shrink-0" />
-                Connect Wallet — Get 99.99 USDT
+                <Gift className="w-4 h-4 shrink-0" />
+                {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : isAuthenticated ? 'Claim Now — Get 99.99 USDT' : 'Sign Up & Claim 99.99 USDT'}
                 <div className="absolute inset-0 pointer-events-none"
                   style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
               </button>
 
               <button
                 onClick={close}
-                className="sm:shrink-0 sm:px-5 py-3 rounded-xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#121821] transition-all duration-150"
+                className="sm:shrink-0 sm:px-5 py-3 rounded-xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#121821] transition-all duration-150 cursor-pointer"
               >
                 Maybe Later
               </button>
@@ -386,9 +535,8 @@ export function PromoPopup() {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
-    <ConnectWalletModal open={paymentOpen} onOpenChange={setPaymentOpen} />
     </>
   );
 }

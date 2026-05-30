@@ -127,16 +127,19 @@ export function WalletPage() {
   const [wdError, setWdError]         = useState('');
   const [wdSuccess, setWdSuccess]     = useState(false);
 
+  const [bonusBalance, setBonusBalance] = useState<number>(0);
+
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       const [info, bal, history] = await Promise.all([
         api.get<DepositInfo>('/wallet/deposit-info'),
-        api.get<{ balance: string }>('/wallet/balance'),
+        api.get<{ balance: string; bonusBalance?: string }>('/wallet/balance'),
         api.get<Transaction[]>('/wallet/transactions'),
       ]);
       setDepositInfo(info);
       setBalance(parseFloat(bal.balance));
+      setBonusBalance(parseFloat(bal.bonusBalance ?? '0'));
       setTxns(history);
     } catch { /* silent */ }
     finally { setLoading(false); }
@@ -334,6 +337,14 @@ export function WalletPage() {
             </span>
             <span className="text-[16px] font-bold text-[#00DFA9] mb-1.5">USDT</span>
           </div>
+          {bonusBalance > 0 && (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#FACC15]/30"
+              style={{ background: 'rgba(250,204,21,0.08)' }}>
+              <span className="text-[#FACC15] text-[10px]">✦</span>
+              <span className="text-[11px] font-bold text-[#FACC15]">+${fmt(bonusBalance)} Bonus</span>
+              <span className="text-[10px] text-[#64748B]">· non-withdrawable</span>
+            </div>
+          )}
 
           {(pendingDeposits > 0 || pendingWithdrawals > 0) && (
             <div className="flex flex-wrap gap-2 mt-3">

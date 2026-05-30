@@ -7,6 +7,7 @@ export const walletsTable = pgTable("wallets", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }).unique(),
   balanceUsdt: numeric("balance_usdt", { precision: 20, scale: 8 }).notNull().default("0"),
+  bonusBalanceUsdt: numeric("bonus_balance_usdt", { precision: 20, scale: 8 }).notNull().default("0"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

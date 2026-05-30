@@ -201,6 +201,17 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v10 skipped");
   }
+
+  // v11: wallets.bonus_balance_usdt — non-withdrawable bonus balance
+  try {
+    await db.execute(sql`
+      ALTER TABLE wallets
+        ADD COLUMN IF NOT EXISTS bonus_balance_usdt NUMERIC(20,8) NOT NULL DEFAULT '0'
+    `);
+    logger.info("DB migration v11 applied (wallets.bonus_balance_usdt)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v11 skipped");
+  }
 }
 
 runMigrations().then(() => {

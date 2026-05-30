@@ -16,6 +16,7 @@ interface WalletState {
   address:        string | null;
   walletName:     string | null;
   balance:        number;
+  bonusBalance:   number;
   connect:        (walletName: string) => Promise<void>;
   disconnect:     () => void;
   deductBalance:  (amount: number) => void;
@@ -33,15 +34,18 @@ function shorten(name: string): string {
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const [balance,      setBalance]      = useState(0);
+  const [bonusBalance, setBonusBalance] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
 
   const fetchBalance = useCallback(async () => {
-    if (!isAuthenticated) { setBalance(0); return; }
+    if (!isAuthenticated) { setBalance(0); setBonusBalance(0); return; }
     try {
-      const data = await api.get<{ balance: string; currency: string }>('/wallet/balance');
+      const data = await api.get<{ balance: string; bonusBalance?: string; currency: string }>('/wallet/balance');
       setBalance(parseFloat(data.balance));
+      setBonusBalance(parseFloat(data.bonusBalance ?? '0'));
     } catch {
       setBalance(0);
+      setBonusBalance(0);
     }
   }, [isAuthenticated]);
 
@@ -72,7 +76,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return createElement(WalletContext.Provider, {
     value: {
-      isConnected, isConnecting, address, walletName, balance,
+      isConnected, isConnecting, address, walletName, balance, bonusBalance,
       connect, disconnect, deductBalance,
       refreshBalance: fetchBalance,
       shortAddress,

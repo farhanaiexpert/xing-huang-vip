@@ -43,7 +43,7 @@ router.get("/wallet/balance", authenticate, async (req, res): Promise<void> => {
     res.status(404).json({ error: "Wallet not found" });
     return;
   }
-  res.json({ balance: wallet.balanceUsdt, currency: "USDT" });
+  res.json({ balance: wallet.balanceUsdt, bonusBalance: wallet.bonusBalanceUsdt, currency: "USDT" });
 });
 
 // ── GET /wallet/transactions ──────────────────────────────────────────────────
@@ -309,6 +309,46 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
   }
 });
 
+// ── POST /wallet/bonus/welcome ────────────────────────────────────────────────
+router.post("/wallet/bonus/welcome", authenticate, async (req, res): Promise<void> => {
+  const userId = req.user!.userId;
+
+  // Check if user already claimed the welcome bonus
+  const [existing] = await db.select({ id: transactionsTable.id })
+    .from(transactionsTable)
+    .where(and(
+      eq(transactionsTable.userId, userId),
+      eq(transactionsTable.type, "bonus"),
+      eq(transactionsTable.reference, "welcome_bonus"),
+    ))
+    .limit(1);
+
+  if (existing) {
+    res.status(409).json({ error: "Welcome bonus already claimed.", code: "ALREADY_CLAIMED" });
+    return;
+  }
+
+  const BONUS_AMOUNT = "99.99";
+
+  // Credit bonus balance (non-withdrawable)
+  await db.update(walletsTable)
+    .set({ bonusBalanceUsdt: sql`bonus_balance_usdt + ${BONUS_AMOUNT}` })
+    .where(eq(walletsTable.userId, userId));
+
+  // Record transaction
+  await db.insert(transactionsTable).values({
+    userId,
+    type: "bonus",
+    amount: BONUS_AMOUNT,
+    status: "completed",
+    reference: "welcome_bonus",
+    notes: "Welcome bonus — non-withdrawable",
+  });
+
+  logger.info({ userId, amount: BONUS_AMOUNT }, "Welcome bonus claimed");
+  res.status(201).json({ bonusAmount: BONUS_AMOUNT, currency: "USDT" });
+});
+
 // ── POST /wallet/withdraw ─────────────────────────────────────────────────────
 const WithdrawBody = z.object({
   amount:        z.number().positive().min(100, "Minimum withdrawal is 100 USDT"),
@@ -326,8 +366,9 @@ router.post("/wallet/withdraw", authenticate, async (req, res): Promise<void> =>
 
   const [wallet] = await db.select().from(walletsTable)
     .where(eq(walletsTable.userId, req.user!.userId)).limit(1);
+  // Withdrawal only checks real balance — bonus balance is non-withdrawable
   if (!wallet || parseFloat(wallet.balanceUsdt) < amount) {
-    res.status(400).json({ error: "Insufficient balance" });
+    res.status(400).json({ error: "Insufficient withdrawable balance. Bonus funds cannot be withdrawn." });
     return;
   }
 

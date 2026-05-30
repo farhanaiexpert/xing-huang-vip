@@ -127,10 +127,12 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     }
   }
 
-  // ── Balance check ──────────────────────────────────────────────────────────
+  // ── Balance check — total of real + bonus ─────────────────────────────────
   const [wallet] = await db.select().from(walletsTable)
     .where(eq(walletsTable.userId, userId)).limit(1);
-  if (!wallet || parseFloat(wallet.balanceUsdt) < stake) {
+  const realBalance  = wallet ? parseFloat(wallet.balanceUsdt)       : 0;
+  const bonusBalance = wallet ? parseFloat(wallet.bonusBalanceUsdt)  : 0;
+  if (!wallet || (realBalance + bonusBalance) < stake) {
     res.status(400).json({ error: "Insufficient balance" });
     return;
   }
@@ -162,9 +164,13 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     }))
   );
 
-  const newBalance = (parseFloat(wallet.balanceUsdt) - stake).toFixed(8);
+  // ── Deduct: bonus first, then real balance ────────────────────────────────
+  let fromBonus = Math.min(bonusBalance, stake);
+  let fromReal  = stake - fromBonus;
+  const newBonusBalance = (bonusBalance - fromBonus).toFixed(8);
+  const newRealBalance  = (realBalance  - fromReal ).toFixed(8);
   await db.update(walletsTable)
-    .set({ balanceUsdt: newBalance })
+    .set({ balanceUsdt: newRealBalance, bonusBalanceUsdt: newBonusBalance })
     .where(eq(walletsTable.userId, userId));
 
   await db.insert(transactionsTable).values({
