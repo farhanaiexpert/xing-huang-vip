@@ -169,6 +169,10 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
       id: user.id,
       walletAddress: user.walletAddress,
       displayName: shortAddress(user.walletAddress!),
+      // email and username are null for wallet-only accounts; kept for
+      // contract compatibility with consumers that destructure these fields
+      email: user.email ?? null,
+      username: user.username ?? null,
       role: user.role,
       referralCode: user.referralCode,
     },
@@ -228,6 +232,7 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
     res.status(404).json({ error: "User not found" });
     return;
   }
+  // Additive: include walletAddress and displayName alongside existing fields
   res.json({
     ...user,
     displayName: user.walletAddress

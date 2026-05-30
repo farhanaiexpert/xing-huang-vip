@@ -1,6 +1,6 @@
 {
-  "id": "9429f3f6-4d80-4b46-bf8f-47b0560cb349",
-  "prevId": "2332744f-80d1-4f9b-b24d-ca0a6ed5cdd7",
+  "id": "ed8cd900-5ebd-4bb3-a0fc-db8d55bd2495",
+  "prevId": "9429f3f6-4d80-4b46-bf8f-47b0560cb349",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -14,23 +14,29 @@
           "primaryKey": true,
           "notNull": true
         },
+        "wallet_address": {
+          "name": "wallet_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "email": {
           "name": "email",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "username": {
           "name": "username",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "password_hash": {
           "name": "password_hash",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "role": {
           "name": "role",
@@ -84,6 +90,13 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "users_wallet_address_unique": {
+          "name": "users_wallet_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "wallet_address"
+          ]
+        },
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
@@ -128,6 +141,13 @@
         },
         "balance_usdt": {
           "name": "balance_usdt",
+          "type": "numeric(20, 8)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "bonus_balance_usdt": {
+          "name": "bonus_balance_usdt",
           "type": "numeric(20, 8)",
           "primaryKey": false,
           "notNull": true,
@@ -217,22 +237,19 @@
           "name": "reference",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "notes": {
           "name": "notes",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "tx_hash": {
           "name": "tx_hash",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "network": {
           "name": "network",
@@ -245,8 +262,7 @@
           "name": "wallet_address",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "verified": {
           "name": "verified",
@@ -259,22 +275,19 @@
           "name": "verification_note",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "nowpayments_payment_id": {
           "name": "nowpayments_payment_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "nowpayments_status": {
           "name": "nowpayments_status",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -377,8 +390,7 @@
           "name": "score_at_placement",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -462,15 +474,14 @@
           "name": "settled_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "settled_payout": {
           "name": "settled_payout",
           "type": "numeric(20, 8)",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": true,
+          "default": "'0'"
         },
         "created_at": {
           "name": "created_at",
@@ -731,6 +742,77 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.promotion_requirements": {
+      "name": "promotion_requirements",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "promotion_id": {
+          "name": "promotion_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_type": {
+          "name": "task_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_value": {
+          "name": "target_value",
+          "type": "numeric(20, 8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "promotion_requirements_promotion_id_promotions_id_fk": {
+          "name": "promotion_requirements_promotion_id_promotions_id_fk",
+          "tableFrom": "promotion_requirements",
+          "tableTo": "promotions",
+          "columnsFrom": [
+            "promotion_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.promotions": {
       "name": "promotions",
       "schema": "",
@@ -760,19 +842,46 @@
           "notNull": true,
           "default": "'welcome'"
         },
+        "reward_type": {
+          "name": "reward_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'flat_bonus'"
+        },
         "bonus_amount": {
           "name": "bonus_amount",
           "type": "numeric(20, 8)",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": true,
+          "default": "'0'"
+        },
+        "pool_amount": {
+          "name": "pool_amount",
+          "type": "numeric(20, 8)",
+          "primaryKey": false,
+          "notNull": false
         },
         "min_deposit": {
           "name": "min_deposit",
           "type": "numeric(20, 8)",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": true,
+          "default": "'0'"
+        },
+        "wagering_requirement": {
+          "name": "wagering_requirement",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'1'"
+        },
+        "banner_color": {
+          "name": "banner_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'#00DFA9'"
         },
         "eligibility": {
           "name": "eligibility",
@@ -785,8 +894,7 @@
           "name": "max_claims",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "is_active": {
           "name": "is_active",
@@ -799,8 +907,7 @@
           "name": "expires_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1295,8 +1402,8 @@
           "name": "margin_override",
           "type": "numeric(5, 2)",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": true,
+          "default": "'0'"
         },
         "updated_at": {
           "name": "updated_at",
@@ -1678,8 +1785,7 @@
           "name": "duration_hours",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "starts_at": {
           "name": "starts_at",
@@ -1692,8 +1798,7 @@
           "name": "ends_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "is_permanent": {
           "name": "is_permanent",
@@ -1713,22 +1818,19 @@
           "name": "reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "lifted_at": {
           "name": "lifted_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "lifted_by_admin_id": {
           "name": "lifted_by_admin_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1811,15 +1913,14 @@
           "name": "pending_amount_usdt",
           "type": "numeric(20, 8)",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": true,
+          "default": "'0'"
         },
         "pending_effective_at": {
           "name": "pending_effective_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1921,8 +2022,8 @@
           "name": "max_stake",
           "type": "numeric(20, 8)",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": true,
+          "default": "'0'"
         },
         "is_active": {
           "name": "is_active",
@@ -1935,8 +2036,7 @@
           "name": "expires_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1949,8 +2049,7 @@
           "name": "created_by",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
+          "notNull": false
         }
       },
       "indexes": {},
@@ -2033,6 +2132,37 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.nonces": {
+      "name": "nonces",
+      "schema": "",
+      "columns": {
+        "wallet_address": {
+          "name": "wallet_address",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nonce": {
+          "name": "nonce",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
