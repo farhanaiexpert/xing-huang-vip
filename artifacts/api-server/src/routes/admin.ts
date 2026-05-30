@@ -1344,6 +1344,7 @@ router.get("/admin/users/:id/profile", async (req, res): Promise<void> => {
 
   const [user] = await db.select({
     id: usersTable.id, email: usersTable.email, username: usersTable.username,
+    walletAddress: usersTable.walletAddress, walletNetwork: usersTable.walletNetwork,
     role: usersTable.role, kycStatus: usersTable.kycStatus, country: usersTable.country,
     isSuspended: usersTable.isSuspended, referralCode: usersTable.referralCode,
     createdAt: usersTable.createdAt, balance: walletsTable.balanceUsdt,

@@ -3,13 +3,53 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { api, AdminUser } from "@/lib/api";
 import { fmt, fmtDate, statusBg } from "@/lib/utils";
-import { Search, Ban, CheckCircle, ChevronLeft, ChevronRight, User, UserPlus, X, History, Wallet, Network } from "lucide-react";
+import { Search, Ban, CheckCircle, ChevronLeft, ChevronRight, User, UserPlus, X, History, Wallet, Network, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DataTable, ColDef } from "@/components/DataTable";
 
 const PAGE_SIZE = 20;
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
+
+const NETWORK_COLORS: Record<string, string> = {
+  Ethereum:  "bg-[#627EEA]/10 text-[#627EEA] border-[#627EEA]/20",
+  BSC:       "bg-[#FACC15]/10 text-[#FACC15] border-[#FACC15]/20",
+  Polygon:   "bg-[#8B5CF6]/10 text-[#8B5CF6] border-[#8B5CF6]/20",
+  Avalanche: "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20",
+  Optimism:  "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20",
+  Arbitrum:  "bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/20",
+  Base:      "bg-[#0052FF]/10 text-[#60A5FA] border-[#60A5FA]/20",
+  Fantom:    "bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/20",
+};
+
+function WalletCell({ u }: { u: AdminUser }) {
+  const [copied, setCopied] = useState(false);
+  if (!u.walletAddress) return <span className="text-[#334155] text-xs">—</span>;
+  function doCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(u.walletAddress!).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  const netStyle = u.walletNetwork ? (NETWORK_COLORS[u.walletNetwork] ?? "bg-white/5 text-[#94A3B8] border-white/10") : "";
+  return (
+    <div className="flex items-center gap-1.5 group/wc">
+      <Wallet className="w-3 h-3 text-[#334155] shrink-0" />
+      <span className="font-mono text-[11px] text-[#64748B]" title={u.walletAddress}>
+        {u.walletAddress.slice(0, 6)}…{u.walletAddress.slice(-4)}
+      </span>
+      <button onClick={doCopy} title="Copy address"
+        className="opacity-0 group-hover/wc:opacity-100 text-[#334155] hover:text-[#00DFA9] transition-all">
+        {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+      </button>
+      {u.walletNetwork && (
+        <span className={cn("flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-medium border", netStyle)}>
+          <Network className="w-2 h-2" /> {u.walletNetwork}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function roleBadge(role: string) {
   if (role === "super_admin") return "bg-[#FACC15]/10 text-[#FACC15] border-[#FACC15]/20";
@@ -135,19 +175,7 @@ export default function UsersPage() {
     },
     {
       key: "wallet", label: "Wallet",
-      render: u => u.walletAddress ? (
-        <div className="flex items-center gap-1.5">
-          <Wallet className="w-3 h-3 text-[#334155] shrink-0" />
-          <span className="font-mono text-[11px] text-[#64748B]">
-            {u.walletAddress.slice(0, 6)}…{u.walletAddress.slice(-4)}
-          </span>
-          {u.walletNetwork && (
-            <span className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-[#38BDF8]/10 text-[#38BDF8] text-[9px] font-medium border border-[#38BDF8]/20">
-              <Network className="w-2 h-2" /> {u.walletNetwork}
-            </span>
-          )}
-        </div>
-      ) : <span className="text-[#334155] text-xs">—</span>,
+      render: u => <WalletCell u={u} />,
     },
     {
       key: "role", label: "Role", sortable: true,
@@ -233,9 +261,8 @@ export default function UsersPage() {
             </button>
           </form>
           <button onClick={() => navigate("/login-history")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-[#94A3B8] hover:text-white rounded-lg text-sm hover:bg-white/10 transition-colors"
-            title="Login History">
-            <History className="w-4 h-4" />
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-[#94A3B8] hover:text-white rounded-lg text-sm hover:bg-white/10 transition-colors">
+            <History className="w-4 h-4" /> Login History
           </button>
           <button onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#00DFA9] text-[#0B0F14] rounded-lg text-sm font-semibold hover:bg-[#00DFA9]/90 transition-colors">

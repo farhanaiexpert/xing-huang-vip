@@ -57,7 +57,7 @@ const CHAIN_NAMES: Record<number, string> = {
 
 function chainName(chainId?: number | null): string | null {
   if (!chainId) return null;
-  return CHAIN_NAMES[chainId] ?? `Chain ${chainId}`;
+  return CHAIN_NAMES[chainId] ?? `chainId:${chainId}`;
 }
 
 const WalletVerifyBody = z.object({
