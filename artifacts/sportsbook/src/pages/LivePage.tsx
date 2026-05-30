@@ -1003,11 +1003,23 @@ export function LivePage() {
     return [...map.entries()].map(([id, v]) => ({ id, ...v }));
   }, [displayMatches]);
 
-  // Matches after sport filter
+  // Matches after sport filter — auto-fall-back to all if filter produces zero results
   const filteredMatches = useMemo(
-    () => activeSport === 'all' ? displayMatches : displayMatches.filter(m => m.sport === activeSport),
+    () => {
+      if (activeSport === 'all') return displayMatches;
+      const filtered = displayMatches.filter(m => m.sport === activeSport);
+      return filtered.length > 0 ? filtered : displayMatches;
+    },
     [displayMatches, activeSport],
   );
+
+  // If the active sport no longer has any matches, reset to "all"
+  useEffect(() => {
+    if (activeSport !== 'all') {
+      const has = displayMatches.some(m => m.sport === activeSport);
+      if (!has) setActiveSport('all');
+    }
+  }, [displayMatches, activeSport]);
 
   // Countdown to next odds update (seconds, resets on each API refresh)
   const [nextUpdateIn, setNextUpdateIn] = useState(15 * 60);
@@ -1148,33 +1160,16 @@ export function LivePage() {
             </div>
 
             {/* ── Match cards grid ───────────────────────────────────────── */}
-            {filteredMatches.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4">
-                {filteredMatches.map(match => (
-                  <LiveMatchCard
-                    key={match.id}
-                    match={match}
-                    simOdds={simOdds[match.id] ?? {}}
-                    prevSimOdds={prevSimOdds[match.id] ?? {}}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <div className="text-4xl opacity-40">
-                  {sportFilters.find(s => s.id === activeSport)?.icon ?? '🏆'}
-                </div>
-                <p className="text-[14px] font-semibold text-[#475569]">
-                  No live {sportFilters.find(s => s.id === activeSport)?.label ?? ''} matches right now
-                </p>
-                <button
-                  onClick={() => setActiveSport('all')}
-                  className="text-[12px] font-bold text-[#00DFA9] hover:underline"
-                >
-                  View all sports →
-                </button>
-              </div>
-            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4">
+              {filteredMatches.map(match => (
+                <LiveMatchCard
+                  key={match.id}
+                  match={match}
+                  simOdds={simOdds[match.id] ?? {}}
+                  prevSimOdds={prevSimOdds[match.id] ?? {}}
+                />
+              ))}
+            </div>
 
             {/* ── Bottom info strip ─────────────────────────────────────── */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-[10px] text-[#475569]">
