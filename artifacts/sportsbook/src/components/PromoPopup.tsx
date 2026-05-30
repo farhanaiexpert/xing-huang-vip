@@ -50,13 +50,13 @@ function useCounter(target: number, active: boolean, duration = 1800) {
 }
 
 const AVATARS = [
-  'https://i.pravatar.cc/56?img=11',
-  'https://i.pravatar.cc/56?img=23',
-  'https://i.pravatar.cc/56?img=47',
-  'https://i.pravatar.cc/56?img=54',
-  'https://i.pravatar.cc/56?img=62',
-  'https://i.pravatar.cc/56?img=8',
-  'https://i.pravatar.cc/56?img=35',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=alex&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=maria&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=james&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=sofia&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=kai&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=nina&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=omar&backgroundColor=0a1628',
 ];
 
 const AVATAR_COLORS = ['#00DFA9','#38BDF8','#FACC15','#F97316','#A855F7','#00DFA9','#38BDF8'];

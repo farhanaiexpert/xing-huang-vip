@@ -8,11 +8,11 @@ import { ConnectWalletModal } from './ConnectWalletModal';
 const WHEEL_ICON = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/wheel-spin.webp';
 
 const PLAYER_AVATARS = [
-  'https://i.pravatar.cc/56?img=12',
-  'https://i.pravatar.cc/56?img=29',
-  'https://i.pravatar.cc/56?img=45',
-  'https://i.pravatar.cc/56?img=58',
-  'https://i.pravatar.cc/56?img=7',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=carlos&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=yuki&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=dana&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=leo&backgroundColor=0a1628',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=priya&backgroundColor=0a1628',
 ];
 
 const SEGMENTS = [
@@ -373,17 +373,22 @@ export function WinSpin() {
                     {/* Stacked player avatars */}
                     <div className="flex items-center shrink-0">
                       <div className="flex -space-x-2.5">
-                        {PLAYER_AVATARS.map((src, i) => (
-                          <div key={i}
-                            className="w-9 h-9 rounded-full overflow-hidden shrink-0"
-                            style={{
-                              border: '2px solid #0D1520',
-                              boxShadow: '0 0 8px rgba(0,223,169,0.2)',
-                              zIndex: PLAYER_AVATARS.length - i,
-                            }}>
-                            <img src={src} alt={`player${i + 1}`} className="w-full h-full object-cover" />
-                          </div>
-                        ))}
+                        {PLAYER_AVATARS.map((src, i) => {
+                          const colors = ['#00DFA9','#38BDF8','#FACC15','#F97316','#A855F7'];
+                          const letters = ['K','M','J','R','S'];
+                          return (
+                            <div key={i}
+                              className="w-9 h-9 rounded-full overflow-hidden shrink-0 relative"
+                              style={{ border: '2px solid #0D1520', boxShadow: '0 0 8px rgba(0,223,169,0.2)', zIndex: PLAYER_AVATARS.length - i }}>
+                              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#0B0F14]"
+                                style={{ background: colors[i % colors.length] }}>
+                                {letters[i % letters.length]}
+                              </div>
+                              <img src={src} alt={`player${i + 1}`} className="absolute inset-0 w-full h-full object-cover"
+                                onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
+                            </div>
+                          );
+                        })}
                       </div>
                       <span className="ml-2.5 text-[10px] font-bold text-[#94A3B8]/60">+1,247</span>
                     </div>
@@ -415,12 +420,21 @@ export function WinSpin() {
                   style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.28)' }}
                 >
                   <div className="flex -space-x-2.5">
-                    {PLAYER_AVATARS.map((src, i) => (
-                      <div key={i} className="w-8 h-8 rounded-full overflow-hidden shrink-0"
-                        style={{ border: '2px solid #0D1520', zIndex: PLAYER_AVATARS.length - i }}>
-                        <img src={src} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
+                    {PLAYER_AVATARS.map((src, i) => {
+                      const colors = ['#00DFA9','#38BDF8','#FACC15','#F97316','#A855F7'];
+                      const letters = ['K','M','J','R','S'];
+                      return (
+                        <div key={i} className="w-8 h-8 rounded-full overflow-hidden shrink-0 relative"
+                          style={{ border: '2px solid #0D1520', zIndex: PLAYER_AVATARS.length - i }}>
+                          <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#0B0F14]"
+                            style={{ background: colors[i % colors.length] }}>
+                            {letters[i % letters.length]}
+                          </div>
+                          <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover"
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
+                        </div>
+                      );
+                    })}
                   </div>
                   <div>
                     <p className="text-[12px] font-bold text-[#00DFA9]">You're on the early access list!</p>

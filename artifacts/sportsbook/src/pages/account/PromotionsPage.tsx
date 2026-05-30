@@ -337,11 +337,12 @@ export function PromotionsPage() {
                           <Clock className="h-3 w-3" /> Expired
                         </span>
                       ) : !isAuthenticated ? (
-                        <Link href="/login">
-                          <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all hover:scale-[1.02] bg-white/8 text-[#94A3B8] border border-white/[0.10]">
-                            Sign in to track <ChevronRight className="h-3 w-3" />
-                          </span>
-                        </Link>
+                        <button
+                          onClick={() => window.dispatchEvent(new Event('openLoginModal'))}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all hover:scale-[1.02] bg-white/8 text-[#94A3B8] border border-white/[0.10]"
+                        >
+                          Connect wallet to track <ChevronRight className="h-3 w-3" />
+                        </button>
                       ) : !canClaim ? (
                         <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold bg-white/5 text-[#475569] border border-white/[0.06] cursor-not-allowed select-none">
                           <Lock className="h-3 w-3" /> Complete tasks first

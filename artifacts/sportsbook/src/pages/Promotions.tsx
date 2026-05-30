@@ -361,7 +361,7 @@ export function Promotions() {
 
   const handleClaim = useCallback(async () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      window.dispatchEvent(new Event('openLoginModal'));
       return;
     }
     if (alreadyClaimed) return;
