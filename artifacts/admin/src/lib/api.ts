@@ -117,6 +117,8 @@ export interface AdminTransaction {
   verificationNote: string | null;
   nowpaymentsPaymentId: string | null;
   nowpaymentsStatus: string | null;
+  plisioPaymentId: string | null;
+  plisioStatus: string | null;
   createdAt: string;
 }
 

@@ -585,6 +585,8 @@ router.get("/admin/transactions", async (req, res): Promise<void> => {
       verificationNote: transactionsTable.verificationNote,
       nowpaymentsPaymentId: transactionsTable.nowpaymentsPaymentId,
       nowpaymentsStatus: transactionsTable.nowpaymentsStatus,
+      plisioPaymentId: transactionsTable.plisioPaymentId,
+      plisioStatus: transactionsTable.plisioStatus,
       createdAt: transactionsTable.createdAt,
     })
     .from(transactionsTable)

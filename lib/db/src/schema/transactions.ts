@@ -18,6 +18,8 @@ export const transactionsTable = pgTable("transactions", {
   verificationNote: text("verification_note"),
   nowpaymentsPaymentId: text("nowpayments_payment_id"),
   nowpaymentsStatus: text("nowpayments_status"),
+  plisioPaymentId: text("plisio_payment_id"),
+  plisioStatus: text("plisio_status"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

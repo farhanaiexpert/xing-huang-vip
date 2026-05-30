@@ -8,6 +8,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { verifyTronDeposit } from "../lib/tronVerify.js";
 import { verifyEvmDeposit } from "../lib/evmVerify.js";
 import { createPayment, getPaymentStatus, getMinimumPaymentAmount, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
+import { createInvoice, getOperationStatus, PLISIO_FINISHED_STATUSES, PLISIO_FAILED_STATUSES, ALLOWED_PLISIO_CURRENCIES } from "../lib/plisio.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
@@ -306,6 +307,158 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
   } catch (err) {
     logger.warn({ err, paymentId }, "Failed to poll NOWPayments status");
     res.json({ status: txn.nowpaymentsStatus ?? "waiting", nowpaymentsStatus: txn.nowpaymentsStatus, credited: false });
+  }
+});
+
+// ── POST /wallet/deposit/plisio/create ───────────────────────────────────────
+const ALLOWED_PLISIO_CURRENCY_VALUES = ["USDTTRC20", "USDTERC20"] as const;
+
+const PlisioCreateBody = z.object({
+  amount:   z.number().positive().min(10, "Minimum deposit is 10 USDT"),
+  currency: z.enum(ALLOWED_PLISIO_CURRENCY_VALUES).default("USDTTRC20"),
+});
+
+router.post("/wallet/deposit/plisio/create", authenticate, async (req, res): Promise<void> => {
+  const parsed = PlisioCreateBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const { amount, currency } = parsed.data;
+
+  const domain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+  const callbackUrl = domain ? `https://${domain}/api/webhooks/plisio` : undefined;
+
+  const orderNumber = `cupbett-${req.user!.userId}-${Date.now()}`;
+
+  // Self-exclusion and deposit-limit preflight
+  const exclMsg = await isSelfExcludedFromDeposits(req.user!.userId);
+  if (exclMsg) {
+    res.status(403).json({ error: exclMsg });
+    return;
+  }
+  const limitCheck = await checkDepositLimits(req.user!.userId, amount);
+  if (limitCheck.blocked) {
+    res.status(403).json({ error: limitCheck.reason ?? "Deposit limit exceeded" });
+    return;
+  }
+
+  try {
+    const invoice = await createInvoice({
+      amount,
+      currency,
+      orderNumber,
+      orderName:   `CupBett deposit $${amount} USDT`,
+      callbackUrl,
+    });
+
+    const network = currency === "USDTTRC20" ? "TRC-20" : "ERC-20";
+
+    const [txn] = await db.insert(transactionsTable).values({
+      userId:         req.user!.userId,
+      type:           "deposit",
+      amount:         amount.toString(),
+      status:         "pending",
+      network,
+      plisioPaymentId: invoice.txnId,
+      plisioStatus:   "new",
+      verificationNote: `Plisio invoice ${invoice.txnId}`,
+    }).returning();
+
+    logger.info({ txnId: invoice.txnId, userId: req.user!.userId, amount, currency }, "Plisio invoice created");
+
+    const expiresAt = invoice.expirationTime
+      ? new Date(invoice.expirationTime * 1000).toISOString()
+      : null;
+
+    res.status(201).json({
+      transactionId: txn.id,
+      invoiceId:     invoice.txnId,
+      walletHash:    invoice.walletHash,
+      pendingAmount: invoice.pendingAmount,
+      currency:      invoice.currency,
+      amount,
+      expiresAt,
+      invoiceUrl:    invoice.invoiceUrl,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to create Plisio invoice");
+    res.status(502).json({ error: "Plisio payment gateway unavailable — please try again or use another deposit method" });
+  }
+});
+
+// ── GET /wallet/deposit/plisio/:invoiceId/status ──────────────────────────────
+router.get("/wallet/deposit/plisio/:invoiceId/status", authenticate, async (req, res): Promise<void> => {
+  const invoiceId = req.params.invoiceId as string;
+
+  const [txn] = await db.select().from(transactionsTable)
+    .where(eq(transactionsTable.plisioPaymentId, invoiceId))
+    .limit(1);
+
+  if (!txn) { res.status(404).json({ error: "Invoice not found" }); return; }
+  if (txn.userId !== req.user!.userId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  // Already settled by webhook
+  if (txn.status === "completed") {
+    res.json({ status: "completed", plisioStatus: txn.plisioStatus, credited: true });
+    return;
+  }
+  if (txn.status === "rejected") {
+    res.json({ status: txn.plisioStatus ?? "cancelled", plisioStatus: txn.plisioStatus, credited: false });
+    return;
+  }
+
+  // Poll Plisio for live status
+  try {
+    const op = await getOperationStatus(invoiceId);
+
+    await db.update(transactionsTable)
+      .set({ plisioStatus: op.status })
+      .where(eq(transactionsTable.id, txn.id));
+
+    if (PLISIO_FINISHED_STATUSES.has(op.status)) {
+      const depositAmt = parseFloat(txn.amount);
+
+      const pollExclMsg = await isSelfExcludedFromDeposits(txn.userId);
+      if (pollExclMsg) {
+        await db.update(transactionsTable)
+          .set({ status: "rejected", verificationNote: "Deposit rejected: account is self-excluded" })
+          .where(eq(transactionsTable.id, txn.id));
+        res.json({ status: "rejected", plisioStatus: op.status, credited: false, error: "Self-excluded" });
+        return;
+      }
+      const pollLimitCheck = await checkDepositLimits(txn.userId, depositAmt);
+      if (pollLimitCheck.blocked) {
+        await db.update(transactionsTable)
+          .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
+          .where(eq(transactionsTable.id, txn.id));
+        res.json({ status: "rejected", plisioStatus: op.status, credited: false, error: "Deposit limit exceeded" });
+        return;
+      }
+
+      await db.update(transactionsTable)
+        .set({ status: "completed", verified: true, verificationNote: `Auto-credited via Plisio (${op.status})` })
+        .where(eq(transactionsTable.id, txn.id));
+      await db.update(walletsTable)
+        .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
+        .where(eq(walletsTable.userId, txn.userId));
+      await recordDepositUsage(txn.userId, txn.amount);
+
+      logger.info({ invoiceId, userId: txn.userId }, "Plisio deposit credited via polling fallback");
+      res.json({ status: op.status, plisioStatus: op.status, credited: true });
+      return;
+    }
+
+    if (PLISIO_FAILED_STATUSES.has(op.status)) {
+      await db.update(transactionsTable)
+        .set({ status: "rejected", verificationNote: `Plisio payment ${op.status}` })
+        .where(eq(transactionsTable.id, txn.id));
+    }
+
+    res.json({ status: op.status, plisioStatus: op.status, credited: false });
+  } catch (err) {
+    logger.warn({ err, invoiceId }, "Failed to poll Plisio status");
+    res.json({ status: txn.plisioStatus ?? "pending", plisioStatus: txn.plisioStatus, credited: false });
   }
 });
 

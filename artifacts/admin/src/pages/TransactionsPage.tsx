@@ -149,9 +149,14 @@ export default function TransactionsPage() {
                 ⚡ {t.nowpaymentsStatus ?? "NPP"} · {t.nowpaymentsPaymentId.slice(0, 8)}…
               </span>
             )}
+            {t.plisioPaymentId && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#A855F7] bg-[#A855F7]/10 border border-[#A855F7]/20 px-1.5 py-0.5 rounded-full max-w-[150px] truncate" title={`Plisio ID: ${t.plisioPaymentId}`}>
+                🔷 {t.plisioStatus ?? "Plisio"} · {t.plisioPaymentId.slice(0, 8)}…
+              </span>
+            )}
             {note
               ? <span className="text-[#475569] text-xs max-w-[150px] truncate block" title={note}>{note}</span>
-              : !t.nowpaymentsPaymentId && <span className="text-[#475569] text-xs">—</span>}
+              : !t.nowpaymentsPaymentId && !t.plisioPaymentId && <span className="text-[#475569] text-xs">—</span>}
           </div>
         );
       },

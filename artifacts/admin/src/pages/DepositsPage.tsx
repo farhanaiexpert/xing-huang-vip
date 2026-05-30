@@ -55,11 +55,36 @@ function NppStatusBadge({ status }: { status: string | null }) {
   );
 }
 
-function TxHashCell({ hash, network, nowpaymentsPaymentId, nowpaymentsStatus }: {
+const PLISIO_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  completed:          { bg: 'rgba(0,223,169,0.10)',   text: '#00DFA9', border: 'rgba(0,223,169,0.25)',   label: 'Completed' },
+  pending:            { bg: 'rgba(250,204,21,0.10)',  text: '#FACC15', border: 'rgba(250,204,21,0.25)',  label: 'Pending' },
+  'pending internal': { bg: 'rgba(250,204,21,0.10)',  text: '#FACC15', border: 'rgba(250,204,21,0.25)',  label: 'Confirming' },
+  new:                { bg: 'rgba(148,163,184,0.10)', text: '#94A3B8', border: 'rgba(148,163,184,0.20)', label: 'New' },
+  cancelled:          { bg: 'rgba(239,68,68,0.10)',   text: '#F87171', border: 'rgba(239,68,68,0.20)',   label: 'Cancelled' },
+  error:              { bg: 'rgba(239,68,68,0.10)',   text: '#F87171', border: 'rgba(239,68,68,0.20)',   label: 'Error' },
+  expired:            { bg: 'rgba(239,68,68,0.10)',   text: '#F87171', border: 'rgba(239,68,68,0.20)',   label: 'Expired' },
+};
+
+function PlisioStatusBadge({ status }: { status: string | null }) {
+  if (!status) return null;
+  const cfg = PLISIO_STATUS_COLORS[status] ?? {
+    bg: 'rgba(100,116,139,0.10)', text: '#94A3B8', border: 'rgba(100,116,139,0.20)', label: status,
+  };
+  return (
+    <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+      style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
+      🔷 {cfg.label}
+    </span>
+  );
+}
+
+function TxHashCell({ hash, network, nowpaymentsPaymentId, nowpaymentsStatus, plisioPaymentId, plisioStatus }: {
   hash: string | null;
   network: string | null;
   nowpaymentsPaymentId: string | null;
   nowpaymentsStatus: string | null;
+  plisioPaymentId: string | null;
+  plisioStatus: string | null;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -98,7 +123,13 @@ function TxHashCell({ hash, network, nowpaymentsPaymentId, nowpaymentsStatus }: 
           {nowpaymentsStatus && <NppStatusBadge status={nowpaymentsStatus} />}
         </div>
       )}
-      {!hash && !nowpaymentsPaymentId && <span className="text-[#334155] text-xs">—</span>}
+      {plisioPaymentId && (
+        <div className="flex flex-col gap-0.5">
+          <CopyableId id={plisioPaymentId} label="Plisio ID" color="#A855F7" />
+          {plisioStatus && <PlisioStatusBadge status={plisioStatus} />}
+        </div>
+      )}
+      {!hash && !nowpaymentsPaymentId && !plisioPaymentId && <span className="text-[#334155] text-xs">—</span>}
     </div>
   );
 }
@@ -325,6 +356,8 @@ export default function DepositsPage() {
                       network={txn.network}
                       nowpaymentsPaymentId={txn.nowpaymentsPaymentId}
                       nowpaymentsStatus={txn.nowpaymentsStatus}
+                      plisioPaymentId={txn.plisioPaymentId}
+                      plisioStatus={txn.plisioStatus}
                     />
                   </td>
 

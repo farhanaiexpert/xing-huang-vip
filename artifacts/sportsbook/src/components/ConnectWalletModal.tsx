@@ -15,7 +15,7 @@ import { useAutoDeposit } from '../hooks/useAutoDeposit';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../lib/apiClient';
 
-type ModalView = 'methods' | 'npp-form' | 'npp-invoice' | 'npp-success' | 'npp-failed';
+type ModalView = 'methods' | 'npp-form' | 'npp-invoice' | 'npp-success' | 'npp-failed' | 'plisio-form' | 'plisio-invoice' | 'plisio-success' | 'plisio-failed';
 
 interface NppPayment {
   paymentId: string;
@@ -24,6 +24,15 @@ interface NppPayment {
   payCurrency: string;
   priceAmount: number;
   priceCurrency: string;
+  expiresAt: string | null;
+}
+
+interface PlisioInvoice {
+  invoiceId: string;
+  walletHash: string;
+  pendingAmount: string;
+  currency: string;
+  amount: number;
   expiresAt: string | null;
 }
 
@@ -112,7 +121,8 @@ function NppAddressCopy({ address }: { address: string }) {
   );
 }
 
-const NPP_PENDING_KEY = 'npp_pending_deposit';
+const NPP_PENDING_KEY    = 'npp_pending_deposit';
+const PLISIO_PENDING_KEY = 'plisio_pending_deposit';
 
 export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: ConnectWalletModalProps) {
   const isVisible = open ?? isOpen ?? false;
@@ -197,6 +207,63 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     setView('npp-form');
   }
 
+  // ── Plisio inline flow ───────────────────────────────────────────────────────
+  const [plisioAmount, setPlisioAmount] = useState('');
+  const [plisioCurrency, setPlisioCurrency] = useState<'USDTTRC20' | 'USDTERC20'>('USDTTRC20');
+  const [plisioInvoice, setPlisioInvoice] = useState<PlisioInvoice | null>(null);
+  const [plisioTimeLeft, setPlisioTimeLeft] = useState(0);
+  const [plisioCreating, setPlisioCreating] = useState(false);
+  const [plisioError, setPlisioError] = useState('');
+
+  function resetPlisio() {
+    setView('methods');
+    setPlisioAmount('');
+    setPlisioCurrency('USDTTRC20');
+    setPlisioInvoice(null);
+    setPlisioTimeLeft(0);
+    setPlisioCreating(false);
+    setPlisioError('');
+  }
+
+  function handlePlisioClick() {
+    if (!user) { setAuthOpen(true); return; }
+    setPlisioError('');
+    setView('plisio-form');
+  }
+
+  async function createPlisioPayment() {
+    const amount = parseFloat(plisioAmount);
+    if (!plisioAmount || isNaN(amount) || amount < 10) {
+      setPlisioError('Minimum deposit is 10 USDT');
+      return;
+    }
+    setPlisioCreating(true);
+    setPlisioError('');
+    try {
+      const result = await api.post<PlisioInvoice & { status: string }>(
+        '/wallet/deposit/plisio/create',
+        { amount, currency: plisioCurrency }
+      );
+      setPlisioInvoice(result);
+      const timeLeft = result.expiresAt
+        ? Math.max(0, Math.floor((new Date(result.expiresAt).getTime() - Date.now()) / 1000))
+        : 20 * 60;
+      setPlisioTimeLeft(timeLeft);
+      setView('plisio-invoice');
+      localStorage.setItem(PLISIO_PENDING_KEY, JSON.stringify({
+        invoiceId: result.invoiceId,
+        amount,
+        currency: plisioCurrency,
+        expiresAt: result.expiresAt ?? new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+      }));
+      window.dispatchEvent(new Event('storage'));
+    } catch (err: unknown) {
+      setPlisioError(err instanceof Error ? err.message : 'Failed to create invoice. Please try again.');
+    } finally {
+      setPlisioCreating(false);
+    }
+  }
+
   async function createNppPayment() {
     const amount = parseFloat(nppAmount);
     if (!nppAmount || isNaN(amount) || amount < 10) {
@@ -268,6 +335,46 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     return () => clearInterval(id);
   }, [view, nppPayment]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Plisio countdown ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (view !== 'plisio-invoice' || plisioTimeLeft <= 0) return;
+    const id = setInterval(() => {
+      setPlisioTimeLeft(prev => {
+        if (prev <= 1) {
+          setView('plisio-failed');
+          localStorage.removeItem(PLISIO_PENDING_KEY);
+          window.dispatchEvent(new Event('storage'));
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Plisio poll ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (view !== 'plisio-invoice' || !plisioInvoice) return;
+    const id = setInterval(async () => {
+      try {
+        const r = await api.get<{ status: string; credited: boolean }>(
+          `/wallet/deposit/plisio/${plisioInvoice.invoiceId}/status`
+        );
+        if (r.credited || r.status === 'completed') {
+          setView('plisio-success');
+          localStorage.removeItem(PLISIO_PENDING_KEY);
+          window.dispatchEvent(new Event('storage'));
+          await refreshBalance();
+        } else if (r.status === 'cancelled' || r.status === 'error' || r.status === 'expired' || r.status === 'rejected') {
+          setView('plisio-failed');
+          localStorage.removeItem(PLISIO_PENDING_KEY);
+          window.dispatchEvent(new Event('storage'));
+        }
+      } catch { /* silent — poll again next tick */ }
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [view, plisioInvoice]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!isVisible) {
       setView('methods');
@@ -285,11 +392,15 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     : 100;
 
   const headerConfig: Record<ModalView, { title: string; subtitle: string; showBack: boolean }> = {
-    'methods': { title: 'Add Funds', subtitle: 'Choose how you want to deposit USDT', showBack: false },
-    'npp-form': { title: 'Crypto Deposit', subtitle: 'Generate a unique payment address', showBack: true },
-    'npp-invoice': { title: 'Awaiting Payment', subtitle: 'Send exactly the amount shown below', showBack: false },
-    'npp-success': { title: 'Deposit Confirmed', subtitle: 'Balance updated successfully', showBack: false },
-    'npp-failed': { title: 'Payment Expired', subtitle: 'This invoice is no longer valid', showBack: true },
+    'methods':       { title: 'Add Funds',        subtitle: 'Choose how you want to deposit USDT',  showBack: false },
+    'npp-form':      { title: 'Crypto Deposit',   subtitle: 'Generate a unique payment address',    showBack: true  },
+    'npp-invoice':   { title: 'Awaiting Payment', subtitle: 'Send exactly the amount shown below',  showBack: false },
+    'npp-success':   { title: 'Deposit Confirmed',subtitle: 'Balance updated successfully',         showBack: false },
+    'npp-failed':    { title: 'Payment Expired',  subtitle: 'This invoice is no longer valid',      showBack: true  },
+    'plisio-form':   { title: 'Pay via Plisio',   subtitle: 'Generate a unique Plisio address',     showBack: true  },
+    'plisio-invoice':{ title: 'Awaiting Payment', subtitle: 'Send exactly the amount shown below',  showBack: false },
+    'plisio-success':{ title: 'Deposit Confirmed',subtitle: 'Balance updated successfully',         showBack: false },
+    'plisio-failed': { title: 'Invoice Expired',  subtitle: 'This invoice is no longer valid',      showBack: true  },
   };
   const hdr = headerConfig[view];
 
@@ -297,7 +408,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     <>
       {isVisible && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={view === 'npp-invoice' ? undefined : close} />
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={(view === 'npp-invoice' || view === 'plisio-invoice') ? undefined : close} />
 
           <div
             className="relative w-full max-w-[460px] rounded-2xl overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.9)]"
@@ -312,7 +423,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
               <div className="flex items-center gap-2.5">
                 {hdr.showBack && (
                   <button
-                    onClick={resetNpp}
+                    onClick={view.startsWith('plisio') ? resetPlisio : resetNpp}
                     className="p-1.5 rounded-lg text-[#64748B] hover:text-[#F8FAFC] hover:bg-white/[0.07] transition-all"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -323,7 +434,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                   <p className="text-[12px] text-[#64748B] mt-0.5">{hdr.subtitle}</p>
                 </div>
               </div>
-              {view !== 'npp-invoice' && (
+              {view !== 'npp-invoice' && view !== 'plisio-invoice' && (
                 <button
                   onClick={close}
                   className="p-2 rounded-xl text-[#64748B] hover:text-[#F8FAFC] hover:bg-white/[0.07] transition-all cursor-pointer"
@@ -571,6 +682,255 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     onClick={() => { setView('npp-form'); setNppPayment(null); setNppTimeLeft(0); }}
                     className="w-full py-3 rounded-xl text-[14px] font-black text-[#0B0F14] transition-all hover:brightness-110"
                     style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)' }}
+                  >
+                    Try Again →
+                  </button>
+                  <button
+                    onClick={close}
+                    className="w-full py-2 rounded-xl text-[12px] font-bold text-[#64748B] hover:text-[#94A3B8] transition-all"
+                    style={{ background: 'rgba(255,255,255,0.04)' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {/* ══════════ PLISIO FORM VIEW ══════════ */}
+              {view === 'plisio-form' && (
+                <div className="space-y-4">
+                  <div
+                    className="rounded-xl p-4 flex items-center gap-3"
+                    style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.20)' }}
+                  >
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.30)' }}>
+                      <CreditCard className="w-4.5 h-4.5 text-[#A855F7]" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-bold text-[#F8FAFC]">Plisio</p>
+                      <p className="text-[11px] text-[#64748B]">A unique address will be generated — balance credited automatically</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">
+                      Amount (USDT)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="10"
+                        step="1"
+                        value={plisioAmount}
+                        onChange={e => { setPlisioAmount(e.target.value); setPlisioError(''); }}
+                        disabled={plisioCreating}
+                        className="w-full rounded-xl px-4 py-3.5 text-[16px] font-bold text-[#F8FAFC] pr-16 outline-none disabled:opacity-60"
+                        style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(168,85,247,0.30)' }}
+                        placeholder="50"
+                        autoFocus
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#A855F7]">USDT</span>
+                    </div>
+                    <p className="text-[10px] text-[#64748B] mt-1">Minimum: 10 USDT</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">
+                      Network
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        { val: 'USDTTRC20' as const, label: 'TRC-20', sub: 'Tron · Recommended', color: '#00DFA9' },
+                        { val: 'USDTERC20' as const, label: 'ERC-20', sub: 'Ethereum', color: '#627EEA' },
+                      ] as const).map(opt => (
+                        <button
+                          key={opt.val}
+                          onClick={() => setPlisioCurrency(opt.val)}
+                          disabled={plisioCreating}
+                          className="relative rounded-xl p-3 text-left transition-all"
+                          style={plisioCurrency === opt.val
+                            ? { background: `rgba(${opt.color === '#00DFA9' ? '0,223,169' : '98,126,234'},0.12)`, border: `2px solid ${opt.color}60` }
+                            : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }
+                          }
+                        >
+                          {plisioCurrency === opt.val && (
+                            <span className="absolute top-2 right-2 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                              style={{ background: opt.color }}>
+                              <Check className="w-2 h-2 text-[#0B0F14]" />
+                            </span>
+                          )}
+                          <p className="text-[13px] font-bold text-[#F8FAFC]">{opt.label}</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: opt.color }}>{opt.sub}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {plisioError && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]"
+                      style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      <p className="text-red-400">{plisioError}</p>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={createPlisioPayment}
+                    disabled={plisioCreating}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-black text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait"
+                    style={{ background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)', boxShadow: '0 0 20px rgba(168,85,247,0.30)' }}
+                  >
+                    {plisioCreating
+                      ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Creating Invoice…</>
+                      : <>Generate Invoice <ChevronRight className="w-4 h-4" /></>
+                    }
+                  </button>
+
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    {[
+                      { icon: <Shield className="w-3 h-3" />, label: 'Secure', color: '#A855F7' },
+                      { icon: <Zap className="w-3 h-3" />, label: 'Auto-credit', color: '#00DFA9' },
+                      { icon: <Clock className="w-3 h-3" />, label: '~20 min window', color: '#FACC15' },
+                    ].map(({ icon, label, color }) => (
+                      <div key={label} className="flex flex-col items-center gap-1 text-center p-2 rounded-xl"
+                        style={{ background: 'rgba(255,255,255,0.02)' }}>
+                        <span style={{ color }}>{icon}</span>
+                        <span className="text-[9px] text-[#64748B]">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ══════════ PLISIO INVOICE VIEW ══════════ */}
+              {view === 'plisio-invoice' && plisioInvoice && (() => {
+                const plisioNetworkLabel = plisioCurrency === 'USDTTRC20' ? 'TRC-20 (Tron)' : 'ERC-20 (Ethereum)';
+                const plisioNetworkColor = plisioCurrency === 'USDTTRC20' ? '#00DFA9' : '#627EEA';
+                const plisioTimerPct = (plisioTimeLeft / (plisioInvoice.expiresAt
+                  ? Math.max(1, Math.floor((new Date(plisioInvoice.expiresAt).getTime() - Date.now() + plisioTimeLeft * 1000) / 1000))
+                  : 20 * 60)) * 100;
+                return (
+                  <div className="space-y-3">
+                    <div
+                      className="rounded-xl p-4 text-center"
+                      style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.20)' }}
+                    >
+                      <p className="text-[11px] text-[#64748B] font-semibold uppercase tracking-wider mb-1">Send exactly</p>
+                      <p className="text-[28px] font-black text-[#F8FAFC] leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {parseFloat(plisioInvoice.pendingAmount).toFixed(6)}
+                      </p>
+                      <p className="text-[14px] font-bold mt-1" style={{ color: plisioNetworkColor }}>
+                        {plisioInvoice.currency.replace('USDT', 'USDT ')} · {plisioNetworkLabel}
+                      </p>
+                      <p className="text-[11px] text-[#64748B] mt-1">≈ ${plisioInvoice.amount.toFixed ? plisioInvoice.amount.toFixed(2) : plisioInvoice.amount} USD</p>
+                    </div>
+
+                    <NppAddressCopy address={plisioInvoice.walletHash} />
+
+                    <div
+                      className="rounded-xl p-3 flex items-center gap-3"
+                      style={{ background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.15)' }}
+                    >
+                      <div className="relative w-10 h-10 shrink-0">
+                        <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                          <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(250,204,21,0.15)" strokeWidth="3" />
+                          <circle cx="18" cy="18" r="15" fill="none" stroke="#FACC15" strokeWidth="3"
+                            strokeDasharray={`${(plisioTimerPct / 100) * 94.2} 94.2`}
+                            strokeLinecap="round" style={{ transition: 'stroke-dasharray 1s linear' }} />
+                        </svg>
+                        <Clock className="w-3.5 h-3.5 text-[#FACC15] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[13px] font-black text-[#FACC15]">{formatCountdown(plisioTimeLeft)}</p>
+                        <p className="text-[10px] text-[#64748B]">Invoice expires — send before it runs out</p>
+                      </div>
+                    </div>
+
+                    <div
+                      className="flex items-center gap-2.5 rounded-xl p-3"
+                      style={{ background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.15)' }}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-[#A855F7] animate-spin shrink-0" />
+                      <div>
+                        <p className="text-[11px] font-semibold text-[#A855F7]">Watching for your payment…</p>
+                        <p className="text-[10px] text-[#64748B]">Checking every 15 seconds · Balance credited automatically on confirmation</p>
+                      </div>
+                    </div>
+
+                    <div
+                      className="flex items-start gap-2 rounded-xl p-3"
+                      style={{ background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.12)' }}
+                    >
+                      <AlertCircle className="w-3.5 h-3.5 text-[#FACC15] shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-[#FACC15] leading-relaxed">
+                        Send <strong>exactly</strong> the amount shown. Sending less or more may delay or prevent credit.
+                      </p>
+                    </div>
+
+                    <p className="text-[10px] text-[#64748B] text-center">
+                      You can close this window — your deposit is tracked automatically.
+                    </p>
+                    <button
+                      onClick={close}
+                      className="w-full py-2.5 rounded-xl text-[12px] font-bold text-[#64748B] hover:text-[#94A3B8] transition-all"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      Close (payment tracked in background)
+                    </button>
+                  </div>
+                );
+              })()}
+
+              {/* ══════════ PLISIO SUCCESS VIEW ══════════ */}
+              {view === 'plisio-success' && (
+                <div className="space-y-4 py-2">
+                  <div className="flex flex-col items-center text-center gap-3">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.15)' }}>
+                      <CheckCircle2 className="w-8 h-8 text-[#00DFA9]" />
+                    </div>
+                    <div>
+                      <p className="text-[20px] font-black text-[#00DFA9]">Deposit Confirmed!</p>
+                      <p className="text-[13px] text-[#64748B] mt-1">
+                        {plisioInvoice ? `$${plisioInvoice.amount} USDT` : 'Your deposit'} has been credited to your account
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={close}
+                    className="w-full py-3 rounded-xl text-[14px] font-black text-[#0B0F14] transition-all hover:brightness-110"
+                    style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 20px rgba(0,223,169,0.25)' }}
+                  >
+                    Done ✓
+                  </button>
+                  <button
+                    onClick={() => { close(); navigate('/account/wallet'); sessionStorage.setItem('cupbett_wallet_tab', 'history'); }}
+                    className="w-full py-2.5 rounded-xl text-[12px] font-bold text-[#A855F7] border border-[#A855F7]/20 hover:bg-[#A855F7]/10 transition-all"
+                  >
+                    View Transaction History →
+                  </button>
+                </div>
+              )}
+
+              {/* ══════════ PLISIO FAILED VIEW ══════════ */}
+              {view === 'plisio-failed' && (
+                <div className="space-y-4 py-2">
+                  <div className="flex flex-col items-center text-center gap-3">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(239,68,68,0.10)', border: '2px solid rgba(239,68,68,0.25)' }}>
+                      <Clock className="w-8 h-8 text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-black text-red-400">Invoice Expired</p>
+                      <p className="text-[13px] text-[#64748B] mt-1">
+                        This Plisio invoice has expired. Please generate a new one to deposit.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setView('plisio-form'); setPlisioInvoice(null); setPlisioTimeLeft(0); }}
+                    className="w-full py-3 rounded-xl text-[14px] font-black text-white transition-all hover:brightness-110"
+                    style={{ background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)' }}
                   >
                     Try Again →
                   </button>
@@ -935,7 +1295,61 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     </div>
                   </button>
 
-                  {/* ── OPTION 3: Manual ── */}
+                  {/* ── OPTION 3: Plisio ── */}
+                  <button
+                    onClick={handlePlisioClick}
+                    className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(168,85,247,0.10) 0%, rgba(124,58,237,0.05) 100%)',
+                      border: '1px solid rgba(168,85,247,0.25)',
+                      boxShadow: '0 0 18px rgba(168,85,247,0.05)',
+                    }}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(168,85,247,0.22) 0%, rgba(124,58,237,0.10) 100%)',
+                          border: '1px solid rgba(168,85,247,0.38)',
+                          boxShadow: '0 0 12px rgba(168,85,247,0.15)',
+                        }}>
+                        <CreditCard className="w-5 h-5 text-[#A855F7]" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span className="text-[15px] font-black text-[#F8FAFC]">Crypto Deposit</span>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                            style={{ background: 'rgba(168,85,247,0.15)', color: '#A855F7', border: '1px solid rgba(168,85,247,0.30)' }}>
+                            Plisio
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#A855F7]/80 font-semibold mb-1.5">USDT TRC-20 · ERC-20</p>
+                        <p className="text-[12px] text-[#94A3B8] leading-relaxed mb-3">
+                          Pay via Plisio gateway. Get a unique deposit address — balance auto-credited on confirmation.
+                        </p>
+
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#A855F7]">
+                            <CreditCard className="w-3 h-3" /> Unique address
+                          </span>
+                          <span className="w-px h-3 bg-white/[0.1]" />
+                          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#94A3B8]">
+                            <CheckCircle2 className="w-3 h-3" /> Auto-credited
+                          </span>
+                          <span className="w-px h-3 bg-white/[0.1]" />
+                          <span className="text-[11px] font-semibold text-[#94A3B8]">Min 10 USDT</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-black text-white transition-all w-fit group-hover:scale-[1.02]"
+                          style={{ background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)', boxShadow: '0 0 16px rgba(168,85,247,0.35)' }}>
+                          {user ? 'Deposit via Plisio' : 'Sign In to Deposit'}
+                          <ArrowRight className="w-4 h-4 ml-1" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* ── OPTION 4: Manual ── */}
                   <button
                     onClick={() => { close(); if (user) { navigate('/account/wallet'); sessionStorage.setItem('cupbett_deposit_method', 'manual'); } else { setAuthOpen(true); } }}
                     className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
