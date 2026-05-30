@@ -157,12 +157,12 @@ export function PromoPopup() {
     try {
       await api.post('/wallet/bonus/welcome', {});
       await refreshBalance();
+      setAlreadyClaimed(true);
       setShowCongrats(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
-      if (msg.toLowerCase().includes('already')) {
+      if (msg.toLowerCase().includes('already') || msg.includes('409') || msg.includes('ALREADY_CLAIMED')) {
         setAlreadyClaimed(true);
-        setClaimError('You have already claimed this bonus!');
       } else {
         setClaimError(msg || 'Failed to claim bonus. Please try again.');
       }

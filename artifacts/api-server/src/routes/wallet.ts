@@ -349,9 +349,11 @@ router.post("/wallet/bonus/welcome", authenticate, async (req, res): Promise<voi
     logger.info({ userId, amount: BONUS_AMOUNT }, "Welcome bonus claimed");
     res.status(201).json({ bonusAmount: BONUS_AMOUNT, currency: "USDT" });
   } catch (err: unknown) {
-    // Unique-index violation (duplicate claim)
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("idx_transactions_welcome_bonus") || msg.includes("unique") || msg.includes("duplicate")) {
+    // DrizzleQueryError wraps the pg error in .cause, not .message — check both
+    const msg = err instanceof Error ? err.message : String(err);
+    const causeMsg = (err as { cause?: { message?: string } })?.cause?.message ?? "";
+    const full = `${msg} ${causeMsg}`.toLowerCase();
+    if (full.includes("idx_transactions_welcome_bonus") || full.includes("duplicate key") || full.includes("already_claimed")) {
       res.status(409).json({ error: "Welcome bonus already claimed.", code: "ALREADY_CLAIMED" });
     } else {
       logger.error({ err, userId }, "Failed to claim welcome bonus");

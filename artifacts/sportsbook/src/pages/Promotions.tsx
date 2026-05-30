@@ -1,14 +1,46 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Header } from '@/components/Header';
-import { ConnectWalletModal } from '@/components/ConnectWalletModal';
 import { useWallet } from '@/hooks/useWallet';
+import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 import {
   Gift, Zap, CalendarCheck, Users, Tv2, Trophy,
-  ChevronRight, Star, CheckCircle2, Clock, Info, Copy, Check,
+  ChevronRight, Star, CheckCircle2, Clock, Info, Copy, Check, PartyPopper,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// ─── Congrats helpers (coin rain + counter) ───────────────────────────────────
+const PROMO_COINS = Array.from({ length: 22 }, (_, i) => ({
+  id: i,
+  x: 5 + Math.random() * 90,
+  delay: Math.random() * 1.4,
+  dur: 1.6 + Math.random() * 1.4,
+  size: 14 + Math.random() * 20,
+  rot: Math.random() * 360,
+  drift: (Math.random() - 0.5) * 80,
+}));
+
+function useCounter(target: number, active: boolean, duration = 1800) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!active) { setValue(0); return; }
+    const start = Date.now();
+    let raf: number;
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setValue(parseFloat((target * ease).toFixed(2)));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+      else setValue(target);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active, target, duration]);
+  return value;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type PromoCategory = 'All' | 'Welcome' | 'Weekly' | 'Loyalty';
@@ -303,26 +335,54 @@ function LoyaltySection({ onJoin }: { onJoin: () => void }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export function Promotions() {
   const [active, setActive] = useState<PromoCategory>('All');
-  const [walletOpen, setWalletOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const { isConnected } = useWallet();
+  const { refreshBalance } = useWallet();
+  const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+
+  // Welcome bonus claim state
+  const [claiming, setClaiming] = useState(false);
+  const [alreadyClaimed, setAlreadyClaimed] = useState(false);
+  const [showCongrats, setShowCongrats] = useState(false);
+  const counterVal = useCounter(99.99, showCongrats);
+
+  // Check on mount if already claimed
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    api.get<{ claimed: boolean }>('/wallet/bonus/welcome/status')
+      .then(r => { if (r.claimed) setAlreadyClaimed(true); })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   const visible = active === 'Loyalty' ? [] : (
     active === 'All' ? PROMOS : PROMOS.filter((p) => p.category === active)
   );
 
-  function handleClaim() {
-    if (!isConnected) {
-      setWalletOpen(true);
-    } else {
-      toast({
-        title: 'Bonus activated!',
-        description: 'Your 100% welcome bonus is ready. Make your first deposit to unlock it.',
-      });
+  const handleClaim = useCallback(async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
     }
-  }
+    if (alreadyClaimed) return;
+    setClaiming(true);
+    try {
+      await api.post('/wallet/bonus/welcome', {});
+      await refreshBalance();
+      setAlreadyClaimed(true);
+      setShowCongrats(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.toLowerCase().includes('already') || msg.includes('409') || msg.includes('ALREADY_CLAIMED')) {
+        setAlreadyClaimed(true);
+        toast({ title: 'Already claimed', description: 'You have already received your welcome bonus.' });
+      } else {
+        toast({ title: 'Error', description: msg || 'Failed to claim bonus. Please try again.' });
+      }
+    } finally {
+      setClaiming(false);
+    }
+  }, [isAuthenticated, alreadyClaimed, refreshBalance, navigate, toast]);
 
   function handleBet() {
     navigate('/');
@@ -350,7 +410,43 @@ export function Promotions() {
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-14 xl:pb-0">
       <Header />
 
-      <ConnectWalletModal open={walletOpen} onOpenChange={setWalletOpen} />
+      {/* ── Congrats overlay ────────────────────────────────────────────── */}
+      {showCongrats && (
+        <>
+          <style>{`
+            @keyframes coinFall { 0%{transform:translateY(-40px) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+            @keyframes congratsPop { 0%{transform:scale(.6);opacity:0} 60%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+          `}</style>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ background: 'rgba(11,15,20,0.92)', backdropFilter: 'blur(8px)' }}>
+            {/* Coin rain */}
+            {PROMO_COINS.map(c => (
+              <span key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '-40px', fontSize: c.size, animationName: 'coinFall', animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, animationTimingFunction: 'cubic-bezier(.4,0,.6,1)', animationIterationCount: 'infinite', animationFillMode: 'both', transform: `rotate(${c.rot}deg) translateX(${c.drift}px)`, pointerEvents: 'none' }}>🪙</span>
+            ))}
+            {/* Card */}
+            <div className="relative z-10 flex flex-col items-center gap-6 px-8 py-10 rounded-3xl max-w-sm w-full mx-4 text-center"
+              style={{ background: 'linear-gradient(145deg,#0D1825,#081018)', border: '1.5px solid rgba(250,204,21,0.35)', boxShadow: '0 0 60px rgba(250,204,21,0.18)', animation: 'congratsPop .5s cubic-bezier(.34,1.56,.64,1) forwards' }}>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#FACC15,#F59E0B)', boxShadow: '0 0 30px rgba(250,204,21,0.4)' }}>
+                <PartyPopper className="w-8 h-8 text-[#0B0F14]" />
+              </div>
+              <div>
+                <p className="text-[#FACC15] text-xs font-bold uppercase tracking-widest mb-1">Welcome Bonus Unlocked!</p>
+                <p className="text-5xl font-black text-white tabular-nums">{counterVal.toFixed(2)} <span className="text-2xl text-[#FACC15]">USDT</span></p>
+                <p className="text-[#94A3B8]/70 text-sm mt-2">Added to your bonus balance · non-withdrawable</p>
+              </div>
+              <div className="flex flex-col gap-2 w-full">
+                <button onClick={() => { setShowCongrats(false); navigate('/'); }}
+                  className="w-full py-3 rounded-xl font-black text-[#0B0F14] text-sm transition-transform hover:scale-[1.02] active:scale-[0.97]"
+                  style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)' }}>
+                  Start Playing →
+                </button>
+                <button onClick={() => setShowCongrats(false)} className="text-xs text-[#94A3B8]/50 hover:text-[#94A3B8]/80 transition-colors">
+                  Stay on Promotions
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <main className="max-w-5xl mx-auto px-6 py-10">
 
@@ -373,9 +469,11 @@ export function Promotions() {
             </div>
             <button
               onClick={handleClaim}
-              className="shrink-0 flex items-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3 rounded-xl transition-all duration-150"
+              disabled={claiming || alreadyClaimed}
+              className="shrink-0 flex items-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3 rounded-xl transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Claim 500 USDT Bonus <ChevronRight className="h-4 w-4" />
+              {alreadyClaimed ? '✓ Bonus Claimed' : claiming ? 'Claiming…' : 'Claim Now — 99.99 USDT Free'}
+              {!alreadyClaimed && !claiming && <ChevronRight className="h-4 w-4" />}
             </button>
           </div>
         </div>
