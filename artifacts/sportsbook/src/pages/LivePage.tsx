@@ -38,6 +38,14 @@ interface LiveMatch {
   isHot: boolean;
   accent: string;
   outcomes: Outcome[];
+  /** Real API O/U 2.5 over odds (soccer only, when available) */
+  ouOver25?: number;
+  /** Real API O/U 2.5 under odds (soccer only, when available) */
+  ouUnder25?: number;
+  /** Real API BTTS Yes odds (soccer only, when available) */
+  bttsYes?: number;
+  /** Real API BTTS No odds (soccer only, when available) */
+  bttsNo?: number;
 }
 
 // ─── 3 Exciting hardcoded live matches ──────────────────────────────────────
@@ -173,16 +181,22 @@ function generateGoalsMarkets(match: LiveMatch): LiveMarketGroup[] {
   const bttsProbNo  = 1 - bttsProbYes;
 
   const { over: o15o, under: o15u } = ouOdds(lambda, 1);
-  const { over: o25o, under: o25u } = ouOdds(lambda, 2);
+  // Prefer real API O/U 2.5 when the live event carried totals market data
+  const o25o = match.ouOver25  ?? ouOdds(lambda, 2).over;
+  const o25u = match.ouUnder25 ?? ouOdds(lambda, 2).under;
   const { over: o35o, under: o35u } = ouOdds(lambda, 3);
   const { over: o45o, under: o45u } = ouOdds(lambda, 4);
+
+  // Prefer real API BTTS odds when available
+  const bttsY = match.bttsYes ?? rnd(1 / Math.max(0.05, bttsProbYes) * 1.10);
+  const bttsN = match.bttsNo  ?? rnd(1 / Math.max(0.05, bttsProbNo)  * 1.10);
 
   return [
     {
       marketKey: 'btts', marketName: 'Both Teams to Score', label: 'Both Teams to Score',
       lines: [
-        { key: 'btts_y', label: 'Yes', name: 'BTTS — Yes', baseOdds: rnd(1 / Math.max(0.05, bttsProbYes) * 1.10) },
-        { key: 'btts_n', label: 'No',  name: 'BTTS — No',  baseOdds: rnd(1 / Math.max(0.05, bttsProbNo)  * 1.10) },
+        { key: 'btts_y', label: 'Yes', name: 'BTTS — Yes', baseOdds: bttsY },
+        { key: 'btts_n', label: 'No',  name: 'BTTS — No',  baseOdds: bttsN },
       ],
     },
     {

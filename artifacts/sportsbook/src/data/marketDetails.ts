@@ -100,14 +100,15 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
   const htXOdds = o(1.88 * v);
   const ht2Odds = o(aOdds * 1.50 * v);
 
-  // ── BTTS ──────────────────────────────────────────────────────────────────
-  const bY = o((1.62 + pd * 0.7) * v);
-  const bN = o((2.18 - pd * 0.5) * v);
+  // ── BTTS — prefer real API odds, fall back to h2h-derived values ──────────
+  const bY = match.bttsYes  ? o(match.bttsYes)          : o((1.62 + pd * 0.7) * v);
+  const bN = match.bttsNo   ? o(match.bttsNo)           : o((2.18 - pd * 0.5) * v);
 
-  // ── Over/Under goals ──────────────────────────────────────────────────────
+  // ── Over/Under goals — prefer real API O/U 2.5, fall back to generated ───
   const o05Ov = o(1.10 * v);  const o05Un = o(7.50 / v);
   const o15Ov = o(1.30 * v);  const o15Un = o(3.40 / v);
-  const o25Ov = o(1.88 * v);  const o25Un = o(1.92 / v);
+  const o25Ov = match.ouOver25  ? o(match.ouOver25)  : o(1.88 * v);
+  const o25Un = match.ouUnder25 ? o(match.ouUnder25) : o(1.92 / v);
   const o35Ov = o(3.20 * v);  const o35Un = o(1.33 / v);
   const o45Ov = o(6.50 * v);  const o45Un = o(1.10);
   const o55Ov = o(11.0 * v);  const o55Un = o(1.05);

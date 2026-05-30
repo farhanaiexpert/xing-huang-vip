@@ -44,6 +44,14 @@ export type Match = {
   kickoffTime?: string;
   /** ISO 8601 commence time — used to re-filter past matches from stale cache */
   commenceIso?: string;
+  /** Real API O/U 2.5 over odds (from totals market), when available */
+  ouOver25?: number;
+  /** Real API O/U 2.5 under odds (from totals market), when available */
+  ouUnder25?: number;
+  /** Real API BTTS Yes odds, when available */
+  bttsYes?: number;
+  /** Real API BTTS No odds, when available */
+  bttsNo?: number;
 };
 
 export type League = {

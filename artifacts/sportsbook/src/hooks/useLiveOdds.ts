@@ -59,6 +59,14 @@ export interface NormalizedLiveMatch {
     color:    string;
     glow:     string;
   }[];
+  /** Real API O/U 2.5 over odds (soccer only, when available) */
+  ouOver25?: number;
+  /** Real API O/U 2.5 under odds (soccer only, when available) */
+  ouUnder25?: number;
+  /** Real API BTTS Yes odds (soccer only, when available) */
+  bttsYes?: number;
+  /** Real API BTTS No odds (soccer only, when available) */
+  bttsNo?: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -144,15 +152,19 @@ function computeStage(sportKey: string, commenceTime: string): string {
   return 'In Progress';
 }
 
-function bestOdds(bookmakers: RawBookmaker[], outcomeName: string): number | undefined {
+function bestOddsForMarket(bookmakers: RawBookmaker[], marketKey: string, outcomeName: string): number | undefined {
   let best: number | undefined;
   for (const bm of bookmakers) {
-    const h2h = bm.markets.find(m => m.key === 'h2h');
-    if (!h2h) continue;
-    const outcome = h2h.outcomes.find(o => o.name === outcomeName);
+    const mkt = bm.markets.find(m => m.key === marketKey);
+    if (!mkt) continue;
+    const outcome = mkt.outcomes.find(o => o.name === outcomeName);
     if (outcome && (!best || outcome.price > best)) best = outcome.price;
   }
   return best ? Math.round(best * 100) / 100 : undefined;
+}
+
+function bestOdds(bookmakers: RawBookmaker[], outcomeName: string): number | undefined {
+  return bestOddsForMarket(bookmakers, 'h2h', outcomeName);
 }
 
 function normalizeEvent(
@@ -185,6 +197,13 @@ function normalizeEvent(
     { key: 'away', label: '2', name: event.away_team, baseOdds: awayOdds, color: '#38BDF8', glow: 'rgba(56,189,248,0.25)' },
   ];
 
+  // Extract real totals / BTTS odds for soccer matches
+  const isSoccer = event.sport_key.startsWith('soccer_');
+  const ouOver25  = isSoccer ? bestOddsForMarket(event.bookmakers, 'totals', 'Over')  : undefined;
+  const ouUnder25 = isSoccer ? bestOddsForMarket(event.bookmakers, 'totals', 'Under') : undefined;
+  const bttsYes   = isSoccer ? bestOddsForMarket(event.bookmakers, 'btts',   'Yes')   : undefined;
+  const bttsNo    = isSoccer ? bestOddsForMarket(event.bookmakers, 'btts',   'No')    : undefined;
+
   return {
     id:        `api_live_${event.id}`,
     sport:     event.sport_key.split('_')[0],
@@ -201,6 +220,10 @@ function normalizeEvent(
     isHot:     closeGame,
     accent,
     outcomes,
+    ...(ouOver25  !== undefined && { ouOver25  }),
+    ...(ouUnder25 !== undefined && { ouUnder25 }),
+    ...(bttsYes   !== undefined && { bttsYes   }),
+    ...(bttsNo    !== undefined && { bttsNo    }),
   };
 }
 

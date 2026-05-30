@@ -36,23 +36,29 @@ function round2(n: number): number {
 }
 
 /**
- * Pick best (highest) odds across all bookmakers for a given outcome name.
- * Falls back to first bookmaker if none have the expected name.
+ * Pick best (highest) odds across all bookmakers for a given market key and outcome name.
  */
-function bestOdds(
+function bestOddsForMarket(
   event:       OddsApiEvent,
+  marketKey:   string,
   outcomeName: string,
 ): number | undefined {
   let best: number | undefined;
   for (const bm of event.bookmakers) {
-    const h2h = bm.markets.find(m => m.key === 'h2h');
-    if (!h2h) continue;
-    const outcome = h2h.outcomes.find(o => o.name === outcomeName);
-    if (outcome && (!best || outcome.price > best)) {
-      best = outcome.price;
-    }
+    const mkt = bm.markets.find(m => m.key === marketKey);
+    if (!mkt) continue;
+    const outcome = mkt.outcomes.find(o => o.name === outcomeName);
+    if (outcome && (!best || outcome.price > best)) best = outcome.price;
   }
   return best ? round2(best) : undefined;
+}
+
+/** Convenience wrapper — reads from h2h market only */
+function bestOdds(
+  event:       OddsApiEvent,
+  outcomeName: string,
+): number | undefined {
+  return bestOddsForMarket(event, 'h2h', outcomeName);
 }
 
 // ─── Main normalizer ──────────────────────────────────────────────────────────
@@ -76,6 +82,13 @@ export function normalizeEvents(
 
       if (!home || !away) return null;
 
+      // Extract real totals / BTTS odds when present in the API response.
+      // Soccer sports request these markets; non-soccer gets undefined here.
+      const ouOver25  = bestOddsForMarket(event, 'totals', 'Over');
+      const ouUnder25 = bestOddsForMarket(event, 'totals', 'Under');
+      const bttsYes   = config.hasDraw ? bestOddsForMarket(event, 'btts', 'Yes') : undefined;
+      const bttsNo    = config.hasDraw ? bestOddsForMarket(event, 'btts', 'No')  : undefined;
+
       const commence = new Date(event.commence_time);
 
       return {
@@ -89,11 +102,11 @@ export function normalizeEvents(
         isLive:      false as boolean,
         marketCount: 20,
         commenceIso: event.commence_time,
-        odds: {
-          home,
-          draw,
-          away,
-        },
+        odds: { home, draw, away },
+        ...(ouOver25  !== undefined && { ouOver25  }),
+        ...(ouUnder25 !== undefined && { ouUnder25 }),
+        ...(bttsYes   !== undefined && { bttsYes   }),
+        ...(bttsNo    !== undefined && { bttsNo    }),
       } as Match;
     })
     .filter((m): m is Match => m !== null);

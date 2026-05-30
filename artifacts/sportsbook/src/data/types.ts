@@ -133,6 +133,14 @@ export interface MatchEntity {
   marketCount: number;
   /** Inline primary market for fast rendering without a separate lookup */
   primaryMarket: MarketEntity;
+  /** Real API O/U 2.5 over odds (from totals market), when available */
+  ouOver25?: number;
+  /** Real API O/U 2.5 under odds (from totals market), when available */
+  ouUnder25?: number;
+  /** Real API BTTS Yes odds, when available */
+  bttsYes?: number;
+  /** Real API BTTS No odds, when available */
+  bttsNo?: number;
 }
 
 // ── Featured Promotion ─────────────────────────────────────────────────────────

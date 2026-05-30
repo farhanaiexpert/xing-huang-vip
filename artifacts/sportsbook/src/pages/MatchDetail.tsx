@@ -52,6 +52,11 @@ function matchToEntity(match: Match): MatchEntity {
         { id: `${match.id}_a`, marketId: primaryMarketId, name: match.team2 ?? 'Away', shortName: '2', odds: match.odds.away,       oddsStatus: 'active', oddsMovement: 'stable' },
       ],
     },
+    // Pass real API totals/BTTS odds so soccerMarkets() can prefer them over generated values
+    ouOver25:  match.ouOver25,
+    ouUnder25: match.ouUnder25,
+    bttsYes:   match.bttsYes,
+    bttsNo:    match.bttsNo,
   };
 }
 
