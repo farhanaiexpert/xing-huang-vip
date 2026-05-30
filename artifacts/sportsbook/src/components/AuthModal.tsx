@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Wallet, Loader2, AlertCircle, CheckCircle2, Copy, Check, ChevronRight } from 'lucide-react';
+import {
+  X, Wallet, AlertCircle, CheckCircle2, Copy, Check,
+  ChevronRight, PenLine, ShieldCheck, Loader2,
+} from 'lucide-react';
 import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react';
 import { useSignMessage } from 'wagmi';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
@@ -31,23 +34,40 @@ function useCopy(text: string) {
   return { copied, copy };
 }
 
+const WALLETS = [
+  { name: 'MetaMask',      short: 'MM',  color: '#E2761B', bg: 'rgba(226,118,27,0.12)',  border: 'rgba(226,118,27,0.25)' },
+  { name: 'WalletConnect', short: 'WC',  color: '#3B99FC', bg: 'rgba(59,153,252,0.12)',  border: 'rgba(59,153,252,0.25)' },
+  { name: 'Coinbase',      short: 'CB',  color: '#4F84FF', bg: 'rgba(79,132,255,0.12)',  border: 'rgba(79,132,255,0.25)' },
+  { name: 'Trust',         short: 'TW',  color: '#3375BB', bg: 'rgba(51,117,187,0.12)',  border: 'rgba(51,117,187,0.25)' },
+  { name: 'Phantom',       short: 'PH',  color: '#AB9FF2', bg: 'rgba(171,159,242,0.12)', border: 'rgba(171,159,242,0.25)' },
+];
+
+const FLOW_STEPS = [
+  { label: 'Connect', Icon: Wallet     },
+  { label: 'Sign',    Icon: PenLine    },
+  { label: 'Access',  Icon: ShieldCheck },
+];
+
+function getFlowStep(step: Step): number {
+  if (step === 'signing' || step === 'verifying') return 1;
+  if (step === 'done') return 2;
+  return 0;
+}
+
 export function AuthModal({ open, onClose }: AuthModalProps) {
   const { loginWithWallet } = useAuth();
-  const { open: openAppKit }              = useAppKit();
-  const { address, isConnected }          = useAppKitAccount();
-  const { open: appKitModalOpen }         = useAppKitState();
-  const { signMessageAsync }              = useSignMessage();
+  const { open: openAppKit }      = useAppKit();
+  const { address, isConnected }  = useAppKitAccount();
+  const { open: appKitModalOpen } = useAppKitState();
+  const { signMessageAsync }      = useSignMessage();
 
   const [step,  setStep]  = useState<Step>('idle');
   const [error, setError] = useState('');
-
-  // Track whether user explicitly triggered wallet connection from this modal
   const waitingForConnect = useRef(false);
 
   const addrShort = shortAddress(address) ?? '';
   const { copied, copy } = useCopy(address ?? '');
 
-  // Reset when modal closes
   useEffect(() => {
     if (!open) {
       setStep('idle');
@@ -56,50 +76,49 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     }
   }, [open]);
 
-  // When AppKit modal closes and wallet just connected → auto-sign
   useEffect(() => {
     if (!open) return;
     if (!waitingForConnect.current) return;
-    if (appKitModalOpen) return;                 // still open
-    if (!isConnected || !address) return;        // not connected
+    if (appKitModalOpen) return;
+    if (!isConnected || !address) return;
     waitingForConnect.current = false;
     void handleSign(address);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appKitModalOpen, isConnected, address, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (step !== 'waiting_wallet') return;
+    if (appKitModalOpen) return;
+    if (isConnected && address) return;
+    setStep('idle');
+    waitingForConnect.current = false;
+  }, [appKitModalOpen, step, isConnected, address, open]);
+
   async function handleSign(addr: string) {
     setError('');
     setStep('signing');
     try {
-      // 1. Fetch nonce
       const { nonce, message } = await api.get<{ nonce: string; message: string }>(
         `/auth/wallet/nonce?address=${addr.toLowerCase()}`
       );
-
-      // 2. Sign message in wallet
       const signature = await signMessageAsync({ message });
-
-      // 3. Verify on server
       setStep('verifying');
       const data = await api.post<WalletVerifyResponse>('/auth/wallet/verify', {
         address: addr.toLowerCase(),
         signature,
         nonce,
       });
-
-      // 4. Store session
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
-
       setStep('done');
-      setTimeout(onClose, 600);
+      setTimeout(onClose, 1400);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
-      // User rejected signature → friendly message
       const isRejected = msg.toLowerCase().includes('reject') ||
                          msg.toLowerCase().includes('denied') ||
                          msg.toLowerCase().includes('user refused');
-      setError(isRejected ? 'Signature request was cancelled. Click below to try again.' : msg);
+      setError(isRejected ? 'Signature cancelled. Tap below to try again.' : msg);
       setStep('idle');
     }
   }
@@ -107,7 +126,6 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   function handleConnectWallet() {
     setError('');
     if (isConnected && address) {
-      // Wallet already connected — go straight to signing
       void handleSign(address);
     } else {
       waitingForConnect.current = true;
@@ -116,166 +134,364 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     }
   }
 
-  // If AppKit modal was dismissed without connecting
-  useEffect(() => {
-    if (!open) return;
-    if (step !== 'waiting_wallet') return;
-    if (appKitModalOpen) return;
-    if (isConnected && address) return; // connected — effect above handles it
-    // AppKit closed without connecting
-    setStep('idle');
-    waitingForConnect.current = false;
-  }, [appKitModalOpen, step, isConnected, address, open]);
-
   if (!open) return null;
 
-  const isWorking = step === 'waiting_wallet' || step === 'signing' || step === 'verifying';
+  const isWorking    = step === 'waiting_wallet' || step === 'signing' || step === 'verifying';
+  const flowStepIdx  = getFlowStep(step);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center sm:p-4">
+      {/* Keyframes */}
+      <style>{`
+        @keyframes amShimmer   { 0%,100%{background-position:200% center} 50%{background-position:0% center} }
+        @keyframes amFadeSlide { from{transform:translateY(24px);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes amPulseRing { 0%{transform:scale(1);opacity:0.55} 80%{transform:scale(2.6);opacity:0} 100%{transform:scale(2.6);opacity:0} }
+        @keyframes amWobble    { 0%,100%{transform:rotate(-5deg) scale(1)} 50%{transform:rotate(5deg) scale(1.06)} }
+        @keyframes amCheckIn   { 0%{transform:scale(0) rotate(-15deg);opacity:0} 60%{transform:scale(1.18) rotate(3deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+        @keyframes amDotPulse  { 0%,100%{opacity:1} 50%{opacity:0.35} }
+      `}</style>
+
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-[#0B0F14]/85 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#050A12]/90 backdrop-blur-md"
         onClick={isWorking ? undefined : onClose}
       />
 
-      {/* Modal */}
+      {/* Card */}
       <div
-        className="relative w-full max-w-md rounded-2xl border border-[#253241] shadow-[0_32px_80px_rgba(0,0,0,0.8)] overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #0D1520 0%, #0B1219 100%)' }}
+        className="relative w-full sm:max-w-[480px] rounded-t-[28px] sm:rounded-[24px] overflow-hidden"
+        style={{
+          background: 'linear-gradient(165deg, #0E1B2C 0%, #0B1219 45%, #080F15 100%)',
+          border: '1px solid rgba(0,223,169,0.14)',
+          boxShadow: '0 -8px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03) inset',
+          animation: 'amFadeSlide 0.42s cubic-bezier(0.16,1,0.3,1)',
+        }}
       >
-        {/* Teal shimmer top bar */}
-        <div className="absolute top-0 left-0 right-0 h-[2px]"
-          style={{ background: 'linear-gradient(90deg, transparent 0%, #00DFA9 50%, transparent 100%)' }} />
+        {/* Corner glow blobs */}
+        <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full"
+          style={{ background: 'radial-gradient(circle,rgba(0,223,169,0.09) 0%,transparent 65%)' }} />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 w-60 h-60 rounded-full"
+          style={{ background: 'radial-gradient(circle,rgba(56,189,248,0.08) 0%,transparent 65%)' }} />
 
-        {/* Close */}
+        {/* Animated shimmer top bar */}
+        <div className="absolute top-0 left-0 right-0 h-[2px]"
+          style={{
+            background: 'linear-gradient(90deg, transparent 0%, #00DFA9 20%, #38BDF8 50%, #00DFA9 80%, transparent 100%)',
+            backgroundSize: '200% 100%',
+            animation: 'amShimmer 3.5s ease-in-out infinite',
+          }} />
+
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-3.5 pb-0">
+          <div className="w-10 h-[3px] rounded-full bg-white/15" />
+        </div>
+
+        {/* Close button */}
         {!isWorking && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1.5 rounded-lg text-[#94A3B8]/40 hover:text-[#F8FAFC] hover:bg-white/[0.06] transition-all z-10"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-[#94A3B8]/40 hover:text-[#F8FAFC] hover:bg-white/[0.07] transition-all duration-150 z-10"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
 
-        {/* Logo + headline */}
-        <div className="pt-8 pb-6 px-8 text-center border-b border-[#253241]/60">
-          <div
-            className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4"
-            style={{
-              background: 'linear-gradient(135deg,#00DFA9,#00A882)',
-              boxShadow: '0 0 24px rgba(0,223,169,0.3)',
-            }}
-          >
-            <Wallet className="w-6 h-6 text-[#0B0F14]" />
+        {/* ─── HEADER ─────────────────────────────────── */}
+        <div className="px-7 pt-6 pb-5 text-center">
+
+          {/* Brand icon */}
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <div
+                className="w-[60px] h-[60px] rounded-[18px] flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg,#00DFA9 0%,#00B88A 100%)',
+                  boxShadow: '0 0 0 1px rgba(0,223,169,0.35), 0 0 36px rgba(0,223,169,0.22)',
+                }}
+              >
+                <Wallet className="w-7 h-7 text-[#031A10]" />
+              </div>
+
+              {/* Pulse rings when working */}
+              {isWorking && [0,1].map(i => (
+                <div key={i} className="absolute inset-0 rounded-[18px]"
+                  style={{
+                    border: '1.5px solid rgba(0,223,169,0.4)',
+                    animation: `amPulseRing 2s ease-out ${i * 0.7}s infinite`,
+                  }} />
+              ))}
+
+              {/* Success badge */}
+              {step === 'done' && (
+                <div
+                  className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(135deg,#00DFA9,#00B88A)',
+                    boxShadow: '0 0 14px rgba(0,223,169,0.6)',
+                    animation: 'amCheckIn 0.45s cubic-bezier(0.16,1,0.3,1)',
+                  }}
+                >
+                  <Check className="w-3.5 h-3.5 text-[#031A10] font-black" strokeWidth={3} />
+                </div>
+              )}
+            </div>
           </div>
-          <h2 className="text-lg font-black text-[#F8FAFC] tracking-tight">
-            {step === 'done' ? 'Signed in!' : 'Connect your wallet'}
-          </h2>
-          <p className="text-xs text-[#94A3B8]/50 mt-1">
+
+          <h2 className="text-[20px] font-black text-[#F8FAFC] tracking-tight leading-tight">
             {step === 'done'
-              ? 'Welcome to CupBett'
-              : 'Your wallet is your identity'}
+              ? "You're in — Welcome!"
+              : step === 'signing' || step === 'verifying'
+                ? 'Sign to Verify'
+                : 'Connect Your Wallet'}
+          </h2>
+          <p className="text-[13px] text-[#94A3B8]/55 mt-1.5 leading-relaxed">
+            {step === 'done'
+              ? 'Welcome to CupBett Sports Trading'
+              : step === 'signing'
+                ? 'Open your wallet app and approve the message'
+                : step === 'verifying'
+                  ? 'Confirming your identity…'
+                  : step === 'waiting_wallet'
+                    ? 'Pick your wallet from the selector'
+                    : 'Your wallet is your CupBett identity'}
           </p>
         </div>
 
-        <div className="p-8 pt-6 flex flex-col gap-4">
+        {/* ─── STEP INDICATOR ─────────────────────────── */}
+        <div className="px-7 pb-5">
+          <div className="flex items-start">
+            {FLOW_STEPS.map(({ label, Icon }, i) => {
+              const isDone   = i < flowStepIdx;
+              const isActive = i === flowStepIdx;
+              return (
+                <div key={i} className="flex items-center flex-1">
+                  <div className="flex flex-col items-center gap-1.5 shrink-0">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-400"
+                      style={{
+                        background: isDone || isActive
+                          ? 'linear-gradient(135deg,#00DFA9 0%,#00B88A 100%)'
+                          : 'rgba(255,255,255,0.04)',
+                        border: isActive
+                          ? '2px solid rgba(0,223,169,0.6)'
+                          : isDone
+                            ? 'none'
+                            : '1px solid rgba(255,255,255,0.08)',
+                        boxShadow: isActive ? '0 0 18px rgba(0,223,169,0.3)' : 'none',
+                      }}
+                    >
+                      {isDone
+                        ? <Check className="w-[15px] h-[15px] text-[#031A10]" strokeWidth={3} />
+                        : <Icon
+                            className="w-[15px] h-[15px]"
+                            style={{ color: isActive ? '#031A10' : 'rgba(148,163,184,0.25)' }}
+                          />
+                      }
+                    </div>
+                    <span
+                      className="text-[9px] font-bold tracking-[0.1em] uppercase"
+                      style={{ color: isActive || isDone ? '#00DFA9' : 'rgba(148,163,184,0.25)' }}
+                    >
+                      {label}
+                    </span>
+                  </div>
 
-          {/* ── Done state ── */}
+                  {/* Connector line */}
+                  {i < FLOW_STEPS.length - 1 && (
+                    <div className="flex-1 mb-5 mx-2 h-px transition-all duration-400"
+                      style={{ background: i < flowStepIdx ? '#00DFA9' : 'rgba(255,255,255,0.07)' }} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Thin separator */}
+        <div className="mx-7 h-px bg-white/[0.05]" />
+
+        {/* ─── CONTENT AREA ───────────────────────────── */}
+        <div className="px-7 py-5 flex flex-col gap-3.5">
+
+          {/* ── DONE ── */}
           {step === 'done' && (
-            <div className="flex flex-col items-center gap-3 py-4">
+            <div className="flex flex-col items-center gap-4 py-3">
               <div
-                className="w-14 h-14 rounded-full flex items-center justify-center"
-                style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.35)' }}
+                className="w-20 h-20 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'radial-gradient(circle,rgba(0,223,169,0.14) 0%,transparent 70%)',
+                  border: '1px solid rgba(0,223,169,0.22)',
+                  animation: 'amCheckIn 0.5s cubic-bezier(0.16,1,0.3,1)',
+                }}
               >
-                <CheckCircle2 className="w-7 h-7 text-[#00DFA9]" />
+                <CheckCircle2 className="w-10 h-10 text-[#00DFA9]" />
               </div>
-              <p className="text-sm text-[#94A3B8]">You're in!</p>
+
+              {address && (
+                <div
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl w-full"
+                  style={{ background: 'rgba(0,223,169,0.06)', border: '1px solid rgba(0,223,169,0.15)' }}
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#00DFA9] shrink-0"
+                    style={{ boxShadow: '0 0 8px rgba(0,223,169,0.9)', animation: 'amDotPulse 1.5s ease-in-out infinite' }} />
+                  <p className="text-sm font-mono text-[#00DFA9] flex-1 truncate">{addrShort}</p>
+                  <Check className="w-4 h-4 text-[#00DFA9]/50 shrink-0" />
+                </div>
+              )}
+
+              <p className="text-[12px] text-[#94A3B8]/40">Closing automatically…</p>
             </div>
           )}
 
-          {/* ── Connected wallet indicator (idle, when wallet is already connected) ── */}
+          {/* ── IDLE: wallet already connected ── */}
           {step === 'idle' && isConnected && address && (
             <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl"
-              style={{ background: 'rgba(0,223,169,0.06)', border: '1px solid rgba(0,223,169,0.20)' }}
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl"
+              style={{ background: 'rgba(0,223,169,0.055)', border: '1px solid rgba(0,223,169,0.18)' }}
             >
-              <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] shrink-0" />
-              <p className="flex-1 text-xs font-mono text-[#00DFA9] truncate">{addrShort}</p>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#00DFA9] shrink-0"
+                style={{ boxShadow: '0 0 8px rgba(0,223,169,0.9)' }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] font-bold text-[#94A3B8]/40 uppercase tracking-[0.12em] mb-0.5">Wallet ready</p>
+                <p className="text-[13px] font-mono text-[#00DFA9] truncate">{addrShort}</p>
+              </div>
               <button
                 onClick={copy}
-                className="shrink-0 p-1 rounded-md text-[#94A3B8]/50 hover:text-[#00DFA9] transition-colors"
-                title="Copy full address"
+                className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:bg-white/[0.05] transition-all"
+                title="Copy address"
               >
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
           )}
 
-          {/* ── Working states ── */}
-          {(step === 'waiting_wallet' || step === 'signing' || step === 'verifying') && (
-            <div className="flex flex-col items-center gap-3 py-4">
-              <Loader2 className="w-8 h-8 text-[#00DFA9] animate-spin" />
-              <p className="text-sm text-[#94A3B8] text-center">
-                {step === 'waiting_wallet' && 'Opening wallet selector…'}
-                {step === 'signing'        && 'Check your wallet — sign the message to continue'}
-                {step === 'verifying'      && 'Verifying signature…'}
-              </p>
-              {step === 'signing' && (
-                <p className="text-xs text-[#64748B] text-center">
-                  This is a free off-chain signature — no gas fees
-                </p>
+          {/* ── WORKING STATES ── */}
+          {isWorking && (
+            <div className="flex flex-col items-center gap-5 py-5">
+
+              {/* Waiting for wallet */}
+              {step === 'waiting_wallet' && (
+                <div className="relative flex items-center justify-center w-20 h-20">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="absolute inset-0 rounded-2xl"
+                      style={{
+                        border: '1.5px solid rgba(0,223,169,0.3)',
+                        animation: `amPulseRing 2.2s ease-out ${i * 0.65}s infinite`,
+                      }} />
+                  ))}
+                  <div className="w-[60px] h-[60px] rounded-2xl flex items-center justify-center"
+                    style={{ background: 'rgba(0,223,169,0.09)', border: '1px solid rgba(0,223,169,0.22)' }}>
+                    <Wallet className="w-7 h-7 text-[#00DFA9]"
+                      style={{ animation: 'amWobble 1.4s ease-in-out infinite' }} />
+                  </div>
+                </div>
               )}
+
+              {/* Signing */}
+              {step === 'signing' && (
+                <div className="relative">
+                  <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(56,189,248,0.09)', border: '1px solid rgba(56,189,248,0.22)' }}>
+                    <PenLine className="w-7 h-7 text-[#38BDF8]" />
+                  </div>
+                  <div className="absolute -top-2.5 -right-2.5 w-7 h-7 rounded-full flex items-center justify-center bg-[#0B1219]">
+                    <Loader2 className="w-5 h-5 text-[#38BDF8] animate-spin" />
+                  </div>
+                </div>
+              )}
+
+              {/* Verifying */}
+              {step === 'verifying' && (
+                <div className="relative">
+                  <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.2)' }}>
+                    <ShieldCheck className="w-7 h-7 text-[#00DFA9]" />
+                  </div>
+                  <div className="absolute -top-2.5 -right-2.5 w-7 h-7 rounded-full flex items-center justify-center bg-[#0B1219]">
+                    <Loader2 className="w-5 h-5 text-[#00DFA9] animate-spin" />
+                  </div>
+                </div>
+              )}
+
+              {/* State label */}
+              <div className="text-center">
+                <p className="text-[14px] font-bold text-[#F8FAFC]">
+                  {step === 'waiting_wallet' && 'Opening wallet selector…'}
+                  {step === 'signing'        && 'Check your wallet'}
+                  {step === 'verifying'      && 'Verifying signature…'}
+                </p>
+                <p className="text-[12px] text-[#94A3B8]/45 mt-1">
+                  {step === 'waiting_wallet' && 'Select MetaMask, WalletConnect, or any wallet'}
+                  {step === 'signing'        && 'Free off-chain signature — zero gas fees'}
+                  {step === 'verifying'      && 'Almost there, hold tight'}
+                </p>
+              </div>
             </div>
           )}
 
-          {/* ── Error ── */}
+          {/* ── ERROR ── */}
           {error && step === 'idle' && (
-            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-400 leading-relaxed">{error}</p>
+            <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-red-500/[0.07] border border-red-500/20">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-[1px]" />
+              <p className="text-[12px] text-red-400 leading-relaxed">{error}</p>
             </div>
           )}
 
-          {/* ── Primary CTA ── */}
-          {(step === 'idle') && (
+          {/* ── PRIMARY CTA ── */}
+          {step === 'idle' && (
             <button
               onClick={handleConnectWallet}
-              className="w-full h-12 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="relative w-full h-[54px] rounded-xl font-black text-[14px] tracking-tight flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] overflow-hidden group"
               style={{
-                background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 60%,#00A882 100%)',
-                boxShadow: '0 0 24px rgba(0,223,169,0.25)',
+                background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 55%,#00A882 100%)',
+                boxShadow: '0 0 40px rgba(0,223,169,0.18), 0 4px 20px rgba(0,0,0,0.4)',
+                color: '#031A10',
               }}
             >
-              <Wallet className="w-4 h-4 shrink-0" />
-              {isConnected && address
-                ? 'Sign to Log In'
-                : 'Connect Wallet'}
-              <ChevronRight className="w-4 h-4 ml-auto shrink-0" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                style={{ background: 'linear-gradient(135deg,#12F0C4 0%,#00DFA9 55%,#00C49A 100%)' }} />
+              <Wallet className="relative w-[18px] h-[18px] shrink-0" />
+              <span className="relative">
+                {isConnected && address ? 'Sign & Log In' : 'Connect Wallet & Log In'}
+              </span>
+              <ChevronRight className="relative w-4 h-4 ml-auto shrink-0 opacity-70" />
             </button>
           )}
 
-          {/* ── Wallet options note ── */}
+          {/* ── WALLET CHIPS ── */}
           {step === 'idle' && !isConnected && (
-            <p className="text-center text-[11px] text-[#64748B]">
-              MetaMask · WalletConnect · Coinbase · Trust · 300+ wallets
-            </p>
+            <div className="flex items-center gap-1.5 justify-center flex-wrap pt-0.5">
+              {WALLETS.map(w => (
+                <div
+                  key={w.name}
+                  title={w.name}
+                  className="flex items-center gap-1 h-[26px] px-2.5 rounded-lg text-[10px] font-bold tracking-wide cursor-default select-none"
+                  style={{ background: w.bg, color: w.color, border: `1px solid ${w.border}` }}
+                >
+                  {w.short}
+                </div>
+              ))}
+              <span className="text-[10px] text-[#64748B]/70">+300 wallets</span>
+            </div>
           )}
 
-          {/* ── First-time info ── */}
+          {/* ── INFO PILL ── */}
           {step === 'idle' && (
-            <div
-              className="flex items-start gap-2.5 px-3 py-3 rounded-xl text-[11px] text-[#94A3B8]/70 leading-relaxed"
-              style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
-              <span className="text-[#00DFA9] shrink-0 font-bold mt-px">ℹ</span>
-              <span>
-                New to CupBett? Your account is created automatically the moment
-                your wallet signs in — nothing else required.
-              </span>
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="w-[22px] h-[22px] rounded-full shrink-0 flex items-center justify-center"
+                style={{ background: 'rgba(0,223,169,0.1)' }}>
+                <ShieldCheck className="w-3 h-3 text-[#00DFA9]" />
+              </div>
+              <p className="text-[11px] text-[#94A3B8]/55 leading-relaxed">
+                New here? Your account is created instantly the first time your wallet signs in.
+              </p>
             </div>
           )}
         </div>
+
+        {/* iOS safe-area spacer */}
+        <div className="sm:hidden" style={{ height: 'env(safe-area-inset-bottom, 12px)' }} />
       </div>
     </div>
   );
