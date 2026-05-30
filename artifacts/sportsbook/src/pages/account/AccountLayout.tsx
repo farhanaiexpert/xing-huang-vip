@@ -136,8 +136,12 @@ export function AccountLayout() {
                   <span className="text-[15px] font-black text-[#00DFA9]">{initials}</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[13px] font-bold text-[#F8FAFC] truncate">{user.username}</p>
-                  <p className="text-[10px] text-[#94A3B8]/50 truncate">{user.email}</p>
+                  <p className="text-[13px] font-bold text-[#F8FAFC] truncate">{displayLabel}</p>
+                  {user.walletAddress && (
+                    <p className="text-[10px] text-[#00DFA9]/60 font-mono truncate">
+                      {user.walletAddress.slice(0, 6)}…{user.walletAddress.slice(-4)}
+                    </p>
+                  )}
                 </div>
               </div>
               {user.referralCode && (
