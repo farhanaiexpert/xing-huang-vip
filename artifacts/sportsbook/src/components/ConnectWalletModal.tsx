@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { useAuth } from '../contexts/AuthContext';
-import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
+import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react';
 
 const ERC20_ADDRESS = import.meta.env.VITE_PLATFORM_ERC20_ADDRESS as string || '';
 const TRC20_ADDRESS = import.meta.env.VITE_PLATFORM_TRC20_ADDRESS as string || '';
@@ -70,14 +70,21 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   const { user } = useAuth();
   const { open: openReown } = useAppKit();
   const { address, isConnected } = useAppKitAccount();
-  const [reownStep, setReownStep] = useState<'idle' | 'connecting' | 'connected'>('idle');
+  const { open: reownModalOpen } = useAppKitState();
+  const [connecting, setConnecting] = useState(false);
   const [copiedErc, setCopiedErc] = useState(false);
   const [copiedTrc, setCopiedTrc] = useState(false);
+
+  // Derive step from live state — no stale local enum needed
+  const reownStep: 'idle' | 'connecting' | 'connected' = isConnected && address
+    ? 'connected'
+    : connecting
+      ? 'connecting'
+      : 'idle';
 
   function close() {
     onOpenChange?.(false);
     onClose?.();
-    setTimeout(() => setReownStep('idle'), 300);
   }
 
   function handleDeposit(method: 'nowpayments' | 'manual') {
@@ -90,21 +97,21 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     }
   }
 
-  async function handleConnectWallet() {
+  function handleConnectWallet() {
     if (!user) { setAuthOpen(true); return; }
-    setReownStep('connecting');
-    try {
-      await openReown();
-    } catch {
-      setReownStep('idle');
-    }
+    // Close our modal FIRST so Reown can open unobstructed
+    close();
+    setConnecting(true);
+    // Small delay to allow our modal exit animation before Reown opens
+    setTimeout(() => openReown(), 120);
   }
 
+  // When Reown modal closes (without connecting) → clear spinner
   useEffect(() => {
-    if (isConnected && address && reownStep === 'connecting') {
-      setReownStep('connected');
+    if (!reownModalOpen && connecting && !isConnected) {
+      setConnecting(false);
     }
-  }, [isConnected, address, reownStep]);
+  }, [reownModalOpen, connecting, isConnected]);
 
   function copyErc() {
     navigator.clipboard.writeText(ERC20_ADDRESS).catch(() => {});

@@ -1,5 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+/* ── Reown AppKit z-index override (must appear above our z-99999 modals) ── */
+w3m-modal,
+wcm-modal,
+appkit-modal {
+  z-index: 2147483647 !important;
+}
+w3m-modal::part(backdrop),
+wcm-modal::part(backdrop) {
+  z-index: 2147483646 !important;
+}
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 

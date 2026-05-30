@@ -32,5 +32,6 @@ export const appkit = createAppKit({
   themeVariables: {
     '--w3m-accent': '#00DFA9',
     '--w3m-border-radius-master': '12px',
+    '--w3m-z-index': 2147483647,
   },
 });
