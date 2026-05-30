@@ -835,6 +835,26 @@ function TopMatchesBanner({ leagues }: { leagues: League[] }) {
 // ────────────────────────────────────────────────────────────────────────────
 // NO RESULTS STATE
 // ────────────────────────────────────────────────────────────────────────────
+const ALL_SPORT_EMOJI: Record<string, string> = {
+  // Covered by Odds API
+  sp_soccer: '⚽', sp_basketball: '🏀', sp_american_football: '🏈',
+  sp_tennis: '🎾', sp_cricket: '🏏', sp_baseball: '⚾',
+  sp_ice_hockey: '🏒', sp_rugby_league: '🏉', sp_rugby_union: '🏉',
+  sp_mma: '🥋', sp_boxing: '🥊', sp_golf: '⛳', sp_aussie_rules: '🏈',
+  sp_darts: '🎯', sp_handball: '🤾', sp_volleyball: '🏐', sp_ucl: '⚽',
+  // Not yet covered
+  sp_formula_1: '🏎️', sp_horse_racing: '🏇', sp_esports: '🎮',
+  sp_cycling: '🚴', sp_snooker: '🎱', sp_badminton: '🏸',
+  sp_table_tennis: '🏓', sp_water_polo: '🤽', sp_sailing: '⛵',
+  sp_skiing: '⛷️', sp_winter_sports: '⛷️', sp_xc_skiing: '⛷️',
+  sp_biathlon: '🎿', sp_ski_jumping: '🎿', sp_sumo: '🤼',
+  sp_surfing: '🏄', sp_lacrosse: '🥍', sp_squash: '🎾',
+  sp_motorsports: '🏎️', sp_motorbikes: '🏍️',
+  sp_gaelic: '🏐', sp_futsal: '⚽', sp_softball: '⚾',
+  sp_speedway: '🏍️', sp_trotting: '🏇', sp_greyhounds: '🐕',
+  sp_lotto: '🎰', sp_virtual: '🎮', sp_fantasy: '🎯',
+};
+
 function NoResultsState({
   search,
   selectedSportId,
@@ -846,16 +866,23 @@ function NoResultsState({
   onClear: () => void;
   onReset: () => void;
 }) {
-  // Sport is selected but has no Odds API coverage → "Coming Soon"
   const isCoveredSport =
     !selectedSportId || REAL_DATA_SPORT_IDS.has(selectedSportId);
+  const sportEmoji = selectedSportId ? ALL_SPORT_EMOJI[selectedSportId] : null;
 
   return (
     <div className="flex flex-col items-center text-center py-16 px-6 bg-[#121821] rounded-xl border border-[#253241]">
       <div className="relative mb-5">
-        <div className="absolute inset-0 rounded-3xl bg-[#38BDF8]/5 blur-2xl scale-[2]" />
+        <div className={cn(
+          "absolute inset-0 rounded-3xl blur-2xl scale-[2]",
+          isCoveredSport ? "bg-[#38BDF8]/5" : "bg-[#94A3B8]/5"
+        )} />
         <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center bg-[#18212B] border border-[#253241] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-          <TrendingUp className="h-7 w-7 text-[#94A3B8]/30" />
+          {sportEmoji ? (
+            <span className="text-3xl leading-none">{sportEmoji}</span>
+          ) : (
+            <TrendingUp className="h-7 w-7 text-[#94A3B8]/30" />
+          )}
         </div>
       </div>
 
@@ -886,8 +913,8 @@ function NoResultsState({
             Coming Soon
           </p>
           <p className="text-sm text-[#94A3B8]/70 mb-5 max-w-xs leading-relaxed">
-            Live odds for this sport are not yet available. Check back soon —
-            we're adding new markets regularly.
+            We're working on live odds for this sport. Check back soon — new
+            markets are added regularly.
           </p>
           <button
             onClick={onReset}
@@ -900,11 +927,11 @@ function NoResultsState({
       ) : (
         <>
           <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1.5">
-            No upcoming fixtures
+            No markets right now
           </p>
           <p className="text-sm text-[#94A3B8]/70 mb-5 max-w-xs leading-relaxed">
-            No events match your current filters. Try removing a date filter or
-            switching sport.
+            No upcoming fixtures match your filters. Check back soon — or
+            try a different date.
           </p>
           <button
             onClick={onReset}

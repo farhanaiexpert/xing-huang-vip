@@ -39,11 +39,11 @@ export const ALL_ODDS_SPORT_KEYS: string[] = [
   // Baseball
   'baseball_mlb', 'baseball_npb', 'baseball_kbo',
   // Ice Hockey
-  'icehockey_nhl', 'icehockey_sweden_hockey_league',
+  'icehockey_nhl', 'icehockey_sweden_hockey_league', 'icehockey_nhl_championship_winner',
   // Rugby League
-  'rugbyleague_nrl', 'rugbyleague_super_league',
+  'rugbyleague_nrl', 'rugbyleague_super_league', 'rugbyleague_nrl_premiership_winner',
   // Rugby Union
-  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations', 'rugbyunion_world_cup',
   // Golf
   'golf_masters_tournament_winner', 'golf_pga_championship_winner',
   'golf_us_open_winner', 'golf_the_open_championship_winner', 'golf_pga_tour_winner',
@@ -59,20 +59,45 @@ export const ALL_ODDS_SPORT_KEYS: string[] = [
   'mma_mixed_martial_arts',
 ];
 
-// Live sports (in-play events polling)
+// Live sports (in-play events polling) — all newly wired sports included
 const LIVE_SPORTS = [
-  'soccer_epl', 'soccer_uefa_champs_league', 'soccer_spain_la_liga',
-  'soccer_germany_bundesliga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
-  'soccer_uefa_europa_league', 'soccer_usa_mls', 'soccer_brazil_campeonato',
-  'americanfootball_nfl', 'basketball_nba', 'basketball_euroleague',
+  // Soccer
+  'soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a',
+  'soccer_france_ligue_one', 'soccer_germany_bundesliga',
+  'soccer_uefa_champs_league', 'soccer_uefa_europa_league',
+  'soccer_usa_mls', 'soccer_turkey_super_league',
+  'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato',
+  'soccer_mexico_ligamx', 'soccer_efl_champ', 'soccer_scotland_premiership',
+  'soccer_portugal_primeira_liga', 'soccer_belgium_first_div',
+  'soccer_argentina_primera_division', 'soccer_conmebol_copa_libertadores',
+  'soccer_korea_kleague1', 'soccer_japan_j_league', 'soccer_australia_aleague',
+  // American Football
+  'americanfootball_nfl', 'americanfootball_ncaaf', 'americanfootball_ufl',
+  // Aussie Rules
+  'aussierules_afl',
+  // Basketball
+  'basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl',
+  // Tennis
   'tennis_atp_french_open', 'tennis_wta_french_open',
-  'cricket_ipl', 'cricket_international_t20', 'cricket_test_match',
-  'baseball_mlb', 'icehockey_nhl',
+  // Cricket
+  'cricket_ipl', 'cricket_international_t20', 'cricket_big_bash',
+  'cricket_psl', 'cricket_test_match',
+  // Baseball
+  'baseball_mlb', 'baseball_npb', 'baseball_kbo',
+  // Ice Hockey
+  'icehockey_nhl', 'icehockey_sweden_hockey_league',
+  // Rugby League
   'rugbyleague_nrl', 'rugbyleague_super_league',
-  'rugbyunion_premiership', 'rugbyunion_super_rugby',
-  'aussierules_afl', 'mma_mixed_martial_arts',
-  'handball_ehf_champions_league', 'volleyball_brazil_superliga',
-  'darts_betway_premier_league', 'boxing_event',
+  // Rugby Union
+  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+  // Handball
+  'handball_ehf_champions_league',
+  // Volleyball
+  'volleyball_brazil_superliga',
+  // Darts
+  'darts_betway_premier_league', 'darts_world_championship',
+  // Boxing & MMA
+  'boxing_event', 'mma_mixed_martial_arts',
 ];
 
 // ─── Returns the merged set of live sport keys (seed + DB-enabled) ────────────

@@ -104,13 +104,16 @@ export const ODDS_API_SPORTS: OddsApiSportConfig[] = [
   // ── Ice Hockey ───────────────────────────────────────────────────────────────
   { key: 'icehockey_nhl',                      sportId: 'sp_ice_hockey',        leagueName: 'NHL',                      countryCode: 'US', hasDraw: false },
   { key: 'icehockey_sweden_hockey_league',     sportId: 'sp_ice_hockey',        leagueName: 'SHL (Sweden)',              countryCode: 'SE', hasDraw: false },
+  { key: 'icehockey_nhl_championship_winner',  sportId: 'sp_ice_hockey',        leagueName: 'NHL Championship Winner',  countryCode: 'US', hasDraw: false },
   // ── Rugby League ─────────────────────────────────────────────────────────────
   { key: 'rugbyleague_nrl',                    sportId: 'sp_rugby_league',      leagueName: 'NRL',                      countryCode: 'AU', hasDraw: false },
   { key: 'rugbyleague_super_league',           sportId: 'sp_rugby_league',      leagueName: 'Super League',             countryCode: 'GB', hasDraw: false },
+  { key: 'rugbyleague_nrl_premiership_winner', sportId: 'sp_rugby_league',      leagueName: 'NRL Premiership Winner',   countryCode: 'AU', hasDraw: false },
   // ── Rugby Union ──────────────────────────────────────────────────────────────
   { key: 'rugbyunion_premiership',             sportId: 'sp_rugby_union',       leagueName: 'Premiership',              countryCode: 'GB', hasDraw: false },
   { key: 'rugbyunion_super_rugby',             sportId: 'sp_rugby_union',       leagueName: 'Super Rugby',              countryCode: 'AU', hasDraw: false },
   { key: 'rugbyunion_six_nations',             sportId: 'sp_rugby_union',       leagueName: 'Six Nations',              countryCode: 'EU', hasDraw: false },
+  { key: 'rugbyunion_world_cup',               sportId: 'sp_rugby_union',       leagueName: 'Rugby World Cup',          countryCode: 'GL', hasDraw: false },
   // ── Golf ─────────────────────────────────────────────────────────────────────
   { key: 'golf_masters_tournament_winner',     sportId: 'sp_golf',              leagueName: 'Masters Tournament',       countryCode: 'US', hasDraw: false },
   { key: 'golf_pga_championship_winner',       sportId: 'sp_golf',              leagueName: 'PGA Championship',         countryCode: 'US', hasDraw: false },
