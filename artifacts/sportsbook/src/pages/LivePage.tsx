@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Radio, Users, Flame, TrendingUp, TrendingDown, Minus, Zap, Wifi } from 'lucide-react';
+import { Radio, Users, Flame, TrendingUp, TrendingDown, Minus, Zap, Wifi, Clock, RefreshCw } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { BetSlip } from '@/components/BetSlip';
 import { useBetSlip } from '@/hooks/useBetSlip';
@@ -131,6 +131,27 @@ interface LiveMarketGroup {
 }
 
 function rnd(n: number): number { return Math.max(1.05, Math.round(n * 100) / 100); }
+
+/** Map sport string → display label + emoji for filter tabs */
+function getSportFilterMeta(sport: string): { label: string; icon: string } {
+  if (sport === 'soccer')            return { label: 'Soccer',     icon: '⚽' };
+  if (sport === 'basketball')        return { label: 'Basketball', icon: '🏀' };
+  if (sport === 'tennis')            return { label: 'Tennis',     icon: '🎾' };
+  if (sport === 'americanfootball')  return { label: 'Football',   icon: '🏈' };
+  if (sport === 'cricket')           return { label: 'Cricket',    icon: '🏏' };
+  if (sport === 'baseball')          return { label: 'Baseball',   icon: '⚾' };
+  if (sport === 'mma')               return { label: 'MMA',        icon: '🥋' };
+  if (sport === 'aussierules')       return { label: 'AFL',        icon: '🏉' };
+  if (sport === 'rugbyleague')       return { label: 'Rugby',      icon: '🏉' };
+  return { label: sport.charAt(0).toUpperCase() + sport.slice(1), icon: '🏆' };
+}
+
+/** Format seconds as M:SS */
+function fmtCountdown(s: number): string {
+  const m   = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
 
 /**
  * Poisson CDF: P(X <= k) where X ~ Poisson(lambda).
@@ -869,10 +890,10 @@ export function LivePage() {
     return () => el.removeEventListener('scroll', handler);
   }, []);
 
-  // Odds drift every 9–14 seconds (continues even on real data, for visual life)
+  // Odds drift every 15–20 minutes (realistic cadence — not instant)
   const driftRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleNextDrift = useCallback(() => {
-    const delay = 9000 + Math.random() * 5000;
+    const delay = 15 * 60 * 1000 + Math.random() * 5 * 60 * 1000; // 15–20 min
     driftRef.current = setTimeout(() => {
       setPrevSimOdds(s => ({ ...s }));
       setSimOdds(prev => nudgeOdds(prev, displayMatchesRef.current));
@@ -886,8 +907,39 @@ export function LivePage() {
     return () => { if (driftRef.current) clearTimeout(driftRef.current); };
   }, [scheduleNextDrift]);
 
-  // Total stats
-  const totalBettors = displayMatches.reduce((s, m) => s + m.bettors, 0);
+  // Sport filter
+  const [activeSport, setActiveSport] = useState<string>('all');
+
+  // Unique sports present in current matches, with counts
+  const sportFilters = useMemo(() => {
+    const map = new Map<string, { label: string; icon: string; count: number }>();
+    for (const m of displayMatches) {
+      const meta = getSportFilterMeta(m.sport);
+      const existing = map.get(m.sport);
+      if (existing) existing.count++;
+      else map.set(m.sport, { ...meta, count: 1 });
+    }
+    return [...map.entries()].map(([id, v]) => ({ id, ...v }));
+  }, [displayMatches]);
+
+  // Matches after sport filter
+  const filteredMatches = useMemo(
+    () => activeSport === 'all' ? displayMatches : displayMatches.filter(m => m.sport === activeSport),
+    [displayMatches, activeSport],
+  );
+
+  // Countdown to next odds update (seconds, resets on each API refresh)
+  const [nextUpdateIn, setNextUpdateIn] = useState(15 * 60);
+  useEffect(() => {
+    if (lastUpdated) setNextUpdateIn(15 * 60);
+  }, [lastUpdated]);
+  useEffect(() => {
+    const t = setInterval(() => setNextUpdateIn(p => Math.max(0, p - 1)), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Total stats (based on filtered view)
+  const totalBettors = filteredMatches.reduce((s, m) => s + m.bettors, 0);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white overflow-hidden">
@@ -902,85 +954,146 @@ export function LivePage() {
             className="sticky top-0 z-20 backdrop-blur-xl border-b border-white/[0.06]"
             style={{ background: 'linear-gradient(180deg, #0A1018 0%, #0B0F14cc 100%)' }}
           >
-            <div className="px-4 md:px-6 py-3.5 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+            {/* Top row: title + stats */}
+            <div className="px-4 md:px-6 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
-                  <h1 className="text-[16px] font-black text-[#F8FAFC] tracking-tight">Live Betting</h1>
+                  <h1 className="text-[15px] font-black text-[#F8FAFC] tracking-tight">Live Betting</h1>
                 </div>
                 <span className="text-[11px] font-bold bg-[#EF4444] text-white px-2 py-0.5 rounded-full tabular-nums shadow-[0_0_12px_rgba(239,68,68,0.4)]">
                   {liveLoading && !isRealData ? '…' : displayMatches.length}
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-[11px] text-[#64748B]">
-                <div className="hidden sm:flex items-center gap-1.5">
+
+              <div className="flex items-center gap-2.5 text-[11px]">
+                {/* Bettors */}
+                <div className="hidden sm:flex items-center gap-1 text-[#64748B]">
                   <Users className="h-3 w-3" />
-                  <span className="font-semibold text-[#94A3B8]">{totalBettors.toLocaleString()}</span>
-                  <span>active</span>
+                  <span className="font-semibold text-[#94A3B8] tabular-nums">{totalBettors.toLocaleString()}</span>
+                  <span>bettors</span>
                 </div>
-                {/* Real data badge */}
+
+                {/* Countdown to next update */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-white/[0.07]"
+                  style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <Clock className="h-3 w-3 text-[#64748B]" />
+                  <span className="font-mono font-bold tabular-nums text-[#94A3B8]">{fmtCountdown(nextUpdateIn)}</span>
+                  <span className="text-[#475569] text-[10px] hidden sm:inline">next update</span>
+                </div>
+
+                {/* Real / demo badge */}
                 {isRealData ? (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#00DFA9]/[0.08] border border-[#00DFA9]/25">
                     <Wifi className="h-3 w-3 text-[#00DFA9]" />
-                    <span className="text-[#00DFA9] font-semibold">
-                      {lastUpdated
-                        ? `Live · ${Math.floor((Date.now() - lastUpdated.getTime()) / 1000)}s ago`
-                        : 'Live odds'}
-                    </span>
+                    <span className="text-[#00DFA9] font-semibold text-[10px]">Real Odds</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EF4444]/[0.08] border border-[#EF4444]/20">
                     <Radio className="h-3 w-3 text-[#EF4444]" />
-                    <span className="text-[#94A3B8] font-medium">Odds update live</span>
+                    <span className="text-[#EF4444] font-semibold text-[10px]">Demo</span>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Sport filter tabs */}
+            {sportFilters.length > 1 && (
+              <div className="px-4 md:px-6 pb-2.5 flex items-center gap-1.5 overflow-x-auto"
+                style={{ scrollbarWidth: 'none' }}>
+                <button
+                  onClick={() => setActiveSport('all')}
+                  className={cn(
+                    'shrink-0 flex items-center gap-1.5 h-7 px-3 rounded-lg text-[11px] font-bold transition-all duration-150 border',
+                    activeSport === 'all'
+                      ? 'bg-[#00DFA9]/12 text-[#00DFA9] border-[#00DFA9]/30'
+                      : 'bg-white/[0.03] text-[#64748B] border-white/[0.06] hover:text-[#94A3B8] hover:bg-white/[0.05]',
+                  )}
+                >
+                  All
+                  <span className={cn(
+                    'text-[10px] font-black px-1.5 py-0.5 rounded-md',
+                    activeSport === 'all' ? 'bg-[#00DFA9]/20 text-[#00DFA9]' : 'bg-white/[0.06] text-[#475569]',
+                  )}>
+                    {displayMatches.length}
+                  </span>
+                </button>
+                {sportFilters.map(sf => (
+                  <button
+                    key={sf.id}
+                    onClick={() => setActiveSport(sf.id)}
+                    className={cn(
+                      'shrink-0 flex items-center gap-1.5 h-7 px-3 rounded-lg text-[11px] font-bold transition-all duration-150 border',
+                      activeSport === sf.id
+                        ? 'bg-[#00DFA9]/12 text-[#00DFA9] border-[#00DFA9]/30'
+                        : 'bg-white/[0.03] text-[#64748B] border-white/[0.06] hover:text-[#94A3B8] hover:bg-white/[0.05]',
+                    )}
+                  >
+                    <span className="text-[12px]">{sf.icon}</span>
+                    {sf.label}
+                    <span className={cn(
+                      'text-[10px] font-black px-1.5 py-0.5 rounded-md',
+                      activeSport === sf.id ? 'bg-[#00DFA9]/20 text-[#00DFA9]' : 'bg-white/[0.06] text-[#475569]',
+                    )}>
+                      {sf.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ── Page content ────────────────────────────────────────────── */}
           <div className="px-4 md:px-6 py-6 pb-28 max-w-5xl mx-auto">
 
-            {/* Page description — Polymarket vibe */}
-            <div className="mb-6 flex items-start gap-3">
-              <div className="flex-1">
+            {/* Page description */}
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
                 <h2 className="text-[13px] font-bold text-[#94A3B8]">
                   Predict the outcome · Win USDT
                 </h2>
                 <p className="text-[11px] text-[#475569] mt-0.5">
                   {isRealData
-                    ? 'Real in-play events — odds refresh every 30 s. Act fast.'
-                    : 'Tap any outcome to add it to your Bet Slip. Odds drift in real time — act fast.'}
+                    ? 'Real in-play events — odds refresh every 15–20 min. Stable and accurate.'
+                    : 'Tap any outcome to add it to your Bet Slip. Odds update every 15–20 minutes.'}
                 </p>
               </div>
-              {/* Live / demo pill */}
-              <div
-                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold"
-                style={isRealData
-                  ? { background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.25)', color: '#00DFA9' }
-                  : { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',  color: '#EF4444'  }
-                }
-                key={tick}
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full animate-ping"
-                  style={{ background: isRealData ? '#00DFA9' : '#EF4444' }}
-                />
-                {isRealData ? 'Real Odds' : 'Live'}
+              {/* Refresh cadence info */}
+              <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border"
+                style={{ background: 'rgba(56,189,248,0.07)', borderColor: 'rgba(56,189,248,0.2)', color: '#38BDF8' }}>
+                <RefreshCw className="h-3 w-3" />
+                15–20 min refresh
               </div>
             </div>
 
             {/* ── Match cards grid ───────────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4">
-              {displayMatches.map(match => (
-                <LiveMatchCard
-                  key={match.id}
-                  match={match}
-                  simOdds={simOdds[match.id] ?? {}}
-                  prevSimOdds={prevSimOdds[match.id] ?? {}}
-                />
-              ))}
-            </div>
+            {filteredMatches.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4">
+                {filteredMatches.map(match => (
+                  <LiveMatchCard
+                    key={match.id}
+                    match={match}
+                    simOdds={simOdds[match.id] ?? {}}
+                    prevSimOdds={prevSimOdds[match.id] ?? {}}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-24 gap-4">
+                <div className="text-4xl opacity-40">
+                  {sportFilters.find(s => s.id === activeSport)?.icon ?? '🏆'}
+                </div>
+                <p className="text-[14px] font-semibold text-[#475569]">
+                  No live {sportFilters.find(s => s.id === activeSport)?.label ?? ''} matches right now
+                </p>
+                <button
+                  onClick={() => setActiveSport('all')}
+                  className="text-[12px] font-bold text-[#00DFA9] hover:underline"
+                >
+                  View all sports →
+                </button>
+              </div>
+            )}
 
             {/* ── Bottom info strip ─────────────────────────────────────── */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-[10px] text-[#475569]">

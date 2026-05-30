@@ -229,7 +229,7 @@ function normalizeEvent(
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-const POLL_MS = 30_000;
+const POLL_MS = 15 * 60 * 1000; // 15 minutes — aligned with UI odds-refresh cycle
 
 export interface UseLiveOddsResult {
   matches:     NormalizedLiveMatch[];
