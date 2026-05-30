@@ -124,40 +124,93 @@ interface LiveMarketGroup {
 
 function rnd(n: number): number { return Math.max(1.05, Math.round(n * 100) / 100); }
 
+/**
+ * Poisson CDF: P(X <= k) where X ~ Poisson(lambda).
+ * Used to compute over/under goal probabilities from expected goals.
+ */
+function poissonCdf(lambda: number, k: number): number {
+  let prob = 0;
+  let term = Math.exp(-lambda);
+  for (let i = 0; i <= k; i++) {
+    prob += term;
+    term *= lambda / (i + 1);
+  }
+  return Math.min(1, prob);
+}
+
+/**
+ * Generate over/under odds for N.5 goals using Poisson distribution.
+ * @param lambda expected total goals for the match
+ * @param k      floor of the line (e.g. k=2 for O/U 2.5)
+ * @param margin bookmaker margin, applied equally to both sides
+ */
+function ouOdds(lambda: number, k: number, margin = 1.10): { over: number; under: number } {
+  const pUnder = poissonCdf(lambda, k);
+  const pOver  = 1 - pUnder;
+  return {
+    over:  rnd(1 / Math.max(0.04, pOver)  * margin),
+    under: rnd(1 / Math.max(0.04, pUnder) * margin),
+  };
+}
+
 function generateGoalsMarkets(match: LiveMatch): LiveMarketGroup[] {
   const h = match.outcomes.find(o => o.key === 'home')?.baseOdds ?? 2.0;
   const d = match.outcomes.find(o => o.key === 'draw')?.baseOdds ?? 3.2;
   const a = match.outcomes.find(o => o.key === 'away')?.baseOdds ?? 3.5;
-  const tot = 1/h + 1/d + 1/a;
-  const pd  = (1/d) / tot;
+  const total = 1/h + 1/d + 1/a;
+  const pd = (1/d) / total;  // normalised draw probability
+
+  // Estimate expected goals (λ) from implied draw probability.
+  // Higher draw prob → defensive match → fewer goals.
+  // Calibrated so pd≈0.28 → λ≈2.5, pd≈0.35 → λ≈2.15, pd≈0.22 → λ≈2.85
+  const lambda = Math.max(1.2, Math.min(4.0, 2.5 - (pd - 0.28) * 5.0));
+
+  // BTTS: assuming roughly equal goal split between teams (λ/2 each),
+  // P(home scores) = 1 − e^{−λ/2}, P(away scores) = 1 − e^{−λ/2}
+  // P(BTTS Yes) ≈ P(home scores) × P(away scores)
+  const halfScoring = 1 - Math.exp(-lambda / 2);
+  const bttsProbYes = Math.min(0.78, halfScoring * halfScoring);
+  const bttsProbNo  = 1 - bttsProbYes;
+
+  const { over: o15o, under: o15u } = ouOdds(lambda, 1);
+  const { over: o25o, under: o25u } = ouOdds(lambda, 2);
+  const { over: o35o, under: o35u } = ouOdds(lambda, 3);
+  const { over: o45o, under: o45u } = ouOdds(lambda, 4);
 
   return [
     {
       marketKey: 'btts', marketName: 'Both Teams to Score', label: 'Both Teams to Score',
       lines: [
-        { key: 'btts_y', label: 'Yes', name: 'BTTS — Yes', baseOdds: rnd(1.62 + pd * 0.7) },
-        { key: 'btts_n', label: 'No',  name: 'BTTS — No',  baseOdds: rnd(2.18 - pd * 0.5) },
+        { key: 'btts_y', label: 'Yes', name: 'BTTS — Yes', baseOdds: rnd(1 / Math.max(0.05, bttsProbYes) * 1.10) },
+        { key: 'btts_n', label: 'No',  name: 'BTTS — No',  baseOdds: rnd(1 / Math.max(0.05, bttsProbNo)  * 1.10) },
       ],
     },
     {
       marketKey: 'ou25', marketName: 'Over/Under 2.5 Goals', label: 'Over / Under 2.5 Goals',
       lines: [
-        { key: 'ou25_o', label: 'Over 2.5',  name: 'Over 2.5 Goals',  baseOdds: rnd(1.88) },
-        { key: 'ou25_u', label: 'Under 2.5', name: 'Under 2.5 Goals', baseOdds: rnd(1.92) },
+        { key: 'ou25_o', label: 'Over 2.5',  name: 'Over 2.5 Goals',  baseOdds: o25o },
+        { key: 'ou25_u', label: 'Under 2.5', name: 'Under 2.5 Goals', baseOdds: o25u },
       ],
     },
     {
       marketKey: 'ou15', marketName: 'Over/Under 1.5 Goals', label: 'Over / Under 1.5 Goals',
       lines: [
-        { key: 'ou15_o', label: 'Over 1.5',  name: 'Over 1.5 Goals',  baseOdds: rnd(1.30) },
-        { key: 'ou15_u', label: 'Under 1.5', name: 'Under 1.5 Goals', baseOdds: rnd(3.40) },
+        { key: 'ou15_o', label: 'Over 1.5',  name: 'Over 1.5 Goals',  baseOdds: o15o },
+        { key: 'ou15_u', label: 'Under 1.5', name: 'Under 1.5 Goals', baseOdds: o15u },
       ],
     },
     {
       marketKey: 'ou35', marketName: 'Over/Under 3.5 Goals', label: 'Over / Under 3.5 Goals',
       lines: [
-        { key: 'ou35_o', label: 'Over 3.5',  name: 'Over 3.5 Goals',  baseOdds: rnd(3.20) },
-        { key: 'ou35_u', label: 'Under 3.5', name: 'Under 3.5 Goals', baseOdds: rnd(1.33) },
+        { key: 'ou35_o', label: 'Over 3.5',  name: 'Over 3.5 Goals',  baseOdds: o35o },
+        { key: 'ou35_u', label: 'Under 3.5', name: 'Under 3.5 Goals', baseOdds: o35u },
+      ],
+    },
+    {
+      marketKey: 'ou45', marketName: 'Over/Under 4.5 Goals', label: 'Over / Under 4.5 Goals',
+      lines: [
+        { key: 'ou45_o', label: 'Over 4.5',  name: 'Over 4.5 Goals',  baseOdds: o45o },
+        { key: 'ou45_u', label: 'Under 4.5', name: 'Under 4.5 Goals', baseOdds: o45u },
       ],
     },
   ];

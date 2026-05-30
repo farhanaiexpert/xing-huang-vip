@@ -153,7 +153,7 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
   }
 
   try {
-    const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h&oddsFormat=decimal&dateFormat=iso`;
+    const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h,totals,btts&oddsFormat=decimal&dateFormat=iso`;
     const response = await fetch(url);
     if (!response.ok) {
       const body = await response.json().catch(() => ({ error: "Failed to fetch odds" }));
