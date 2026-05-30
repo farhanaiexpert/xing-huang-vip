@@ -20,6 +20,13 @@ export const USDT_ABI = [
     ],
     outputs: [{ name: '', type: 'bool' }],
   },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '_owner', type: 'address' }],
+    outputs: [{ name: 'balance', type: 'uint256' }],
+  },
 ] as const;
 
 export const EVM_CHAINS: Record<number, {

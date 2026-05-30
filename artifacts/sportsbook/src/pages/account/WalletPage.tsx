@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
-import { useAutoDeposit } from '@/hooks/useAutoDeposit';
+import { useReadContract } from 'wagmi';
+import { useAutoDeposit, USDT_ABI, TRON_USDT_CONTRACT } from '@/hooks/useAutoDeposit';
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
   Clock, XCircle, RefreshCw, Loader2, CircleDollarSign, Shield,
@@ -152,6 +153,38 @@ export function WalletPage() {
     isProcessing: walletProcessing, hasTronLink, chainCfg,
     handleEvmDeposit, handleTronDeposit, resetDeposit: resetWalletDeposit,
   } = useAutoDeposit({ onSuccess: loadData });
+
+  // ── EVM USDT balance (wagmi read) ────────────────────────────────────────
+  const { data: evmBalanceRaw } = useReadContract({
+    address: chainCfg?.address,
+    abi: USDT_ABI,
+    functionName: 'balanceOf',
+    args: w3Address ? [w3Address as `0x${string}`] : undefined,
+    query: { enabled: !!chainCfg && !!w3Address && w3Connected },
+  });
+  const evmBalance = (evmBalanceRaw !== undefined && chainCfg)
+    ? Number(evmBalanceRaw) / Math.pow(10, chainCfg.decimals)
+    : null;
+
+  // ── TronLink USDT balance ─────────────────────────────────────────────────
+  const [tronBalance, setTronBalance] = useState<number | null>(null);
+  useEffect(() => {
+    if (!hasTronLink) { setTronBalance(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tronWeb = (window as any).tronWeb;
+        const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
+        const raw = await contract.balanceOf(tronWeb.defaultAddress.base58).call();
+        if (!cancelled) setTronBalance(Number(raw) / 1_000_000);
+      } catch { if (!cancelled) setTronBalance(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [hasTronLink]);
+
+  // Whichever wallet is active, pick its balance
+  const walletBalance = w3Connected ? evmBalance : hasTronLink ? tronBalance : null;
 
   function copyAddress() {
     if (!depositInfo) return;
@@ -726,7 +759,30 @@ export function WalletPage() {
 
                     {/* Amount input */}
                     <div>
-                      <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Amount (USDT)</label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Amount (USDT)</label>
+                        {walletBalance !== null && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-[#64748B]">
+                              Available: <span className="text-[#A78BFA] font-bold">{walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setWalletDepAmount(Math.floor(walletBalance).toString())}
+                              disabled={walletProcessing || walletBalance < 10}
+                              className="px-1.5 py-0.5 rounded text-[9px] font-black transition-all disabled:opacity-40"
+                              style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.30)' }}
+                            >
+                              MAX
+                            </button>
+                          </div>
+                        )}
+                        {walletBalance === null && (w3Connected || hasTronLink) && (
+                          <span className="text-[10px] text-[#64748B] flex items-center gap-1">
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Fetching balance…
+                          </span>
+                        )}
+                      </div>
                       <div className="relative">
                         <input
                           type="number" min="10" step="1"
