@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearch } from 'wouter';
 import { useBetHistory, PlacedBet } from '@/hooks/useBetHistory';
 import { useOddsFormat } from '@/hooks/useOddsFormat';
 import { formatOdds } from '@/lib/oddsFormat';
@@ -12,9 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 type Filter = 'all' | 'open' | 'won' | 'lost' | 'void';
 
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all',  label: 'All' },
+  { key: 'all',  label: 'All'  },
   { key: 'open', label: 'Open' },
-  { key: 'won',  label: 'Won' },
+  { key: 'won',  label: 'Won'  },
   { key: 'lost', label: 'Lost' },
   { key: 'void', label: 'Void' },
 ];
@@ -39,10 +40,10 @@ function StatusBadge({ status }: { status?: string }) {
     );
   }
   const cfg: Partial<Record<Filter, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }>> = {
-    won:  { label: 'Won',   color: '#00DFA9', bg: 'rgba(0,223,169,0.12)',    icon: CheckCircle2 },
-    lost: { label: 'Lost',  color: '#EF4444', bg: 'rgba(239,68,68,0.12)',    icon: XCircle      },
-    void: { label: 'Void',  color: '#94A3B8', bg: 'rgba(148,163,184,0.12)', icon: Clock        },
-    all:  { label: 'All',   color: '#94A3B8', bg: 'rgba(148,163,184,0.12)', icon: Clock        },
+    won:  { label: 'Won',  color: '#00DFA9', bg: 'rgba(0,223,169,0.12)',    icon: CheckCircle2 },
+    lost: { label: 'Lost', color: '#EF4444', bg: 'rgba(239,68,68,0.12)',    icon: XCircle      },
+    void: { label: 'Void', color: '#94A3B8', bg: 'rgba(148,163,184,0.12)', icon: Clock        },
+    all:  { label: 'All',  color: '#94A3B8', bg: 'rgba(148,163,184,0.12)', icon: Clock        },
   };
   const c = cfg[k] ?? cfg['all']!;
   const Icon = c.icon;
@@ -56,18 +57,13 @@ function StatusBadge({ status }: { status?: string }) {
 }
 
 function fmtDate(d: Date) {
-  const now = new Date();
+  const now  = new Date();
   const diff = (now.getTime() - d.getTime()) / 1000;
   if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
 }
 
-/**
- * Parse formatted kickoff strings like "Today, 20:00" / "Tomorrow, 15:30" / "Sat, 15:30"
- * and return a countdown string like "Kicks off in 2h 30m" or "Kicks off in 45m".
- * Returns null when the time has already passed (treat as in-progress).
- */
 function kickoffCountdown(kt: string): string | null {
   if (!kt) return null;
   const [dayPart, timePart] = kt.split(', ');
@@ -76,7 +72,7 @@ function kickoffCountdown(kt: string): string | null {
   const h = parseInt(hStr, 10), m = parseInt(mStr, 10);
   if (isNaN(h) || isNaN(m)) return null;
 
-  const now = new Date();
+  const now    = new Date();
   const target = new Date(now);
   if (dayPart === 'Today') {
     target.setHours(h, m, 0, 0);
@@ -85,7 +81,7 @@ function kickoffCountdown(kt: string): string | null {
     target.setHours(h, m, 0, 0);
   } else {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const idx = days.indexOf(dayPart);
+    const idx  = days.indexOf(dayPart);
     if (idx === -1) return null;
     const diff = ((idx - now.getDay() + 7) % 7) || 7;
     target.setDate(target.getDate() + diff);
@@ -93,7 +89,7 @@ function kickoffCountdown(kt: string): string | null {
   }
 
   const diffMins = Math.round((target.getTime() - now.getTime()) / 60000);
-  if (diffMins <= 0) return null; // match in progress or past
+  if (diffMins <= 0) return null;
   if (diffMins < 60) return `Kicks off in ${diffMins}m`;
   const hrs = Math.floor(diffMins / 60), mins = diffMins % 60;
   return mins > 0 ? `Kicks off in ${hrs}h ${mins}m` : `Kicks off in ${hrs}h`;
@@ -101,15 +97,32 @@ function kickoffCountdown(kt: string): string | null {
 
 const PAGE_SIZE = 10;
 
-function BetCard({ bet }: { bet: PlacedBet }) {
-  const [open, setOpen] = useState(false);
+// ── BetCard ───────────────────────────────────────────────────────────────────
+
+function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boolean }) {
+  const [open, setOpen] = useState(isHighlighted ?? false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const { format } = useOddsFormat();
-  const k = statusKey(bet.status);
-  const profit = bet.estimatedPayout - bet.stake;
-  const settled = k === 'won' || k === 'lost';
+  const k       = statusKey(bet.status);
+  const profit  = bet.estimatedPayout - bet.stake;
+
+  // Scroll highlighted card into view and open it
+  useEffect(() => {
+    if (isHighlighted && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isHighlighted]);
 
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-[#0E1520] overflow-hidden">
+    <div
+      ref={cardRef}
+      className={cn(
+        'rounded-2xl border bg-[#0E1520] overflow-hidden transition-all duration-300',
+        isHighlighted
+          ? 'border-[#00DFA9]/50 shadow-[0_0_24px_rgba(0,223,169,0.15)]'
+          : 'border-white/[0.07]',
+      )}
+    >
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
@@ -118,6 +131,11 @@ function BetCard({ bet }: { bet: PlacedBet }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-[11px] font-bold text-[#64748B] font-mono">{bet.betId}</span>
+            {isHighlighted && (
+              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-[#00DFA9]/15 text-[#00DFA9] border border-[#00DFA9]/30">
+                ← from stats
+              </span>
+            )}
             <span className={cn(
               'px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider',
               bet.betType === 'acca'
@@ -136,7 +154,7 @@ function BetCard({ bet }: { bet: PlacedBet }) {
               {bet.selections.some(s => s.isLive) ? (
                 <><span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse inline-block" /><span className="text-[#EF4444]/80">In play</span></>
               ) : (() => {
-                const kt = bet.selections[0]?.kickoffTime;
+                const kt        = bet.selections[0]?.kickoffTime;
                 const countdown = kt ? kickoffCountdown(kt) : null;
                 return countdown
                   ? <span className="text-[#FACC15]/70">🕐 {countdown}</span>
@@ -220,11 +238,19 @@ function BetCard({ bet }: { bet: PlacedBet }) {
   );
 }
 
+// ── BetsPage ──────────────────────────────────────────────────────────────────
+
 export function BetsPage() {
   const { bets, isLoading, refresh } = useBetHistory();
   const { isAuthenticated } = useAuth();
-  const [filter, setFilter] = useState<Filter>('all');
-  const [page, setPage] = useState(1);
+  const search = useSearch();
+
+  // Parse ?highlight=<numeric-bet-id> from URL
+  const highlightNumericId = new URLSearchParams(search).get('highlight');
+  const highlightedBetId   = highlightNumericId ? `#BET-${highlightNumericId}` : null;
+
+  const [filter,     setFilter]     = useState<Filter>('all');
+  const [page,       setPage]       = useState(1);
   const [refreshing, setRefreshing] = useState(false);
 
   const filtered = useMemo(() => {
@@ -232,8 +258,18 @@ export function BetsPage() {
     return bets.filter(b => statusKey(b.status) === filter);
   }, [bets, filter]);
 
-  const pages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pages     = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // When a highlight target is present, switch filter to 'all' and jump to
+  // the page that contains the targeted bet so it can be scrolled into view.
+  useEffect(() => {
+    if (!highlightedBetId || !bets.length) return;
+    const idx = bets.findIndex(b => b.betId === highlightedBetId);
+    if (idx === -1) return;
+    setFilter('all');
+    setPage(Math.floor(idx / PAGE_SIZE) + 1);
+  }, [highlightedBetId, bets]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -264,6 +300,14 @@ export function BetsPage() {
           Refresh
         </button>
       </div>
+
+      {/* Highlight notice */}
+      {highlightedBetId && (
+        <p className="text-[11px] text-[#00DFA9]/70 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] inline-block" />
+          Showing bet from your stats — scroll to highlighted card
+        </p>
+      )}
 
       {/* Filter tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
@@ -306,7 +350,13 @@ export function BetsPage() {
         </div>
       ) : (
         <div className="space-y-2.5">
-          {paginated.map(b => <BetCard key={b.betId} bet={b} />)}
+          {paginated.map(b => (
+            <BetCard
+              key={b.betId}
+              bet={b}
+              isHighlighted={highlightedBetId ? b.betId === highlightedBetId : false}
+            />
+          ))}
         </div>
       )}
 

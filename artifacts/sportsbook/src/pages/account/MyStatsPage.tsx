@@ -222,9 +222,9 @@ export function MyStatsPage() {
       .finally(() => setLoading(false));
   }, [range]);
 
-  // Navigate to bets page when a form badge is clicked
-  function handleFormBadgeClick(_betId: number) {
-    navigate('/account/bets');
+  // Navigate to bets page and highlight the specific bet card
+  function handleFormBadgeClick(betId: number) {
+    navigate('/account/bets?highlight=' + betId);
   }
 
   // ── Time-range toggle (always rendered) ──────────────────────────────────
