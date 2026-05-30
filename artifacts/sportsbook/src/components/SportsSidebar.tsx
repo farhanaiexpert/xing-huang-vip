@@ -356,10 +356,13 @@ function AZSidebarItem({ title, iconUrl, isActive, isFavourite, matchCount, onFa
   onFavToggle?: () => void;
   onClick?: () => void;
 }) {
+  const isEmpty = !isActive && (!matchCount || matchCount === 0);
+
   return (
     <div className={cn(
       'group relative flex w-full items-center transition-all duration-150',
-      isActive ? 'bg-[#00DFA9]/8' : 'hover:bg-[#121821]/80'
+      isActive ? 'bg-[#00DFA9]/8' : 'hover:bg-[#121821]/80',
+      isEmpty && 'opacity-40 hover:opacity-70',
     )}>
       {isActive && (
         <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full bg-[#00DFA9] shadow-[0_0_8px_rgba(0,223,169,0.7)]" />

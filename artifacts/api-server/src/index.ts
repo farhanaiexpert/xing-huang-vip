@@ -275,20 +275,15 @@ runMigrations().then(() => {
 
   // ── Odds refresh cron: every 5 min, triggers full batch every 25-35 min ──
   let isOddsRefreshing = false;
+  // Start lastOddsRefreshAt at 0 so the startup batch (below) counts as first run
   let lastOddsRefreshAt = 0;
-  // Randomise first interval so restart doesn't always fetch immediately
   let nextIntervalMs = (25 + Math.floor(Math.random() * 11)) * 60 * 1000;
 
-  cron.schedule("*/5 * * * *", async () => {
+  async function runOddsBatch() {
     if (isOddsRefreshing) return;
-    const now = Date.now();
-    if (now - lastOddsRefreshAt < nextIntervalMs) return;
-
     isOddsRefreshing = true;
-    // Randomise next interval: 25–35 minutes
     nextIntervalMs = (25 + Math.floor(Math.random() * 11)) * 60 * 1000;
     logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length, nextIntervalMin: Math.round(nextIntervalMs / 60000) }, "Odds refresh cron: starting full batch");
-
     try {
       for (const sportKey of ALL_ODDS_SPORT_KEYS) {
         await fetchAndCacheOdds(sportKey);
@@ -302,8 +297,21 @@ runMigrations().then(() => {
     } finally {
       isOddsRefreshing = false;
     }
+  }
+
+  cron.schedule("*/5 * * * *", async () => {
+    const now = Date.now();
+    if (now - lastOddsRefreshAt < nextIntervalMs) return;
+    runOddsBatch().catch((err) => logger.error({ err }, "Odds refresh cron: unhandled error"));
   });
   logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron started (every 25-35 minutes — PostgreSQL-backed cache)");
+
+  // ── Warm the cache immediately on startup (non-blocking) ─────────────────
+  // This ensures new sport keys get cached right away rather than waiting
+  // up to 5 min for the first cron tick.
+  setImmediate(() => {
+    runOddsBatch().catch((err) => logger.error({ err }, "Startup odds warm: unhandled error"));
+  });
 
   app.listen(PORT, "0.0.0.0", () => {
     logger.info({ port: PORT }, "CupBett API server started");

@@ -13,6 +13,10 @@ const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 const liveCache = new Map<string, { data: unknown; expiresAt: number }>();
 const LIVE_CACHE_TTL = 30 * 1000;
 
+// ─── In-flight deduplicator — one Odds API call per sport at a time ──────────
+// Prevents burst 429s when multiple clients request the same uncached sport
+const inFlight = new Map<string, Promise<unknown[]>>();
+
 // ─── All sport keys the server cron will refresh ──────────────────────────────
 export const ALL_ODDS_SPORT_KEYS: string[] = [
   // Soccer
@@ -31,8 +35,11 @@ export const ALL_ODDS_SPORT_KEYS: string[] = [
   'aussierules_afl',
   // Basketball
   'basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl',
-  // Tennis
+  // Tennis — Grand Slams + hard-court swing
   'tennis_atp_french_open', 'tennis_wta_french_open',
+  'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
+  'tennis_atp_us_open', 'tennis_wta_us_open',
+  'tennis_atp_australian_open', 'tennis_wta_australian_open',
   // Cricket
   'cricket_ipl', 'cricket_international_t20', 'cricket_big_bash',
   'cricket_psl', 'cricket_test_match',
@@ -43,7 +50,8 @@ export const ALL_ODDS_SPORT_KEYS: string[] = [
   // Rugby League
   'rugbyleague_nrl', 'rugbyleague_super_league', 'rugbyleague_nrl_premiership_winner',
   // Rugby Union
-  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations', 'rugbyunion_world_cup',
+  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+  'rugbyunion_world_cup', 'rugbyunion_champions_cup',
   // Golf
   'golf_masters_tournament_winner', 'golf_pga_championship_winner',
   'golf_us_open_winner', 'golf_the_open_championship_winner', 'golf_pga_tour_winner',
@@ -57,6 +65,16 @@ export const ALL_ODDS_SPORT_KEYS: string[] = [
   'boxing_event',
   // MMA
   'mma_mixed_martial_arts',
+  // Snooker
+  'snooker_world_championship', 'snooker_premier_league',
+  // Basketball — WNBA
+  'basketball_wnba',
+  // Soccer — Nordic + more European leagues
+  'soccer_sweden_allsvenskan', 'soccer_norway_eliteserien', 'soccer_denmark_superliga',
+  'soccer_finland_veikkausliiga', 'soccer_spain_segunda_division',
+  'soccer_england_league1', 'soccer_england_league2',
+  'soccer_china_superleague', 'soccer_india_superleague',
+  'soccer_conmebol_copa_america', 'soccer_uefa_nations_league',
 ];
 
 // Live sports (in-play events polling) — all newly wired sports included
@@ -77,8 +95,11 @@ const LIVE_SPORTS = [
   'aussierules_afl',
   // Basketball
   'basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl',
-  // Tennis
+  // Tennis — Grand Slams + hard-court swing
   'tennis_atp_french_open', 'tennis_wta_french_open',
+  'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
+  'tennis_atp_us_open', 'tennis_wta_us_open',
+  'tennis_atp_australian_open', 'tennis_wta_australian_open',
   // Cricket
   'cricket_ipl', 'cricket_international_t20', 'cricket_big_bash',
   'cricket_psl', 'cricket_test_match',
@@ -89,7 +110,8 @@ const LIVE_SPORTS = [
   // Rugby League
   'rugbyleague_nrl', 'rugbyleague_super_league',
   // Rugby Union
-  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations', 'rugbyunion_world_cup',
+  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+  'rugbyunion_world_cup', 'rugbyunion_champions_cup',
   // Futures/outright-winner keys (icehockey_nhl_championship_winner,
   // rugbyleague_nrl_premiership_winner, golf_*_winner) are intentionally
   // excluded — they have no in-play match events, only pre-tournament markets.
@@ -101,6 +123,16 @@ const LIVE_SPORTS = [
   'darts_betway_premier_league', 'darts_world_championship',
   // Boxing & MMA
   'boxing_event', 'mma_mixed_martial_arts',
+  // Snooker
+  'snooker_world_championship', 'snooker_premier_league',
+  // Basketball — WNBA
+  'basketball_wnba',
+  // Soccer — Nordic + more European leagues
+  'soccer_sweden_allsvenskan', 'soccer_norway_eliteserien', 'soccer_denmark_superliga',
+  'soccer_finland_veikkausliiga', 'soccer_spain_segunda_division',
+  'soccer_england_league1', 'soccer_england_league2',
+  'soccer_china_superleague', 'soccer_india_superleague',
+  'soccer_conmebol_copa_america', 'soccer_uefa_nations_league',
 ];
 
 // ─── Returns the merged set of live sport keys (seed + DB-enabled) ────────────
@@ -286,21 +318,39 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
     return;
   }
 
-  // ── Cache miss — fetch from Odds API ─────────────────────────────────────
+  // ── Cache miss — fetch from Odds API (deduplicated) ──────────────────────
   try {
-    const extraMarkets = sport.startsWith('soccer_') ? ',totals,btts' : '';
-    const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({ error: "Failed to fetch odds" }));
-      res.status(response.status).json(body);
+    // Reuse an already in-flight fetch for this sport to avoid burst 429s
+    if (!inFlight.has(sport)) {
+      const promise = (async (): Promise<unknown[]> => {
+        const extraMarkets = sport.startsWith('soccer_') ? ',totals,btts' : '';
+        const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          // Return sentinel to propagate HTTP error to all waiting callers
+          const body = await response.json().catch(() => ({})) as { status?: number };
+          return [{ __err: response.status, __body: body }] as unknown[];
+        }
+        const data = await response.json() as unknown[];
+        const arr = Array.isArray(data) ? data : [];
+        await setDbCachedOdds(sport, arr);
+        await upsertSportControl(sport, formatLeagueName(sport));
+        return arr;
+      })();
+      inFlight.set(sport, promise);
+      promise.finally(() => inFlight.delete(sport));
+    }
+
+    const result = await inFlight.get(sport)!;
+
+    // Check for error sentinel
+    if (result.length === 1 && typeof result[0] === 'object' && result[0] !== null && '__err' in (result[0] as object)) {
+      const { __err, __body } = result[0] as { __err: number; __body: unknown };
+      res.status(__err).json(__body);
       return;
     }
-    const data = await response.json() as unknown[];
-    await setDbCachedOdds(sport, Array.isArray(data) ? data : []);
-    await upsertSportControl(sport, formatLeagueName(sport));
 
-    const adjusted = applyMultiplier(applyMargin(data, effectiveMargin), multiplier);
+    const adjusted = applyMultiplier(applyMargin(result, effectiveMargin), multiplier);
     res.json({ data: adjusted, cached: false });
   } catch {
     res.status(500).json({ error: "Failed to fetch odds" });
