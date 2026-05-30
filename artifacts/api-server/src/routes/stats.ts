@@ -7,6 +7,9 @@ const router = Router();
 
 // ── GET /stats/my ─────────────────────────────────────────────────────────────
 // Query param: ?days=7|30|90|0  (0 = all time, default = 30)
+//
+// All performance metrics are filtered by settledAt so that the selected period
+// reflects outcomes that actually resolved in that window, not just bets placed.
 router.get("/stats/my", authenticate, async (req, res): Promise<void> => {
   const userId = req.user!.userId;
 
@@ -18,11 +21,23 @@ router.get("/stats/my", authenticate, async (req, res): Promise<void> => {
     ? new Date(Date.now() - validDays * 86_400_000).toISOString()
     : null;
 
-  // Drizzle condition fragments — applied to created_at-based queries
-  const createdCond  = cutoff ? sql`${betsTable.createdAt} >= ${cutoff}::timestamptz`  : undefined;
-  const settledCond  = cutoff ? sql`${betsTable.settledAt} >= ${cutoff}::timestamptz`  : undefined;
+  // For all settled performance queries: filter by settledAt so that numbers
+  // reflect bets that resolved in the chosen window.
+  const settledPeriodCond = cutoff
+    ? sql`${betsTable.settledAt} >= ${cutoff}::timestamptz`
+    : undefined;
 
-  // ── 1. Summary aggregates ─────────────────────────────────────────────────
+  // Base condition: only settled bets (won/lost/void) for performance metrics
+  const settledStatusCond = sql`${betsTable.status} in ('won','lost','void')`;
+
+  // Combined condition helper
+  const periodFilter = and(
+    eq(betsTable.userId, userId),
+    settledStatusCond,
+    settledPeriodCond,
+  );
+
+  // ── 1. Summary aggregates (settled bets only in period) ───────────────────
   const [summary] = await db
     .select({
       totalBets:   sql<number>`count(*)::int`,
@@ -36,7 +51,7 @@ router.get("/stats/my", authenticate, async (req, res): Promise<void> => {
       avgStake:    sql<number>`coalesce(avg(stake::numeric), 0)::float`,
     })
     .from(betsTable)
-    .where(and(eq(betsTable.userId, userId), createdCond));
+    .where(periodFilter);
 
   const staked  = parseFloat(summary.totalStaked);
   const payout  = parseFloat(summary.totalPayout);
@@ -66,21 +81,21 @@ router.get("/stats/my", authenticate, async (req, res): Promise<void> => {
   const today  = new Date();
   const pnlMap = Object.fromEntries(dailyRows.map(r => [r.date, r.pnl]));
   let cumulative = 0;
-  const days: { date: string; pnl: number; cumulative: number }[] = [];
+  const dailyPnl: { date: string; pnl: number; cumulative: number }[] = [];
   for (let i = chartDays - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setUTCDate(d.getUTCDate() - i);
     const key    = d.toISOString().slice(0, 10);
     const dayPnl = pnlMap[key] ?? 0;
     cumulative  += dayPnl;
-    days.push({
+    dailyPnl.push({
       date:       key,
-      pnl:        Math.round(dayPnl * 100) / 100,
+      pnl:        Math.round(dayPnl    * 100) / 100,
       cumulative: Math.round(cumulative * 100) / 100,
     });
   }
 
-  // ── 3. Sport breakdown (with per-sport win/loss counts) ───────────────────
+  // ── 3. Sport breakdown (settled bets, per-sport win/loss) ─────────────────
   const sportRows = await db
     .select({
       sport:     betSelectionsTable.sport,
@@ -92,11 +107,11 @@ router.get("/stats/my", authenticate, async (req, res): Promise<void> => {
     })
     .from(betSelectionsTable)
     .innerJoin(betsTable, eq(betSelectionsTable.betId, betsTable.id))
-    .where(and(eq(betsTable.userId, userId), createdCond))
+    .where(periodFilter)
     .groupBy(betSelectionsTable.sport)
     .orderBy(desc(sql`count(distinct ${betsTable.id})`));
 
-  // ── 4. Bet type breakdown ─────────────────────────────────────────────────
+  // ── 4. Bet type breakdown (settled bets) ──────────────────────────────────
   const typeRows = await db
     .select({
       type:   betsTable.type,
@@ -104,65 +119,79 @@ router.get("/stats/my", authenticate, async (req, res): Promise<void> => {
       staked: sql<string>`coalesce(sum(stake::numeric), 0)::text`,
     })
     .from(betsTable)
-    .where(and(eq(betsTable.userId, userId), createdCond))
+    .where(periodFilter)
     .groupBy(betsTable.type);
 
   // ── 5. Streaks + recent form ───────────────────────────────────────────────
-  // Fetch last 200 settled (won/lost) for streaks, plus void for recent form display
   const [recentSettled, recentForm10] = await Promise.all([
     db.select({ status: betsTable.status })
       .from(betsTable)
       .where(and(
         eq(betsTable.userId, userId),
         sql`status in ('won', 'lost')`,
-        settledCond,
+        settledPeriodCond,
       ))
       .orderBy(desc(betsTable.settledAt))
       .limit(200),
 
-    db.select({ status: betsTable.status, totalOdds: betsTable.totalOdds })
+    // Include betId + eventName so frontend can navigate to bet detail
+    db.select({
+        id:         betsTable.id,
+        status:     betsTable.status,
+        totalOdds:  betsTable.totalOdds,
+        settledAt:  betsTable.settledAt,
+      })
       .from(betsTable)
       .where(and(
         eq(betsTable.userId, userId),
         sql`status in ('won', 'lost', 'void')`,
-        settledCond,
+        settledPeriodCond,
       ))
       .orderBy(desc(betsTable.settledAt))
       .limit(10),
   ]);
 
-  // Current win streak (most recent first)
+  // Current win streak (most-recent-first)
   let currentWin = 0;
   for (const b of recentSettled) {
     if (b.status === "won") currentWin++;
     else break;
   }
 
-  // Longest win + loss streaks (process chronologically)
+  // Longest win/loss streaks (chronological)
   const chronological = [...recentSettled].reverse();
   let longestWin  = 0, longestLoss  = 0;
   let runningWin  = 0, runningLoss  = 0;
   for (const b of chronological) {
-    if (b.status === "won")  { runningWin++;  longestWin  = Math.max(longestWin,  runningWin);  runningLoss = 0; }
-    else                     { runningLoss++; longestLoss = Math.max(longestLoss, runningLoss); runningWin  = 0; }
+    if (b.status === "won") {
+      runningWin++;
+      longestWin  = Math.max(longestWin,  runningWin);
+      runningLoss = 0;
+    } else {
+      runningLoss++;
+      longestLoss = Math.max(longestLoss, runningLoss);
+      runningWin  = 0;
+    }
   }
 
   const recentForm = recentForm10.map(b => ({
+    betId:  b.id,
     status: b.status as "won" | "lost" | "void",
     odds:   Math.round(parseFloat(b.totalOdds) * 100) / 100,
+    date:   b.settledAt ? b.settledAt.toISOString().slice(0, 10) : null,
   }));
 
-  // ── 6. Most-backed selection ──────────────────────────────────────────────
+  // ── 6. Most-backed selection (settled bets) ───────────────────────────────
   const mbsRows = await db
     .select({
-      selection:    betSelectionsTable.selection,
-      count:        sql<number>`count(*)::int`,
-      totalStaked:  sql<string>`coalesce(sum(${betsTable.stake}::numeric), 0)::text`,
-      totalPayout:  sql<string>`coalesce(sum(${betsTable.settledPayout}::numeric) filter (where ${betsTable.status} in ('won','lost')), 0)::text`,
+      selection:   betSelectionsTable.selection,
+      count:       sql<number>`count(*)::int`,
+      totalStaked: sql<string>`coalesce(sum(${betsTable.stake}::numeric), 0)::text`,
+      totalPayout: sql<string>`coalesce(sum(${betsTable.settledPayout}::numeric) filter (where ${betsTable.status} in ('won','lost')), 0)::text`,
     })
     .from(betSelectionsTable)
     .innerJoin(betsTable, eq(betSelectionsTable.betId, betsTable.id))
-    .where(and(eq(betsTable.userId, userId), createdCond))
+    .where(periodFilter)
     .groupBy(betSelectionsTable.selection)
     .orderBy(desc(sql`count(*)`))
     .limit(1);
@@ -193,10 +222,10 @@ router.get("/stats/my", authenticate, async (req, res): Promise<void> => {
       netPnl:      Math.round(netPnl   * 100)  / 100,
       bestWin:     Math.round(parseFloat(summary.bestWin) * 100) / 100,
       roi:         Math.round(roi      * 100)  / 100,
-      avgOdds:     Math.round((summary.avgOdds ?? 0) * 100) / 100,
+      avgOdds:     Math.round((summary.avgOdds  ?? 0) * 100) / 100,
       avgStake:    Math.round((summary.avgStake ?? 0) * 100) / 100,
     },
-    dailyPnl: days,
+    dailyPnl,
     sportBreakdown: sportRows.map(r => ({
       sport:    r.sport || "Other",
       bets:     r.bets,
@@ -211,9 +240,9 @@ router.get("/stats/my", authenticate, async (req, res): Promise<void> => {
       staked: Math.round(parseFloat(r.staked) * 100) / 100,
     })),
     streaks: {
-      current:       currentWin,
-      longest:       longestWin,
-      longestLoss:   longestLoss,
+      current:     currentWin,
+      longest:     longestWin,
+      longestLoss: longestLoss,
     },
     recentForm,
     mostBackedSelection,
