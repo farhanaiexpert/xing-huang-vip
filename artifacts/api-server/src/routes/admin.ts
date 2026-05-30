@@ -2093,8 +2093,8 @@ router.get("/admin/rg/players", async (_req, res): Promise<void> => {
       if (user) {
         playerMap.set(row.user_id, {
           userId: row.user_id,
-          username: user.username,
-          email: user.email,
+          username: user.username ?? "",
+          email: user.email ?? "",
           exclusion: null,
           limits: [],
         });

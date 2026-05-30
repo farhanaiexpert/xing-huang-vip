@@ -19,7 +19,7 @@ catalogs:
       specifier: ^4.1.14
       version: 4.3.0
     '@tanstack/react-query':
-      specifier: ^5.90.21
+      specifier: 5.100.9
       version: 5.100.9
     '@types/node':
       specifier: ^25.3.3
@@ -385,6 +385,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      viem:
+        specifier: ^2.51.3
+        version: 2.51.3(typescript@5.9.3)(zod@3.25.76)
       zod:
         specifier: 'catalog:'
         version: 3.25.76

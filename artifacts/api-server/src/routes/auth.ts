@@ -1,101 +1,137 @@
 import { Router } from "express";
-import { and, eq, ne, or, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable } from "@workspace/db";
+import { verifyMessage, isAddress, getAddress } from "viem";
+import { randomBytes } from "crypto";
+import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable, noncesTable } from "@workspace/db";
 import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken } from "../lib/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
 
 const router = Router();
 
-const RegisterBody = z.object({
-  email: z.string().email(),
-  username: z.string().min(3).max(30),
-  password: z.string().min(8),
-  referralCode: z.string().optional(),
-});
+// ── Wallet authentication helpers ────────────────────────────────────────────
 
-const LoginBody = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
+const NONCE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-router.post("/auth/register", async (req, res): Promise<void> => {
-  const parsed = RegisterBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+function generateNonce(): string {
+  return randomBytes(32).toString("hex");
+}
+
+function buildSignMessage(address: string, nonce: string): string {
+  return `Welcome to CupBett!\n\nSign this message to verify your wallet ownership.\n\nWallet: ${address}\nNonce: ${nonce}\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
+}
+
+function shortAddress(addr: string): string {
+  return addr.slice(0, 6) + "…" + addr.slice(-4);
+}
+
+// ── GET /auth/wallet/nonce?address=0x... ──────────────────────────────────────
+router.get("/auth/wallet/nonce", async (req, res): Promise<void> => {
+  const rawAddress = req.query.address as string | undefined;
+  if (!rawAddress || !isAddress(rawAddress)) {
+    res.status(400).json({ error: "Valid Ethereum wallet address required" });
     return;
   }
-  const { email, username, password, referralCode } = parsed.data;
 
-  const existing = await db.select({ id: usersTable.id, field: usersTable.email })
-    .from(usersTable)
-    .where(or(eq(usersTable.email, email), eq(usersTable.username, username)))
+  const address = rawAddress.toLowerCase();
+  const nonce = generateNonce();
+  const expiresAt = new Date(Date.now() + NONCE_TTL_MS);
+
+  await db.insert(noncesTable)
+    .values({ walletAddress: address, nonce, expiresAt })
+    .onConflictDoUpdate({
+      target: noncesTable.walletAddress,
+      set: { nonce, expiresAt },
+    });
+
+  const message = buildSignMessage(address, nonce);
+  res.json({ nonce, message });
+});
+
+// ── POST /auth/wallet/verify ──────────────────────────────────────────────────
+const WalletVerifyBody = z.object({
+  address: z.string(),
+  signature: z.string(),
+  nonce: z.string(),
+});
+
+router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
+  const parsed = WalletVerifyBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "address, signature, and nonce are required" });
+    return;
+  }
+  const { address: rawAddress, signature, nonce } = parsed.data;
+
+  if (!isAddress(rawAddress)) {
+    res.status(400).json({ error: "Invalid wallet address" });
+    return;
+  }
+  const address = rawAddress.toLowerCase();
+
+  // Verify nonce exists and hasn't expired
+  const [storedNonce] = await db.select()
+    .from(noncesTable)
+    .where(and(
+      eq(noncesTable.walletAddress, address),
+      eq(noncesTable.nonce, nonce),
+      gt(noncesTable.expiresAt, new Date()),
+    ))
     .limit(1);
-  if (existing.length > 0) {
-    const conflict = existing[0].field === email ? "Email" : "Username";
-    res.status(409).json({ error: `${conflict} already in use` });
+
+  if (!storedNonce) {
+    res.status(401).json({ error: "Invalid or expired nonce. Please request a new one." });
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
-  const userReferralCode = Math.random().toString(36).slice(2, 10).toUpperCase();
-
-  const [user] = await db.insert(usersTable).values({
-    email,
-    username,
-    passwordHash,
-    referralCode: userReferralCode,
-    role: "user",
-  }).returning();
-
-  await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
-
-  if (referralCode) {
-    const referrer = await db.select({ id: usersTable.id })
-      .from(usersTable)
-      .where(eq(usersTable.referralCode, referralCode))
-      .limit(1);
-    if (referrer.length > 0) {
-      await db.insert(referralsTable).values({
-        referrerId: referrer[0].id,
-        referredId: user.id,
-        tier: 1,
-      });
-    }
+  // Verify the signature using viem
+  const message = buildSignMessage(address, nonce);
+  let valid = false;
+  try {
+    valid = await verifyMessage({
+      address: getAddress(rawAddress),
+      message,
+      signature: signature as `0x${string}`,
+    });
+  } catch {
+    valid = false;
   }
 
-  const payload = { userId: user.id, role: user.role };
-  const accessToken = signAccessToken(payload);
-  const refreshToken = signRefreshToken(payload);
-  await db.insert(sessionsTable).values({
-    userId: user.id,
-    refreshToken,
-    expiresAt: refreshTokenExpiresAt(),
-  });
-
-  res.status(201).json({ accessToken, refreshToken, user: { id: user.id, email: user.email, username: user.username, role: user.role, referralCode: user.referralCode } });
-});
-
-router.post("/auth/login", async (req, res): Promise<void> => {
-  const parsed = LoginBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+  if (!valid) {
+    res.status(401).json({ error: "Signature verification failed" });
     return;
   }
-  const { email, password } = parsed.data;
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    res.status(401).json({ error: "Invalid email or password" });
-    return;
+  // Consume the nonce (one-time use)
+  await db.delete(noncesTable).where(eq(noncesTable.walletAddress, address));
+
+  // Upsert user — create if first login, return existing if not
+  const existing = await db.select()
+    .from(usersTable)
+    .where(eq(usersTable.walletAddress, address))
+    .limit(1);
+
+  let user = existing[0];
+
+  if (!user) {
+    const referralCode = randomBytes(4).toString("hex").toUpperCase();
+    const [created] = await db.insert(usersTable).values({
+      walletAddress: address,
+      referralCode,
+      role: "user",
+    }).returning();
+    user = created;
+    // Initialise wallet balance
+    await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
   }
+
   if (user.isSuspended) {
     res.status(403).json({ error: "Account is suspended" });
     return;
   }
 
-  // Block login for permanent or long-term self-exclusions (take-a-break only blocks betting)
+  // Check for active self-exclusion (non-take-a-break)
   const now = new Date();
   const [excl] = await db.select().from(selfExclusionsTable)
     .where(and(
@@ -108,6 +144,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       ),
     ))
     .limit(1);
+
   if (excl) {
     const endsMsg = excl.isPermanent
       ? "Your account is permanently self-excluded. Please contact support for assistance."
@@ -125,9 +162,20 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     expiresAt: refreshTokenExpiresAt(),
   });
 
-  res.json({ accessToken, refreshToken, user: { id: user.id, email: user.email, username: user.username, role: user.role, referralCode: user.referralCode } });
+  res.json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      walletAddress: user.walletAddress,
+      displayName: shortAddress(user.walletAddress!),
+      role: user.role,
+      referralCode: user.referralCode,
+    },
+  });
 });
 
+// ── POST /auth/refresh ────────────────────────────────────────────────────────
 router.post("/auth/refresh", async (req, res): Promise<void> => {
   const { refreshToken } = req.body as { refreshToken?: string };
   if (!refreshToken) {
@@ -153,6 +201,7 @@ router.post("/auth/refresh", async (req, res): Promise<void> => {
   res.json({ accessToken });
 });
 
+// ── POST /auth/logout ─────────────────────────────────────────────────────────
 router.post("/auth/logout", authenticate, async (req, res): Promise<void> => {
   const { refreshToken } = req.body as { refreshToken?: string };
   if (refreshToken) {
@@ -161,9 +210,11 @@ router.post("/auth/logout", authenticate, async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+// ── GET /auth/me ──────────────────────────────────────────────────────────────
 router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
   const [user] = await db.select({
     id: usersTable.id,
+    walletAddress: usersTable.walletAddress,
     email: usersTable.email,
     username: usersTable.username,
     role: usersTable.role,
@@ -177,65 +228,58 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
     res.status(404).json({ error: "User not found" });
     return;
   }
-  res.json(user);
+  res.json({
+    ...user,
+    displayName: user.walletAddress
+      ? shortAddress(user.walletAddress)
+      : (user.username ?? user.email ?? "User"),
+  });
 });
 
-const UpdateProfileBody = z.object({
-  username: z.string().min(3).max(30),
+// ── Admin-only: email/password login (kept for admin portal) ──────────────────
+const AdminLoginBody = z.object({
+  email: z.string().email(),
+  password: z.string(),
 });
 
-router.patch("/auth/update-profile", authenticate, async (req, res): Promise<void> => {
-  const parsed = UpdateProfileBody.safeParse(req.body);
+router.post("/auth/admin/login", async (req, res): Promise<void> => {
+  const parsed = AdminLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { username } = parsed.data;
+  const { email, password } = parsed.data;
 
-  const existing = await db.select({ id: usersTable.id })
-    .from(usersTable)
-    .where(and(eq(usersTable.username, username), ne(usersTable.id, req.user!.userId)))
-    .limit(1);
-  if (existing.length > 0) {
-    res.status(409).json({ error: "Username already taken" });
+  const [user] = await db.select().from(usersTable)
+    .where(eq(usersTable.email, email)).limit(1);
+
+  if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+    res.status(401).json({ error: "Invalid email or password" });
+    return;
+  }
+  if (!["admin", "super_admin"].includes(user.role)) {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  if (user.isSuspended) {
+    res.status(403).json({ error: "Account is suspended" });
     return;
   }
 
-  const [user] = await db.update(usersTable)
-    .set({ username })
-    .where(eq(usersTable.id, req.user!.userId))
-    .returning();
+  const payload = { userId: user.id, role: user.role };
+  const accessToken = signAccessToken(payload);
+  const refreshToken = signRefreshToken(payload);
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    refreshToken,
+    expiresAt: refreshTokenExpiresAt(),
+  });
 
-  res.json({ id: user.id, email: user.email, username: user.username, role: user.role, referralCode: user.referralCode });
-});
-
-const ChangePasswordBody = z.object({
-  currentPassword: z.string(),
-  newPassword: z.string().min(8),
-});
-
-router.post("/auth/change-password", authenticate, async (req, res): Promise<void> => {
-  const parsed = ChangePasswordBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-  const { currentPassword, newPassword } = parsed.data;
-
-  const [user] = await db.select()
-    .from(usersTable)
-    .where(eq(usersTable.id, req.user!.userId))
-    .limit(1);
-
-  if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
-    res.status(401).json({ error: "Current password is incorrect" });
-    return;
-  }
-
-  const passwordHash = await bcrypt.hash(newPassword, 12);
-  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, req.user!.userId));
-
-  res.json({ success: true });
+  res.json({
+    accessToken,
+    refreshToken,
+    user: { id: user.id, email: user.email, username: user.username, role: user.role, referralCode: user.referralCode },
+  });
 });
 
 export default router;
