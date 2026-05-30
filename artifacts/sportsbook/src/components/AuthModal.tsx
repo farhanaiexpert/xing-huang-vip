@@ -3,6 +3,7 @@ import {
   X, Wallet, AlertCircle, CheckCircle2, Copy, Check,
   ChevronRight, PenLine, ShieldCheck, Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react';
 import { useSignMessage } from 'wagmi';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
@@ -112,6 +113,18 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setStep('done');
+
+      // Login success toast
+      toast.success(`Signed in as ${shortAddress(addr)}`, {
+        description: 'Welcome to CupBett',
+        duration: 4500,
+        style: {
+          background: '#0D1A26',
+          border: '1px solid rgba(0,223,169,0.22)',
+          color: '#F8FAFC',
+        },
+      });
+
       setTimeout(onClose, 1400);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';

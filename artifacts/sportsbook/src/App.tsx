@@ -1,6 +1,7 @@
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
@@ -27,6 +28,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
+import { ProfileSetupModal } from "@/components/ProfileSetupModal";
 import { useTransactionNotifications } from "@/hooks/useTransactionNotifications";
 import { Link } from "wouter";
 
@@ -90,7 +92,18 @@ function App() {
                             <MobileBottomNav />
                             <OnboardingGuide />
                             <TransactionNotifier />
+                            <ProfileSetupModal />
                             <Toaster />
+                            <SonnerToaster
+                              position="top-right"
+                              toastOptions={{
+                                style: {
+                                  background: '#0D1A26',
+                                  border: '1px solid rgba(0,223,169,0.18)',
+                                  color: '#F8FAFC',
+                                },
+                              }}
+                            />
                           </BetSlipProvider>
                         </BetHistoryProvider>
                       </WalletProvider>
