@@ -219,6 +219,8 @@ router.get("/admin/users", async (req, res): Promise<void> => {
       id: usersTable.id,
       email: usersTable.email,
       username: usersTable.username,
+      walletAddress: usersTable.walletAddress,
+      walletNetwork: usersTable.walletNetwork,
       role: usersTable.role,
       kycStatus: usersTable.kycStatus,
       country: usersTable.country,
@@ -1462,6 +1464,7 @@ router.get("/admin/login-history", async (req, res): Promise<void> => {
     SELECT
       u.id,
       u.wallet_address   AS "walletAddress",
+      u.wallet_network   AS "walletNetwork",
       u.username,
       u.email,
       u.kyc_status       AS "kycStatus",
@@ -1470,7 +1473,7 @@ router.get("/admin/login-history", async (req, res): Promise<void> => {
       COUNT(s.id)::int   AS "sessionCount"
     FROM users u
     LEFT JOIN sessions s ON s.user_id = u.id
-    GROUP BY u.id, u.wallet_address, u.username, u.email, u.kyc_status, u.country
+    GROUP BY u.id, u.wallet_address, u.wallet_network, u.username, u.email, u.kyc_status, u.country
     ORDER BY MAX(s.created_at) DESC NULLS LAST
     LIMIT ${pageSize} OFFSET ${offset}
   `);

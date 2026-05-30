@@ -12,7 +12,8 @@ import {
   ArrowLeft, User, Ban, CheckCircle, KeyRound, DollarSign, Eye, EyeOff,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, RefreshCw,
   MessageSquare, Trash2, Shield, Zap, Gift, Users, Clock, TrendingUp,
-  AlertTriangle, Star, Flag, Headphones, Info, CheckCheck,
+  AlertTriangle, Star, Flag, Headphones, Info, CheckCheck, Wallet, Copy, Check,
+  ShieldCheck, ShieldX, RotateCcw, Network,
 } from "lucide-react";
 
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
@@ -563,9 +564,25 @@ export default function UserProfilePage() {
     enabled: !!userId && !isNaN(userId),
   });
 
+  const [copiedWallet, setCopiedWallet] = useState(false);
+  function copyWallet(addr: string) {
+    navigator.clipboard.writeText(addr).catch(() => {});
+    setCopiedWallet(true);
+    setTimeout(() => setCopiedWallet(false), 2000);
+  }
+
   const suspendMut = useMutation({
     mutationFn: (suspend: boolean) => api.patch(`/admin/users/${userId}`, { isSuspended: suspend }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["user-profile", userId] }); toast.success("User status updated"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const kycMut = useMutation({
+    mutationFn: (kycStatus: string) => api.patch(`/admin/users/${userId}`, { kycStatus }),
+    onSuccess: (_d, kycStatus) => {
+      qc.invalidateQueries({ queryKey: ["user-profile", userId] });
+      toast.success(`KYC status set to "${kycStatus}"`);
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -616,13 +633,13 @@ export default function UserProfilePage() {
         <div className="flex items-start gap-4 flex-wrap">
           {/* Avatar */}
           <div className="w-14 h-14 rounded-2xl bg-[#38BDF8]/10 flex items-center justify-center shrink-0">
-            <span className="text-[#38BDF8] text-2xl font-bold uppercase">{user.username.slice(0, 1)}</span>
+            <span className="text-[#38BDF8] text-2xl font-bold uppercase">{(user.username ?? user.walletAddress ?? "?").slice(0, 1)}</span>
           </div>
 
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h1 className="text-xl font-bold text-white">{user.username}</h1>
+              <h1 className="text-xl font-bold text-white">{user.username ?? <span className="text-[#475569] italic text-base">no username</span>}</h1>
               <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-semibold",
                 isSuspended ? "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20" : "bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/20")}>
                 {isSuspended ? "Suspended" : "Active"}
@@ -630,8 +647,33 @@ export default function UserProfilePage() {
               <span className="px-2 py-0.5 rounded-full text-[11px] border bg-white/5 text-[#94A3B8] border-white/10 capitalize">
                 {user.role.replace(/_/g, " ")}
               </span>
+              {/* KYC badge */}
+              <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-semibold",
+                user.kycStatus === "verified" || user.kycStatus === "approved"
+                  ? "bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/20"
+                  : user.kycStatus === "rejected"
+                  ? "bg-red-500/10 text-red-400 border-red-500/20"
+                  : "bg-[#FACC15]/10 text-[#FACC15] border-[#FACC15]/20")}>
+                KYC: {user.kycStatus}
+              </span>
             </div>
-            <p className="text-sm text-[#64748B] mb-2">{user.email}</p>
+            {user.email && <p className="text-sm text-[#64748B] mb-2">{user.email}</p>}
+            {/* Wallet address row */}
+            {user.walletAddress && (
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="w-3.5 h-3.5 text-[#334155] shrink-0" />
+                <span className="font-mono text-xs text-[#64748B]">{user.walletAddress}</span>
+                <button onClick={() => copyWallet(user.walletAddress!)}
+                  className="text-[#334155] hover:text-[#00DFA9] transition-colors" title="Copy address">
+                  {copiedWallet ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+                </button>
+                {user.walletNetwork && (
+                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#38BDF8]/10 text-[#38BDF8] text-[10px] font-medium border border-[#38BDF8]/20">
+                    <Network className="w-2.5 h-2.5" /> {user.walletNetwork}
+                  </span>
+                )}
+              </div>
+            )}
             <div className="flex gap-4 text-xs text-[#475569] flex-wrap">
               <span>uid: <span className="text-[#94A3B8] font-mono">#{user.id}</span></span>
               <span>Joined: <span className="text-[#94A3B8]">{fmtDate(user.createdAt)}</span></span>
@@ -642,6 +684,31 @@ export default function UserProfilePage() {
 
           {/* Quick actions */}
           <div className="flex gap-2 flex-wrap shrink-0">
+            {/* KYC controls */}
+            <div className="flex items-center gap-1 bg-white/3 border border-white/8 rounded-lg px-2 py-1">
+              <span className="text-[10px] text-[#475569] mr-1">KYC</span>
+              <button
+                onClick={() => kycMut.mutate("verified")}
+                disabled={kycMut.isPending || user.kycStatus === "verified"}
+                title="Approve KYC"
+                className="p-1 rounded text-[#00DFA9] hover:bg-[#00DFA9]/10 disabled:opacity-30 transition-colors">
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => kycMut.mutate("rejected")}
+                disabled={kycMut.isPending || user.kycStatus === "rejected"}
+                title="Reject KYC"
+                className="p-1 rounded text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition-colors">
+                <ShieldX className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => kycMut.mutate("pending")}
+                disabled={kycMut.isPending || user.kycStatus === "pending"}
+                title="Reset KYC to pending"
+                className="p-1 rounded text-[#FACC15] hover:bg-[#FACC15]/10 disabled:opacity-30 transition-colors">
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <button onClick={() => setShowAdj(v => !v)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FACC15]/10 text-[#FACC15] hover:bg-[#FACC15]/20 rounded-lg text-xs font-semibold transition-colors">
               <DollarSign className="w-3.5 h-3.5" /> Adjust Balance

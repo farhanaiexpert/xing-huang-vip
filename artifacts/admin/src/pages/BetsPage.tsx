@@ -47,11 +47,11 @@ function UserSheet({ username, onClose }: { username: string; onClose: () => voi
           <div className="mt-5 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#38BDF8]/10 flex items-center justify-center">
-                <span className="text-[#38BDF8] font-bold uppercase">{user.username.slice(0, 1)}</span>
+                <span className="text-[#38BDF8] font-bold uppercase">{(user.username ?? user.walletAddress ?? "?").slice(0, 1)}</span>
               </div>
               <div>
-                <div className="text-white font-semibold">{user.username}</div>
-                <div className="text-xs text-[#475569]">{user.email}</div>
+                <div className="text-white font-semibold">{user.username ?? user.walletAddress ?? "—"}</div>
+                <div className="text-xs text-[#475569]">{user.email ?? "—"}</div>
               </div>
             </div>
             <div className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">

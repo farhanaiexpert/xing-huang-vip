@@ -50,10 +50,21 @@ router.get("/auth/wallet/nonce", async (req, res): Promise<void> => {
 });
 
 // ── POST /auth/wallet/verify ──────────────────────────────────────────────────
+const CHAIN_NAMES: Record<number, string> = {
+  1: "Ethereum", 56: "BSC", 137: "Polygon", 43114: "Avalanche",
+  10: "Optimism", 42161: "Arbitrum", 8453: "Base", 250: "Fantom",
+};
+
+function chainName(chainId?: number | null): string | null {
+  if (!chainId) return null;
+  return CHAIN_NAMES[chainId] ?? `Chain ${chainId}`;
+}
+
 const WalletVerifyBody = z.object({
   address: z.string(),
   signature: z.string(),
   nonce: z.string(),
+  chainId: z.number().optional(),
 });
 
 router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
@@ -62,7 +73,7 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
     res.status(400).json({ error: "address, signature, and nonce are required" });
     return;
   }
-  const { address: rawAddress, signature, nonce } = parsed.data;
+  const { address: rawAddress, signature, nonce, chainId } = parsed.data;
 
   if (!isAddress(rawAddress)) {
     res.status(400).json({ error: "Invalid wallet address" });
@@ -114,16 +125,23 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
 
   let user = existing[0];
 
+  const network = chainName(chainId);
+
   if (!user) {
     const referralCode = randomBytes(4).toString("hex").toUpperCase();
     const [created] = await db.insert(usersTable).values({
       walletAddress: address,
+      walletNetwork: network,
       referralCode,
       role: "user",
     }).returning();
     user = created;
     // Initialise wallet balance
     await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+  } else if (network && user.walletNetwork !== network) {
+    // Update network if it changed or was never set
+    await db.update(usersTable).set({ walletNetwork: network }).where(eq(usersTable.id, user.id));
+    user = { ...user, walletNetwork: network };
   }
 
   if (user.isSuspended) {

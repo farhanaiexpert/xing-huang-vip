@@ -98,11 +98,11 @@ function AdminDrawer({
                     : "text-[#38BDF8]"
                 )}
               >
-                {user.username.slice(0, 1)}
+                {(user.username ?? user.walletAddress ?? "?").slice(0, 1)}
               </span>
             </div>
             <div>
-              <div className="text-base">{user.username}</div>
+              <div className="text-base">{user.username ?? user.walletAddress ?? "—"}</div>
               <div className="text-xs text-[#475569] font-normal">
                 uid:{user.id}
               </div>
@@ -553,12 +553,12 @@ export default function AdminAccountsPage() {
                     "text-xs font-bold uppercase",
                     u.role === "super_admin" ? "text-[#FACC15]" : "text-[#38BDF8]"
                   )}>
-                    {u.username.slice(0, 1)}
+                    {(u.username ?? u.walletAddress ?? "?").slice(0, 1)}
                   </span>
                 </div>
                 <div>
-                  <div className="font-medium text-white text-sm">{u.username}</div>
-                  <div className="text-[11px] text-[#475569]">{u.email}</div>
+                  <div className="font-medium text-white text-sm">{u.username ?? <span className="italic text-[#475569]">no username</span>}</div>
+                  <div className="text-[11px] text-[#475569]">{u.email ?? "—"}</div>
                 </div>
               </div>
             ),

@@ -6,7 +6,7 @@ import { fmtDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft, ChevronRight, Clock, Wallet, User,
-  Search, RefreshCw,
+  Search, RefreshCw, Copy, Check, Network,
 } from "lucide-react";
 
 const PAGE_SIZE = 50;
@@ -16,6 +16,28 @@ function kycBadge(kyc: string) {
   if (kyc === "pending") return "bg-[#FACC15]/10 text-[#FACC15] border-[#FACC15]/20";
   if (kyc === "rejected") return "bg-red-500/10 text-red-400 border-red-500/20";
   return "bg-white/5 text-[#94A3B8] border-white/10";
+}
+
+function CopyAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+  function doCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(address).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <div className="flex items-center gap-1.5 group/addr">
+      <Wallet className="w-3.5 h-3.5 text-[#334155] shrink-0" />
+      <span className="font-mono text-[11px] text-[#64748B]" title={address}>
+        {address.slice(0, 8)}…{address.slice(-6)}
+      </span>
+      <button onClick={doCopy} title="Copy full address"
+        className="opacity-0 group-hover/addr:opacity-100 text-[#334155] hover:text-[#00DFA9] transition-all">
+        {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+      </button>
+    </div>
+  );
 }
 
 export default function LoginHistoryPage() {
@@ -90,7 +112,7 @@ export default function LoginHistoryPage() {
             <thead>
               <tr className="border-b border-white/6">
                 <th className="text-left px-4 py-3 text-xs font-medium text-[#475569] uppercase tracking-wide whitespace-nowrap">User</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#475569] uppercase tracking-wide whitespace-nowrap">Wallet Address</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-[#475569] uppercase tracking-wide whitespace-nowrap">Wallet / Network</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-[#475569] uppercase tracking-wide whitespace-nowrap">KYC</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-[#475569] uppercase tracking-wide whitespace-nowrap">Country</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-[#475569] uppercase tracking-wide whitespace-nowrap">Last Login</th>
@@ -138,11 +160,13 @@ export default function LoginHistoryPage() {
                     </td>
                     <td className="px-4 py-3">
                       {row.walletAddress ? (
-                        <div className="flex items-center gap-1.5">
-                          <Wallet className="w-3.5 h-3.5 text-[#334155] shrink-0" />
-                          <span className="font-mono text-[11px] text-[#64748B]">
-                            {row.walletAddress.slice(0, 6)}…{row.walletAddress.slice(-4)}
-                          </span>
+                        <div className="space-y-1">
+                          <CopyAddress address={row.walletAddress} />
+                          {row.walletNetwork && (
+                            <span className="flex items-center gap-1 w-fit px-1.5 py-0.5 rounded bg-[#38BDF8]/10 text-[#38BDF8] text-[9px] font-medium border border-[#38BDF8]/20">
+                              <Network className="w-2.5 h-2.5" /> {row.walletNetwork}
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-[#334155] text-xs">—</span>

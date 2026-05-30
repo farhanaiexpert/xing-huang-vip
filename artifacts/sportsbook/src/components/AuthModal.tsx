@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react';
-import { useSignMessage } from 'wagmi';
+import { useSignMessage, useChainId } from 'wagmi';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import { api, setTokens } from '../lib/apiClient';
 import { shortAddress } from '../lib/utils';
@@ -61,6 +61,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   const { address, isConnected }  = useAppKitAccount();
   const { open: appKitModalOpen } = useAppKitState();
   const { signMessageAsync }      = useSignMessage();
+  const chainId                   = useChainId();
 
   const [step,  setStep]  = useState<Step>('idle');
   const [error, setError] = useState('');
@@ -109,6 +110,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
         address: addr.toLowerCase(),
         signature,
         nonce,
+        chainId,
       });
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);

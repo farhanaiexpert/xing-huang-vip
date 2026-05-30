@@ -73,8 +73,10 @@ export interface AdminStats {
 
 export interface AdminUser {
   id: number;
-  email: string;
-  username: string;
+  email: string | null;
+  username: string | null;
+  walletAddress: string | null;
+  walletNetwork: string | null;
   role: string;
   kycStatus: string;
   country: string | null;
@@ -381,6 +383,7 @@ export interface UserGrowthRow {
 export interface LoginHistoryRow {
   id: number;
   walletAddress: string | null;
+  walletNetwork: string | null;
   username: string | null;
   email: string | null;
   kycStatus: string;

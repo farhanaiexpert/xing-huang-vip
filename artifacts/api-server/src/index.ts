@@ -224,6 +224,16 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v12 skipped");
   }
+
+  // v13: users.wallet_network — chain/network name captured on wallet connect
+  try {
+    await db.execute(sql`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_network TEXT
+    `);
+    logger.info("DB migration v13 applied (users.wallet_network)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v13 skipped");
+  }
 }
 
 runMigrations().then(() => {
