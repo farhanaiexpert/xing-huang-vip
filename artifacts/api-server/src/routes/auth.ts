@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { verifyMessage, isAddress, getAddress } from "viem";
@@ -239,6 +239,72 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
       ? shortAddress(user.walletAddress)
       : (user.username ?? user.email ?? "User"),
   });
+});
+
+// ── PATCH /auth/update-profile ────────────────────────────────────────────────
+// Kept for backward compatibility; wallet users may still set a display username
+const UpdateProfileBody = z.object({
+  username: z.string().min(3).max(30).optional(),
+});
+
+router.patch("/auth/update-profile", authenticate, async (req, res): Promise<void> => {
+  const parsed = UpdateProfileBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { username } = parsed.data;
+  if (!username) {
+    res.status(400).json({ error: "username is required" });
+    return;
+  }
+
+  const existing = await db.select({ id: usersTable.id })
+    .from(usersTable)
+    .where(and(eq(usersTable.username, username), ne(usersTable.id, req.user!.userId)))
+    .limit(1);
+  if (existing.length > 0) {
+    res.status(409).json({ error: "Username already taken" });
+    return;
+  }
+
+  const [user] = await db.update(usersTable)
+    .set({ username })
+    .where(eq(usersTable.id, req.user!.userId))
+    .returning();
+
+  res.json({ id: user.id, email: user.email, username: user.username, role: user.role, referralCode: user.referralCode });
+});
+
+// ── POST /auth/change-password ────────────────────────────────────────────────
+// Kept for backward compatibility; only applies to admin accounts with a passwordHash
+const ChangePasswordBody = z.object({
+  currentPassword: z.string(),
+  newPassword: z.string().min(8),
+});
+
+router.post("/auth/change-password", authenticate, async (req, res): Promise<void> => {
+  const parsed = ChangePasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { currentPassword, newPassword } = parsed.data;
+
+  const [user] = await db.select()
+    .from(usersTable)
+    .where(eq(usersTable.id, req.user!.userId))
+    .limit(1);
+
+  if (!user || !user.passwordHash || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    res.status(401).json({ error: "Current password is incorrect" });
+    return;
+  }
+
+  const hash = await bcrypt.hash(newPassword, 12);
+  await db.update(usersTable).set({ passwordHash: hash }).where(eq(usersTable.id, req.user!.userId));
+
+  res.json({ success: true });
 });
 
 // ── Admin-only: email/password login (kept for admin portal) ──────────────────
