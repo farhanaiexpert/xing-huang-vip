@@ -74,6 +74,10 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@reown/appkit": "^1.8.20",
+    "@reown/appkit-adapter-wagmi": "^1.8.20",
+    "viem": "^2.51.3",
+    "wagmi": "^3.6.16",
     "zustand": "^5.0.13"
   }
 }
