@@ -175,7 +175,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
           <p className="text-xs text-[#94A3B8]/50 mt-1">
             {step === 'done'
               ? 'Welcome to CupBett'
-              : 'Sign in securely — no password needed'}
+              : 'Your wallet is your identity'}
           </p>
         </div>
 
