@@ -41,16 +41,46 @@ function saveToStorage(entry: StoredEntry): void {
   } catch { /* storage quota exceeded — silently skip */ }
 }
 
+const QUOTA_TTL_MS = 24 * 60 * 60 * 1000; // auto-clear after 24 h
+
+interface QuotaEntry { ts: number }
+
 function isQuotaExhausted(): boolean {
-  try { return localStorage.getItem(QUOTA_KEY) === '1'; } catch { return false; }
+  try {
+    const raw = localStorage.getItem(QUOTA_KEY);
+    if (!raw) return false;
+    // Legacy flag stored as plain '1' — treat as immediately expired
+    if (raw === '1') { localStorage.removeItem(QUOTA_KEY); return false; }
+    const entry = JSON.parse(raw) as QuotaEntry;
+    if (Date.now() - entry.ts >= QUOTA_TTL_MS) {
+      localStorage.removeItem(QUOTA_KEY);
+      return false;
+    }
+    return true;
+  } catch { return false; }
 }
 
 function setQuotaExhausted(): void {
-  try { localStorage.setItem(QUOTA_KEY, '1'); } catch {}
+  try { localStorage.setItem(QUOTA_KEY, JSON.stringify({ ts: Date.now() })); } catch {}
 }
 
 function clearQuotaExhausted(): void {
   try { localStorage.removeItem(QUOTA_KEY); } catch {}
+}
+
+// ─── Filter past matches out of cached league data ────────────────────────────
+
+function filterCurrentLeagues(leagues: League[]): League[] {
+  const now = Date.now();
+  return leagues
+    .map(league => ({
+      ...league,
+      matches: league.matches.filter(m =>
+        // Keep mock matches (no commenceIso) and future API matches
+        !m.commenceIso || new Date(m.commenceIso).getTime() > now,
+      ),
+    }))
+    .filter(league => league.matches.length > 0);
 }
 
 // ─── Module-level session cache (faster than localStorage) ───────────────────
@@ -125,7 +155,9 @@ export interface UseOddsApiResult {
 export function useOddsApi(): UseOddsApiResult {
   const stored = _sessionCache ?? loadFromStorage();
 
-  const [realLeagues, setRealLeagues] = useState<League[]>(stored?.leagues ?? []);
+  const [realLeagues, setRealLeagues] = useState<League[]>(
+    stored ? filterCurrentLeagues(stored.leagues) : [],
+  );
   const [loading,     setLoading]     = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);
   const [error,       setError]       = useState<string | null>(null);
@@ -172,9 +204,10 @@ export function useOddsApi(): UseOddsApiResult {
     const cached = _sessionCache ?? loadFromStorage();
 
     if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-      // Cache is fresh — hydrate without network call
+      // Cache is fresh — hydrate without network call, but drop any matches
+      // whose kick-off time has already passed (stale cache issue).
       _sessionCache = cached;
-      setRealLeagues(cached.leagues);
+      setRealLeagues(filterCurrentLeagues(cached.leagues));
       setFetchedAt(new Date(cached.fetchedAt));
     } else {
       // Cache stale or absent — fetch through API server

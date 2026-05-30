@@ -42,6 +42,8 @@ export type Match = {
   marketCount?: number;
   /** Formatted kickoff time, e.g. "Today, 20:00" or "Sat, 15:30" */
   kickoffTime?: string;
+  /** ISO 8601 commence time — used to re-filter past matches from stale cache */
+  commenceIso?: string;
 };
 
 export type League = {

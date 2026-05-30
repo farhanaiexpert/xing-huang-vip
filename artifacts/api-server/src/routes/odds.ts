@@ -8,7 +8,7 @@ const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
-const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours — stretches free-tier monthly credits ~6×
 const LIVE_CACHE_TTL = 30 * 1000;
 
 const LIVE_SPORTS = [

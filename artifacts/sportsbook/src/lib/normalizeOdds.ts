@@ -88,6 +88,7 @@ export function normalizeEvents(
         sportId:     config.sportId,
         isLive:      false as boolean,
         marketCount: 20,
+        commenceIso: event.commence_time,
         odds: {
           home,
           draw,
