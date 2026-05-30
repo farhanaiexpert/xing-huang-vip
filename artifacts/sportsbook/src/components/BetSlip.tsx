@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
@@ -22,23 +22,34 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     singleStakes, setSingleStake,
     removeSelection, clearSlip,
     totalOdds, accaReturn, totalSingleReturn, totalSingleStaked,
+    oddsChanges, acceptOddsChanges,
   } = useBetSlip();
 
   const { isConnected, balance, deductBalance, refreshBalance, connect } = useWallet();
   const { isAuthenticated } = useAuth();
   const { addBet, refresh: refreshBetHistory } = useBetHistory();
   const { toast } = useToast();
-  const [isPlacing,      setIsPlacing]      = useState(false);
-  const [confirmation,   setConfirmation]   = useState<BetConfirmation | null>(null);
-  const [depositOpen,    setDepositOpen]    = useState(false);
+  const [isPlacing,       setIsPlacing]      = useState(false);
+  const [confirmation,    setConfirmation]   = useState<BetConfirmation | null>(null);
+  const [depositOpen,     setDepositOpen]    = useState(false);
+  const [driftPending,    setDriftPending]   = useState(false);
+  const [removingIds,     setRemovingIds]    = useState<Set<string>>(new Set());
+  const [lastAddedId,     setLastAddedId]    = useState<string | null>(null);
+  const prevSelectionIdsRef = useRef<string[]>([]);
   const isScrolled = !forceExpanded && !!isScrolledProp;
   const [compactExpanded, setCompactExpanded] = useState(false);
 
   const hasSelections = selections.length > 0;
 
   // ── Place bet ──────────────────────────────────────────────────
-  async function handlePlaceBet() {
+  async function handlePlaceBet(skipDriftCheck = false) {
     if (!isAuthenticated) return;
+
+    // Pause if any odds have drifted since selection was added
+    if (!skipDriftCheck && Object.keys(oddsChanges).length > 0) {
+      setDriftPending(true);
+      return;
+    }
 
     const stakeNum = betType === 'acca' ? parseFloat(stake || '0') : totalSingleStaked;
     const payout   = betType === 'acca' ? accaReturn : totalSingleReturn;
@@ -99,6 +110,24 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     setConfirmation(null);
     clearSlip();
   }
+
+  // Animated remove — plays exit animation then removes from context
+  function handleRemoveSelection(id: string) {
+    setRemovingIds(prev => new Set([...prev, id]));
+    setTimeout(() => {
+      removeSelection(id);
+      setRemovingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    }, 230);
+  }
+
+  // Track the most-recently-added selection id for auto-focusing its stake input
+  useEffect(() => {
+    const prevIds = prevSelectionIdsRef.current;
+    const currentIds = selections.map(s => s.id);
+    const newId = currentIds.find(id => !prevIds.includes(id));
+    prevSelectionIdsRef.current = currentIds;
+    if (newId) setLastAddedId(newId);
+  }, [selections]);
 
   // ── Bet logic ─────────────────────────────────────────────────
   const accaStakeNum     = parseFloat(stake || '0');
@@ -194,7 +223,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
                   )}
 
                   {/* Place bet */}
-                  <button onClick={handlePlaceBet} disabled={!canPlace}
+                  <button onClick={() => handlePlaceBet()} disabled={!canPlace}
                     className={cn('w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200',
                       canPlace
                         ? 'bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 shadow-[0_0_16px_rgba(0,223,169,0.25)]'
@@ -216,6 +245,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   return (
     <aside className={cn(
+      'relative',
       forceExpanded
         ? 'flex flex-col w-full h-full overflow-hidden'
         : 'w-[260px] shrink-0 flex flex-col h-[calc(100vh-3.5rem)] fixed right-0 top-14 hidden xl:flex border-t border-[#253241] overflow-hidden',
@@ -314,20 +344,24 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               selections={selections}
               singleStakes={singleStakes}
               setSingleStake={setSingleStake}
-              removeSelection={removeSelection}
+              removeSelection={handleRemoveSelection}
+              removingIds={removingIds}
+              newSelectionId={lastAddedId}
               totalSingleStaked={totalSingleStaked}
               totalSingleReturn={totalSingleReturn}
               isConnected={isConnected}
               isAuthenticated={isAuthenticated}
               balance={balance}
               canPlace={canPlaceSingle}
+              isPlacing={isPlacing}
               onConnectWallet={() => setDepositOpen(true)}
               onPlaceBet={handlePlaceBet}
             />
           ) : (
             <AccaView
               selections={selections}
-              removeSelection={removeSelection}
+              removeSelection={handleRemoveSelection}
+              removingIds={removingIds}
               totalOdds={totalOdds}
               stake={stake}
               setStake={setStake}
@@ -337,6 +371,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               balance={balance}
               canPlace={canPlaceAcca}
               readyToStake={readyToStake}
+              isPlacing={isPlacing}
               onConnectWallet={() => setDepositOpen(true)}
               onPlaceBet={handlePlaceBet}
             />
@@ -345,6 +380,57 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
       )}
 
       </div>
+
+      {/* ── Odds drift overlay ────────────────────────────────────── */}
+      {driftPending && (
+        <div className="absolute inset-0 z-20 flex flex-col justify-end bg-[#0D1117]/95 backdrop-blur-sm">
+          <div className="p-4 space-y-3">
+            <div className="rounded-xl bg-[#FACC15]/8 border border-[#FACC15]/25 p-3.5">
+              <div className="flex items-start gap-2.5 mb-3">
+                <AlertCircle className="h-4 w-4 text-[#FACC15] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[13px] font-bold text-[#FACC15]">Odds have moved</p>
+                  <p className="text-[11px] text-[#94A3B8]/70 mt-0.5 leading-snug">
+                    {Object.keys(oddsChanges).length} selection{Object.keys(oddsChanges).length !== 1 ? 's have' : ' has'} changed since you added {Object.keys(oddsChanges).length !== 1 ? 'them' : 'it'}.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(oddsChanges).map(([id, change]) => {
+                  const sel = selections.find(s => s.id === id);
+                  if (!sel) return null;
+                  const isWorse = change.current < change.prev;
+                  return (
+                    <div key={id} className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#94A3B8]/70 truncate flex-1 mr-2">{sel.selectionName}</span>
+                      <span className="flex items-center gap-1.5 font-mono shrink-0">
+                        <span className="text-[#94A3B8]/50">{change.prev.toFixed(2)}</span>
+                        <span className="text-[#94A3B8]/40">→</span>
+                        <span className={cn('font-bold', isWorse ? 'text-[#EF4444]' : 'text-[#00DFA9]')}>{change.current.toFixed(2)}</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDriftPending(false)}
+                className="flex-1 h-11 rounded-xl border border-[#253241] text-[13px] font-semibold text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] transition-all duration-150"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { acceptOddsChanges(); setDriftPending(false); handlePlaceBet(true); }}
+                className="flex-1 h-11 rounded-xl bg-[#FACC15] text-[#0B0F14] text-[13px] font-bold flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Accept & Place
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />
       <ConnectWalletModal open={depositOpen} onOpenChange={setDepositOpen} />
@@ -356,23 +442,35 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 // SINGLE VIEW
 // ────────────────────────────────────────────────────────────────
 function SingleView({
-  selections, singleStakes, setSingleStake, removeSelection,
-  totalSingleStaked, totalSingleReturn, isConnected, isAuthenticated, balance, canPlace,
-  onConnectWallet, onPlaceBet,
+  selections, singleStakes, setSingleStake, removeSelection, removingIds,
+  newSelectionId, totalSingleStaked, totalSingleReturn, isConnected, isAuthenticated,
+  balance, canPlace, isPlacing, onConnectWallet, onPlaceBet,
 }: {
   selections: Selection[];
   singleStakes: Record<string, string>;
   setSingleStake: (id: string, v: string) => void;
   removeSelection: (id: string) => void;
+  removingIds: Set<string>;
+  newSelectionId?: string | null;
   totalSingleStaked: number;
   totalSingleReturn: number;
   isConnected: boolean;
   isAuthenticated: boolean;
   balance: number;
   canPlace: boolean;
+  isPlacing: boolean;
   onConnectWallet: () => void;
   onPlaceBet: () => void;
 }) {
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Auto-focus the stake input for the most recently added selection
+  useEffect(() => {
+    if (!newSelectionId) return;
+    const t = setTimeout(() => { inputRefs.current[newSelectionId]?.focus(); }, 160);
+    return () => clearTimeout(t);
+  }, [newSelectionId]);
+
   const totalProfit = totalSingleReturn - totalSingleStaked;
 
   // Compute why Place Bet is disabled (for the helper hint)
@@ -396,6 +494,7 @@ function SingleView({
               <SelectionCard
                 key={sel.id}
                 sel={sel}
+                isRemoving={removingIds.has(sel.id)}
                 onRemove={() => removeSelection(sel.id)}
                 extra={
                   <div className="mt-2 space-y-1.5">
@@ -407,6 +506,7 @@ function SingleView({
                           className="pl-3 pr-2 h-8 rounded-lg text-xs bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50"
                           value={singleStakes[sel.id] || ''}
                           onChange={e => setSingleStake(sel.id, e.target.value)}
+                          ref={(el: HTMLInputElement | null) => { inputRefs.current[sel.id] = el; }}
                         />
                       </div>
                       <div className="text-right shrink-0 w-[72px]">
@@ -487,6 +587,7 @@ function SingleView({
           onConnectWallet={onConnectWallet}
           onPlaceBet={onPlaceBet}
           hasStake={totalSingleStaked > 0}
+          isPlacing={isPlacing}
         />
         {disabledHint && (
           <p className="text-[10px] text-[#94A3B8]/50 text-center leading-snug -mt-1">{disabledHint}</p>
@@ -500,11 +601,13 @@ function SingleView({
 // ACCA VIEW
 // ────────────────────────────────────────────────────────────────
 function AccaView({
-  selections, removeSelection, totalOdds, stake, setStake,
-  accaReturn, isConnected, isAuthenticated, balance, canPlace, readyToStake, onConnectWallet, onPlaceBet,
+  selections, removeSelection, removingIds, totalOdds, stake, setStake,
+  accaReturn, isConnected, isAuthenticated, balance, canPlace, readyToStake,
+  isPlacing, onConnectWallet, onPlaceBet,
 }: {
   selections: Selection[];
   removeSelection: (id: string) => void;
+  removingIds: Set<string>;
   totalOdds: number;
   stake: string;
   setStake: (v: string) => void;
@@ -514,6 +617,7 @@ function AccaView({
   balance: number;
   canPlace: boolean;
   readyToStake: boolean;
+  isPlacing: boolean;
   onConnectWallet: () => void;
   onPlaceBet: () => void;
 }) {
@@ -541,7 +645,7 @@ function AccaView({
       <ScrollArea className="flex-1 min-h-0 px-3">
         <div className="space-y-1.5 py-2">
           {selections.map(sel => (
-            <SelectionCard key={sel.id} sel={sel} compact onRemove={() => removeSelection(sel.id)} />
+            <SelectionCard key={sel.id} sel={sel} compact isRemoving={removingIds.has(sel.id)} onRemove={() => removeSelection(sel.id)} />
           ))}
         </div>
       </ScrollArea>
@@ -622,6 +726,7 @@ function AccaView({
           onConnectWallet={onConnectWallet}
           onPlaceBet={onPlaceBet}
           hasStake={stakeNum > 0}
+          isPlacing={isPlacing}
         />
         {disabledHint && (
           <p className="text-[10px] text-[#94A3B8]/50 text-center leading-snug -mt-1">{disabledHint}</p>
@@ -635,17 +740,19 @@ function AccaView({
 // SELECTION CARD
 // ────────────────────────────────────────────────────────────────
 function SelectionCard({
-  sel, onRemove, compact = false, extra,
+  sel, onRemove, compact = false, extra, isRemoving = false,
 }: {
   sel: Selection;
   onRemove: () => void;
   compact?: boolean;
   extra?: React.ReactNode;
+  isRemoving?: boolean;
 }) {
   const { format } = useOddsFormat();
   return (
     <div className={cn(
       'relative rounded-xl border transition-colors group/card w-full max-w-full overflow-hidden',
+      isRemoving ? 'slip-sel-exit' : 'slip-sel-enter',
       compact
         ? 'bg-[#0B0F14] border-[#253241] px-3 py-2 hover:border-[#2E3D50]'
         : 'bg-gradient-to-br from-[#18212B] to-[#121821] border-[#253241] hover:border-[#2E3D50] p-3'
@@ -715,14 +822,30 @@ function SelectionCard({
 // ACTION BUTTON (Place Bet / Connect Wallet / Enter Stake)
 // ────────────────────────────────────────────────────────────────
 function ActionButton({
-  isConnected, canPlace, hasStake, onConnectWallet, onPlaceBet,
+  isConnected, canPlace, hasStake, onConnectWallet, onPlaceBet, isPlacing = false,
 }: {
   isConnected: boolean;
   canPlace: boolean;
   hasStake: boolean;
   onConnectWallet: () => void;
   onPlaceBet: () => void;
+  isPlacing?: boolean;
 }) {
+  if (isPlacing) {
+    return (
+      <button
+        disabled
+        data-testid="button-place-bet"
+        className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 bg-[#00DFA9] text-[#0B0F14] cursor-not-allowed opacity-90"
+      >
+        <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+        Placing Bet…
+      </button>
+    );
+  }
   if (!isConnected) {
     return (
       <button

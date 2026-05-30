@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode, createElement } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode, createElement } from 'react';
 import { Selection, BetType } from '../types';
 
 interface BetSlipState {
@@ -13,6 +13,12 @@ interface BetSlipState {
   removeSelection: (id: string) => void;
   clearSlip: () => void;
   hasSelection: (id: string) => boolean;
+  /** Odds that drifted since selection was added: id → { prev, current } */
+  oddsChanges: Record<string, { prev: number; current: number }>;
+  /** Call when live odds update for an in-slip selection */
+  updateSelectionOdds: (id: string, newOdds: number) => void;
+  /** Accept all drifted odds — clears the change map */
+  acceptOddsChanges: () => void;
   /** Combined odds (product) — for accumulator display */
   totalOdds: number;
   /** Estimated acca return */
@@ -30,16 +36,15 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
   const [betType,       setBetTypeState]  = useState<BetType>('acca');
   const [stake,         setStakeState]    = useState('');
   const [singleStakes,  setSingleStakesState] = useState<Record<string, string>>({});
+  /** Odds locked at the moment each selection was added */
+  const [lockedOdds,    setLockedOdds]    = useState<Record<string, number>>({});
 
-  /**
-   * Add a selection. If another selection from the same market (same marketId)
-   * already exists, replace it — you can't back two outcomes from the same market.
-   */
   const addSelection = useCallback((selection: Selection) => {
     setSelections(prev => {
       const withoutSameMarket = prev.filter(s => s.marketId !== selection.marketId);
       return [...withoutSameMarket, selection];
     });
+    setLockedOdds(prev => ({ ...prev, [selection.id]: selection.odds }));
   }, []);
 
   const removeSelection = useCallback((id: string) => {
@@ -49,15 +54,15 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
       delete next[id];
       return next;
     });
+    setLockedOdds(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }, []);
 
-  const setBetType = useCallback((type: BetType) => {
-    setBetTypeState(type);
-  }, []);
-
-  const setStake = useCallback((s: string) => {
-    setStakeState(s);
-  }, []);
+  const setBetType = useCallback((type: BetType) => { setBetTypeState(type); }, []);
+  const setStake   = useCallback((s: string)       => { setStakeState(s); }, []);
 
   const setSingleStake = useCallback((id: string, s: string) => {
     setSingleStakesState(prev => ({ ...prev, [id]: s }));
@@ -67,12 +72,46 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
     setSelections([]);
     setStakeState('');
     setSingleStakesState({});
+    setLockedOdds({});
   }, []);
 
   const hasSelection = useCallback(
     (id: string) => selections.some(s => s.id === id),
     [selections]
   );
+
+  /** Called by OddsButton when live odds change while the selection is in the slip */
+  const updateSelectionOdds = useCallback((id: string, newOdds: number) => {
+    setSelections(prev => {
+      const sel = prev.find(s => s.id === id);
+      if (!sel || Math.abs(sel.odds - newOdds) < 0.001) return prev;
+      return prev.map(s => s.id === id ? { ...s, odds: newOdds } : s);
+    });
+  }, []);
+
+  /** Accept all drifted odds — updates locked prices to the current values */
+  const acceptOddsChanges = useCallback(() => {
+    setLockedOdds(prev => {
+      const next = { ...prev };
+      setSelections(sels => {
+        for (const s of sels) next[s.id] = s.odds;
+        return sels;
+      });
+      return next;
+    });
+  }, []);
+
+  /** Computed: which selections have drifted ≥ 0.01 from their locked odds */
+  const oddsChanges = useMemo(() => {
+    const changes: Record<string, { prev: number; current: number }> = {};
+    for (const sel of selections) {
+      const locked = lockedOdds[sel.id];
+      if (locked !== undefined && Math.abs(locked - sel.odds) >= 0.01) {
+        changes[sel.id] = { prev: locked, current: sel.odds };
+      }
+    }
+    return changes;
+  }, [selections, lockedOdds]);
 
   const totalOdds = selections.length > 0
     ? selections.reduce((acc, s) => acc * s.odds, 1)
@@ -96,6 +135,7 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
       singleStakes, setSingleStake,
       addSelection, removeSelection,
       clearSlip, hasSelection,
+      oddsChanges, updateSelectionOdds, acceptOddsChanges,
       totalOdds, accaReturn,
       totalSingleReturn, totalSingleStaked,
     },

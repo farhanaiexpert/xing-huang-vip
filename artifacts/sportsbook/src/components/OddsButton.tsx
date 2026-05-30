@@ -27,7 +27,7 @@ export function OddsButton({
   matchId, marketId, matchName, leagueName, marketName,
   selectionType, selectionName, odds, isLive = false, className, sportId, kickoffTime,
 }: OddsButtonProps) {
-  const { addSelection, removeSelection, hasSelection } = useBetSlip();
+  const { addSelection, removeSelection, hasSelection, updateSelectionOdds } = useBetSlip();
   const { toast } = useToast();
   const { tick, suspendedMarketIds } = useOddsSimulation();
   const [isPulsing,  setIsPulsing]  = useState(false);
@@ -44,7 +44,8 @@ export function OddsButton({
   const delta       = isLive ? getOddsDelta(selectionId, tick) : 0;
   const displayOdds = Math.max(1.01, odds + delta);
 
-  // Flash the number whenever displayOdds actually changes
+  // Flash the number whenever displayOdds actually changes;
+  // also notify useBetSlip so it can detect drift for in-slip selections.
   useEffect(() => {
     if (!isLive) return undefined;
     const prev = prevOddsRef.current;
@@ -52,11 +53,12 @@ export function OddsButton({
       const dir = displayOdds > prev ? 'up' : 'down';
       setFlashDir(dir);
       const t = setTimeout(() => setFlashDir(null), 700);
+      if (isSelected) updateSelectionOdds(selectionId, displayOdds);
       return () => clearTimeout(t);
     }
     prevOddsRef.current = displayOdds;
     return undefined;
-  }, [displayOdds, isLive]);
+  }, [displayOdds, isLive, isSelected, selectionId, updateSelectionOdds]);
 
   // Sync ref after flash resolves
   useEffect(() => {

@@ -111,7 +111,10 @@ export function MobileBottomNav() {
             )}>
               <Receipt className="h-[18px] w-[18px]" />
               {selections.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-[#EF4444] border-2 border-[#0B0F14] text-white text-[9px] font-bold flex items-center justify-center px-0.5 tabular-nums">
+                <span
+                  key={selections.length}
+                  className="badge-pop absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-[#EF4444] border-2 border-[#0B0F14] text-white text-[9px] font-bold flex items-center justify-center px-0.5 tabular-nums"
+                >
                   {selections.length}
                 </span>
               )}
