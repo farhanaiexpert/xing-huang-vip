@@ -349,15 +349,6 @@ export function Header() {
                     style={{ boxShadow: '0 0 16px rgba(0,223,169,0.5)' }} />
                   <span className="relative">+ Deposit</span>
                 </button>
-                {/* Disconnect button — always visible */}
-                <button
-                  onClick={handleDisconnect}
-                  className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-red-500/20 text-red-400/60 text-xs font-semibold hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/[0.08] transition-all duration-150"
-                  title="Disconnect wallet"
-                >
-                  <LogOut className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden sm:inline">Disconnect</span>
-                </button>
                 {/* Wallet address button — hidden on mobile (visible in More drawer) */}
                 <div className="relative hidden sm:block" ref={menuRef}>
                 <button
@@ -391,7 +382,7 @@ export function Header() {
                       <MenuAction href="/account" icon={<User className="h-3.5 w-3.5" />} label="My Account" onClick={() => setShowAddressMenu(false)} />
                       <MenuAction href="/account/wallet" icon={<ArrowDownLeft className="h-3.5 w-3.5" />} label="Deposit" onClick={() => setShowAddressMenu(false)} />
                       <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Address'} onClick={handleCopy} />
-                      <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Sign Out" onClick={handleDisconnect} danger />
+                      <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Disconnect" onClick={handleDisconnect} danger />
                     </div>
                   </div>
                 )}
