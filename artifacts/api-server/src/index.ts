@@ -212,6 +212,18 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v11 skipped");
   }
+
+  // v12: unique partial index — one welcome bonus per user
+  try {
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_welcome_bonus
+        ON transactions (user_id)
+        WHERE type = 'bonus' AND reference = 'welcome_bonus'
+    `);
+    logger.info("DB migration v12 applied (unique index: one welcome bonus per user)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v12 skipped");
+  }
 }
 
 runMigrations().then(() => {

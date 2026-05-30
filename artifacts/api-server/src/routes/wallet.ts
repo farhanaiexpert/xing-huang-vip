@@ -309,44 +309,55 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
   }
 });
 
-// ── POST /wallet/bonus/welcome ────────────────────────────────────────────────
-router.post("/wallet/bonus/welcome", authenticate, async (req, res): Promise<void> => {
-  const userId = req.user!.userId;
-
-  // Check if user already claimed the welcome bonus
+// ── GET /wallet/bonus/welcome/status ─────────────────────────────────────────
+router.get("/wallet/bonus/welcome/status", authenticate, async (req, res): Promise<void> => {
   const [existing] = await db.select({ id: transactionsTable.id })
     .from(transactionsTable)
     .where(and(
-      eq(transactionsTable.userId, userId),
+      eq(transactionsTable.userId, req.user!.userId),
       eq(transactionsTable.type, "bonus"),
       eq(transactionsTable.reference, "welcome_bonus"),
     ))
     .limit(1);
+  res.json({ claimed: !!existing });
+});
 
-  if (existing) {
-    res.status(409).json({ error: "Welcome bonus already claimed.", code: "ALREADY_CLAIMED" });
-    return;
-  }
-
+// ── POST /wallet/bonus/welcome ────────────────────────────────────────────────
+router.post("/wallet/bonus/welcome", authenticate, async (req, res): Promise<void> => {
+  const userId = req.user!.userId;
   const BONUS_AMOUNT = "99.99";
 
-  // Credit bonus balance (non-withdrawable)
-  await db.update(walletsTable)
-    .set({ bonusBalanceUsdt: sql`bonus_balance_usdt + ${BONUS_AMOUNT}` })
-    .where(eq(walletsTable.userId, userId));
+  try {
+    // Atomic: insert transaction first — the unique partial index rejects duplicates
+    // then credit the wallet. Wrapped in a DB transaction for consistency.
+    await db.transaction(async (tx) => {
+      await tx.insert(transactionsTable).values({
+        userId,
+        type: "bonus",
+        amount: BONUS_AMOUNT,
+        status: "completed",
+        reference: "welcome_bonus",
+        verified: true,
+        notes: "Welcome bonus — non-withdrawable",
+      });
 
-  // Record transaction
-  await db.insert(transactionsTable).values({
-    userId,
-    type: "bonus",
-    amount: BONUS_AMOUNT,
-    status: "completed",
-    reference: "welcome_bonus",
-    notes: "Welcome bonus — non-withdrawable",
-  });
+      await tx.update(walletsTable)
+        .set({ bonusBalanceUsdt: sql`bonus_balance_usdt + ${BONUS_AMOUNT}` })
+        .where(eq(walletsTable.userId, userId));
+    });
 
-  logger.info({ userId, amount: BONUS_AMOUNT }, "Welcome bonus claimed");
-  res.status(201).json({ bonusAmount: BONUS_AMOUNT, currency: "USDT" });
+    logger.info({ userId, amount: BONUS_AMOUNT }, "Welcome bonus claimed");
+    res.status(201).json({ bonusAmount: BONUS_AMOUNT, currency: "USDT" });
+  } catch (err: unknown) {
+    // Unique-index violation (duplicate claim)
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("idx_transactions_welcome_bonus") || msg.includes("unique") || msg.includes("duplicate")) {
+      res.status(409).json({ error: "Welcome bonus already claimed.", code: "ALREADY_CLAIMED" });
+    } else {
+      logger.error({ err, userId }, "Failed to claim welcome bonus");
+      res.status(500).json({ error: "Failed to claim bonus. Please try again." });
+    }
+  }
 });
 
 // ── POST /wallet/withdraw ─────────────────────────────────────────────────────

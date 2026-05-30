@@ -96,6 +96,14 @@ export function PromoPopup() {
 
   const counterVal = useCounter(99.99, showCongrats);
 
+  // Check claimed status on mount (when authenticated)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    api.get<{ claimed: boolean }>('/wallet/bonus/welcome/status')
+      .then(r => { if (r.claimed) setAlreadyClaimed(true); })
+      .catch(() => { /* silent — don't block popup */ });
+  }, [isAuthenticated]);
+
   // Show popup after 3 s
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 3000);
