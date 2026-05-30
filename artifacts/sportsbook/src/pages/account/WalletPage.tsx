@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
+import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
+import { useAutoDeposit } from '@/hooks/useAutoDeposit';
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
   Clock, XCircle, RefreshCw, Loader2, CircleDollarSign, Shield,
   AlertCircle, ExternalLink, Info, QrCode, Zap, CreditCard, Lock,
+  ChevronRight,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -77,7 +81,11 @@ function StatusBadge({ status }: { status: string }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 export function WalletPage() {
   const { isAuthenticated, user } = useAuth();
-  const [tab, setTab] = useState<'deposit' | 'withdraw' | 'history'>('deposit');
+  const [tab, setTab] = useState<'deposit' | 'withdraw' | 'history'>(() => {
+    const hint = sessionStorage.getItem('cupbett_wallet_tab');
+    if (hint) sessionStorage.removeItem('cupbett_wallet_tab');
+    return hint === 'history' ? 'history' : hint === 'withdraw' ? 'withdraw' : 'deposit';
+  });
   const [depositInfo, setDepositInfo] = useState<DepositInfo | null>(null);
   const [txns, setTxns]               = useState<Transaction[]>([]);
   const [balance, setBalance]         = useState<number>(0);
@@ -93,10 +101,12 @@ export function WalletPage() {
   const [depAutoVerified, setDepAutoVerified] = useState(false);
 
   // NOWPayments
-  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual'>(() => {
+  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual' | 'wallet'>(() => {
     const hint = sessionStorage.getItem('cupbett_deposit_method');
     sessionStorage.removeItem('cupbett_deposit_method');
-    return (hint === 'manual' ? 'manual' : 'nowpayments') as 'nowpayments' | 'manual';
+    if (hint === 'manual') return 'manual';
+    if (hint === 'wallet') return 'wallet';
+    return 'nowpayments';
   });
   const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20'>('TRC-20');
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
@@ -132,6 +142,16 @@ export function WalletPage() {
   }, [isAuthenticated]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const [, navigate] = useLocation();
+  const { address: w3Address, isConnected: w3Connected } = useAppKitAccount();
+  const { open: openReown } = useAppKit();
+  const {
+    depositAmount: walletDepAmount, setDepositAmount: setWalletDepAmount,
+    depositPhase: walletPhase, depositError: walletError, depositResult: walletResult,
+    isProcessing: walletProcessing, hasTronLink, chainCfg,
+    handleEvmDeposit, handleTronDeposit, resetDeposit: resetWalletDeposit,
+  } = useAutoDeposit({ onSuccess: loadData });
 
   function copyAddress() {
     if (!depositInfo) return;
@@ -372,16 +392,25 @@ export function WalletPage() {
                 <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>Soon</span>
               </div>
 
-              {/* Coming soon — WalletConnect */}
-              <div className="relative rounded-xl p-3 flex flex-col items-center gap-1.5" style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.14)', opacity: 0.5 }}>
-                <div className="absolute top-1.5 right-1.5"><Lock className="w-3 h-3 text-[#64748B]" /></div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.14)' }}>
+              {/* Live — Web3 Wallet auto-deposit */}
+              <button onClick={() => setDepositMethod('wallet')}
+                className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-left"
+                style={depositMethod === 'wallet'
+                  ? { background: 'rgba(167,139,250,0.10)', border: '2px solid rgba(167,139,250,0.50)', boxShadow: '0 0 16px rgba(167,139,250,0.10)' }
+                  : { background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.14)' }}>
+                {depositMethod === 'wallet' && (
+                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#A78BFA] flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
+                  </div>
+                )}
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(167,139,250,0.18)', border: '1px solid rgba(167,139,250,0.35)' }}>
                   <Wallet className="w-4.5 h-4.5 text-[#A78BFA]" />
                 </div>
-                <p className="text-[11px] font-bold text-[#94A3B8] text-center leading-tight">WalletConnect</p>
-                <p className="text-[9px] text-[#64748B]">Web3</p>
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>Soon</span>
-              </div>
+                <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">Web3 Wallet</p>
+                <p className="text-[9px] text-[#A78BFA] font-semibold">ETH · BNB · TRC-20</p>
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.3)' }}>Auto</span>
+              </button>
             </div>
           </div>
 
@@ -391,6 +420,10 @@ export function WalletPage() {
               { icon: Shield, label: 'Secure', sub: '300+ currencies', color: '#38BDF8' },
               { icon: Zap, label: 'Auto Credit', sub: 'No TxHash needed', color: '#00DFA9' },
               { icon: CircleDollarSign, label: 'Min 10 USDT', sub: '~20 min window', color: '#FACC15' },
+            ] : depositMethod === 'wallet' ? [
+              { icon: Shield, label: 'Self-custody', sub: 'Your keys', color: '#A78BFA' },
+              { icon: Zap, label: 'Auto Credit', sub: 'No TxHash', color: '#00DFA9' },
+              { icon: CircleDollarSign, label: 'Min 10 USDT', sub: 'Instant verify', color: '#FACC15' },
             ] : [
               { icon: Shield, label: 'Secure', sub: 'TRC-20 Network', color: '#00DFA9' },
               { icon: Clock, label: 'Fast', sub: '5–30 min', color: '#38BDF8' },
@@ -610,6 +643,183 @@ export function WalletPage() {
                       style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)' }}>
                       Try Again
                     </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Web3 Wallet auto-deposit ─────────────────────────────────── */}
+          {depositMethod === 'wallet' && (
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A0F1E 0%, #0E1228 100%)', border: '1px solid rgba(167,139,250,0.20)' }}>
+              <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(167,139,250,0.06) 0%, transparent 100%)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.30)' }}>
+                    <Wallet className="h-4 w-4 text-[#A78BFA]" />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-[#F8FAFC]">Web3 Wallet Deposit</p>
+                    <p className="text-[11px] text-[#64748B] mt-0.5">Send USDT in one click — no TxHash needed</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-5">
+
+                {/* Not connected */}
+                {!w3Connected && !hasTronLink && walletPhase === 'idle' && (
+                  <div className="flex flex-col items-center py-6 gap-4 text-center">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.12)', border: '2px solid rgba(167,139,250,0.25)' }}>
+                      <Wallet className="h-8 w-8 text-[#A78BFA]" />
+                    </div>
+                    <div>
+                      <p className="text-[15px] font-black text-[#F8FAFC]">Connect Your Wallet</p>
+                      <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                        Connect MetaMask, Trust Wallet, OKX, TronLink or any other wallet to deposit USDT instantly.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => openReown()}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-black text-white transition-all hover:scale-[1.02]"
+                      style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)', boxShadow: '0 0 20px rgba(124,58,237,0.4)' }}
+                    >
+                      <Wallet className="w-4 h-4" /> Connect Wallet <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <p className="text-[10px] text-[#64748B]">Supports 300+ wallets · ETH · BNB Chain · Polygon · TRC-20</p>
+                  </div>
+                )}
+
+                {/* Connected — deposit form */}
+                {(w3Connected || hasTronLink) && walletPhase !== 'success' && (
+                  <div className="space-y-4">
+                    {/* Connected status */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(0,223,169,0.05)', border: '1px solid rgba(0,223,169,0.15)' }}>
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.25)' }}>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#00DFA9]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold text-[#00DFA9]">Wallet Connected</p>
+                        {w3Address && (
+                          <p className="text-[10px] font-mono text-[#64748B] truncate">
+                            {w3Address.slice(0, 10)}…{w3Address.slice(-8)}
+                            {chainCfg && <span className="ml-1.5 font-sans" style={{ color: chainCfg.color }}>· {chainCfg.label}</span>}
+                          </p>
+                        )}
+                        {hasTronLink && !w3Connected && <p className="text-[10px] text-[#64748B]">TronLink · TRC-20</p>}
+                      </div>
+                    </div>
+
+                    {/* Unsupported chain warning */}
+                    {w3Connected && !chainCfg && !hasTronLink && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]" style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
+                        <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0 mt-0.5" />
+                        <p className="text-[#FACC15]">Switch to <strong>Ethereum, BNB Chain,</strong> or <strong>Polygon</strong> to deposit, or use TronLink for TRC-20.</p>
+                      </div>
+                    )}
+
+                    {/* Error banner */}
+                    {walletPhase === 'error' && walletError && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
+                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-red-400 flex-1">{walletError}</p>
+                      </div>
+                    )}
+
+                    {/* Amount input */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Amount (USDT)</label>
+                      <div className="relative">
+                        <input
+                          type="number" min="10" step="1"
+                          value={walletDepAmount}
+                          onChange={e => setWalletDepAmount(e.target.value)}
+                          disabled={walletProcessing}
+                          className="w-full rounded-xl px-4 py-3 text-[15px] font-bold text-[#F8FAFC] pr-16 outline-none disabled:opacity-60"
+                          style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(167,139,250,0.25)' }}
+                          placeholder="50"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#A78BFA]">USDT</span>
+                      </div>
+                      <p className="text-[10px] text-[#64748B] mt-1">Minimum: 10 USDT</p>
+                    </div>
+
+                    {/* Deposit buttons */}
+                    <div className="space-y-2">
+                      {chainCfg && (
+                        <button
+                          onClick={handleEvmDeposit}
+                          disabled={walletProcessing}
+                          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black text-[#0B0F14] transition-all hover:scale-[1.01] disabled:opacity-70 disabled:cursor-wait disabled:scale-100"
+                          style={{ background: walletProcessing ? 'rgba(0,223,169,0.5)' : 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: walletProcessing ? 'none' : '0 0 20px rgba(0,223,169,0.30)' }}
+                        >
+                          {walletPhase === 'sending' ? (
+                            <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Approve in wallet…</>
+                          ) : walletPhase === 'confirming' ? (
+                            <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Waiting for confirmation…</>
+                          ) : walletPhase === 'submitting' ? (
+                            <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Verifying on-chain…</>
+                          ) : (
+                            <>Deposit via {chainCfg.label}<ChevronRight className="w-4 h-4" /></>
+                          )}
+                        </button>
+                      )}
+                      {hasTronLink && (
+                        <button
+                          onClick={handleTronDeposit}
+                          disabled={walletProcessing}
+                          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black transition-all hover:scale-[1.01] disabled:opacity-70 disabled:cursor-wait disabled:scale-100"
+                          style={{ background: walletProcessing ? 'rgba(255,255,255,0.05)' : 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.30)', color: '#00DFA9' }}
+                        >
+                          {walletPhase === 'sending' ? (
+                            <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Approve in TronLink…</>
+                          ) : walletPhase === 'confirming' ? (
+                            <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Waiting for confirmation…</>
+                          ) : walletPhase === 'submitting' ? (
+                            <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Verifying on-chain…</>
+                          ) : (
+                            <>Deposit via TronLink TRC-20<ChevronRight className="w-4 h-4" /></>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Success */}
+                {walletPhase === 'success' && walletResult && (
+                  <div className="flex flex-col items-center py-8 gap-4 text-center">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.2)' }}>
+                        <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
+                      </div>
+                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                        <Check className="w-3 h-3 text-[#0B0F14]" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-black text-[#F8FAFC]">
+                        {walletResult.autoVerified ? 'Deposit Verified! ⚡' : 'Deposit Submitted!'}
+                      </p>
+                      <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                        {walletResult.autoVerified
+                          ? <><span className="text-[#00DFA9] font-semibold">Automatically verified</span> — funds are in your account.</>
+                          : <>Under review — usually credited within 5–30 min.</>}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 w-full">
+                      <button
+                        onClick={resetWalletDeposit}
+                        className="flex-1 py-2.5 rounded-xl text-[13px] font-black text-[#0B0F14]"
+                        style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
+                      >
+                        Deposit More
+                      </button>
+                      <button
+                        onClick={() => setTab('history')}
+                        className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-[#38BDF8] border border-[#38BDF8]/25 hover:bg-[#38BDF8]/10 transition-all"
+                      >
+                        View History →
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

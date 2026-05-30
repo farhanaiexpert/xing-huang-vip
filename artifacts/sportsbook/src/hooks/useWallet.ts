@@ -26,8 +26,8 @@ interface WalletState {
 const WalletContext = createContext<WalletState | null>(null);
 
 function shorten(name: string): string {
-  if (name.length <= 10) return name;
-  return `${name.slice(0, 6)}...${name.slice(-4)}`;
+  if (name.length <= 9) return name;
+  return `${name.slice(0, 4)}…${name.slice(-4)}`;
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {

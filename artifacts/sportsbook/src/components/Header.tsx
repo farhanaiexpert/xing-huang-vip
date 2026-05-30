@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User } from 'lucide-react';
+import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { NotificationBell } from './NotificationBell';
@@ -379,6 +379,7 @@ export function Header() {
                     </div>
                     <div className="py-1">
                       <MenuAction href="/account" icon={<User className="h-3.5 w-3.5" />} label="My Account" onClick={() => setShowAddressMenu(false)} />
+                      <MenuAction href="/account/wallet" icon={<ArrowDownLeft className="h-3.5 w-3.5" />} label="Deposit" onClick={() => setShowAddressMenu(false)} />
                       <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Username'} onClick={handleCopy} />
                       <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Sign Out" onClick={handleDisconnect} danger />
                     </div>

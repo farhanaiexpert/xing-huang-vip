@@ -10,54 +10,11 @@ import {
 import { AuthModal } from './AuthModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react';
-import { useChainId, useWriteContract, useDisconnect, useConfig } from 'wagmi';
-import { waitForTransactionReceipt } from 'wagmi/actions';
-import { useWallet } from '../hooks/useWallet';
-import { api } from '../lib/apiClient';
-import { useToast } from '@/hooks/use-toast';
+import { useDisconnect } from 'wagmi';
+import { useAutoDeposit } from '../hooks/useAutoDeposit';
 
 const ERC20_ADDRESS = (import.meta.env.VITE_PLATFORM_ERC20_ADDRESS as string) || '';
 const TRC20_ADDRESS = (import.meta.env.VITE_PLATFORM_TRC20_ADDRESS as string) || '';
-const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-
-const USDT_ABI = [
-  {
-    name: 'transfer',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: '_to', type: 'address' },
-      { name: '_value', type: 'uint256' },
-    ],
-    outputs: [{ name: '', type: 'bool' }],
-  },
-] as const;
-
-const EVM_CHAINS: Record<number, {
-  address: `0x${string}`;
-  decimals: number;
-  network: string;
-  label: string;
-  color: string;
-  /** Must match backend MIN_CONFIRMATIONS in evmVerify.ts */
-  minConfirmations: number;
-}> = {
-  1:   { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6,  network: 'ETH',     label: 'Ethereum',        color: '#627EEA', minConfirmations: 6 },
-  56:  { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, network: 'BSC',     label: 'BNB Smart Chain', color: '#F0B90B', minConfirmations: 3 },
-  137: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6,  network: 'POLYGON', label: 'Polygon',         color: '#8247E5', minConfirmations: 3 },
-};
-
-/** Convert human USDT amount to BigInt base units, avoiding float precision loss */
-function toBaseUnits(amount: number, decimals: number): bigint {
-  const fixed = amount.toFixed(decimals);
-  const [whole, frac = ''] = fixed.split('.');
-  return BigInt(whole + frac.padEnd(decimals, '0').slice(0, decimals));
-}
-
-type DepositPhase = 'idle' | 'sending' | 'confirming' | 'submitting' | 'success' | 'error';
-
-interface DepositResult { autoVerified: boolean; txHash: string }
-
 interface ConnectWalletModalProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -113,30 +70,24 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   const [authOpen, setAuthOpen] = useState(false);
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const { refreshBalance } = useWallet();
-  const { toast } = useToast();
   const { open: openReown } = useAppKit();
   const { address, isConnected } = useAppKitAccount();
   const { open: reownModalOpen } = useAppKitState();
   const { disconnect } = useDisconnect();
-  const chainId = useChainId();
-  const wagmiConfig = useConfig();
-  const { writeContractAsync } = useWriteContract();
 
   const [connecting, setConnecting] = useState(false);
-  const [depositAmount, setDepositAmount] = useState('50');
-  const [depositPhase, setDepositPhase] = useState<DepositPhase>('idle');
-  const [depositError, setDepositError] = useState<string | null>(null);
-  const [depositResult, setDepositResult] = useState<DepositResult | null>(null);
   const [showManual, setShowManual] = useState(false);
-  const [hasTronLink, setHasTronLink] = useState(false);
 
-  // Detect TronLink on mount and when wallet state changes
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tronWeb = (window as any).tronWeb;
-    setHasTronLink(!!tronWeb?.defaultAddress?.base58);
-  }, [isConnected]);
+  const {
+    depositAmount, setDepositAmount,
+    depositPhase, depositError, depositResult,
+    isProcessing, hasTronLink, chainCfg,
+    handleEvmDeposit: runEvmDeposit, handleTronDeposit: runTronDeposit,
+    resetDeposit, clearError,
+  } = useAutoDeposit();
+
+  function handleEvmDeposit() { if (!user) { setAuthOpen(true); return; } runEvmDeposit(); }
+  function handleTronDeposit() { if (!user) { setAuthOpen(true); return; } runTronDeposit(); }
 
   // Derive step from live state
   const reownStep: 'idle' | 'connecting' | 'connected' = isConnected && address
@@ -169,9 +120,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   function handleDisconnect() {
     disconnect();
-    setDepositPhase('idle');
-    setDepositError(null);
-    setDepositResult(null);
+    resetDeposit();
   }
 
   // When Reown modal closes without connecting → clear spinner
@@ -183,136 +132,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   // Reset deposit state when wallet disconnects
   useEffect(() => {
-    if (!isConnected) {
-      setDepositPhase('idle');
-      setDepositError(null);
-      setDepositResult(null);
-    }
-  }, [isConnected]);
-
-  async function submitToBackend(txHash: string, amount: number, network: string) {
-    setDepositPhase('submitting');
-    try {
-      const result = await api.post<{ autoVerified: boolean }>('/wallet/deposit', { txHash, amount, network });
-      setDepositResult({ autoVerified: result.autoVerified, txHash });
-      setDepositPhase('success');
-      await refreshBalance();
-      toast({
-        title: result.autoVerified ? '✅ Deposit verified!' : '⏳ Deposit submitted',
-        description: result.autoVerified
-          ? `$${amount} USDT has been credited to your account.`
-          : `$${amount} USDT is under review and will be credited shortly.`,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Deposit submission failed. Please contact support.';
-      setDepositError(msg);
-      setDepositPhase('error');
-    }
-  }
-
-  async function handleEvmDeposit() {
-    if (!user) { setAuthOpen(true); return; }
-    const amount = parseFloat(depositAmount);
-    if (isNaN(amount) || amount < 10) {
-      setDepositError('Minimum deposit is 10 USDT');
-      return;
-    }
-    const chainCfg = chainId ? EVM_CHAINS[chainId] : null;
-    if (!chainCfg) {
-      setDepositError('Your wallet is on an unsupported network. Please switch to Ethereum, BNB Smart Chain, or Polygon.');
-      return;
-    }
-
-    setDepositPhase('sending');
-    setDepositError(null);
-
-    try {
-      const rawAmount = toBaseUnits(amount, chainCfg.decimals);
-      const txHash = await writeContractAsync({
-        address: chainCfg.address,
-        abi: USDT_ABI,
-        functionName: 'transfer',
-        args: [ERC20_ADDRESS as `0x${string}`, rawAmount],
-      });
-
-      // Wait for chain-specific minimum confirmations before submitting to backend.
-      // Must match backend MIN_CONFIRMATIONS in evmVerify.ts (ETH:6, BSC:3, POLYGON:3).
-      setDepositPhase('confirming');
-      await waitForTransactionReceipt(wagmiConfig, { hash: txHash, confirmations: chainCfg.minConfirmations });
-
-      await submitToBackend(txHash, amount, chainCfg.network);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes('user rejected') || msg.toLowerCase().includes('user denied')) {
-        setDepositError('Transaction was rejected in your wallet.');
-      } else if (msg.toLowerCase().includes('insufficient')) {
-        setDepositError('Insufficient USDT balance in your wallet for this amount.');
-      } else {
-        setDepositError(msg.length > 120 ? msg.slice(0, 120) + '…' : msg);
-      }
-      setDepositPhase('error');
-    }
-  }
-
-  /** Poll TronGrid until the tx appears in a block (confirmed). */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function waitForTronConfirmation(tronWeb: any, txHash: string): Promise<void> {
-    for (let i = 0; i < 30; i++) {
-      await new Promise(r => setTimeout(r, 3000));
-      try {
-        const info = await tronWeb.trx.getTransactionInfo(txHash);
-        if (info?.blockNumber) return;
-      } catch {
-        // keep polling
-      }
-    }
-    throw new Error('Transaction confirmation timed out. Your funds are safe — please use Manual Deposit and paste the TxHash.');
-  }
-
-  async function handleTronDeposit() {
-    if (!user) { setAuthOpen(true); return; }
-    const amount = parseFloat(depositAmount);
-    if (isNaN(amount) || amount < 10) {
-      setDepositError('Minimum deposit is 10 USDT');
-      return;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tronWeb = (window as any).tronWeb;
-    if (!tronWeb?.defaultAddress?.base58) {
-      setDepositError('TronLink is not connected. Please unlock TronLink and try again.');
-      return;
-    }
-
-    setDepositPhase('sending');
-    setDepositError(null);
-
-    try {
-      const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
-      const rawAmount = Math.round(amount * 1_000_000); // TRC-20 USDT: 6 decimals
-      const txHash = await contract.transfer(TRC20_ADDRESS, rawAmount).send({
-        feeLimit: 10_000_000,
-        callValue: 0,
-      });
-
-      // Wait for on-chain confirmation before submitting to backend
-      setDepositPhase('confirming');
-      await waitForTronConfirmation(tronWeb, txHash as string);
-
-      await submitToBackend(txHash as string, amount, 'TRC-20');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
-        setDepositError('Transaction was cancelled in TronLink.');
-      } else {
-        setDepositError(msg.length > 120 ? msg.slice(0, 120) + '…' : msg);
-      }
-      setDepositPhase('error');
-    }
-  }
-
-  const chainCfg = chainId ? EVM_CHAINS[chainId] : null;
-  const isProcessing = depositPhase === 'sending' || depositPhase === 'confirming' || depositPhase === 'submitting';
+    if (!isConnected) resetDeposit();
+  }, [isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isVisible && !authOpen) return null;
 
@@ -449,13 +270,19 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                           Done
                         </button>
                         <button
-                          onClick={() => { setDepositPhase('idle'); setDepositResult(null); }}
+                          onClick={resetDeposit}
                           className="px-4 py-2 rounded-xl text-[11px] font-bold text-[#64748B] hover:text-[#94A3B8] transition-all"
                           style={{ background: 'rgba(255,255,255,0.05)' }}
                         >
                           Deposit more
                         </button>
                       </div>
+                      <button
+                        onClick={() => { close(); navigate('/account/wallet'); sessionStorage.setItem('cupbett_wallet_tab', 'history'); }}
+                        className="w-full py-2 rounded-xl text-[12px] font-bold text-[#38BDF8] border border-[#38BDF8]/20 hover:bg-[#38BDF8]/10 transition-all"
+                      >
+                        View History →
+                      </button>
                     </div>
                   ) : (
                     <div className="p-4 space-y-3">
@@ -472,18 +299,28 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             {chainCfg && (
                               <span className="ml-1.5 font-sans" style={{ color: chainCfg.color }}>· {chainCfg.label}</span>
                             )}
-                            {!chainCfg && chainId && (
+                            {!chainCfg && isConnected && (
                               <span className="ml-1.5 text-[#FACC15]">· Unsupported chain</span>
                             )}
                           </p>
                         </div>
-                        <button
-                          onClick={handleDisconnect}
-                          disabled={isProcessing}
-                          className="shrink-0 text-[10px] text-[#64748B] hover:text-[#94A3B8] underline transition-colors disabled:opacity-50"
-                        >
-                          Change
-                        </button>
+                        <div className="flex gap-1.5 shrink-0">
+                          <button
+                            onClick={() => { if (!isProcessing) openReown(); }}
+                            disabled={isProcessing}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold text-[#94A3B8] bg-white/[0.04] border border-white/[0.10] hover:border-white/[0.20] hover:text-[#F8FAFC] transition-all disabled:opacity-50 flex items-center gap-1"
+                          >
+                            <RefreshCw className="w-2.5 h-2.5" />Change
+                          </button>
+                          <button
+                            onClick={handleDisconnect}
+                            disabled={isProcessing}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all disabled:opacity-50"
+                            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', color: '#F87171' }}
+                          >
+                            <X className="w-2.5 h-2.5" />Disconnect
+                          </button>
+                        </div>
                       </div>
 
                       {/* Unsupported chain warning */}
@@ -521,8 +358,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                                 value={depositAmount}
                                 onChange={e => {
                                   setDepositAmount(e.target.value);
-                                  setDepositError(null);
-                                  if (depositPhase === 'error') setDepositPhase('idle');
+                                  clearError();
                                 }}
                                 disabled={isProcessing}
                                 className="w-full rounded-xl px-4 py-3 text-[15px] font-bold text-[#F8FAFC] pr-16 outline-none disabled:opacity-60"
@@ -590,6 +426,17 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                           </div>
                         </>
                       )}
+
+                      {/* Go to full Deposit page */}
+                      <div className="pt-1 border-t border-white/[0.05]">
+                        <button
+                          onClick={() => { close(); navigate('/account/wallet'); sessionStorage.setItem('cupbett_deposit_method', 'wallet'); }}
+                          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold text-[#A78BFA] transition-colors hover:text-[#C4B5FD]"
+                          style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)' }}
+                        >
+                          <ExternalLink className="w-3 h-3" /> Go to full Deposit page
+                        </button>
+                      </div>
 
                       {/* Manual fallback (collapsible) */}
                       <div>
