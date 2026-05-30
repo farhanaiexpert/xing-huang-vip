@@ -50,12 +50,17 @@ function useCounter(target: number, active: boolean, duration = 1800) {
 }
 
 const AVATARS = [
-  'https://randomuser.me/api/portraits/men/32.jpg',
-  'https://randomuser.me/api/portraits/women/44.jpg',
-  'https://randomuser.me/api/portraits/men/78.jpg',
-  'https://randomuser.me/api/portraits/women/21.jpg',
-  'https://randomuser.me/api/portraits/men/56.jpg',
+  'https://i.pravatar.cc/56?img=11',
+  'https://i.pravatar.cc/56?img=23',
+  'https://i.pravatar.cc/56?img=47',
+  'https://i.pravatar.cc/56?img=54',
+  'https://i.pravatar.cc/56?img=62',
+  'https://i.pravatar.cc/56?img=8',
+  'https://i.pravatar.cc/56?img=35',
 ];
+
+const AVATAR_COLORS = ['#00DFA9','#38BDF8','#FACC15','#F97316','#A855F7','#00DFA9','#38BDF8'];
+const AVATAR_LETTERS = ['A','K','M','J','R','S','T'];
 
 const DOT_BG = `radial-gradient(ellipse at 55% 85%, rgba(0,223,169,0.15) 0%, transparent 50%), radial-gradient(ellipse at 20% 20%, rgba(56,189,248,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 10%, rgba(250,204,21,0.08) 0%, transparent 40%), linear-gradient(160deg, #0D1825 0%, #081018 100%)`;
 
@@ -67,7 +72,7 @@ const IMG_BASE: React.CSSProperties = {
   objectFit: 'contain',
   objectPosition: 'bottom center',
   display: 'block',
-  transform: 'scale(0.91)',
+  transform: 'scale(0.73)',
   transformOrigin: 'bottom center',
   transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
@@ -150,7 +155,7 @@ export function PromoPopup() {
     setClaimError('');
     if (!isAuthenticated) {
       close();
-      navigate('/login');
+      window.dispatchEvent(new Event('openLoginModal'));
       return;
     }
     setClaiming(true);
@@ -390,7 +395,7 @@ export function PromoPopup() {
           {/* ── LEFT: Celebrity images (crossfade) ── */}
           <div
             className="relative shrink-0 w-full md:w-[40%] overflow-hidden"
-            style={{ background: DOT_BG, minHeight: '240px' }}
+            style={{ background: DOT_BG, minHeight: '200px' }}
             onMouseEnter={() => { setHovered(true); setShowAlt(true); }}
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
           >
@@ -477,14 +482,24 @@ export function PromoPopup() {
             >
               <div className="flex -space-x-2 shrink-0">
                 {AVATARS.map((src, i) => (
-                  <img
+                  <div
                     key={i}
-                    src={src}
-                    alt="Player"
-                    className="w-7 h-7 rounded-full border-2 border-[#0A0F16] object-cover"
+                    className="w-7 h-7 rounded-full border-2 border-[#0A0F16] overflow-hidden shrink-0 relative"
                     style={{ zIndex: AVATARS.length - i }}
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                  />
+                  >
+                    <div
+                      className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#0B0F14]"
+                      style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                    >
+                      {AVATAR_LETTERS[i % AVATAR_LETTERS.length]}
+                    </div>
+                    <img
+                      src={src}
+                      alt="Player"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }}
+                    />
+                  </div>
                 ))}
               </div>
               <div className="min-w-0">
