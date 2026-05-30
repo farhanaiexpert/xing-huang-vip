@@ -6,6 +6,7 @@ import { db, walletsTable, transactionsTable, userLimitsTable, selfExclusionsTab
 import { checkDepositLimits, recordDepositUsage, isSelfExcludedFromDeposits } from "../lib/depositGuard.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { verifyTronDeposit } from "../lib/tronVerify.js";
+import { verifyEvmDeposit } from "../lib/evmVerify.js";
 import { createPayment, getPaymentStatus, getMinimumPaymentAmount, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
 import { logger } from "../lib/logger.js";
 
@@ -58,7 +59,10 @@ router.get("/wallet/transactions", authenticate, async (req, res): Promise<void>
 const DepositBody = z.object({
   amount:  z.number().positive().min(PLATFORM_DEPOSIT.minDeposit, `Minimum deposit is ${PLATFORM_DEPOSIT.minDeposit} USDT`),
   txHash:  z.string().min(10, "Please enter a valid transaction hash"),
-  network: z.enum(["TRC-20", "ERC-20"]).default("TRC-20"),
+  // ETH | BSC | POLYGON = EVM auto-deposit (verified via evmVerify)
+  // TRC-20 = TRON auto or manual deposit (verified via tronVerify)
+  // ERC-20 = legacy manual form (falls through to EVM/ETH verifier)
+  network: z.enum(["TRC-20", "ERC-20", "ETH", "BSC", "POLYGON"]).default("TRC-20"),
 });
 
 router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => {
@@ -94,12 +98,14 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     return;
   }
 
-  // ── On-chain verification via Tronscan ────────────────────────────────────────
-  logger.info({ txHash, amount, userId: req.user!.userId }, "Starting on-chain deposit verification");
+  // ── On-chain verification — route to correct verifier by network ──────────────
+  logger.info({ txHash, amount, network, userId: req.user!.userId }, "Starting on-chain deposit verification");
 
-  const verification = await verifyTronDeposit(txHash, PLATFORM_DEPOSIT.address, amount);
+  const verification = (network === "TRC-20")
+    ? await verifyTronDeposit(txHash, PLATFORM_DEPOSIT.address, amount)
+    : await verifyEvmDeposit(txHash, network === "ERC-20" ? "ETH" : network, PLATFORM_DEPOSIT.addressErc20, amount);
 
-  logger.info({ txHash, verified: verification.verified, note: verification.note }, "Verification result");
+  logger.info({ txHash, verified: verification.verified, note: verification.note, network }, "Verification result");
 
   if (verification.verified) {
     // ── AUTO-APPROVE: verified on-chain → credit balance immediately ─────────
@@ -307,7 +313,7 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
 const WithdrawBody = z.object({
   amount:        z.number().positive().min(100, "Minimum withdrawal is 100 USDT"),
   walletAddress: z.string().min(10, "Please enter a valid USDT wallet address"),
-  network:       z.enum(["TRC-20", "ERC-20"], { errorMap: () => ({ message: "Network must be TRC-20 or ERC-20" }) }),
+  network:       z.enum(["TRC-20", "ERC-20"]),
 });
 
 router.post("/wallet/withdraw", authenticate, async (req, res): Promise<void> => {
