@@ -322,8 +322,10 @@ export function MainContent({
       >
         {/* ── Sticky controls ─────────────────────────────────────────── */}
         <div className="sticky top-0 z-20 bg-[#0B0F14]/97 backdrop-blur-md border-b border-[#253241]/60">
-          {/* Winners ticker */}
-          <WinnersTicker />
+          {/* Winners ticker — desktop only (saves ~32px on mobile) */}
+          <div className="hidden sm:block">
+            <WinnersTicker />
+          </div>
 
           {/* Quick sport navigation */}
           <SportQuickNav
@@ -332,8 +334,8 @@ export function MainContent({
             onSelect={onSelectSport}
           />
 
-          {/* Search */}
-          <div className="px-4 pt-3.5 pb-2.5">
+          {/* Search — desktop only (mobile uses header search icon) */}
+          <div className="hidden sm:block px-4 pt-3.5 pb-2.5">
             <div className="relative group max-w-2xl">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/50 group-focus-within:text-[#00DFA9] transition-colors duration-200 pointer-events-none" />
               <Input
@@ -409,7 +411,7 @@ export function MainContent({
                       </span>
                       <span
                         className={cn(
-                          "text-[9px] font-semibold leading-none tabular-nums transition-colors",
+                          "hidden sm:block text-[9px] font-semibold leading-none tabular-nums transition-colors",
                           isActive
                             ? "text-[#00DFA9]/60"
                             : "text-[#94A3B8]/35 group-hover:text-[#94A3B8]/60",
@@ -623,17 +625,17 @@ export function MainContent({
           ) : (
             <>
               {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
-              {showFeatured && <PriceBoostsStrip />}
+              {showFeatured && <FeaturedCards />}
+              {showFeatured && <div className="hidden sm:block"><PriceBoostsStrip /></div>}
               {showFeatured && <JackpotPool />}
               {showFeatured && <FlashOdds />}
               {showFeatured && <LiveBetFeed />}
-              {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
               {showFeatured && hasRealData && <TopMatchesBanner leagues={realLeagues} />}
               {showFeatured && <EuropaLeagueFinal />}
-              {showFeatured && <SoccerHighlights />}
-              {showFeatured && <TennisHighlights />}
-              {showFeatured && <NBAHighlights />}
+              {showFeatured && <div className="hidden sm:block"><SoccerHighlights /></div>}
+              {showFeatured && <div className="hidden sm:block"><TennisHighlights /></div>}
+              {showFeatured && <div className="hidden sm:block"><NBAHighlights /></div>}
               {showFeatured && <AllSportsHighlights />}
               {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights />

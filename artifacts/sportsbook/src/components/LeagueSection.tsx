@@ -61,19 +61,19 @@ export function LeagueSection({ league }: { league: League }) {
             <div className="flex-1">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[#94A3B8]/35">Match</span>
             </div>
-            <div className="flex items-center shrink-0" style={{ width: isFootball ? '174px' : '116px' }}>
+            <div className={cn('flex items-center shrink-0', isFootball ? 'w-[160px] sm:w-[174px]' : 'w-[110px] sm:w-[116px]')}>
               {isFootball ? (
                 <>
                   <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">1</div>
                   <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">X</div>
                   <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">2</div>
-                  <div className="w-[18px]" />
+                  <div className="hidden sm:block w-[18px]" />
                 </>
               ) : (
                 <>
                   <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">1</div>
                   <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">2</div>
-                  <div className="w-[12px]" />
+                  <div className="hidden sm:block w-[12px]" />
                 </>
               )}
             </div>

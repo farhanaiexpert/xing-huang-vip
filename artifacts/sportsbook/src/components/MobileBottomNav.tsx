@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  Home, Grid3X3, Receipt, Gift, MoreHorizontal,
+  Home, Receipt, MoreHorizontal,
   History, HelpCircle, Star, FileText, ShieldCheck,
   Landmark, ChevronRight, Wallet, X, Zap, Check,
   TrendingUp, Share2, UserCircle, Radio,
@@ -11,6 +11,7 @@ import { useBetHistory } from '../hooks/useBetHistory';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { useI18n } from '../contexts/I18nContext';
+import { useOddsData } from '../hooks/useOddsData';
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from './ui/drawer';
 import { BetSlip } from './BetSlip';
 import { SPORTS } from '../data/mockData';
@@ -48,6 +49,11 @@ export function MobileBottomNav() {
   const { isConnected, shortAddress, connect } = useWallet();
   const { format, setFormat } = useOddsFormat();
   const { t } = useI18n();
+  const { allLeagues } = useOddsData();
+  const liveCount = useMemo(
+    () => allLeagues.flatMap(l => l.matches).filter(m => m.isLive).length,
+    [allLeagues],
+  );
   const [betSlipOpen, setBetSlipOpen] = useState(false);
   const [sportsOpen,  setSportsOpen]  = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
@@ -59,6 +65,12 @@ export function MobileBottomNav() {
     }
     prevCountRef.current = selections.length;
   }, [selections.length]);
+
+  useEffect(() => {
+    function handler() { setSportsOpen(true); }
+    window.addEventListener('open-sports-drawer', handler);
+    return () => window.removeEventListener('open-sports-drawer', handler);
+  }, []);
 
   function handleSelectSport(sportId: string) {
     window.dispatchEvent(new CustomEvent('mobile-sport-select', { detail: sportId }));
@@ -91,15 +103,21 @@ export function MobileBottomNav() {
             <span>{t('Home')}</span>
           </Link>
 
-          <button
-            onClick={() => setSportsOpen(true)}
+          <Link href="/live"
             className={cn(
               'flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150',
-              isSportsTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
+              location === '/live' && !isBetSlipTab && !isMoreTab ? 'text-[#EF4444]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
             )}>
-            <Grid3X3 className="h-5 w-5" />
-            <span>{t('Sports')}</span>
-          </button>
+            <div className="relative">
+              <Radio className="h-5 w-5" />
+              {liveCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-[#EF4444] border border-[#0B0F14] text-white text-[8px] font-bold flex items-center justify-center px-0.5 tabular-nums">
+                  {liveCount > 9 ? '9+' : liveCount}
+                </span>
+              )}
+            </div>
+            <span>Live</span>
+          </Link>
 
           {/* Bet Slip — centre accent tab */}
           <button onClick={() => setBetSlipOpen(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5">
