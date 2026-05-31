@@ -1022,7 +1022,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
 
   if (referrerId) {
-    await db.insert(referralsTable).values({ referrerId, refereeId: user.id }).catch(() => {});
+    await db.insert(referralsTable).values({ referrerId, referredId: user.id }).catch(() => {});
   }
 
   const payload = { userId: user.id, role: user.role };

@@ -960,7 +960,8 @@ function ActionButton({
 // EMPTY STATE
 // ────────────────────────────────────────────────────────────────
 function EmptyState() {
-  const { isConnected, shortAddress, walletName, connect } = useWallet();
+  const { isConnected, shortAddress, walletName } = useWallet();
+  const [connectOpen, setConnectOpen] = useState(false);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-4 text-center">
@@ -991,13 +992,14 @@ function EmptyState() {
         </div>
       ) : (
         <button
-          onClick={() => setDepositOpen(true)}
+          onClick={() => setConnectOpen(true)}
           className="w-full mb-4 flex items-center gap-2 bg-[#121821] border border-[#253241] rounded-lg px-3 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all"
         >
           <Wallet className="h-4 w-4 text-[#94A3B8]/50 shrink-0" />
           Deposit to place bets
         </button>
       )}
+      <ConnectWalletModal open={connectOpen} onOpenChange={setConnectOpen} />
 
       {/* Ghost selection rows */}
       <div className="w-full space-y-2 mb-4">

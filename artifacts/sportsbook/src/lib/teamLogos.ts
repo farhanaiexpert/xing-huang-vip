@@ -368,7 +368,7 @@ const LOGOS: Record<string, string> = {
   'Phoenix Suns':              N('phx'),    'Suns':       N('phx'),
   'Portland Trail Blazers':    N('por'),    'Trail Blazers': N('por'),  'Blazers': N('por'),
   'Sacramento Kings':          N('sac'),    'Kings':      N('sac'),
-  'San Antonio Spurs':         N('sa'),     'Spurs':      N('sa'),
+  'San Antonio Spurs':         N('sa'),
   'Toronto Raptors':           N('tor'),    'Raptors':    N('tor'),
   'Utah Jazz':                 N('utah'),   'Jazz':       N('utah'),
   'Washington Wizards':        N('wsh'),    'Wizards':    N('wsh'),

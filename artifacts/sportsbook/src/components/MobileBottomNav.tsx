@@ -237,7 +237,7 @@ export function MobileBottomNav() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => { setMoreOpen(false); connect(); }}
+                    onClick={() => { setMoreOpen(false); connect(''); }}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#00DFA9] text-[#0B0F14] text-[11px] font-bold shadow-[0_0_12px_rgba(0,223,169,0.3)] active:scale-95 transition-transform"
                   >
                     <Wallet className="h-3 w-3" />
