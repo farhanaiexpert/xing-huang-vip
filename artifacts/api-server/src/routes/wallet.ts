@@ -583,7 +583,7 @@ router.get("/wallet/deposit/cryptomus/:uuid/status", authenticate, async (req, r
       if (pollExclMsg) {
         await db.update(transactionsTable)
           .set({ status: "rejected", verificationNote: "Deposit rejected: account is self-excluded" })
-          .where(eq(transactionsTable.id, txn.id));
+          .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
         res.json({ status: "rejected", cryptomusStatus: payment.status, credited: false, error: "Self-excluded" });
         return;
       }
@@ -591,21 +591,28 @@ router.get("/wallet/deposit/cryptomus/:uuid/status", authenticate, async (req, r
       if (pollLimitCheck.blocked) {
         await db.update(transactionsTable)
           .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
-          .where(eq(transactionsTable.id, txn.id));
+          .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
         res.json({ status: "rejected", cryptomusStatus: payment.status, credited: false, error: "Deposit limit exceeded" });
         return;
       }
 
-      await db.update(transactionsTable)
-        .set({ status: "completed", verified: true, verificationNote: `Auto-credited via Cryptomus (${payment.status})` })
-        .where(eq(transactionsTable.id, txn.id));
-      await db.update(walletsTable)
-        .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
-        .where(eq(walletsTable.userId, txn.userId));
-      await recordDepositUsage(txn.userId, txn.amount);
+      // Atomic claim: only credit if we transition pending → completed
+      const claimed = await db.update(transactionsTable)
+        .set({ status: "completed", verified: true, verificationNote: `Auto-credited via Cryptomus (${payment.status})`, cryptomusStatus: payment.status })
+        .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")))
+        .returning({ id: transactionsTable.id });
 
-      logger.info({ uuid, userId: txn.userId }, "Cryptomus deposit credited via polling fallback");
-      res.json({ status: payment.status, cryptomusStatus: payment.status, credited: true });
+      if (claimed.length > 0) {
+        await db.update(walletsTable)
+          .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
+          .where(eq(walletsTable.userId, txn.userId));
+        await recordDepositUsage(txn.userId, txn.amount);
+        logger.info({ uuid, userId: txn.userId }, "Cryptomus deposit credited via polling fallback");
+        res.json({ status: payment.status, cryptomusStatus: payment.status, credited: true });
+      } else {
+        // Already credited by a concurrent webhook or poll — return success
+        res.json({ status: "paid", cryptomusStatus: payment.status, credited: true });
+      }
       return;
     }
 

@@ -22,15 +22,15 @@ export function cryptomusConfigured(): boolean {
 
 /**
  * Build the Cryptomus sign:
- *   md5( base64( JSON.stringify(keySorted body) ) + apiKey )
+ *   HMAC-MD5( base64( JSON.stringify(keySorted body) ), apiKey )
  *
- * Keys must be sorted alphabetically before serialising — Cryptomus PHP
- * reference implementation uses ksort() before json_encode().
+ * Keys are sorted alphabetically before serialising — mirrors the Cryptomus
+ * PHP reference (ksort → json_encode → base64_encode → hash_hmac('md5',...)).
  */
 function buildSign(body: Record<string, unknown>, apiKey: string): string {
-  const sorted = Object.fromEntries(Object.keys(body).sort().map(k => [k, body[k]]));
+  const sorted  = Object.fromEntries(Object.keys(body).sort().map(k => [k, body[k]]));
   const encoded = Buffer.from(JSON.stringify(sorted)).toString("base64");
-  return crypto.createHash("md5").update(encoded + apiKey).digest("hex");
+  return crypto.createHmac("md5", apiKey).update(encoded).digest("hex");
 }
 
 /** Verify an inbound webhook body — same algo, strip the `sign` field first */
@@ -130,7 +130,7 @@ export async function createPayment(params: {
     network:  params.network,
     order_id: params.orderId,
     is_payment_multiple: false,
-    lifetime: 3600, // 60-minute window
+    lifetime: 900, // 15-minute window
   };
   if (params.callbackUrl) body.url_callback = params.callbackUrl;
 

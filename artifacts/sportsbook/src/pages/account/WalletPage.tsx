@@ -340,7 +340,7 @@ export function WalletPage() {
       setCmPayment(result);
       setCmTimeLeft(result.expiresAt
         ? Math.max(0, Math.floor((new Date(result.expiresAt).getTime() - Date.now()) / 1000))
-        : 60 * 60);
+        : 900); // 15-minute default matches backend lifetime
       setCmState('paying');
       loadData();
     } catch (err: unknown) {

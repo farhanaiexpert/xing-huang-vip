@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db, walletsTable, transactionsTable } from "@workspace/db";
 import { checkDepositLimits, recordDepositUsage, isSelfExcludedFromDeposits } from "../lib/depositGuard.js";
 import { verifyIpnSignature, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
@@ -258,14 +258,17 @@ router.post("/webhooks/cryptomus", async (req, res): Promise<void> => {
   }
 
   // ── 4. Credit wallet when payment completes ────────────────────────────────
-  if (status && CRYPTOMUS_FINISHED.has(status) && txn.status !== "completed") {
+  // Atomic idempotency: claim the row only if it is still 'pending'.
+  // PostgreSQL UPDATE is atomic — exactly one concurrent request wins; others
+  // see claimed.length === 0 and skip the wallet credit (no double-credit).
+  if (status && CRYPTOMUS_FINISHED.has(status)) {
     const depositAmount = parseFloat(txn.amount);
 
     const exclMsg = await isSelfExcludedFromDeposits(txn.userId);
     if (exclMsg) {
       await db.update(transactionsTable)
         .set({ status: "rejected", verificationNote: "Deposit rejected: account is self-excluded" })
-        .where(eq(transactionsTable.id, txn.id));
+        .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
       logger.warn({ uuid, userId: txn.userId }, "Cryptomus deposit rejected: self-excluded");
       res.status(200).json({ received: true });
       return;
@@ -275,30 +278,34 @@ router.post("/webhooks/cryptomus", async (req, res): Promise<void> => {
     if (limitCheck.blocked) {
       await db.update(transactionsTable)
         .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
-        .where(eq(transactionsTable.id, txn.id));
+        .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
       logger.warn({ uuid, userId: txn.userId, depositAmount }, "Cryptomus deposit rejected: deposit limit exceeded");
       res.status(200).json({ received: true });
       return;
     }
 
-    await db.update(transactionsTable)
-      .set({ status: "completed", verified: true, verificationNote: `Auto-credited via Cryptomus (${status})` })
-      .where(eq(transactionsTable.id, txn.id));
+    // Atomic claim: only credit if we transition pending → completed
+    const claimed = await db.update(transactionsTable)
+      .set({ status: "completed", verified: true, verificationNote: `Auto-credited via Cryptomus (${status})`, cryptomusStatus: status })
+      .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")))
+      .returning({ id: transactionsTable.id });
 
-    await db.update(walletsTable)
-      .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
-      .where(eq(walletsTable.userId, txn.userId));
-
-    await recordDepositUsage(txn.userId, txn.amount);
-
-    logger.info({ uuid, userId: txn.userId, amount: txn.amount }, "Cryptomus deposit credited to wallet");
+    if (claimed.length > 0) {
+      await db.update(walletsTable)
+        .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
+        .where(eq(walletsTable.userId, txn.userId));
+      await recordDepositUsage(txn.userId, txn.amount);
+      logger.info({ uuid, userId: txn.userId, amount: txn.amount }, "Cryptomus deposit credited to wallet");
+    } else {
+      logger.info({ uuid }, "Cryptomus webhook: deposit already processed, skipping duplicate credit");
+    }
   }
 
   // ── 5. Mark failed/cancelled ───────────────────────────────────────────────
-  if (status && CRYPTOMUS_FAILED.has(status) && txn.status === "pending") {
+  if (status && CRYPTOMUS_FAILED.has(status)) {
     await db.update(transactionsTable)
       .set({ status: "rejected", verificationNote: `Cryptomus payment ${status}` })
-      .where(eq(transactionsTable.id, txn.id));
+      .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
 
     logger.info({ uuid, status }, "Cryptomus payment marked rejected");
   }
