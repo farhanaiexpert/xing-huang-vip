@@ -17,13 +17,14 @@ import { fetchBetsApiUpcoming, type BetsApiEvent, type BetsApiSportMeta } from '
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v4'; // v4 — two-source merge (Odds API + BetsAPI)
+const STORAGE_KEY  = 'oddschain_v5'; // v5 — persists betsApiCountById for instant sidebar counts
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
 const CACHE_TTL_MS = 35 * 60 * 1000;
 
 interface StoredEntry {
-  leagues:   League[];
-  fetchedAt: number;
+  leagues:        League[];
+  fetchedAt:      number;
+  countBySportId?: Record<string, number>;
 }
 
 function loadFromStorage(): StoredEntry | null {
@@ -329,7 +330,9 @@ export function useOddsApi(): UseOddsApiResult {
   const [fetchedAt,       setFetchedAt]       = useState<Date | null>(
     stored ? new Date(stored.fetchedAt) : null,
   );
-  const [betsApiCountById, setBetsApiCountById] = useState<Record<string, number>>({});
+  const [betsApiCountById, setBetsApiCountById] = useState<Record<string, number>>(
+    stored?.countBySportId ?? {},
+  );
 
   const isMounted = useRef(true);
 
@@ -345,7 +348,7 @@ export function useOddsApi(): UseOddsApiResult {
 
     if (leagues.length > 0) {
       clearQuotaExhausted();
-      const now: StoredEntry = { leagues, fetchedAt: Date.now() };
+      const now: StoredEntry = { leagues, fetchedAt: Date.now(), countBySportId };
       _sessionCache = now;
       saveToStorage(now);
       setRealLeagues(leagues);
@@ -371,6 +374,7 @@ export function useOddsApi(): UseOddsApiResult {
       _sessionCache = cached;
       setRealLeagues(filterCurrentLeagues(cached.leagues));
       setFetchedAt(new Date(cached.fetchedAt));
+      if (cached.countBySportId) setBetsApiCountById(cached.countBySportId);
     } else {
       void doFetch(false);
     }

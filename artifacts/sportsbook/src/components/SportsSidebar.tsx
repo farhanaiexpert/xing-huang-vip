@@ -20,52 +20,30 @@ interface SportsSidebarProps {
 const B365 = 'https://www.bet365.com/sports-assets/sports/ClassificationIconsLib/assets/classification/';
 const B365E = 'https://www.bet365.com/sports-assets/sports/ClassificationIconsLib/assets/specialevent/';
 
+// Only sports with confirmed real-data coverage from The Odds API and/or BetsAPI.
+// Sports with no API coverage have been removed to keep the list clean.
 const AZ_SPORTS: { name: string; id: string; iconUrl: string }[] = [
-  { name: 'American Football',   id: 'sp_american_football', iconUrl: `${B365}12.svg`   },
-  { name: 'Australian Rules',    id: 'sp_aussie_rules',      iconUrl: `${B365}36.svg`   },
-  { name: 'Badminton',           id: 'sp_badminton',         iconUrl: `${B365}94.svg`   },
-  { name: 'Baseball',            id: 'sp_baseball',          iconUrl: `${B365}16.svg`   },
-  { name: 'Basketball',          id: 'sp_basketball',        iconUrl: `${B365}18.svg`   },
-  { name: 'Biathlon',            id: 'sp_biathlon',          iconUrl: `${B365}118.svg`  },
-  { name: 'Boxing',              id: 'sp_boxing',            iconUrl: `${B365}9.svg`    },
-  { name: 'Cricket',             id: 'sp_cricket',           iconUrl: `${B365}3.svg`    },
-  { name: 'Cross Country Skiing',id: 'sp_xc_skiing',         iconUrl: `${B365}118.svg`  },
-  { name: 'Cycling',             id: 'sp_cycling',           iconUrl: `${B365}38.svg`   },
-  { name: 'Darts',               id: 'sp_darts',             iconUrl: `${B365}15.svg`   },
-  { name: 'Esports',             id: 'sp_esports',           iconUrl: `${B365}151.svg`  },
-  { name: 'Fantasy Sports',      id: 'sp_fantasy',           iconUrl: `${B365}161.svg`  },
-  { name: 'Formula 1',           id: 'sp_formula_1',         iconUrl: `${B365}10.svg`   },
-  { name: 'Futsal',              id: 'sp_futsal',            iconUrl: `${B365}83.svg`   },
-  { name: 'Gaelic Sports',       id: 'sp_gaelic',            iconUrl: `${B365}37.svg`   },
-  { name: 'Golf',                id: 'sp_golf',              iconUrl: `${B365}7.svg`    },
-  { name: 'Greyhounds',          id: 'sp_greyhounds',        iconUrl: `${B365}4.svg`    },
-  { name: 'Handball',            id: 'sp_handball',          iconUrl: `${B365}78.svg`   },
-  { name: 'Horse Racing',        id: 'sp_horse_racing',      iconUrl: `${B365}2.svg`    },
-  { name: 'Ice Hockey',          id: 'sp_ice_hockey',        iconUrl: `${B365}17.svg`   },
-  { name: 'Lacrosse',            id: 'sp_lacrosse',          iconUrl: `${B365}143.svg`  },
-  { name: 'Lotto',               id: 'sp_lotto',             iconUrl: `${B365}6.svg`    },
-  { name: 'MMA',                 id: 'sp_mma',               iconUrl: `${B365}162.svg`  },
-  { name: 'Motor Sports',        id: 'sp_motorsports',       iconUrl: `${B365}999.svg`  },
-  { name: 'Motorbikes',          id: 'sp_motorbikes',        iconUrl: `${B365}27.svg`   },
-  { name: 'Rugby League',        id: 'sp_rugby_league',      iconUrl: `${B365}19.svg`   },
-  { name: 'Rugby Union',         id: 'sp_rugby_union',       iconUrl: `${B365}8.svg`    },
-  { name: 'Sailing',             id: 'sp_sailing',           iconUrl: `${B365}113.svg`  },
-  { name: 'Ski Jumping',         id: 'sp_ski_jumping',       iconUrl: `${B365}121.svg`  },
-  { name: 'Snooker',             id: 'sp_snooker',           iconUrl: `${B365}14.svg`   },
-  { name: 'Soccer',              id: 'sp_soccer',            iconUrl: `${B365}1.svg`    },
-  { name: 'Softball',            id: 'sp_softball',          iconUrl: `${B365}117.svg`  },
-  { name: 'Speedway',            id: 'sp_speedway',          iconUrl: `${B365}24.svg`   },
-  { name: 'Squash',              id: 'sp_squash',            iconUrl: `${B365}107.svg`  },
-  { name: 'Sumo',                id: 'sp_sumo',              iconUrl: `${B365}160.svg`  },
-  { name: 'Surfing',             id: 'sp_surfing',           iconUrl: `${B365}148.svg`  },
-  { name: 'Table Tennis',        id: 'sp_table_tennis',      iconUrl: `${B365}92.svg`   },
-  { name: 'Tennis',              id: 'sp_tennis',            iconUrl: `${B365}13.svg`   },
-  { name: 'Trotting',            id: 'sp_trotting',          iconUrl: `${B365}88.svg`   },
-  { name: 'UEFA Champions League',id: 'sp_ucl',              iconUrl: `${B365E}18.svg`  },
-  { name: 'Virtual Sports',      id: 'sp_virtual',           iconUrl: `${B365}144.svg`  },
-  { name: 'Volleyball',          id: 'sp_volleyball',        iconUrl: `${B365}91.svg`   },
-  { name: 'Water Polo',          id: 'sp_water_polo',        iconUrl: `${B365}110.svg`  },
-  { name: 'Winter Sports',       id: 'sp_winter_sports',     iconUrl: `${B365}998.svg`  },
+  { name: 'American Football',    id: 'sp_american_football', iconUrl: `${B365}12.svg`  },
+  { name: 'Australian Rules',     id: 'sp_aussie_rules',      iconUrl: `${B365}36.svg`  },
+  { name: 'Baseball',             id: 'sp_baseball',          iconUrl: `${B365}16.svg`  },
+  { name: 'Basketball',           id: 'sp_basketball',        iconUrl: `${B365}18.svg`  },
+  { name: 'Boxing',               id: 'sp_boxing',            iconUrl: `${B365}9.svg`   },
+  { name: 'Cricket',              id: 'sp_cricket',           iconUrl: `${B365}3.svg`   },
+  { name: 'Darts',                id: 'sp_darts',             iconUrl: `${B365}15.svg`  },
+  { name: 'Golf',                 id: 'sp_golf',              iconUrl: `${B365}7.svg`   },
+  { name: 'Greyhounds',           id: 'sp_greyhounds',        iconUrl: `${B365}4.svg`   },
+  { name: 'Handball',             id: 'sp_handball',          iconUrl: `${B365}78.svg`  },
+  { name: 'Horse Racing',         id: 'sp_horse_racing',      iconUrl: `${B365}2.svg`   },
+  { name: 'Ice Hockey',           id: 'sp_ice_hockey',        iconUrl: `${B365}17.svg`  },
+  { name: 'MMA',                  id: 'sp_mma',               iconUrl: `${B365}162.svg` },
+  { name: 'Rugby League',         id: 'sp_rugby_league',      iconUrl: `${B365}19.svg`  },
+  { name: 'Rugby Union',          id: 'sp_rugby_union',       iconUrl: `${B365}8.svg`   },
+  { name: 'Snooker',              id: 'sp_snooker',           iconUrl: `${B365}14.svg`  },
+  { name: 'Soccer',               id: 'sp_soccer',            iconUrl: `${B365}1.svg`   },
+  { name: 'Table Tennis',         id: 'sp_table_tennis',      iconUrl: `${B365}92.svg`  },
+  { name: 'Tennis',               id: 'sp_tennis',            iconUrl: `${B365}13.svg`  },
+  { name: 'UEFA Champions League', id: 'sp_ucl',              iconUrl: `${B365E}18.svg` },
+  { name: 'Volleyball',           id: 'sp_volleyball',        iconUrl: `${B365}91.svg`  },
 ];
 
 const AZ_INITIAL = 10;
@@ -356,13 +334,10 @@ function AZSidebarItem({ title, iconUrl, isActive, isFavourite, matchCount, onFa
   onFavToggle?: () => void;
   onClick?: () => void;
 }) {
-  const isEmpty = !isActive && (!matchCount || matchCount === 0);
-
   return (
     <div className={cn(
       'group relative flex w-full items-center transition-all duration-150',
       isActive ? 'bg-[#00DFA9]/8' : 'hover:bg-[#121821]/80',
-      isEmpty && 'opacity-40 hover:opacity-70',
     )}>
       {isActive && (
         <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full bg-[#00DFA9] shadow-[0_0_8px_rgba(0,223,169,0.7)]" />
