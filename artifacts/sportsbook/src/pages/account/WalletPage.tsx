@@ -49,6 +49,15 @@ interface NppPayment {
   expiresAt: string | null;
 }
 
+interface CmPayment {
+  uuid: string;
+  address: string | null;
+  amount: number;
+  network: string;
+  paymentUrl: string;
+  expiresAt: string | null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(v: string | number) {
   return parseFloat(v as string).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -102,11 +111,12 @@ export function WalletPage() {
   const [depAutoVerified, setDepAutoVerified] = useState(false);
 
   // NOWPayments
-  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual' | 'wallet'>(() => {
+  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual' | 'wallet' | 'cryptomus'>(() => {
     const hint = sessionStorage.getItem('cupbett_deposit_method');
     sessionStorage.removeItem('cupbett_deposit_method');
     if (hint === 'manual') return 'manual';
     if (hint === 'wallet') return 'wallet';
+    if (hint === 'cryptomus') return 'cryptomus';
     return 'nowpayments';
   });
   const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20'>('TRC-20');
@@ -117,6 +127,16 @@ export function WalletPage() {
   const [nppTimeLeft, setNppTimeLeft] = useState(0);
   const [nppError, setNppError]       = useState('');
   const [nppAddrCopied, setNppAddrCopied] = useState(false);
+
+  // Cryptomus
+  const [cmAvailable, setCmAvailable]   = useState<boolean | null>(null);
+  const [cmState, setCmState]           = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
+  const [cmAmount, setCmAmount]         = useState('');
+  const [cmNetwork, setCmNetwork]       = useState<'trc20' | 'erc20'>('trc20');
+  const [cmPayment, setCmPayment]       = useState<CmPayment | null>(null);
+  const [cmTimeLeft, setCmTimeLeft]     = useState(0);
+  const [cmError, setCmError]           = useState('');
+  const [cmAddrCopied, setCmAddrCopied] = useState(false);
 
   // Withdrawal form
   const [wdAmount, setWdAmount]       = useState('');
@@ -132,15 +152,17 @@ export function WalletPage() {
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      const [info, bal, history] = await Promise.all([
+      const [info, bal, history, cmCheck] = await Promise.all([
         api.get<DepositInfo>('/wallet/deposit-info'),
         api.get<{ balance: string; bonusBalance?: string }>('/wallet/balance'),
         api.get<Transaction[]>('/wallet/transactions'),
+        api.get<{ available: boolean }>('/wallet/deposit/cryptomus/available').catch(() => ({ available: false })),
       ]);
       setDepositInfo(info);
       setBalance(parseFloat(bal.balance));
       setBonusBalance(parseFloat(bal.bonusBalance ?? '0'));
       setTxns(history);
+      setCmAvailable(cmCheck.available);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, [isAuthenticated]);
@@ -306,6 +328,69 @@ export function WalletPage() {
     return () => clearInterval(id);
   }, [nppState, nppPayment]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Cryptomus handlers ───────────────────────────────────────────────────────
+  async function createCmPayment() {
+    const amount = parseFloat(cmAmount);
+    if (!cmAmount || isNaN(amount) || amount < 10) { setCmError('Minimum deposit is 10 USDT'); return; }
+    setCmState('creating'); setCmError('');
+    try {
+      const result = await api.post<CmPayment & { paymentStatus: string }>(
+        '/wallet/deposit/cryptomus/create', { amount, network: cmNetwork }
+      );
+      setCmPayment(result);
+      setCmTimeLeft(result.expiresAt
+        ? Math.max(0, Math.floor((new Date(result.expiresAt).getTime() - Date.now()) / 1000))
+        : 60 * 60);
+      setCmState('paying');
+      loadData();
+    } catch (err: unknown) {
+      setCmError(err instanceof Error ? err.message : 'Failed to create payment');
+      setCmState('idle');
+    }
+  }
+
+  function copyCmAddress() {
+    if (!cmPayment?.address) return;
+    navigator.clipboard.writeText(cmPayment.address);
+    setCmAddrCopied(true);
+    setTimeout(() => setCmAddrCopied(false), 2000);
+  }
+
+  function resetCm() {
+    setCmState('idle'); setCmPayment(null);
+    setCmAmount(''); setCmError(''); setCmTimeLeft(0);
+  }
+
+  // Cryptomus countdown
+  useEffect(() => {
+    if (cmState !== 'paying' || cmTimeLeft <= 0) return;
+    const id = setInterval(() => {
+      setCmTimeLeft(prev => {
+        if (prev <= 1) { setCmState('expired'); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cmState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cryptomus auto-poll every 12 s
+  useEffect(() => {
+    if (cmState !== 'paying' || !cmPayment) return;
+    const id = setInterval(async () => {
+      try {
+        const r = await api.get<{ status: string; credited: boolean }>(
+          `/wallet/deposit/cryptomus/${cmPayment.uuid}/status`
+        );
+        if (r.credited || r.status === 'paid' || r.status === 'paid_over') {
+          setCmState('success'); loadData();
+        } else if (r.status === 'fail' || r.status === 'cancel' || r.status === 'wrong_amount') {
+          setCmState('failed');
+        }
+      } catch { /* silent */ }
+    }, 12_000);
+    return () => clearInterval(id);
+  }, [cmState, cmPayment]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <Loader2 className="h-7 w-7 text-[#00DFA9] animate-spin" />
@@ -385,7 +470,7 @@ export function WalletPage() {
           {/* ── Method selector ─────────────────────────────────────────── */}
           <div className="rounded-2xl border border-white/[0.07] bg-[#0E1520] p-4">
             <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Choose Deposit Method</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
 
               {/* NOWPayments — active default */}
               <button onClick={() => { setDepositMethod('nowpayments'); resetNpp(); }}
@@ -455,6 +540,38 @@ export function WalletPage() {
                 <p className="text-[9px] text-[#A78BFA] font-semibold">ETH · BNB · TRC-20</p>
                 <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.3)' }}>Auto</span>
               </button>
+
+              {/* Cryptomus — USDT TRC-20 & ERC-20 */}
+              {cmAvailable === false ? (
+                <div className="relative rounded-xl p-3 flex flex-col items-center gap-1.5" style={{ background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.14)', opacity: 0.5 }}>
+                  <div className="absolute top-1.5 right-1.5"><Lock className="w-3 h-3 text-[#64748B]" /></div>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.14)' }}>
+                    <CircleDollarSign className="w-4.5 h-4.5 text-[#FACC15]" />
+                  </div>
+                  <p className="text-[11px] font-bold text-[#94A3B8] text-center leading-tight">Cryptomus</p>
+                  <p className="text-[9px] text-[#64748B]">USDT only</p>
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>N/A</span>
+                </div>
+              ) : (
+                <button onClick={() => { setDepositMethod('cryptomus'); resetCm(); }}
+                  className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-left"
+                  style={depositMethod === 'cryptomus'
+                    ? { background: 'rgba(0,223,169,0.10)', border: '2px solid rgba(0,223,169,0.50)', boxShadow: '0 0 16px rgba(0,223,169,0.10)' }
+                    : { background: 'rgba(0,223,169,0.04)', border: '1px solid rgba(0,223,169,0.14)' }}>
+                  {depositMethod === 'cryptomus' && (
+                    <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
+                    </div>
+                  )}
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
+                    <CircleDollarSign className="w-4.5 h-4.5 text-[#00DFA9]" />
+                  </div>
+                  <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">Cryptomus</p>
+                  <p className="text-[9px] text-[#00DFA9] font-semibold">USDT only</p>
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.3)' }}>Auto</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -468,6 +585,10 @@ export function WalletPage() {
               { icon: Shield, label: 'Self-custody', sub: 'Your keys', color: '#A78BFA' },
               { icon: Zap, label: 'Auto Credit', sub: 'No TxHash', color: '#00DFA9' },
               { icon: CircleDollarSign, label: 'Min 10 USDT', sub: 'Instant verify', color: '#FACC15' },
+            ] : depositMethod === 'cryptomus' ? [
+              { icon: Shield, label: 'Secure', sub: 'USDT only', color: '#00DFA9' },
+              { icon: Zap, label: 'Auto Credit', sub: 'No TxHash needed', color: '#38BDF8' },
+              { icon: CircleDollarSign, label: 'Min 10 USDT', sub: 'TRC-20 · ERC-20', color: '#FACC15' },
             ] : [
               { icon: Shield, label: 'Secure', sub: 'TRC-20 Network', color: '#00DFA9' },
               { icon: Clock, label: 'Fast', sub: '5–30 min', color: '#38BDF8' },
@@ -887,6 +1008,227 @@ export function WalletPage() {
                         View History →
                       </button>
                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Cryptomus USDT auto-pay panel ───────────────────────────── */}
+          {depositMethod === 'cryptomus' && (
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #071A12 100%)', border: '1px solid rgba(0,223,169,0.20)' }}>
+              <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(0,223,169,0.06) 0%, transparent 100%)' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
+                    <CircleDollarSign className="h-4 w-4 text-[#00DFA9]" />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Deposit via Cryptomus</p>
+                    <p className="text-[11px] text-[#64748B] mt-0.5">USDT TRC-20 or ERC-20 — auto-credited on confirmation</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-5">
+
+                {/* IDLE */}
+                {cmState === 'idle' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                          <CircleDollarSign className="h-3 w-3" /> Amount (USDT)
+                        </label>
+                        <div className="relative">
+                          <input type="number" min="10" step="0.01" value={cmAmount}
+                            onChange={e => { setCmAmount(e.target.value); setCmError(''); }}
+                            placeholder="Min 10 USDT"
+                            className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16" />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">USDT</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                          <Zap className="h-3 w-3" /> Network
+                        </label>
+                        <select value={cmNetwork} onChange={e => setCmNetwork(e.target.value as 'trc20' | 'erc20')}
+                          className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[13px] font-semibold text-[#F8FAFC] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all">
+                          <option value="trc20">USDT (TRC-20 / Tron)</option>
+                          <option value="erc20">USDT (ERC-20 / Ethereum)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <p className="text-[10px] text-[#64748B] font-semibold">Quick:</p>
+                      {[10, 50, 100, 250, 500].map(amt => (
+                        <button key={amt} type="button" onClick={() => setCmAmount(String(amt))}
+                          className={cn('text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all',
+                            cmAmount === String(amt)
+                              ? 'bg-[#00DFA9]/20 text-[#00DFA9] border border-[#00DFA9]/40'
+                              : 'bg-white/5 text-[#64748B] border border-white/[0.07] hover:bg-white/10 hover:text-white')}>
+                          ${amt}
+                        </button>
+                      ))}
+                    </div>
+                    {cmError && (
+                      <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl p-3">
+                        <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                        <p className="text-[12px] text-red-400">{cmError}</p>
+                      </div>
+                    )}
+                    <button onClick={createCmPayment}
+                      className="w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2"
+                      style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.30)' }}>
+                      <Zap className="h-4 w-4" /> Generate Payment Address
+                    </button>
+                    <p className="text-center text-[10px] text-[#64748B]">
+                      A unique address is generated for each deposit — balance is credited automatically when confirmed
+                    </p>
+                  </div>
+                )}
+
+                {/* CREATING */}
+                {cmState === 'creating' && (
+                  <div className="flex flex-col items-center py-12 gap-5 text-center">
+                    <div className="relative flex items-center justify-center">
+                      <div className="absolute w-24 h-24 rounded-full animate-ping opacity-10" style={{ background: 'radial-gradient(circle, #00DFA9, transparent)', animationDuration: '1.4s' }} />
+                      <svg className="w-20 h-20 animate-spin" style={{ animationDuration: '1.1s' }} viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#00DFA9" strokeWidth="3" strokeDasharray="160" strokeDashoffset="120" strokeLinecap="round" />
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#38BDF8" strokeWidth="1" strokeDasharray="213" strokeLinecap="round" style={{ opacity: 0.15 }} />
+                      </svg>
+                      <div className="absolute w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.3)' }}>
+                        <CircleDollarSign className="w-6 h-6 text-[#00DFA9]" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-black text-[#F8FAFC]">Generating address…</p>
+                      <p className="text-[11px] text-[#64748B] mt-1">Connecting to Cryptomus gateway</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* PAYING */}
+                {cmState === 'paying' && cmPayment && (
+                  <div className="space-y-4">
+                    {/* Timer */}
+                    <div className="flex items-center justify-between px-4 py-2.5 rounded-xl"
+                      style={{ background: cmTimeLeft < 300 ? 'rgba(239,68,68,0.08)' : 'rgba(0,223,169,0.08)', border: `1px solid ${cmTimeLeft < 300 ? 'rgba(239,68,68,0.25)' : 'rgba(0,223,169,0.25)'}` }}>
+                      <div className="flex items-center gap-2">
+                        <Clock className={`h-4 w-4 ${cmTimeLeft < 300 ? 'text-red-400' : 'text-[#00DFA9]'}`} />
+                        <span className="text-[12px] font-bold text-[#F8FAFC]">Payment expires in</span>
+                      </div>
+                      <span className={`text-[16px] font-black tabular-nums ${cmTimeLeft < 300 ? 'text-red-400' : 'text-[#00DFA9]'}`}>
+                        {Math.floor(cmTimeLeft / 3600)}:{String(Math.floor((cmTimeLeft % 3600) / 60)).padStart(2, '0')}:{String(cmTimeLeft % 60).padStart(2, '0')}
+                      </span>
+                    </div>
+
+                    {/* Pay on Cryptomus button */}
+                    {cmPayment.paymentUrl && (
+                      <a href={cmPayment.paymentUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01]"
+                        style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 20px rgba(0,223,169,0.25)' }}>
+                        <ExternalLink className="h-4 w-4" /> Pay on Cryptomus
+                      </a>
+                    )}
+
+                    {/* QR + address (if address is available) */}
+                    {cmPayment.address && (
+                      <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-[#0B0F14] border border-white/[0.07]">
+                        <div className="p-2 rounded-xl bg-white flex-shrink-0" style={{ boxShadow: '0 0 0 1px rgba(0,223,169,0.2)' }}>
+                          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(cmPayment.address)}`}
+                            alt="Payment address QR" className="w-[140px] h-[140px] object-contain" />
+                        </div>
+                        <div className="flex-1 w-full space-y-3">
+                          <div>
+                            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Send Exactly</p>
+                            <div className="flex items-center gap-2 bg-[#00DFA9]/5 border border-[#00DFA9]/20 rounded-xl px-4 py-2.5">
+                              <span className="text-[18px] font-black text-[#F8FAFC] tabular-nums">{cmPayment.amount}</span>
+                              <span className="text-[12px] font-bold text-[#00DFA9]">USDT</span>
+                              <span className="text-[10px] text-[#64748B] ml-auto">{cmPayment.network === 'TRON' ? 'TRC-20' : 'ERC-20'}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">To This Address</p>
+                            <div className="flex items-center gap-2 bg-[#0E1520] border border-white/[0.08] rounded-xl px-3 py-2">
+                              <p className="flex-1 text-[11px] font-mono text-[#94A3B8] break-all leading-relaxed select-all">{cmPayment.address}</p>
+                              <button onClick={copyCmAddress}
+                                className={cn('shrink-0 p-2 rounded-lg transition-all', cmAddrCopied ? 'bg-[#00DFA9]/20 text-[#00DFA9]' : 'bg-white/5 text-[#64748B] hover:bg-white/10 hover:text-white')}>
+                                {cmAddrCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                              </button>
+                            </div>
+                            {cmAddrCopied && <p className="text-[10px] text-[#00DFA9] mt-1 flex items-center gap-1"><Check className="h-2.5 w-2.5" /> Address copied</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Polling indicator */}
+                    <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#00DFA9]/5 border border-[#00DFA9]/15">
+                      <div className="relative w-3 h-3 flex-shrink-0">
+                        <div className="absolute inset-0 rounded-full bg-[#00DFA9] animate-ping opacity-60" style={{ animationDuration: '1.5s' }} />
+                        <div className="relative w-3 h-3 rounded-full bg-[#00DFA9]" />
+                      </div>
+                      <p className="text-[11px] text-[#00DFA9]/80">Monitoring your payment — balance updates automatically when confirmed</p>
+                    </div>
+                    <div className="flex items-start gap-2 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-xl p-3">
+                      <AlertCircle className="h-3.5 w-3.5 text-[#FACC15] shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-[#FACC15]/80 leading-relaxed">
+                        Send <strong>exactly</strong> the amount shown. You can also tap "Pay on Cryptomus" to use the hosted payment page.
+                      </p>
+                    </div>
+                    <button onClick={resetCm}
+                      className="w-full py-2.5 rounded-xl text-[12px] font-bold text-[#64748B] border border-white/[0.07] hover:text-white hover:bg-white/5 transition-all">
+                      ← Start a new payment
+                    </button>
+                  </div>
+                )}
+
+                {/* SUCCESS */}
+                {cmState === 'success' && (
+                  <div className="flex flex-col items-center py-8 gap-4 text-center">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.2)' }}>
+                        <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
+                      </div>
+                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                        <Check className="w-3 h-3 text-[#0B0F14]" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Credited! ⚡</p>
+                      <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                        Your Cryptomus payment was confirmed and <span className="text-[#00DFA9] font-semibold">automatically credited</span> to your account.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-[#00DFA9]/5 border border-[#00DFA9]/15 rounded-xl px-4 py-2.5">
+                      <Check className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
+                      <p className="text-[11px] text-[#00DFA9]/80">Funds are available in your wallet now</p>
+                    </div>
+                    <button onClick={resetCm}
+                      className="mt-1 px-5 py-2 rounded-xl text-[12px] font-bold text-[#00DFA9] border border-[#00DFA9]/25 hover:bg-[#00DFA9]/10 transition-all">
+                      Make another deposit
+                    </button>
+                  </div>
+                )}
+
+                {/* EXPIRED / FAILED */}
+                {(cmState === 'expired' || cmState === 'failed') && (
+                  <div className="flex flex-col items-center py-8 gap-4 text-center">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.10)', border: '2px solid rgba(239,68,68,0.25)' }}>
+                      <XCircle className="h-8 w-8 text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-black text-[#F8FAFC]">{cmState === 'expired' ? 'Payment Expired' : 'Payment Failed'}</p>
+                      <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                        {cmState === 'expired'
+                          ? 'This payment session has expired. Please generate a new address to deposit.'
+                          : 'The payment was not completed. Please try again or use another deposit method.'}
+                      </p>
+                    </div>
+                    <button onClick={resetCm}
+                      className="px-5 py-2.5 rounded-xl font-black text-[13px] text-[#0B0F14] transition-all hover:scale-[1.01]"
+                      style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}>
+                      Try Again
+                    </button>
                   </div>
                 )}
               </div>
