@@ -1533,6 +1533,8 @@ export function WalletPage() {
                       {(() => {
                         const isBtc = manualNetwork === 'BTC';
                         const isXrp = manualNetwork === 'XRP';
+                        const isSolana = manualNetwork === 'SOLANA';
+                        const isTon = manualNetwork === 'TON';
                         const coinLabel = isBtc ? 'BTC' : isXrp ? 'XRP' : 'USDT';
                         const minVal   = isBtc ? '0.00001' : isXrp ? '1' : String(depositInfo?.minDeposit ?? 10);
                         const stepVal  = isBtc ? '0.00000001' : isXrp ? '0.000001' : '0.01';
@@ -1560,6 +1562,11 @@ export function WalletPage() {
                             {(isBtc || isXrp) && (
                               <p className="text-[10px] text-[#64748B] mt-1">
                                 Admin will convert to USDT and credit within 30 min
+                              </p>
+                            )}
+                            {(isSolana || isTon) && (
+                              <p className="text-[10px] text-[#00DFA9] mt-1 flex items-center gap-1">
+                                <span>⚡</span> Auto-credited once confirmed on-chain (usually &lt; 1 min)
                               </p>
                             )}
                           </>

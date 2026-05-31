@@ -60,21 +60,40 @@ async function fetchTonApiTx(txHash: string): Promise<TonApiTransaction | null> 
 }
 
 /**
- * Extract the 64-char hex address segment from any TON address format.
- * Handles:
- *   - raw hex: "0:abc123..."   → "abc123..."
- *   - bounceable base64url: "EQAbc..."  → decode to 33 bytes, skip byte 0 (flags+workchain) and last 2 (checksum)
- * Falls back to lowercasing the full string for comparison.
+ * Normalise a TON address to its 64-char lowercase hex account-ID.
+ *
+ * Handles three formats:
+ *   1. Raw:            "-1:<64hex>" or "0:<64hex>"  → strip prefix
+ *   2. User-friendly:  "EQ…" / "UQ…" (48 base64url chars)
+ *                      → base64url-decode → 36 bytes
+ *                      → layout: [tag(1)] [workchain(1)] [hash(32)] [crc(2)]
+ *                      → return hex(hash)
+ *   3. Fallback:       extract first run of 64 hex chars
  */
 function normaliseTonAddress(addr: string): string {
   if (!addr) return "";
   const s = addr.trim();
-  // Raw hex format: "0:<64 hex>"
-  const rawMatch = /^[0-9a-fA-F-]:[0-9a-fA-F]{64}$/.exec(s);
-  if (rawMatch) return s.slice(2).toLowerCase();
-  // Try to extract 64 contiguous hex chars
+
+  // Format 1: raw  "-1:<64hex>" or "0:<64hex>"
+  const rawMatch = /^-?[0-9]+:([0-9a-fA-F]{64})$/.exec(s);
+  if (rawMatch) return rawMatch[1].toLowerCase();
+
+  // Format 2: user-friendly base64url (exactly 48 chars like EQ… / UQ…)
+  if (/^[A-Za-z0-9_-]{48}$/.test(s)) {
+    try {
+      const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+      // pad to multiple of 4
+      const padded = b64.padEnd(Math.ceil(b64.length / 4) * 4, "=");
+      const buf = Buffer.from(padded, "base64");
+      // 36 bytes: 1 tag + 1 workchain + 32 hash + 2 CRC
+      if (buf.length >= 34) return buf.slice(2, 34).toString("hex").toLowerCase();
+    } catch { /* fall through */ }
+  }
+
+  // Format 3: extract first 64-char hex run (covers partial raw addresses)
   const hexMatch = /[0-9a-fA-F]{64}/.exec(s);
   if (hexMatch) return hexMatch[0].toLowerCase();
+
   return s.toLowerCase();
 }
 
