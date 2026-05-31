@@ -192,10 +192,9 @@ function EntryModal({
 
   // If wallet was already connected when arriving on step 2, confirm straight away
   useEffect(() => {
-    if (step === 'wallet' && isConnected && !connectingWallet) {
-      const t = setTimeout(onConfirm, 200);
-      return () => clearTimeout(t);
-    }
+    if (!(step === 'wallet' && isConnected && !connectingWallet)) return;
+    const t = setTimeout(onConfirm, 200);
+    return () => clearTimeout(t);
   }, [isConnected, step]);
 
   return (

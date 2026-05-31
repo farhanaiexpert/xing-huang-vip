@@ -226,7 +226,7 @@ export function FlashOdds() {
                 style={
                   isExpired ? undefined :
                   isSelected
-                    ? { background: `linear-gradient(145deg, #18212B, #0F1820)`, ringColor: flash.accent, boxShadow: `0 0 24px ${flash.accent}40, inset 0 1px 0 ${flash.accent}20`, borderColor: flash.accent }
+                    ? { background: `linear-gradient(145deg, #18212B, #0F1820)`, '--tw-ring-color': flash.accent, boxShadow: `0 0 24px ${flash.accent}40, inset 0 1px 0 ${flash.accent}20`, borderColor: flash.accent } as React.CSSProperties
                     : { background: 'linear-gradient(145deg, #18212B, #111922)', boxShadow: `0 4px 20px rgba(0,0,0,0.4)` }
                 }
                 onClick={() => !isExpired && handleClick(flash)}

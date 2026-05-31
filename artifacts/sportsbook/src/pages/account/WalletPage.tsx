@@ -218,13 +218,18 @@ export function WalletPage() {
   // Whichever wallet is active, pick its balance
   const walletBalance = w3Connected ? evmBalance : hasTronLink ? tronBalance : null;
 
+  function cleanAddr(addr: string | undefined): string {
+    if (!addr || addr.startsWith('PASTE_YOUR') || addr.startsWith('CONFIGURE_')) return '';
+    return addr;
+  }
+
   function getManualAddress(network: typeof manualNetwork, info: DepositInfo): string {
-    if (network === 'BTC')    return info.addressBtc ?? '';
-    if (network === 'SOLANA') return info.addressSol ?? '';
-    if (network === 'TON')    return info.addressTon ?? '';
-    if (network === 'XRP')    return info.addressXrp ?? '';
-    if (network !== 'TRC-20') return info.addressErc20 ?? info.address;
-    return info.address;
+    if (network === 'BTC')    return cleanAddr(info.addressBtc);
+    if (network === 'SOLANA') return cleanAddr(info.addressSol);
+    if (network === 'TON')    return cleanAddr(info.addressTon);
+    if (network === 'XRP')    return cleanAddr(info.addressXrp);
+    if (network !== 'TRC-20') return cleanAddr(info.addressErc20) || cleanAddr(info.address);
+    return cleanAddr(info.address);
   }
 
   function copyAddress() {

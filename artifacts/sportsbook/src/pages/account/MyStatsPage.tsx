@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -206,6 +207,7 @@ function RecentForm({ form, onBadgeClick }: { form: FormBet[]; onBadgeClick: (be
 
 export function MyStatsPage() {
   const [, navigate]  = useLocation();
+  const { isAuthenticated } = useAuth();
   const [range,   setRange]      = useState<RangeDays>(30);
   const [data,    setData]       = useState<StatsData | null>(null);
   const [loading, setLoading]    = useState(true);
@@ -275,7 +277,7 @@ export function MyStatsPage() {
         </div>
         <div className="flex items-center justify-center h-48 gap-2 text-[#64748B] text-sm">
           <AlertCircle className="w-4 h-4" />
-          {error ?? 'Failed to load stats'}
+          {!isAuthenticated ? 'Sign in to see your betting statistics.' : (error ?? 'Failed to load stats')}
         </div>
       </div>
     );
