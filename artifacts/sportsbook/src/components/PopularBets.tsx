@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { OddsButton } from './OddsButton';
-import { Flame, TrendingUp } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { useOddsData } from '../hooks/useOddsData';
 import type { League } from '../types';
 
@@ -21,23 +21,26 @@ function formatCount(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
 
-// ── Build popular bet entries from real league data ───────────────────────────
+// ── Data shape ────────────────────────────────────────────────────────────────
 interface PopularBet {
-  id: string;
-  selectionName: string;
-  marketName: string;
-  matchName: string;
-  leagueName: string;
-  flag: string;
-  matchId: string;
-  marketId: string;
-  selectionType: string;
-  odds: number;
-  betCount: number;
-  isLive?: boolean;
-  sportKey?: string;
+  id:            string;
+  matchId:       string;
+  marketId:      string;
+  matchName:     string;
+  leagueName:    string;
+  flag:          string;
+  marketName:    string;
+  sportKey:      string | undefined;
+  homeTeam:      string;
+  homeOdds:      number;
+  awayTeam:      string;
+  awayOdds:      number;
+  drawOdds?:     number;
+  betCount:      number;
+  isLive?:       boolean;
 }
 
+// ── Build entries from real league data ───────────────────────────────────────
 function buildPopularBets(allLeagues: League[]): PopularBet[] {
   const bets: PopularBet[] = [];
   const seen = new Set<string>();
@@ -48,30 +51,30 @@ function buildPopularBets(allLeagues: League[]): PopularBet[] {
       if (seen.has(match.id)) continue;
       seen.add(match.id);
 
-      const isSoccer  = league.sportKey?.startsWith('soccer_') ?? false;
-      const isTennis  = league.sportKey?.startsWith('tennis_') ?? false;
-      const matchName = match.team2 ? `${match.team1} vs ${match.team2}` : match.team1;
+      const isSoccer   = league.sportKey?.startsWith('soccer_') ?? false;
+      const isTennis   = league.sportKey?.startsWith('tennis_') ?? false;
       const marketName = isSoccer ? 'Match Result' : isTennis ? 'To Win Match' : 'Match Winner';
 
-      // Pseudo-random (but stable per match) bet count for engagement display
+      // Stable pseudo-random bet count per match
       let hash = 0;
       for (let i = 0; i < match.id.length; i++) hash = (hash * 31 + match.id.charCodeAt(i)) >>> 0;
-      const betCount = 400 + (hash % 2600);
 
       bets.push({
-        id:            `pb_${match.id}`,
-        selectionName: `${match.team1} Win`,
-        marketName,
-        matchName,
-        leagueName: league.name,
-        flag:       getFlag(league),
+        id:         `pb_${match.id}`,
         matchId:    match.id,
         marketId:   `mkt_${match.id}_mr`,
-        selectionType: '1',
-        odds:       match.odds.home,
-        betCount,
-        isLive:     match.isLive,
+        matchName:  match.team2 ? `${match.team1} vs ${match.team2}` : match.team1,
+        leagueName: league.name,
+        flag:       getFlag(league),
+        marketName,
         sportKey:   match.sportKey ?? league.sportKey,
+        homeTeam:   match.team1,
+        homeOdds:   match.odds.home,
+        awayTeam:   match.team2 ?? '',
+        awayOdds:   match.odds.away,
+        drawOdds:   match.odds.draw,
+        betCount:   400 + (hash % 2600),
+        isLive:     match.isLive,
       });
     }
     if (bets.length >= 6) break;
@@ -82,11 +85,21 @@ function buildPopularBets(allLeagues: League[]): PopularBet[] {
 
 // ── Card component ────────────────────────────────────────────────────────────
 function PopularBetCard({ bet }: { bet: PopularBet }) {
+  const shared = {
+    matchId:    bet.matchId,
+    marketId:   bet.marketId,
+    matchName:  bet.matchName,
+    leagueName: bet.leagueName,
+    marketName: bet.marketName,
+    sportKey:   bet.sportKey,
+    isLive:     bet.isLive,
+  };
+
   return (
-    <div className="w-[210px] shrink-0 rounded-xl flex flex-col bg-[#121821] border border-[#253241] hover:border-[#2E3D50] hover:bg-[#18212B] transition-all duration-200 cursor-pointer group">
+    <div className="w-[220px] shrink-0 rounded-xl flex flex-col bg-[#121821] border border-[#253241] hover:border-[#2E3D50] hover:bg-[#18212B] transition-all duration-200">
       <div className="h-[2px] w-full rounded-tl-xl bg-gradient-to-r from-[#253241] via-[#2E3D50] to-transparent" />
 
-      <div className="p-3.5 flex flex-col gap-3">
+      <div className="p-3.5 flex flex-col gap-2.5">
         {/* League + live badge */}
         <div className="flex items-center gap-1.5 justify-between">
           <span className="text-[10px] text-[#94A3B8]/50 flex items-center gap-1 truncate">
@@ -100,32 +113,51 @@ function PopularBetCard({ bet }: { bet: PopularBet }) {
           )}
         </div>
 
-        {/* Match + selection */}
+        {/* Market name */}
         <div>
-          <p className="text-[11px] text-[#94A3B8]/60 leading-none mb-1 truncate">{bet.matchName}</p>
-          <p className="text-[13px] font-semibold text-[#F8FAFC] leading-tight line-clamp-2">{bet.selectionName}</p>
-          <p className="text-[10px] text-[#94A3B8]/40 mt-0.5">{bet.marketName}</p>
+          <p className="text-[11px] font-medium text-[#F8FAFC]/80 leading-none">{bet.marketName}</p>
         </div>
 
-        {/* Bets count + odds button */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/40">
-            <TrendingUp className="h-2.5 w-2.5" />
-            <span className="font-semibold text-[#94A3B8]/60">{formatCount(bet.betCount)}</span>
-            <span>bets</span>
+        {/* Home / Draw / Away odds */}
+        <div className="flex items-center gap-1">
+          <div className="flex flex-col items-center gap-0.5 flex-1">
+            <span className="text-[9px] text-[#94A3B8]/40 truncate w-full text-center">{bet.homeTeam.split(' ').pop()}</span>
+            <OddsButton
+              {...shared}
+              selectionType="1"
+              selectionName={bet.homeTeam}
+              odds={bet.homeOdds}
+            />
           </div>
-          <OddsButton
-            matchId={bet.matchId}
-            marketId={bet.marketId}
-            matchName={bet.matchName}
-            leagueName={bet.leagueName}
-            marketName={bet.marketName}
-            selectionType={bet.selectionType}
-            selectionName={bet.selectionName}
-            odds={bet.odds}
-            isLive={bet.isLive}
-            sportKey={bet.sportKey}
-          />
+          {bet.drawOdds != null && (
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[9px] text-[#94A3B8]/40">Draw</span>
+              <OddsButton
+                {...shared}
+                selectionType="X"
+                selectionName="Draw"
+                odds={bet.drawOdds}
+              />
+            </div>
+          )}
+          {bet.awayTeam && (
+            <div className="flex flex-col items-center gap-0.5 flex-1">
+              <span className="text-[9px] text-[#94A3B8]/40 truncate w-full text-center">{bet.awayTeam.split(' ').pop()}</span>
+              <OddsButton
+                {...shared}
+                selectionType="2"
+                selectionName={bet.awayTeam}
+                odds={bet.awayOdds}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Bet count */}
+        <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/35">
+          <Flame className="h-2.5 w-2.5 text-[#EF4444]/50" />
+          <span className="font-semibold text-[#94A3B8]/50">{formatCount(bet.betCount)}</span>
+          <span>bets placed</span>
         </div>
       </div>
     </div>

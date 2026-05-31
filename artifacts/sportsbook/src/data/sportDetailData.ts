@@ -152,14 +152,7 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       'NCAAF National Championship Winner',
       'Heisman Trophy Winner',
     ],
-    mockMatches: [
-      { id: 'af_1', team1: 'Kansas City Chiefs',   team2: 'Baltimore Ravens',     leagueName: 'NFL Look Ahead Matches', dateLabel: future(3, 15, 20, 0),  odds1: 1.67, odds2: 2.15, team1Country: 'US', team2Country: 'US' },
-      { id: 'af_2', team1: 'Dallas Cowboys',        team2: 'New York Giants',      leagueName: 'NFL Look Ahead Matches', dateLabel: future(3, 15, 23, 30), odds1: 1.45, odds2: 2.65, team1Country: 'US', team2Country: 'US' },
-      { id: 'af_3', team1: 'San Francisco 49ers',   team2: 'Las Vegas Raiders',    leagueName: 'NFL Preseason',          dateLabel: future(3, 16, 22, 0),  odds1: 1.57, odds2: 2.30, team1Country: 'US', team2Country: 'US' },
-      { id: 'af_4', team1: 'Philadelphia Eagles',   team2: 'New England Patriots', leagueName: 'NFL Preseason',          dateLabel: future(3, 16, 23, 30), odds1: 1.38, odds2: 2.90, team1Country: 'US', team2Country: 'US' },
-      { id: 'af_5', team1: 'Buffalo Bills',         team2: 'Miami Dolphins',       leagueName: 'NFL Look Ahead Matches', dateLabel: future(3, 17, 20, 0),  odds1: 1.72, odds2: 2.05, team1Country: 'US', team2Country: 'US' },
-      { id: 'af_6', team1: 'Los Angeles Rams',      team2: 'Seattle Seahawks',     leagueName: 'NFL Look Ahead Matches', dateLabel: future(3, 17, 22, 30), odds1: 1.80, odds2: 1.95, team1Country: 'US', team2Country: 'US' },
-    ],
+    mockMatches: [],
   },
 
   // ── Australian Rules ────────────────────────────────────────────────────────
@@ -179,14 +172,7 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       'AFL Coleman Medal 2026',
       'AFL Rising Star Award 2026',
     ],
-    mockMatches: [
-      { id: 'ar_1', team1: 'Collingwood Magpies', team2: 'Melbourne Demons',     leagueName: 'AFL', dateLabel: rel(0, 15, 20), odds1: 2.10, odds2: 1.72, team1Country: 'AU', team2Country: 'AU' },
-      { id: 'ar_2', team1: 'Brisbane Lions',       team2: 'Port Adelaide Power',  leagueName: 'AFL', dateLabel: rel(0, 18, 45), odds1: 1.90, odds2: 1.90, team1Country: 'AU', team2Country: 'AU' },
-      { id: 'ar_3', team1: 'Carlton Blues',        team2: 'Essendon Bombers',     leagueName: 'AFL', dateLabel: rel(1, 13, 15), odds1: 1.65, odds2: 2.25, team1Country: 'AU', team2Country: 'AU' },
-      { id: 'ar_4', team1: 'Sydney Swans',         team2: 'GWS Giants',           leagueName: 'AFL', dateLabel: rel(1, 16, 35), odds1: 1.45, odds2: 2.60, team1Country: 'AU', team2Country: 'AU' },
-      { id: 'ar_5', team1: 'Richmond Tigers',      team2: 'Hawthorn Hawks',       leagueName: 'AFL', dateLabel: rel(2, 15, 20), odds1: 2.40, odds2: 1.58, team1Country: 'AU', team2Country: 'AU' },
-      { id: 'ar_6', team1: 'Geelong Cats',         team2: 'West Coast Eagles',    leagueName: 'AFL', dateLabel: rel(2, 18, 10), odds1: 1.25, odds2: 3.80, team1Country: 'AU', team2Country: 'AU' },
-    ],
+    mockMatches: [],
   },
 
   // ── Badminton ───────────────────────────────────────────────────────────────
@@ -211,17 +197,7 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       'Thomas Cup — Winner',
       'Uber Cup — Winner',
     ],
-    mockMatches: [
-      { id: 'bad_1', team1: 'Po-Wei Wang',          team2: 'Tharun Mannepalli',  leagueName: 'Malaysia Masters',       dateLabel: rel(0, 4,  50), odds1: 1.83, odds2: 1.83, team1Country: 'TW', team2Country: 'US' },
-      { id: 'bad_2', team1: 'Moh. Zaki Ubaidillah', team2: 'Lakshya Sen',        leagueName: 'Malaysia Masters',       dateLabel: rel(0, 5,  40), odds1: 3.00, odds2: 1.36, team1Country: 'MY', team2Country: 'IN' },
-      { id: 'bad_3', team1: 'H.S. Prannoy',         team2: 'Kodai Naraoka',      leagueName: 'Malaysia Masters',       dateLabel: rel(0, 6,  30), odds1: 3.75, odds2: 1.25, team1Country: 'IN', team2Country: 'JP' },
-      { id: 'bad_4', team1: 'Shi Yu Qi',             team2: 'Anders Antonsen',   leagueName: 'Malaysia Masters',       dateLabel: rel(0, 7,  10), odds1: 1.40, odds2: 2.75, team1Country: 'CN', team2Country: 'DK' },
-      { id: 'bad_5', team1: 'Viktor Axelsen',        team2: 'Lee Zii Jia',       leagueName: 'Malaysia Masters',       dateLabel: rel(0, 8,  0),  odds1: 1.22, odds2: 4.25, team1Country: 'DK', team2Country: 'MY' },
-      { id: 'bad_6', team1: 'Jonatan Christie',      team2: 'Ng Ka Long Angus',  leagueName: 'Malaysia Masters',       dateLabel: rel(0, 9,  15), odds1: 2.10, odds2: 1.70, team1Country: 'ID', team2Country: 'HK' },
-      { id: 'bad_7', team1: 'An Se-young',           team2: 'Carolina Marin',    leagueName: 'Malaysia Masters Women', dateLabel: rel(0, 6,  0),  odds1: 1.20, odds2: 4.50, team1Country: 'KR', team2Country: 'ES' },
-      { id: 'bad_8', team1: 'PV Sindhu',             team2: 'Ratchanok Intanon', leagueName: 'Malaysia Masters Women', dateLabel: rel(0, 7,  20), odds1: 2.80, odds2: 1.40, team1Country: 'IN', team2Country: 'TH' },
-      { id: 'bad_9', team1: 'Tai Tzu-ying',          team2: 'Nozomi Okuhara',    leagueName: 'Malaysia Masters Women', dateLabel: rel(0, 8,  40), odds1: 1.55, odds2: 2.35, team1Country: 'TW', team2Country: 'JP' },
-    ],
+    mockMatches: [],
   },
 
   // ── Basketball ──────────────────────────────────────────────────────────────
@@ -260,14 +236,7 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       'EuroLeague Champion',
       'NBA Coach of the Year',
     ],
-    mockMatches: [
-      { id: 'bb_1', team1: 'Boston Celtics',         team2: 'Indiana Pacers',        leagueName: 'NBA',        dateLabel: rel(0, 22, 0),  odds1: 1.35, odds2: 3.10, isLive: true, team1Country: 'US', team2Country: 'US' },
-      { id: 'bb_2', team1: 'Oklahoma City Thunder',  team2: 'Denver Nuggets',        leagueName: 'NBA',        dateLabel: rel(1, 0,  30), odds1: 1.57, odds2: 2.40, team1Country: 'US', team2Country: 'US' },
-      { id: 'bb_3', team1: 'Minnesota Timberwolves', team2: 'Golden State Warriors', leagueName: 'NBA',        dateLabel: rel(1, 23, 0),  odds1: 1.72, odds2: 2.10, team1Country: 'US', team2Country: 'US' },
-      { id: 'bb_4', team1: 'Cleveland Cavaliers',    team2: 'Miami Heat',            leagueName: 'NBA',        dateLabel: rel(2, 0,  0),  odds1: 1.48, odds2: 2.55, team1Country: 'US', team2Country: 'US' },
-      { id: 'bb_5', team1: 'Real Madrid',            team2: 'Fenerbahce Beko',       leagueName: 'Euroleague', dateLabel: rel(2, 20, 0),  odds1: 1.45, odds2: 2.65, team1Country: 'ES', team2Country: 'TR' },
-      { id: 'bb_6', team1: 'Olympiacos',             team2: 'Panathinaikos',         leagueName: 'Euroleague', dateLabel: rel(2, 18, 30), odds1: 2.20, odds2: 1.65, team1Country: 'GR', team2Country: 'GR' },
-    ],
+    mockMatches: [],
   },
 
   // ── Baseball ────────────────────────────────────────────────────────────────
@@ -297,14 +266,7 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       'NL Cy Young Award 2026',
       'AL Rookie of the Year',
     ],
-    mockMatches: [
-      { id: 'bsb_1', team1: 'New York Yankees',       team2: 'Boston Red Sox',          leagueName: 'MLB', dateLabel: rel(0, 23, 10), odds1: 1.72, odds2: 2.05, team1Country: 'US', team2Country: 'US' },
-      { id: 'bsb_2', team1: 'Los Angeles Dodgers',    team2: 'San Francisco Giants',    leagueName: 'MLB', dateLabel: rel(0, 2,  10), odds1: 1.35, odds2: 3.00, team1Country: 'US', team2Country: 'US' },
-      { id: 'bsb_3', team1: 'Houston Astros',         team2: 'Texas Rangers',           leagueName: 'MLB', dateLabel: rel(1, 23, 5),  odds1: 1.65, odds2: 2.20, team1Country: 'US', team2Country: 'US' },
-      { id: 'bsb_4', team1: 'Atlanta Braves',         team2: 'New York Mets',           leagueName: 'MLB', dateLabel: rel(1, 1,  10), odds1: 1.50, odds2: 2.45, team1Country: 'US', team2Country: 'US' },
-      { id: 'bsb_5', team1: 'Yomiuri Giants',         team2: 'Fukuoka SoftBank Hawks',  leagueName: 'Japanese NPB', dateLabel: rel(0, 11, 0), odds1: 2.00, odds2: 1.80, team1Country: 'JP', team2Country: 'JP' },
-      { id: 'bsb_6', team1: 'Samsung Lions',          team2: 'LG Twins',                leagueName: 'Korean KBO',   dateLabel: rel(0, 10, 0), odds1: 1.90, odds2: 1.90, team1Country: 'KR', team2Country: 'KR' },
-    ],
+    mockMatches: [],
   },
 
   // ── Boxing ──────────────────────────────────────────────────────────────────
@@ -334,11 +296,7 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       'WBC Light Heavyweight Championship',
       'IBF Middleweight Championship',
     ],
-    mockMatches: [
-      { id: 'bx_1', team1: 'Oleksandr Usyk',  team2: 'Rico Verhoeven',    leagueName: 'Heavyweight',       dateLabel: rel(5, 23, 0), odds1: 1.055, odds2: 9.00,  team1Country: 'UA', team2Country: 'NL' },
-      { id: 'bx_2', team1: 'Jack Catterall',   team2: 'Shakhram Giyasov', leagueName: 'Super Lightweight', dateLabel: rel(5, 23, 0), odds1: 1.36,  odds2: 3.00,  team1Country: 'GB', team2Country: 'UZ' },
-      { id: 'bx_3', team1: 'Hamzah Sheeraz',   team2: 'Alem Begic',       leagueName: 'Light Middleweight',dateLabel: rel(5, 22, 0), odds1: 1.05,  odds2: 10.00, team1Country: 'GB', team2Country: 'BA' },
-    ],
+    mockMatches: [],
     betBoostCards: [
       { id: 'bx_bb_1', title: 'Fight Result: Frank Sanchez', matchName: 'Frank Sanchez vs Richard Torrez Jr', baseOdds: 9.00,  boostedOdds: 10.00, exampleReturn: '10 USDT returns 100 USDT' },
       { id: 'bx_bb_2', title: 'Fight Result: Richard Torrez Jr', matchName: 'Frank Sanchez vs Richard Torrez Jr', baseOdds: 3.75, boostedOdds: 4.00,  exampleReturn: '10 USDT returns 40 USDT'  },
@@ -374,13 +332,7 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       'IPL 2026 Winner',
       'The Ashes 2025-26 Winner',
     ],
-    mockMatches: [
-      { id: 'cr_1', team1: 'Rajasthan Royals',          team2: 'Lucknow Super Giants',   leagueName: 'Indian Premier League', dateLabel: 'Today, 14:00',  odds1: 1.62,  odds2: 2.15,  isLive: true,  score1: '220/3', liveStatus: 'T20 · 16.2 Ov' },
-      { id: 'cr_2', team1: 'Bangladesh',                 team2: 'Pakistan',               leagueName: 'Test Matches',          dateLabel: 'Live — Day 5',  odds1: 1.061, odds2: 10.00, oddsDraw: 51.00, isLive: true, score1: '278 & 390', score2: '232 & 316/7', liveStatus: '2nd Test — Day 5' },
-      { id: 'cr_3', team1: 'Kolkata Knight Riders',     team2: 'Mumbai Indians',         leagueName: 'Indian Premier League', dateLabel: rel(2, 17, 0),   odds1: 1.96,  odds2: 1.76  },
-      { id: 'cr_4', team1: 'England Women',             team2: 'New Zealand Women',      leagueName: 'International T20',     dateLabel: rel(3, 14, 30),  odds1: 1.72,  odds2: 2.10  },
-      { id: 'cr_5', team1: 'Royal Challengers Bengaluru', team2: 'Chennai Super Kings', leagueName: 'Indian Premier League', dateLabel: rel(3, 19, 30),  odds1: 2.10,  odds2: 1.72  },
-    ],
+    mockMatches: [],
     inPlayItems: [
       { id: 'cr_ip_1', name: 'Rajasthan Royals vs Lucknow Super Giants — T20' },
       { id: 'cr_ip_2', name: 'Bangladesh vs Pakistan — 2nd Test' },
@@ -412,11 +364,7 @@ export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
       'VALORANT Champions Winner',
       'Rocket League World Championship',
     ],
-    mockMatches: [
-      { id: 'es_1', team1: 'Natus Vincere',     team2: 'Aurora Gaming',   leagueName: 'DOTA2 — DreamLeague', dateLabel: rel(0, 20, 0),  odds1: 1.47, odds2: 2.60, team1Country: 'UA', team2Country: 'RU' },
-      { id: 'es_2', team1: 'T1',                team2: 'Kiwoom DRX',      leagueName: 'LOL — LCX',           dateLabel: rel(2, 11, 0),  odds1: 1.04, odds2: 9.00, team1Country: 'KR', team2Country: 'KR' },
-      { id: 'es_3', team1: 'Nongshim RedForce', team2: 'KT Rolster',      leagueName: 'LOL — LCX',           dateLabel: rel(2, 13, 0),  odds1: 3.75, odds2: 1.25, team1Country: 'KR', team2Country: 'KR' },
-    ],
+    mockMatches: [],
     betBoostCards: [
       { id: 'es_bb_1', title: 'Weibo Gaming',  subtitle: 'Map 1 — Race to 30 Kills',             matchName: 'Weibo Gaming vs Bilibili Gaming', baseOdds: 3.75, boostedOdds: 4.00, exampleReturn: '10 USDT returns 40 USDT'  },
       { id: 'es_bb_2', title: 'Cloud',         subtitle: 'Map 1 — First Dragon to Spawn',        matchName: 'Weibo Gaming vs Bilibili Gaming', baseOdds: 5.50, boostedOdds: 6.00, exampleReturn: '10 USDT returns 60 USDT'  },

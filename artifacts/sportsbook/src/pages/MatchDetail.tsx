@@ -6,8 +6,6 @@ import { Header } from '../components/Header';
 import { MatchHeader } from '../components/match/MatchHeader';
 import { MarketGroup } from '../components/match/MarketGroup';
 import { MarketNav } from '../components/match/MarketNav';
-import { ALL_MATCHES } from '../data/matches';
-import { LEAGUES_CATALOG } from '../data/catalog';
 import { generateDetailMarkets } from '../data/marketDetails';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useOddsData } from '../hooks/useOddsData';
@@ -227,18 +225,10 @@ export function MatchDetail() {
   // Access real API matches through the global context
   const { allLeagues } = useOddsData();
 
-  // Resolve match + league: mock data first, then real API leagues
+  // Resolve match + league from real API data only
   const resolved = useMemo(() => {
     if (!matchId) return null;
 
-    // 1. Try mock data (MatchEntity directly)
-    const mockMatch = ALL_MATCHES.find(m => m.id === matchId);
-    if (mockMatch) {
-      const mockLeague = LEAGUES_CATALOG.find(l => l.id === mockMatch.leagueId);
-      if (mockLeague) return { match: mockMatch, league: mockLeague, isApi: false };
-    }
-
-    // 2. Try real API data (League[] → Match → bridge to MatchEntity)
     const found = findMatchInLeagues(matchId, allLeagues);
     if (found) {
       return {
