@@ -282,6 +282,37 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v16 skipped");
   }
+
+  // v17: test balance — credit 200,000 USDT to the primary test wallet if not already done.
+  // Idempotent: guarded by the 'test_balance_v17' transaction reference.
+  try {
+    await db.execute(sql`
+      DO $$
+      DECLARE
+        v_user_id INTEGER;
+      BEGIN
+        SELECT id INTO v_user_id
+        FROM users
+        WHERE wallet_address = '0x65c5dff769f01246bbfe30ee2b28715a6bac6543'
+        LIMIT 1;
+
+        IF v_user_id IS NOT NULL AND NOT EXISTS (
+          SELECT 1 FROM transactions
+          WHERE user_id = v_user_id AND reference = 'test_balance_v17'
+        ) THEN
+          UPDATE wallets
+            SET balance_usdt = balance_usdt + 200000
+          WHERE user_id = v_user_id;
+
+          INSERT INTO transactions (user_id, type, amount, status, reference, notes, verified)
+          VALUES (v_user_id, 'credit', '200000.00', 'completed', 'test_balance_v17', 'Test balance credit', true);
+        END IF;
+      END $$
+    `);
+    logger.info("DB migration v17 applied (test balance credit for primary test wallet)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v17 skipped");
+  }
 }
 
 runMigrations().then(() => {
