@@ -85,9 +85,9 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     }
 
     const remaining = effectiveLimit - parseFloat(lim.currentUsage);
-    if (remaining <= 0) {
+    if (remaining < stake) {
       res.status(403).json({
-        error: `Your ${lim.period} loss limit of ${effectiveLimit.toFixed(2)} USDT has been reached. Betting is blocked until your limit resets.`,
+        error: `This bet would exceed your ${lim.period} loss limit. You have ${remaining.toFixed(2)} USDT remaining before your limit resets.`,
         code: "LOSS_LIMIT_EXCEEDED",
       });
       return;

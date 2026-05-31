@@ -25,7 +25,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     oddsChanges, acceptOddsChanges,
   } = useBetSlip();
 
-  const { isConnected, balance, deductBalance, refreshBalance, connect } = useWallet();
+  const { isConnected, balance, refreshBalance, connect } = useWallet();
   const { isAuthenticated } = useAuth();
   const { addBet, refresh: refreshBetHistory } = useBetHistory();
   const { toast } = useToast();
@@ -45,64 +45,131 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
   async function handlePlaceBet(skipDriftCheck = false) {
     if (!isAuthenticated) return;
 
-    // Pause if any odds have drifted since selection was added
     if (!skipDriftCheck && Object.keys(oddsChanges).length > 0) {
       setDriftPending(true);
       return;
     }
 
-    const stakeNum = betType === 'acca' ? parseFloat(stake || '0') : totalSingleStaked;
-    const payout   = betType === 'acca' ? accaReturn : totalSingleReturn;
-    const odds     = betType === 'acca' ? totalOdds  : (stakeNum > 0 ? payout / stakeNum : 1);
+    if (betType === 'acca') {
+      // ── Accumulator: single API call with all selections ──
+      const stakeNum = parseFloat(stake || '0');
+      const payout   = accaReturn;
+      const odds     = totalOdds;
+      if (stakeNum <= 0 || balance <= 0 || stakeNum > balance) return;
 
-    if (stakeNum <= 0 || balance <= 0 || stakeNum > balance) return;
+      setIsPlacing(true);
+      try {
+        const placed_bet = await api.post<{ id: number }>('/bets', {
+          type: 'accumulator',
+          stake: stakeNum,
+          selections: selections.map(s => ({
+            eventId:          s.matchId,
+            eventName:        s.matchName,
+            sport:            s.sportKey ?? s.sportId ?? "",
+            marketType:       s.marketName,
+            selection:        s.selectionName,
+            odds:             s.odds,
+            isLive:           s.isLive ?? false,
+            scoreAtPlacement: s.scoreAtPlacement,
+          })),
+        });
 
-    setIsPlacing(true);
-    try {
-      const apiType = betType === 'acca' ? 'accumulator' : 'single';
-      const apiSelections = selections.map(s => ({
-        eventId:          s.matchId,
-        eventName:        s.matchName,
-        sport:            s.sportKey ?? s.sportId ?? "",
-        marketType:       s.marketName,
-        selection:        s.selectionName,
-        odds:             s.odds,
-        isLive:           s.isLive ?? false,
-        scoreAtPlacement: s.scoreAtPlacement,
-      }));
+        await Promise.all([refreshBalance(), refreshBetHistory()]);
 
-      const placed_bet = await api.post<{ id: number }>('/bets', {
-        type: apiType,
-        stake: stakeNum,
-        selections: apiSelections,
-      });
+        const placed: BetConfirmation = {
+          betId:           `#BET-${placed_bet.id}`,
+          betType,
+          selections:      [...selections],
+          stake:           stakeNum,
+          totalOdds:       odds,
+          estimatedPayout: payout,
+          placedAt:        new Date(),
+        };
+        addBet(placed);
+        setConfirmation(placed);
+      } catch (err) {
+        const raw = err instanceof Error ? err.message : 'Could not place bet';
+        const isAuthErr = /authorization|unauthorized|401/i.test(raw);
+        toast({
+          title: 'Bet failed',
+          description: isAuthErr ? 'Your session has expired. Please log in again.' : raw,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsPlacing(false);
+      }
+    } else {
+      // ── Singles: one independent API call per selection ──
+      const validSels = selections.filter(s => parseFloat(singleStakes[s.id] || '0') > 0);
+      if (validSels.length === 0 || balance <= 0 || totalSingleStaked > balance) return;
 
-      deductBalance(stakeNum);
-      await Promise.all([refreshBalance(), refreshBetHistory()]);
+      setIsPlacing(true);
+      try {
+        const results = await Promise.allSettled(
+          validSels.map(s => {
+            const selStake = parseFloat(singleStakes[s.id] || '0');
+            return api.post<{ id: number }>('/bets', {
+              type: 'single',
+              stake: selStake,
+              selections: [{
+                eventId:          s.matchId,
+                eventName:        s.matchName,
+                sport:            s.sportKey ?? s.sportId ?? "",
+                marketType:       s.marketName,
+                selection:        s.selectionName,
+                odds:             s.odds,
+                isLive:           s.isLive ?? false,
+                scoreAtPlacement: s.scoreAtPlacement,
+              }],
+            });
+          }),
+        );
 
-      const placed: BetConfirmation = {
-        betId:           `#BET-${placed_bet.id}`,
-        betType,
-        selections:      [...selections],
-        stake:           stakeNum,
-        totalOdds:       odds,
-        estimatedPayout: payout,
-        placedAt:        new Date(),
-      };
-      addBet(placed);
-      setConfirmation(placed);
-    } catch (err) {
-      const raw = err instanceof Error ? err.message : 'Could not place bet';
-      const isAuthErr = /authorization|unauthorized|401/i.test(raw);
-      toast({
-        title: 'Bet failed',
-        description: isAuthErr
-          ? 'Your session has expired. Please log in again to place bets.'
-          : raw,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsPlacing(false);
+        const succeeded: { sel: Selection; betId: number }[] = [];
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled') succeeded.push({ sel: validSels[i], betId: r.value.id });
+        });
+        const failedCount = results.length - succeeded.length;
+
+        if (failedCount > 0) {
+          toast({
+            title: failedCount === results.length ? 'All bets failed' : `${failedCount} bet${failedCount > 1 ? 's' : ''} failed`,
+            description: failedCount === results.length
+              ? 'Could not place any bets. Please try again.'
+              : `${succeeded.length} of ${results.length} bets placed successfully.`,
+            variant: 'destructive',
+          });
+        }
+
+        if (succeeded.length > 0) {
+          await Promise.all([refreshBalance(), refreshBetHistory()]);
+
+          const combinedStake  = succeeded.reduce((acc, { sel }) => acc + parseFloat(singleStakes[sel.id] || '0'), 0);
+          const combinedReturn = succeeded.reduce((acc, { sel }) => acc + parseFloat(singleStakes[sel.id] || '0') * sel.odds, 0);
+
+          const placed: BetConfirmation = {
+            betId:           succeeded.length === 1 ? `#BET-${succeeded[0].betId}` : `${succeeded.length} Singles`,
+            betType:         'single',
+            selections:      succeeded.map(({ sel }) => sel),
+            stake:           combinedStake,
+            totalOdds:       combinedStake > 0 ? combinedReturn / combinedStake : 1,
+            estimatedPayout: combinedReturn,
+            placedAt:        new Date(),
+          };
+          addBet(placed);
+          setConfirmation(placed);
+        }
+      } catch (err) {
+        const raw = err instanceof Error ? err.message : 'Could not place bet';
+        const isAuthErr = /authorization|unauthorized|401/i.test(raw);
+        toast({
+          title: 'Bet failed',
+          description: isAuthErr ? 'Your session has expired. Please log in again.' : raw,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsPlacing(false);
+      }
     }
   }
 

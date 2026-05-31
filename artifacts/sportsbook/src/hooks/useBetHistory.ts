@@ -153,7 +153,7 @@ export function BetHistoryProvider({ children }: { children: ReactNode }) {
 
     const id = setInterval(() => {
       if (document.visibilityState === 'visible') refresh();
-    }, 30_000);
+    }, 60_000);
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') refresh();

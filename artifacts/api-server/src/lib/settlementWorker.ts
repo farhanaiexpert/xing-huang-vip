@@ -419,7 +419,7 @@ async function settleBetsForEvent(
 
       // Award loyalty points (1 pt/USDT for singles; 2× for accas)
       const stakeAmt  = parseFloat(String(bet.stake));
-      const loyaltyPts = stakeAmt * (bet.type === "acca" ? 2 : 1);
+      const loyaltyPts = stakeAmt * (bet.type === "accumulator" ? 2 : 1);
       await tx.insert(loyaltyPointsTable).values({
         userId: bet.userId,
         betId,
@@ -465,9 +465,11 @@ async function processEvent(
       result = "void";
     } else if (row.market_type === "h2h") {
       result = mapSelectionOutcome(row.selection, matchOutcome, event.home_team, event.away_team);
-    } else if (row.market_type === "totals" && numericScores) {
+    } else if (row.market_type === "totals") {
+      if (!numericScores) continue; // skip — retry next tick when clean scores arrive
       result = mapTotalsOutcome(row.selection, numericScores.home, numericScores.away);
-    } else if (row.market_type === "spreads" && numericScores) {
+    } else if (row.market_type === "spreads") {
+      if (!numericScores) continue; // skip — retry next tick when clean scores arrive
       result = mapSpreadsOutcome(row.selection, event.home_team, event.away_team, numericScores.home, numericScores.away);
     } else {
       result = "void";

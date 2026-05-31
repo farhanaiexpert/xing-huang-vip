@@ -51,7 +51,7 @@ export function BetHistory() {
 
   const filtered = useMemo(() => {
     let list = bets;
-    if (filter === 'active') list = list.filter(b => b.betType === b.betType); // all placed bets are active
+    if (filter === 'active') list = list.filter(b => !b.status || b.status === 'open' || b.status === 'pending');
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(b =>
@@ -67,8 +67,9 @@ export function BetHistory() {
   }, [bets, filter, search]);
 
   const totalStake  = bets.reduce((acc, b) => acc + b.stake, 0);
-  const potReturn   = bets.reduce((acc, b) => acc + b.estimatedPayout, 0);
-  const openCount   = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
+  const openBets    = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending');
+  const potReturn   = openBets.reduce((acc, b) => acc + b.estimatedPayout, 0);
+  const openCount   = openBets.length;
 
   if (!isConnected) {
     return (
