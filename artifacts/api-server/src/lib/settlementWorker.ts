@@ -172,10 +172,20 @@ interface OpenEventMeta {
   earliestBet: Date;
 }
 
-// ─── Odds API score fetching ──────────────────────────────────────────────────
+// ─── Odds API score fetching — with 5-minute in-memory cache (Change 6) ───────
+// Settlement runs every 1 minute but scores rarely change within 5 minutes.
+// Caching here cuts Odds API score calls by ~80% (from 60/hour to ~12/hour
+// per sport with open bets).
+const scoresCache = new Map<string, { data: CompletedEvent[]; expiresAt: number }>();
+const SCORES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 async function fetchCompletedScoresOddsApi(sportKey: string): Promise<CompletedEvent[]> {
   if (!ODDS_API_KEY) return [];
+
+  // Return cached result if still fresh
+  const hit = scoresCache.get(sportKey);
+  if (hit && hit.expiresAt > Date.now()) return hit.data;
+
   try {
     const url = `${ODDS_API_BASE}/sports/${sportKey}/scores?apiKey=${ODDS_API_KEY}&daysFrom=3&dateFormat=iso`;
     const res  = await fetch(url, { signal: AbortSignal.timeout(12_000) });
@@ -184,9 +194,11 @@ async function fetchCompletedScoresOddsApi(sportKey: string): Promise<CompletedE
       return [];
     }
     const data = (await res.json()) as CompletedEvent[];
-    return Array.isArray(data)
+    const filtered = Array.isArray(data)
       ? data.filter(e => e.completed && Array.isArray(e.scores) && e.scores.length > 0)
       : [];
+    scoresCache.set(sportKey, { data: filtered, expiresAt: Date.now() + SCORES_CACHE_TTL_MS });
+    return filtered;
   } catch (err) {
     logger.warn({ err, sport: sportKey }, "Odds API scores: request error");
     return [];

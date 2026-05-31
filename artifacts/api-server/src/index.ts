@@ -344,12 +344,12 @@ runMigrations().then(() => {
   let isOddsRefreshing = false;
   // Start lastOddsRefreshAt at 0 so the startup batch (below) counts as first run
   let lastOddsRefreshAt = 0;
-  let nextIntervalMs = (25 + Math.floor(Math.random() * 11)) * 60 * 1000;
+  let nextIntervalMs = (50 + Math.floor(Math.random() * 11)) * 60 * 1000; // Change 3: 50-60 min
 
   async function runOddsBatch() {
     if (isOddsRefreshing) return;
     isOddsRefreshing = true;
-    nextIntervalMs = (25 + Math.floor(Math.random() * 11)) * 60 * 1000;
+    nextIntervalMs = (50 + Math.floor(Math.random() * 11)) * 60 * 1000; // Change 3: 50-60 min
     logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length, nextIntervalMin: Math.round(nextIntervalMs / 60000) }, "Odds refresh cron: starting full batch");
     try {
       for (const sportKey of ALL_ODDS_SPORT_KEYS) {
