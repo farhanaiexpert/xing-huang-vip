@@ -80,16 +80,31 @@ export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEven
   }
 }
 
+/**
+ * Fetch all inplay events using /v1/bet365/inplay_filter per sport.
+ * This endpoint returns clean {id, sport_id, home, away, ss, league, timer} objects.
+ * We query the top sports in parallel (capped to avoid rate limits).
+ */
 export async function fetchBetsApiInplay(): Promise<BetsApiEventRaw[]> {
   if (!BETSAPI_KEY) return [];
-  try {
-    const url = `${BETSAPI_BASE}/v1/bet365/inplay?token=${BETSAPI_KEY}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) return [];
-    const json = await res.json() as BetsApiListResponse;
-    if (json.success !== 1 || !Array.isArray(json.results)) return [];
-    return json.results.filter(filterEvent);
-  } catch {
-    return [];
-  }
+
+  // Sports to query for live: soccer, cricket, rugby, am.football, baseball,
+  // ice hockey, basketball, tennis, handball, table tennis, snooker, darts
+  const liveSportIds = [1, 3, 8, 12, 13, 14, 16, 17, 19, 92, 94, 95];
+
+  const fetchSport = async (sportId: number): Promise<BetsApiEventRaw[]> => {
+    try {
+      const url = `${BETSAPI_BASE}/v1/bet365/inplay_filter?sport_id=${sportId}&token=${BETSAPI_KEY}`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) return [];
+      const json = await res.json() as BetsApiListResponse;
+      if (json.success !== 1 || !Array.isArray(json.results)) return [];
+      return json.results.filter(filterEvent);
+    } catch {
+      return [];
+    }
+  };
+
+  const results = await Promise.all(liveSportIds.map(fetchSport));
+  return results.flat();
 }
