@@ -409,20 +409,23 @@ runMigrations().then(() => {
           continue;
         }
 
-        // For non-countOnly sports: enrich ALL events with real prematch odds.
-        // Batch in groups of 10 to avoid rate-limit bursts; 200ms between batches.
+        // For non-countOnly sports: enrich top 50 events with real prematch odds.
+        // Batch 10 at a time with 200ms gap to stay within rate limits.
+        // Events outside this window keep prematchOdds undefined; the frontend
+        // falls back to fallbackOdds for those, so cards still render.
         if (!meta.countOnly) {
-          for (let i = 0; i < events.length; i += 10) {
-            const batch = events.slice(i, i + 10);
+          const toEnrich = events.slice(0, 50);
+          for (let i = 0; i < toEnrich.length; i += 10) {
+            const batch = toEnrich.slice(i, i + 10);
             await Promise.all(
               batch.map(async (ev) => {
                 try {
                   const odds = await fetchPrematchOdds(ev.id, meta.hasDraw);
                   if (odds) ev.prematchOdds = odds;
-                } catch { /* leave prematchOdds undefined */ }
+                } catch { /* leave prematchOdds undefined — frontend uses fallback */ }
               })
             );
-            if (i + 10 < events.length) await new Promise(r => setTimeout(r, 200));
+            if (i + 10 < toEnrich.length) await new Promise(r => setTimeout(r, 200));
           }
         }
 

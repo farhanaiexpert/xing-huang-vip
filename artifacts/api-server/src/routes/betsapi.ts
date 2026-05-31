@@ -25,17 +25,24 @@ async function readUpcomingCache(): Promise<{
   sports:          Record<string, BetsApiEventRaw[]>;
   sportMeta:       Record<string, typeof BETSAPI_SPORT_MAP[number]>;
   countBySportId:  Record<string, number>;
+  updatedAt:       string | null;
 }> {
   const result = await db.execute(sql`
-    SELECT cache_key, data FROM betsapi_cache WHERE expires_at > NOW()
+    SELECT cache_key, data, fetched_at FROM betsapi_cache WHERE expires_at > NOW()
   `);
 
   const sports: Record<string, BetsApiEventRaw[]> = {};
+  let latestFetchedAt: Date | null = null;
+
   for (const row of result.rows) {
     const key  = row.cache_key as string;
     if (key === 'live') continue;  // skip live cache row
     const data = Array.isArray(row.data) ? (row.data as BetsApiEventRaw[]) : [];
     sports[key] = data;
+    const fetchedAt = row.fetched_at ? new Date(row.fetched_at as string) : null;
+    if (fetchedAt && (!latestFetchedAt || fetchedAt > latestFetchedAt)) {
+      latestFetchedAt = fetchedAt;
+    }
   }
 
   const sportMeta: Record<string, typeof BETSAPI_SPORT_MAP[number]> = {};
@@ -50,7 +57,7 @@ async function readUpcomingCache(): Promise<{
     countBySportId[key] = events.length;
   }
 
-  return { sports, sportMeta, countBySportId };
+  return { sports, sportMeta, countBySportId, updatedAt: latestFetchedAt?.toISOString() ?? null };
 }
 
 // ─── GET /betsapi/all — primary endpoint ─────────────────────────────────────
@@ -61,8 +68,8 @@ router.get('/betsapi/all', async (_req, res): Promise<void> => {
     return;
   }
   try {
-    const { sports, sportMeta, countBySportId } = await readUpcomingCache();
-    res.json({ sports, sportMeta, countBySportId, cached: true, sportCount: Object.keys(sports).length });
+    const { sports, sportMeta, countBySportId, updatedAt } = await readUpcomingCache();
+    res.json({ sports, sportMeta, countBySportId, updatedAt, cached: true, sportCount: Object.keys(sports).length });
   } catch (err) {
     logger.error({ err }, 'BetsAPI: failed to read upcoming cache');
     res.status(500).json({ error: 'Failed to fetch BetsAPI data' });
@@ -77,8 +84,8 @@ router.get('/betsapi/upcoming', async (_req, res): Promise<void> => {
     return;
   }
   try {
-    const { sports, sportMeta, countBySportId } = await readUpcomingCache();
-    res.json({ sports, sportMeta, countBySportId, cached: true, sportCount: Object.keys(sports).length });
+    const { sports, sportMeta, countBySportId, updatedAt } = await readUpcomingCache();
+    res.json({ sports, sportMeta, countBySportId, updatedAt, cached: true, sportCount: Object.keys(sports).length });
   } catch (err) {
     logger.error({ err }, 'BetsAPI: failed to read upcoming cache');
     res.status(500).json({ error: 'Failed to fetch BetsAPI upcoming' });

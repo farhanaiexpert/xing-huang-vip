@@ -176,15 +176,13 @@ function normaliseBetsApiLeagues(
       const matches: Match[] = evs
         .filter(ev => {
           const ts = parseInt(ev.time, 10);
-          if (isNaN(ts) || ts * 1000 <= now) return false;
-          // Only create betting cards for events with real prematch odds.
-          // Events without odds still count toward sidebar via countBySportId.
-          return ev.prematchOdds != null;
+          return !isNaN(ts) && ts * 1000 > now;
         })
         .slice(0, 10)
         .map((ev): Match => {
-          const ts     = parseInt(ev.time, 10);
-          const odds   = ev.prematchOdds!;  // guaranteed by filter above
+          const ts       = parseInt(ev.time, 10);
+          const real     = ev.prematchOdds;
+          const fallback = meta.fallbackOdds;
           return {
             id:          `betsapi_${ev.id}`,
             team1:       ev.home.name,
@@ -198,9 +196,11 @@ function normaliseBetsApiLeagues(
             marketCount: 10,
             commenceIso: new Date(ts * 1000).toISOString(),
             odds: {
-              home: odds.home,
-              ...(meta.hasDraw && odds.draw != null ? { draw: odds.draw } : {}),
-              away: odds.away,
+              home: real?.home  ?? fallback.home,
+              ...(meta.hasDraw && (real?.draw ?? fallback.draw) != null
+                ? { draw: real?.draw ?? fallback.draw }
+                : {}),
+              away: real?.away  ?? fallback.away,
             },
           };
         });
