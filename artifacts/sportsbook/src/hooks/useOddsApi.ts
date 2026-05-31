@@ -176,17 +176,15 @@ function normaliseBetsApiLeagues(
       const matches: Match[] = evs
         .filter(ev => {
           const ts = parseInt(ev.time, 10);
-          return !isNaN(ts) && ts * 1000 > now;
+          if (isNaN(ts) || ts * 1000 <= now) return false;
+          // Only create betting cards for events with real prematch odds.
+          // Events without odds still count toward sidebar via countBySportId.
+          return ev.prematchOdds != null;
         })
         .slice(0, 10)
         .map((ev): Match => {
-          const ts = parseInt(ev.time, 10);
-          // Use real prematch odds if available, else fall back
-          const realOdds = ev.prematchOdds;
-          const fallback = meta.fallbackOdds;
-          const home = realOdds?.home  ?? fallback.home;
-          const away = realOdds?.away  ?? fallback.away;
-          const draw = realOdds?.draw  ?? (meta.hasDraw ? fallback.draw : undefined);
+          const ts     = parseInt(ev.time, 10);
+          const odds   = ev.prematchOdds!;  // guaranteed by filter above
           return {
             id:          `betsapi_${ev.id}`,
             team1:       ev.home.name,
@@ -200,9 +198,9 @@ function normaliseBetsApiLeagues(
             marketCount: 10,
             commenceIso: new Date(ts * 1000).toISOString(),
             odds: {
-              home,
-              ...(meta.hasDraw && draw != null ? { draw } : {}),
-              away,
+              home: odds.home,
+              ...(meta.hasDraw && odds.draw != null ? { draw: odds.draw } : {}),
+              away: odds.away,
             },
           };
         });
@@ -256,10 +254,10 @@ async function fetchAllLeagues(): Promise<{
   ]);
 
   const leagues: League[] = [];
-  let oddsError: string | null = null;
+  let oddsQuotaExhausted = false;
   let countBySportId: Record<string, number> = {};
 
-  // 1. The Odds API — primary source (added first so they win de-dup)
+  // 1. The Odds API — supplemental source (optional; never blocks BetsAPI)
   if (oddsResult.status === 'fulfilled') {
     const sportsMap = oddsResult.value;
     for (const config of ODDS_API_SPORTS) {
@@ -270,11 +268,11 @@ async function fetchAllLeagues(): Promise<{
     }
   } else {
     const msg = oddsResult.reason instanceof Error ? oddsResult.reason.message : String(oddsResult.reason);
-    if (msg === 'QUOTA_EXHAUSTED') return { leagues: [], error: 'QUOTA_EXHAUSTED', countBySportId };
-    oddsError = msg;
+    if (msg === 'QUOTA_EXHAUSTED') oddsQuotaExhausted = true;
+    // Odds API failure is non-fatal — BetsAPI continues below
   }
 
-  // 2. BetsAPI — supplemental source
+  // 2. BetsAPI — primary source for volume; always processed regardless of Odds API state
   if (betsResult.status === 'fulfilled' && betsResult.value) {
     const { sports, sportMeta, countBySportId: betsCount } = betsResult.value;
     countBySportId = betsCount ?? {};
@@ -282,8 +280,13 @@ async function fetchAllLeagues(): Promise<{
     leagues.push(...betsLeagues);
   }
 
+  // Only report quota exhausted if BetsAPI also has no data
+  if (oddsQuotaExhausted && leagues.length === 0) {
+    return { leagues: [], error: 'QUOTA_EXHAUSTED', countBySportId };
+  }
+
   if (leagues.length === 0) {
-    return { leagues: [], error: oddsError ?? 'No cached data yet — server is warming up', countBySportId };
+    return { leagues: [], error: 'No cached data yet — server is warming up', countBySportId };
   }
 
   // De-duplicate by (sportId, leagueName) — Odds API entries win (they're first)
@@ -359,10 +362,8 @@ export function useOddsApi(): UseOddsApiResult {
   useEffect(() => {
     isMounted.current = true;
 
-    if (isQuotaExhausted()) {
-      setError('QUOTA_EXHAUSTED');
-      return () => { isMounted.current = false; };
-    }
+    // Quota exhausted only blocks if BetsAPI also fails — always attempt fetch
+    if (isQuotaExhausted()) setError('QUOTA_EXHAUSTED');
 
     const cached = _sessionCache ?? loadFromStorage();
 

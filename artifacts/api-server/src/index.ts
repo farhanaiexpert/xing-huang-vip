@@ -409,17 +409,21 @@ runMigrations().then(() => {
           continue;
         }
 
-        // For non-countOnly sports: enrich top 20 events with real prematch odds
+        // For non-countOnly sports: enrich ALL events with real prematch odds.
+        // Batch in groups of 10 to avoid rate-limit bursts; 200ms between batches.
         if (!meta.countOnly) {
-          const toEnrich = events.slice(0, 20);
-          await Promise.all(
-            toEnrich.map(async (ev) => {
-              try {
-                const odds = await fetchPrematchOdds(ev.id, meta.hasDraw);
-                if (odds) ev.prematchOdds = odds;
-              } catch { /* silently use fallback */ }
-            })
-          );
+          for (let i = 0; i < events.length; i += 10) {
+            const batch = events.slice(i, i + 10);
+            await Promise.all(
+              batch.map(async (ev) => {
+                try {
+                  const odds = await fetchPrematchOdds(ev.id, meta.hasDraw);
+                  if (odds) ev.prematchOdds = odds;
+                } catch { /* leave prematchOdds undefined */ }
+              })
+            );
+            if (i + 10 < events.length) await new Promise(r => setTimeout(r, 200));
+          }
         }
 
         await db.execute(sql`
