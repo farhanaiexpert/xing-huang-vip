@@ -11,6 +11,7 @@ import { SportQuickNav } from "./SportQuickNav";
 import { TennisHighlights } from "./TennisHighlights";
 import { SoccerHighlights } from "./SoccerHighlights";
 import { NBAHighlights } from "./NBAHighlights";
+import { AllSportsHighlights } from "./AllSportsHighlights";
 import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { FlashOdds } from "./FlashOdds";
 import { JackpotPool } from "./JackpotPool";
@@ -633,6 +634,7 @@ export function MainContent({
               {showFeatured && <SoccerHighlights />}
               {showFeatured && <TennisHighlights />}
               {showFeatured && <NBAHighlights />}
+              {showFeatured && <AllSportsHighlights />}
               {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights />
               )}

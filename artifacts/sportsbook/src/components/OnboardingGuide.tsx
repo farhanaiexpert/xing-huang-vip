@@ -46,6 +46,7 @@ export function OnboardingGuide() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('noGuide')) return;
     const stored = localStorage.getItem(STORAGE_KEY);
     const lastSeen = stored ? parseInt(stored, 10) : 0;
     const hours24 = 24 * 60 * 60 * 1000;
