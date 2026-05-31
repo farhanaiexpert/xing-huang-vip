@@ -376,7 +376,7 @@ function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-const POLL_MS = 15 * 1000; // 15 seconds — fast enough for real-time score updates
+const POLL_MS = 60 * 1000; // 60 seconds — matches server-side DB cache refresh rhythm
 
 export interface UseLiveOddsResult {
   matches:     NormalizedLiveMatch[];
