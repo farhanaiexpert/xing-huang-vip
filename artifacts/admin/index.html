@@ -16,9 +16,70 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Google Translate: suppress ALL branding, toolbar, spinner, tooltips -->
+    <style>
+      .goog-te-banner-frame,
+      .goog-te-banner-frame.skiptranslate,
+      .skiptranslate > iframe,
+      iframe.skiptranslate { display: none !important; visibility: hidden !important; }
+      body { top: 0px !important; }
+      #google_translate_element { display: none !important; }
+      .goog-te-gadget, .goog-te-gadget-icon,
+      .goog-logo-link, .goog-logo-link:link, .goog-logo-link:visited { display: none !important; }
+      #goog-gt-tt, .goog-te-balloon-frame, .goog-tooltip,
+      .goog-tooltip-content, .goog-tooltip-container { display: none !important; }
+      .goog-te-spinner, .goog-te-spinner-pos, .goog-te-spinner-animation { display: none !important; }
+      .goog-te-menu-frame, .goog-te-menu2 { display: none !important; }
+      [class*="VIpgJd"] { display: none !important; }
+      font[color] { color: inherit !important; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="google_translate_element" aria-hidden="true"></div>
+
     <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+          { pageLanguage: 'en', autoDisplay: false },
+          'google_translate_element'
+        );
+      }
+
+      (function () {
+        var HIDE_SELECTORS = [
+          '.goog-te-banner-frame', '.skiptranslate > iframe', 'iframe.skiptranslate',
+          '#goog-gt-tt', '.goog-te-balloon-frame', '.goog-tooltip',
+          '.goog-tooltip-content', '.goog-tooltip-container',
+          '.goog-te-spinner', '.goog-te-spinner-pos', '.goog-te-spinner-animation',
+          '.goog-te-menu-frame', '.goog-te-menu2', '.goog-te-gadget', '.goog-logo-link',
+        ].join(',');
+
+        function suppressAll() {
+          if (document.body && document.body.style.top !== '0px') {
+            document.body.style.setProperty('top', '0px', 'important');
+          }
+          document.querySelectorAll(HIDE_SELECTORS).forEach(function (el) {
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+          });
+          document.querySelectorAll('[class]').forEach(function (el) {
+            if (el.className && typeof el.className === 'string' && el.className.indexOf('VIpgJd') !== -1) {
+              el.style.setProperty('display', 'none', 'important');
+            }
+          });
+        }
+
+        var obs = new MutationObserver(suppressAll);
+        document.addEventListener('DOMContentLoaded', function () {
+          suppressAll();
+          obs.observe(document.body, { attributes: true, attributeFilter: ['style'], childList: true, subtree: true });
+        });
+      })();
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
   </body>
 </html>

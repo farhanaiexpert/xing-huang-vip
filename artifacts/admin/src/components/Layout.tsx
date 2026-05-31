@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { clearToken, getStoredUser, api, PendingTotals, isTokenStored } from "@/lib/api";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
@@ -7,15 +7,77 @@ import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
   Shield, ShieldCheck, Zap, Globe, BarChart2, Settings, CheckCheck,
-  Activity, DollarSign, TrendingUp, ArrowDownCircle, ArrowUpCircle, Clock,
+  Activity, DollarSign, TrendingUp, ArrowDownCircle, ArrowUpCircle, Clock, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const LANGUAGES = [
+  { code: 'ar',    label: 'Arabic',      native: 'العربية',    flag: '🇸🇦', short: 'AR' },
+  { code: 'zh-CN', label: 'Chinese',     native: '中文',        flag: '🇨🇳', short: 'ZH' },
+  { code: 'en',    label: 'English',     native: 'English',    flag: '🇬🇧', short: 'EN' },
+  { code: 'fr',    label: 'French',      native: 'Français',   flag: '🇫🇷', short: 'FR' },
+  { code: 'de',    label: 'German',      native: 'Deutsch',    flag: '🇩🇪', short: 'DE' },
+  { code: 'hi',    label: 'Hindi',       native: 'हिन्दी',      flag: '🇮🇳', short: 'HI' },
+  { code: 'ja',    label: 'Japanese',    native: '日本語',       flag: '🇯🇵', short: 'JP' },
+  { code: 'ko',    label: 'Korean',      native: '한국어',       flag: '🇰🇷', short: 'KO' },
+  { code: 'pt',    label: 'Portuguese',  native: 'Português',  flag: '🇧🇷', short: 'PT' },
+  { code: 'ru',    label: 'Russian',     native: 'Русский',    flag: '🇷🇺', short: 'RU' },
+  { code: 'es',    label: 'Spanish',     native: 'Español',    flag: '🇪🇸', short: 'ES' },
+  { code: 'th',    label: 'Thai',        native: 'ไทย',         flag: '🇹🇭', short: 'TH' },
+  { code: 'vi',    label: 'Vietnamese',  native: 'Tiếng Việt', flag: '🇻🇳', short: 'VI' },
+];
+
+const LANG_STORAGE_KEY = 'admin_lang';
+
+function triggerTranslate(langCode: string) {
+  if (langCode === 'en') {
+    const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
+    if (select) { select.value = langCode; select.dispatchEvent(new Event('change')); }
+    document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    window.location.reload();
+    return;
+  }
+  const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
+  if (select) {
+    select.value = langCode;
+    select.dispatchEvent(new Event('change'));
+  } else {
+    document.cookie = `googtrans=/en/${langCode}; path=/`;
+    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${location.hostname}`;
+    window.location.reload();
+  }
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const storedUser = getStoredUser();
+
+  // Language switcher
+  const [currentLang, setCurrentLang] = useState<string>(() => {
+    try { return localStorage.getItem(LANG_STORAGE_KEY) || 'en'; } catch { return 'en'; }
+  });
+  const [showLang, setShowLang] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  function handleSelectLanguage(code: string) {
+    setCurrentLang(code);
+    try { localStorage.setItem(LANG_STORAGE_KEY, code); } catch { /* ignore */ }
+    setShowLang(false);
+    triggerTranslate(code);
+  }
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setShowLang(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const activeLang = LANGUAGES.find(l => l.code === currentLang) ?? LANGUAGES[2];
 
   const handleCountChange = useCallback((count: number) => {
     setPendingCount(count);
@@ -209,6 +271,65 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           )}
+
+          {/* Language switcher */}
+          <div className="relative mb-0.5" ref={langRef}>
+            <button
+              onClick={() => setShowLang(v => !v)}
+              className={cn(
+                "flex items-center gap-2.5 w-full rounded-lg text-sm transition-colors",
+                showLang ? "text-[#00DFA9] bg-[#00DFA9]/8" : "text-[#475569] hover:text-[#94A3B8] hover:bg-white/5",
+                collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2"
+              )}
+              title={collapsed ? "Language" : undefined}
+            >
+              <Globe className={cn("shrink-0", collapsed ? "w-[18px] h-[18px]" : "w-4 h-4")} />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left">
+                    <span className="mr-1.5">{activeLang.flag}</span>
+                    {activeLang.native}
+                  </span>
+                  <span className="text-[10px] font-bold text-[#475569]">{activeLang.short}</span>
+                </>
+              )}
+            </button>
+
+            {showLang && (
+              <div
+                translate="no"
+                className={cn(
+                  "absolute bottom-[calc(100%+4px)] z-50 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7)] overflow-hidden",
+                  collapsed ? "left-full ml-2 w-48" : "left-0 right-0"
+                )}
+              >
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-[#253241]">
+                  <Globe className="h-3.5 w-3.5 text-[#00DFA9]" />
+                  <p className="text-[10px] font-bold text-[#F8FAFC]/60 uppercase tracking-widest">Language</p>
+                </div>
+                <div className="py-1 max-h-64 overflow-y-auto">
+                  {LANGUAGES.map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => handleSelectLanguage(lang.code)}
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
+                        currentLang === lang.code
+                          ? "bg-[#00DFA9]/8 text-[#00DFA9]"
+                          : "text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#253241]/50"
+                      )}
+                    >
+                      <span className="text-base leading-none w-5 text-center">{lang.flag}</span>
+                      <span className="flex-1 text-left text-[12px]">{lang.native}</span>
+                      <span className="text-[9px] font-bold text-[#475569]">{lang.short}</span>
+                      {currentLang === lang.code && <Check className="h-3 w-3 ml-1 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={logout}
             className={cn(
