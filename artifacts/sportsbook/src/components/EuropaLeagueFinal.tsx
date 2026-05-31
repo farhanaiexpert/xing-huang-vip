@@ -243,6 +243,7 @@ function SoccerPropCell({
       marketName: col.label, selectionType: selType,
       selectionName: `${player.name} — ${col.label}`,
       odds: col.odds,
+      sportKey: 'soccer_uefa_europa_league',
     });
   }
 

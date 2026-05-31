@@ -156,6 +156,7 @@ export function BetBuilder() {
         matchId: match.id,
         matchName: `${match.home} v ${match.away}`,
         leagueName: match.league,
+        sportKey: 'soccer_epl',
         marketName: `${tab} — ${col}`,
         selectionType: '1',
         selectionName: `${player.name} ${col}`,

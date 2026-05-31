@@ -80,11 +80,11 @@ function deriveMarkets(odds1: number, oddsDraw: number | null | undefined, odds2
 // ── Odds button ───────────────────────────────────────────────────────────────
 
 function OddsButton({
-  label, odds, selectionId, marketId, matchId, matchName, leagueName, selectionName, marketName,
+  label, odds, selectionId, marketId, matchId, matchName, leagueName, selectionName, marketName, sportKey,
 }: {
   label: string; odds: number; selectionId: string; marketId: string;
   matchId: string; matchName: string; leagueName: string; selectionName: string;
-  marketName?: string;
+  marketName?: string; sportKey?: string;
 }) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const active = hasSelection(selectionId);
@@ -94,6 +94,7 @@ function OddsButton({
     else addSelection({
       id: selectionId, marketId, matchId, matchName, leagueName,
       marketName: marketName ?? 'Match Result', selectionType: label, selectionName, odds,
+      sportKey: sportKey ?? '',
     });
   }
 
@@ -248,6 +249,7 @@ function MatchCard({ match, leagueName }: { match: MockMatchCard; leagueName: st
             label={entry.label} odds={entry.odds} selectionId={entry.selId}
             marketId={entry.marketId} matchId={match.id} matchName={matchName}
             leagueName={leagueName} selectionName={entry.selName} marketName={entry.marketName}
+            sportKey={match.sportKey ?? match.sportId ?? ''}
           />
         ))}
       </div>
@@ -465,6 +467,8 @@ function MainTab({
           leagueName: l.name, dateLabel: m.date,
           odds1: m.odds.home, odds2: m.odds.away, oddsDraw: m.odds.draw,
           isLive: m.isLive,
+          sportKey: m.sportKey ?? m.sportId ?? '',
+          sportId: m.sportId,
         } satisfies MockMatchCard)),
       }));
     }

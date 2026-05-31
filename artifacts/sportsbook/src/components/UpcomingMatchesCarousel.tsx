@@ -112,6 +112,7 @@ function MatchCard({ match, league }: MatchCardProps) {
         selectionType: type,
         selectionName: name,
         odds,
+        sportKey: match.sportKey ?? match.sportId ?? '',
       });
     }
   }

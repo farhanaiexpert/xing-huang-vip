@@ -193,6 +193,7 @@ function PropCell({
       selectionType: selType,
       selectionName: `${player.name} — ${col.label}`,
       odds: col.odds,
+      sportKey: 'soccer_epl',
     });
   }
 

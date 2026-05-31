@@ -16,6 +16,7 @@ interface PriceBoost {
   boostedOdds: string;
   maxStake: string | null;
   expiresAt: string | null;
+  sportKey?: string;
 }
 
 function useCountdown(expiresAt: string | null) {
@@ -62,6 +63,7 @@ function BoostCard({ boost }: { boost: PriceBoost }) {
       selectionType: 'boost',
       selectionName: `${boost.selectionName} (Boosted)`,
       odds: bstOdds,
+      sportKey: boost.sportKey ?? '',
     });
     toast(`${boost.selectionName} @ ${bstOdds.toFixed(2)} added to slip`, { duration: 2000 });
   }

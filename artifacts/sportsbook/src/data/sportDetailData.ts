@@ -43,6 +43,8 @@ export interface MockMatchCard {
   score1?:      string;
   score2?:      string;
   liveStatus?:  string;
+  sportKey?:    string;
+  sportId?:     string;
 }
 
 export interface BetBoostCard {

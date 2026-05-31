@@ -95,6 +95,7 @@ export function UpcomingRaces() {
         selectionType: 'W',
         selectionName: runner.horse,
         odds:          runner.odds,
+        sportKey:      'horse_racing',
       });
     }
   }

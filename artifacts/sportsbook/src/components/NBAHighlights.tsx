@@ -133,7 +133,7 @@ function OddsCell({
 
   function toggle() {
     if (active) removeSelection(selId);
-    else addSelection({ id: selId, marketId, matchId, matchName, leagueName, marketName, selectionType, selectionName, odds });
+    else addSelection({ id: selId, marketId, matchId, matchName, leagueName, marketName, selectionType, selectionName, odds, sportKey: 'basketball_nba' });
   }
 
   return (
@@ -290,6 +290,7 @@ function PropCell({
       selectionType: selType,
       selectionName: `${row.player.name} ${threshold.value}+ ${mktLabel}`,
       odds:          threshold.odds,
+      sportKey:      'basketball_nba',
     });
   }
 
