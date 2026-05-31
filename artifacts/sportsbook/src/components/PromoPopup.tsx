@@ -72,7 +72,7 @@ const IMG_BASE: React.CSSProperties = {
   objectFit: 'contain',
   objectPosition: 'bottom center',
   display: 'block',
-  transform: 'scale(0.87)',
+  transform: 'scale(1.044)',
   transformOrigin: 'bottom center',
   transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
