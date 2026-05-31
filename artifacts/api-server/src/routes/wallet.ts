@@ -478,7 +478,7 @@ router.get("/wallet/bonus/welcome/status", authenticate, async (req, res): Promi
 // ── POST /wallet/bonus/welcome ────────────────────────────────────────────────
 router.post("/wallet/bonus/welcome", authenticate, async (req, res): Promise<void> => {
   const userId = req.user!.userId;
-  const BONUS_AMOUNT = "99.99";
+  const BONUS_AMOUNT = "120.00";
 
   try {
     // Atomic: insert transaction first — the unique partial index rejects duplicates

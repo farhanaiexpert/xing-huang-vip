@@ -99,7 +99,7 @@ export function PromoPopup() {
   const initRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const counterVal = useCounter(99.99, showCongrats);
+  const counterVal = useCounter(120, showCongrats);
 
   // Check claimed status on mount (when authenticated)
   useEffect(() => {

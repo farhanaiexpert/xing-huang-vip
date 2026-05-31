@@ -345,7 +345,7 @@ export function Promotions() {
   const [claiming, setClaiming] = useState(false);
   const [alreadyClaimed, setAlreadyClaimed] = useState(false);
   const [showCongrats, setShowCongrats] = useState(false);
-  const counterVal = useCounter(99.99, showCongrats);
+  const counterVal = useCounter(120, showCongrats);
 
   // Check on mount if already claimed
   useEffect(() => {
