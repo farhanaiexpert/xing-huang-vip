@@ -472,16 +472,7 @@ function MainTab({
         } satisfies MockMatchCard)),
       }));
     }
-    const map = new Map<string, MockMatchCard[]>();
-    for (const m of config.mockMatches) {
-      const arr = map.get(m.leagueName) ?? [];
-      arr.push(m);
-      map.set(m.leagueName, arr);
-    }
-    return Array.from(map.entries()).map(([leagueName, matches]) => {
-      const comp = config.competitions.find(c => c.name === leagueName);
-      return { leagueName, countryCode: comp?.countryCode ?? '', matches };
-    });
+    return [];
   }, [leagues, config]);
 
   const hasData = groups.some(g => g.matches.length > 0);
@@ -715,9 +706,8 @@ export function SportDetailPage({
   const [activeTab, setActiveTab] = useState<TabId>(config.defaultTab);
 
   const liveCount = useMemo(
-    () => config.mockMatches.filter(m => m.isLive).length +
-          leagues.flatMap(l => l.matches).filter(m => m.isLive).length,
-    [config, leagues]
+    () => leagues.flatMap(l => l.matches).filter(m => m.isLive).length,
+    [leagues]
   );
 
   function renderTabContent() {

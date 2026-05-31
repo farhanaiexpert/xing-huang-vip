@@ -3,17 +3,14 @@ import { Link } from "wouter";
 import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { LeagueSection } from "./LeagueSection";
 import { FeaturedCards } from "./FeaturedCards";
-import { BetBuilder } from "./BetBuilder";
 import { PopularBets } from "./PopularBets";
 import { SkeletonLeague } from "./SkeletonLeague";
-import { UpcomingRaces } from "./UpcomingRaces";
 import { UpcomingMatchesCarousel } from "./UpcomingMatchesCarousel";
 import { WinnersTicker } from "./WinnersTicker";
 import { SportQuickNav } from "./SportQuickNav";
 import { TennisHighlights } from "./TennisHighlights";
 import { SoccerHighlights } from "./SoccerHighlights";
 import { NBAHighlights } from "./NBAHighlights";
-import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { FlashOdds } from "./FlashOdds";
 import { JackpotPool } from "./JackpotPool";
 import { PriceBoostsStrip } from "./PriceBoostsStrip";
@@ -634,8 +631,6 @@ export function MainContent({
               {showFeatured && <SoccerHighlights />}
               {showFeatured && <TennisHighlights />}
               {showFeatured && <NBAHighlights />}
-              {showFeatured && <EuropaLeagueFinal />}
-
               {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights />
               )}
@@ -643,9 +638,6 @@ export function MainContent({
                 <TennisHighlights />
               )}
               {!search.trim() && selectedSportId === "nba" && <NBAHighlights />}
-              {!search.trim() && selectedSportId === "ucl-final" && (
-                <EuropaLeagueFinal />
-              )}
 
               {/* Live heading */}
               {dateFilter === "today" && liveCount > 0 && (
@@ -681,18 +673,10 @@ export function MainContent({
                 {filteredLeagues.length > 0 ? (
                   filteredLeagues.map((league) => (
                     <div key={league.id}>
-                      {/* Bet Builder appears immediately before MMA / UFC */}
-                      {!search.trim() && league.sportId === "sp_mma" && (
-                        <BetBuilder />
-                      )}
                       <LeagueSection league={league} />
-                      {/* Upcoming Races appears immediately after Ligue 1 */}
-                      {!search.trim() && league.id === "lg_ligue1" && (
-                        <UpcomingRaces />
-                      )}
                     </div>
                   ))
-                ) : selectedSportId !== "ucl-final" ? (
+                ) : (
                   <NoResultsState
                     search={search}
                     selectedSportId={selectedSportId}
@@ -703,7 +687,7 @@ export function MainContent({
                       setSearch("");
                     }}
                   />
-                ) : null}
+                )}
               </div>
             </>
           )}

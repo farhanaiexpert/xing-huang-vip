@@ -938,9 +938,9 @@ export function LivePage() {
   // ── Real live data ──────────────────────────────────────────────────────────
   const { matches: realMatches, loading: liveLoading, isRealData, lastUpdated } = useLiveOdds();
 
-  // Use real data when available; fall back to demo matches otherwise
+  // Show only real live data — no hardcoded fallback
   const displayMatches = useMemo<LiveMatch[]>(
-    () => (realMatches.length > 0 ? realMatches as LiveMatch[] : BASE_MATCHES),
+    () => realMatches as LiveMatch[],
     [realMatches],
   );
 
@@ -948,8 +948,8 @@ export function LivePage() {
   const matchKey = useMemo(() => displayMatches.map(m => m.id).join(','), [displayMatches]);
 
   // ── Simulation state ────────────────────────────────────────────────────────
-  const [simOdds,     setSimOdds]     = useState<SimState>(() => buildInitialSim(BASE_MATCHES));
-  const [prevSimOdds, setPrevSimOdds] = useState<SimState>(() => buildInitialSim(BASE_MATCHES));
+  const [simOdds,     setSimOdds]     = useState<SimState>(() => buildInitialSim([]));
+  const [prevSimOdds, setPrevSimOdds] = useState<SimState>(() => buildInitialSim([]));
   const [tick, setTick] = useState(0);
 
   // Re-seed sim whenever the match list changes (real data arrived or changed)
@@ -1179,6 +1179,19 @@ export function LivePage() {
                 />
               ))}
             </div>
+
+            {/* ── Empty state — no live events ───────────────────────────── */}
+            {filteredMatches.length === 0 && !liveLoading && (
+              <div className="flex flex-col items-center text-center py-16 px-6 bg-[#121821] rounded-2xl border border-[#253241]">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-[#18212B] border border-[#253241] mb-4">
+                  <Radio className="h-6 w-6 text-[#EF4444] opacity-40" />
+                </div>
+                <p className="text-[15px] font-semibold text-[#F8FAFC] mb-1.5">No live matches right now</p>
+                <p className="text-[13px] text-[#94A3B8]/55 max-w-xs">
+                  Live events will appear here as they kick off. Check back soon or browse upcoming matches on the home page.
+                </p>
+              </div>
+            )}
 
             {/* ── Bottom info strip ─────────────────────────────────────── */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-[10px] text-[#475569]">
