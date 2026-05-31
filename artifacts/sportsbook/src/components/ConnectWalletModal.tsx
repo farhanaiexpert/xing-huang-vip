@@ -233,9 +233,10 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     setView('plisio-form');
   }
 
-  // ── Phantom (Solana USDT) inline flow ────────────────────────────────────────
+  // ── Phantom (Solana USDT SPL) one-click send ─────────────────────────────────
   const [phantomAmount,     setPhantomAmount]     = useState('');
   const [phantomTxHash,     setPhantomTxHash]     = useState('');
+  const [phantomPhase,      setPhantomPhase]      = useState<'idle'|'connecting'|'approving'|'confirming'|'submitting'>('idle');
   const [phantomError,      setPhantomError]      = useState('');
   const [phantomSubmitting, setPhantomSubmitting] = useState(false);
   const [phantomVerified,   setPhantomVerified]   = useState<boolean | null>(null);
@@ -244,41 +245,78 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     setView('methods');
     setPhantomAmount('');
     setPhantomTxHash('');
+    setPhantomPhase('idle');
     setPhantomError('');
     setPhantomSubmitting(false);
     setPhantomVerified(null);
   }
 
-  async function submitPhantomDeposit() {
+  async function handlePhantomSend() {
     const amount = parseFloat(phantomAmount);
     if (!phantomAmount || isNaN(amount) || amount < 1) {
       setPhantomError('Minimum deposit is 1 USDT');
       return;
     }
-    if (!phantomTxHash.trim()) {
-      setPhantomError('Please paste your Solana transaction signature');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const solana = (window as any).solana;
+    if (!solana?.isPhantom) {
+      setPhantomError('Phantom wallet not detected. Please install Phantom from phantom.app and try again.');
       return;
     }
     setPhantomSubmitting(true);
+    setPhantomPhase('connecting');
     setPhantomError('');
     try {
+      await solana.connect();
+      const userPubKeyStr: string = solana.publicKey.toString();
+
+      const { Connection, PublicKey, Transaction } = await import('@solana/web3.js');
+      const { createTransferInstruction, getAssociatedTokenAddress } = await import('@solana/spl-token');
+
+      const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+      const USDT_MINT  = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'; // USDT SPL mainnet
+
+      const connection  = new Connection(SOLANA_RPC, 'confirmed');
+      const userPubKey  = new PublicKey(userPubKeyStr);
+      const platPubKey  = new PublicKey(SOL_ADDRESS!);
+      const mintPubKey  = new PublicKey(USDT_MINT);
+
+      const fromATA = await getAssociatedTokenAddress(mintPubKey, userPubKey);
+      const toATA   = await getAssociatedTokenAddress(mintPubKey, platPubKey);
+
+      const tx = new Transaction();
+      tx.add(createTransferInstruction(fromATA, toATA, userPubKey, BigInt(Math.round(amount * 1_000_000))));
+
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = userPubKey;
+
+      setPhantomPhase('approving');
+      const { signature } = await solana.signAndSendTransaction(tx);
+
+      setPhantomPhase('confirming');
+      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight });
+
+      setPhantomPhase('submitting');
       const result = await api.post<{ autoVerified: boolean }>('/wallet/deposit', {
-        txHash: phantomTxHash.trim(),
-        amount,
-        network: 'SOLANA',
+        txHash: signature, amount, network: 'SOLANA',
       });
-      setPhantomVerified(result.autoVerified);
       await refreshBalance();
+      setPhantomTxHash(signature);
+      setPhantomVerified(result.autoVerified);
     } catch (err) {
-      setPhantomError(err instanceof Error ? err.message : 'Submission failed. Please try again.');
+      const msg = err instanceof Error ? err.message : String(err);
+      setPhantomError(/reject|cancel|denied/i.test(msg) ? 'Transaction cancelled.' : msg.slice(0, 120));
     } finally {
       setPhantomSubmitting(false);
+      setPhantomPhase('idle');
     }
   }
 
-  // ── TON USDT inline flow ─────────────────────────────────────────────────────
+  // ── TON USDT Jetton one-click send ───────────────────────────────────────────
   const [tonAmount,     setTonAmount]     = useState('');
   const [tonTxHash,     setTonTxHash]     = useState('');
+  const [tonPhase,      setTonPhase]      = useState<'idle'|'connecting'|'fetching'|'approving'|'confirming'|'submitting'>('idle');
   const [tonError,      setTonError]      = useState('');
   const [tonSubmitting, setTonSubmitting] = useState(false);
   const [tonVerified,   setTonVerified]   = useState<boolean | null>(null);
@@ -287,35 +325,98 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     setView('methods');
     setTonAmount('');
     setTonTxHash('');
+    setTonPhase('idle');
     setTonError('');
     setTonSubmitting(false);
     setTonVerified(null);
   }
 
-  async function submitTonDeposit() {
+  async function handleTonSend() {
     const amount = parseFloat(tonAmount);
     if (!tonAmount || isNaN(amount) || amount < 1) {
       setTonError('Minimum deposit is 1 USDT');
       return;
     }
-    if (!tonTxHash.trim()) {
-      setTonError('Please paste your TON transaction hash');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ton = (window as any).ton;
+    if (!ton?.send) {
+      setTonError('No TON wallet found. Install Tonkeeper browser extension and try again.');
       return;
     }
     setTonSubmitting(true);
+    setTonPhase('connecting');
     setTonError('');
     try {
+      const accounts = await ton.send('ton_requestAccounts') as string[];
+      const userAddress = accounts?.[0];
+      if (!userAddress) throw new Error('No TON account available — please unlock your wallet');
+
+      // Fetch user's USDT Jetton wallet address (Jetton = USDT on TON)
+      const USDT_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
+      setTonPhase('fetching');
+      const jr = await fetch(
+        `https://tonapi.io/v2/accounts/${encodeURIComponent(userAddress)}/jettons/${encodeURIComponent(USDT_MASTER)}`,
+        { headers: { Accept: 'application/json' } },
+      );
+      if (!jr.ok) throw new Error('USDT Jetton wallet not found. Ensure you hold USDT on TON network.');
+      const jd = await jr.json() as { jetton_wallet_address?: { address: string } };
+      const jettonWallet = jd.jetton_wallet_address?.address;
+      if (!jettonWallet) throw new Error('Could not resolve your USDT Jetton wallet address');
+
+      // Build Jetton transfer body cell
+      const { beginCell, Address, toNano } = await import('@ton/core');
+      const body = beginCell()
+        .storeUint(0x0f8a7ea5, 32)                           // Jetton transfer op
+        .storeUint(0n, 64)                                    // query_id
+        .storeCoins(BigInt(Math.round(amount * 1_000_000)))   // amount (6 decimals)
+        .storeAddress(Address.parse(TON_ADDR!))               // destination (platform)
+        .storeAddress(Address.parse(userAddress))             // response_destination
+        .storeBit(false)                                      // no custom_payload
+        .storeCoins(1n)                                       // forward_ton_amount (min)
+        .storeBit(false)                                      // no forward_payload
+        .endCell();
+
+      const bocBytes  = body.toBoc();
+      let bocBase64 = '';
+      for (let i = 0; i < bocBytes.length; i++) bocBase64 += String.fromCharCode(bocBytes[i]);
+      bocBase64 = btoa(bocBase64);
+
+      setTonPhase('approving');
+      const txResult = await ton.send('ton_sendTransaction', {
+        to:       jettonWallet,
+        value:    toNano('0.1').toString(),   // 0.1 TON for gas
+        dataType: 'boc',
+        data:     bocBase64,
+      }) as { boc?: string } | string;
+
+      const bocStr = (typeof txResult === 'object' && txResult?.boc) ? txResult.boc
+                   : typeof txResult === 'string' ? txResult : '';
+
+      // Compute external message hash for TONapi transaction lookup
+      setTonPhase('confirming');
+      let txHash = bocStr;
+      if (bocStr) {
+        try {
+          const { Cell } = await import('@ton/core');
+          const bocData = Uint8Array.from(atob(bocStr), c => c.charCodeAt(0));
+          const cells = Cell.fromBoc(Buffer.from(bocData));
+          txHash = Buffer.from(cells[0].hash()).toString('hex');
+        } catch { /* use raw BOC string as fallback identifier */ }
+      }
+
+      setTonPhase('submitting');
       const result = await api.post<{ autoVerified: boolean }>('/wallet/deposit', {
-        txHash: tonTxHash.trim(),
-        amount,
-        network: 'TON',
+        txHash, amount, network: 'TON',
       });
-      setTonVerified(result.autoVerified);
       await refreshBalance();
+      setTonTxHash(txHash);
+      setTonVerified(result.autoVerified);
     } catch (err) {
-      setTonError(err instanceof Error ? err.message : 'Submission failed. Please try again.');
+      const msg = err instanceof Error ? err.message : String(err);
+      setTonError(msg.slice(0, 120));
     } finally {
       setTonSubmitting(false);
+      setTonPhase('idle');
     }
   }
 
@@ -503,8 +604,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     'plisio-invoice': { title: 'Awaiting Payment',   subtitle: 'Send exactly the amount shown below',           showBack: false },
     'plisio-success': { title: 'Deposit Confirmed',  subtitle: 'Balance updated successfully',                  showBack: false },
     'plisio-failed':  { title: 'Invoice Expired',    subtitle: 'This invoice is no longer valid',               showBack: true  },
-    'phantom-form':   { title: 'Phantom Deposit',    subtitle: 'Send Solana USDT and paste the TxHash',         showBack: true, onBack: resetPhantom },
-    'ton-form':       { title: 'TON Deposit',        subtitle: 'Send TON USDT Jetton and paste the TxHash',     showBack: true, onBack: resetTon     },
+    'phantom-form':   { title: 'Phantom Deposit',    subtitle: 'Send Solana USDT directly from Phantom',        showBack: true, onBack: resetPhantom },
+    'ton-form':       { title: 'TON Deposit',        subtitle: 'Send USDT Jetton directly from Tonkeeper',      showBack: true, onBack: resetTon     },
   };
   const hdr = headerConfig[view];
 
@@ -593,19 +694,9 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         </div>
                         <div>
                           <p className="text-[13px] font-bold text-[#F8FAFC]">Phantom · Solana USDT SPL</p>
-                          <p className="text-[11px] text-[#64748B]">Send USDT (SPL) to the address below, paste TxHash — credited instantly</p>
+                          <p className="text-[11px] text-[#64748B]">Enter amount and click Send — Phantom signs and broadcasts automatically</p>
                         </div>
                       </div>
-
-                      {SOL_ADDRESS ? (
-                        <NppAddressCopy address={SOL_ADDRESS} />
-                      ) : (
-                        <div className="flex items-center gap-2 p-3 rounded-xl text-[11px]"
-                          style={{ background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.15)' }}>
-                          <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0" />
-                          <p className="text-[#FACC15]">Solana deposit address not yet configured — contact support</p>
-                        </div>
-                      )}
 
                       <div>
                         <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Amount (USDT)</label>
@@ -622,18 +713,6 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         <p className="text-[10px] text-[#64748B] mt-1">Minimum: 1 USDT · SPL token (Solana network)</p>
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Transaction Signature</label>
-                        <input type="text" value={phantomTxHash}
-                          onChange={e => { setPhantomTxHash(e.target.value); setPhantomError(''); }}
-                          disabled={phantomSubmitting}
-                          className="w-full rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] outline-none disabled:opacity-60"
-                          style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(153,69,255,0.20)' }}
-                          placeholder="Paste Solana tx signature (87–88 base58 chars)"
-                        />
-                        <p className="text-[10px] text-[#64748B] mt-1">Phantom app: Activity → tap transaction → Copy Signature</p>
-                      </div>
-
                       {phantomError && (
                         <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]"
                           style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
@@ -642,19 +721,27 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         </div>
                       )}
 
-                      <button onClick={submitPhantomDeposit} disabled={phantomSubmitting || !SOL_ADDRESS}
+                      <button onClick={handlePhantomSend} disabled={phantomSubmitting || !SOL_ADDRESS || !phantomAmount}
                         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-black text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait"
                         style={{ background: 'linear-gradient(135deg, #9945FF 0%, #7B2FBE 100%)', boxShadow: '0 0 20px rgba(153,69,255,0.25)' }}>
-                        {phantomSubmitting
-                          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Verifying…</>
-                          : <>Submit Deposit <ChevronRight className="w-4 h-4" /></>
-                        }
+                        {phantomSubmitting ? (
+                          <>
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            {phantomPhase === 'connecting'  && 'Connecting…'}
+                            {phantomPhase === 'approving'   && 'Approve in Phantom…'}
+                            {phantomPhase === 'confirming'  && 'Confirming on Solana…'}
+                            {phantomPhase === 'submitting'  && 'Crediting balance…'}
+                            {phantomPhase === 'idle'        && 'Processing…'}
+                          </>
+                        ) : (
+                          <><Zap className="w-4 h-4" /> Send via Phantom</>
+                        )}
                       </button>
 
                       <div className="flex items-center gap-2 p-3 rounded-xl text-[11px]"
                         style={{ background: 'rgba(0,223,169,0.04)', border: '1px solid rgba(0,223,169,0.12)' }}>
                         <Zap className="w-3.5 h-3.5 text-[#00DFA9] shrink-0" />
-                        <p className="text-[#64748B]"><span className="text-[#00DFA9] font-semibold">Auto-verified</span> — balance credited instantly after on-chain confirmation</p>
+                        <p className="text-[#64748B]"><span className="text-[#00DFA9] font-semibold">One-click</span> — Phantom signs and sends; balance credited after on-chain confirmation</p>
                       </div>
                     </>
                   )}
@@ -704,19 +791,9 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         </div>
                         <div>
                           <p className="text-[13px] font-bold text-[#F8FAFC]">TON Wallet · USDT Jetton</p>
-                          <p className="text-[11px] text-[#64748B]">Send USDT (Jetton) to the address below, paste TxHash — credited instantly</p>
+                          <p className="text-[11px] text-[#64748B]">Enter amount and click Send — Tonkeeper signs and broadcasts automatically</p>
                         </div>
                       </div>
-
-                      {TON_ADDR ? (
-                        <NppAddressCopy address={TON_ADDR} />
-                      ) : (
-                        <div className="flex items-center gap-2 p-3 rounded-xl text-[11px]"
-                          style={{ background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.15)' }}>
-                          <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0" />
-                          <p className="text-[#FACC15]">TON deposit address not yet configured — contact support</p>
-                        </div>
-                      )}
 
                       <div>
                         <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Amount (USDT)</label>
@@ -733,18 +810,6 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         <p className="text-[10px] text-[#64748B] mt-1">Minimum: 1 USDT · TON network (Jetton)</p>
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Transaction Hash</label>
-                        <input type="text" value={tonTxHash}
-                          onChange={e => { setTonTxHash(e.target.value); setTonError(''); }}
-                          disabled={tonSubmitting}
-                          className="w-full rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] outline-none disabled:opacity-60"
-                          style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,152,234,0.20)' }}
-                          placeholder="Paste TON transaction hash"
-                        />
-                        <p className="text-[10px] text-[#64748B] mt-1">Tonkeeper: Activity → tap transaction → Copy TxHash</p>
-                      </div>
-
                       {tonError && (
                         <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]"
                           style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
@@ -753,19 +818,28 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         </div>
                       )}
 
-                      <button onClick={submitTonDeposit} disabled={tonSubmitting || !TON_ADDR}
+                      <button onClick={handleTonSend} disabled={tonSubmitting || !TON_ADDR || !tonAmount}
                         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-black text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait"
                         style={{ background: 'linear-gradient(135deg, #0098EA 0%, #0077C2 100%)', boxShadow: '0 0 20px rgba(0,152,234,0.25)' }}>
-                        {tonSubmitting
-                          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Verifying…</>
-                          : <>Submit Deposit <ChevronRight className="w-4 h-4" /></>
-                        }
+                        {tonSubmitting ? (
+                          <>
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            {tonPhase === 'connecting'  && 'Connecting…'}
+                            {tonPhase === 'fetching'    && 'Fetching Jetton wallet…'}
+                            {tonPhase === 'approving'   && 'Approve in Tonkeeper…'}
+                            {tonPhase === 'confirming'  && 'Confirming on TON…'}
+                            {tonPhase === 'submitting'  && 'Crediting balance…'}
+                            {tonPhase === 'idle'        && 'Processing…'}
+                          </>
+                        ) : (
+                          <><Zap className="w-4 h-4" /> Send via TON Wallet</>
+                        )}
                       </button>
 
                       <div className="flex items-center gap-2 p-3 rounded-xl text-[11px]"
                         style={{ background: 'rgba(0,223,169,0.04)', border: '1px solid rgba(0,223,169,0.12)' }}>
                         <Zap className="w-3.5 h-3.5 text-[#00DFA9] shrink-0" />
-                        <p className="text-[#64748B]"><span className="text-[#00DFA9] font-semibold">Auto-verified</span> — balance credited instantly after on-chain confirmation</p>
+                        <p className="text-[#64748B]"><span className="text-[#00DFA9] font-semibold">One-click</span> — Tonkeeper signs and sends USDT Jetton; balance credited after confirmation</p>
                       </div>
                     </>
                   )}

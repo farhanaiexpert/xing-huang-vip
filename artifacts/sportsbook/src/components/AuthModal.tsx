@@ -276,27 +276,50 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     tonWalletActive.current = true;
     setStep('signing');
     try {
+      // Step 1: get address
       const accounts = await ton.send('ton_requestAccounts') as string[];
       const tonAddress = accounts?.[0];
       if (!tonAddress) throw new Error('No TON account returned — please unlock your wallet');
 
+      // Step 2: request nonce
       const { nonce, message } = await api.get<{ nonce: string; message: string }>(
         `/auth/wallet/nonce/ton?address=${encodeURIComponent(tonAddress)}`
       );
 
-      // Tonkeeper/OpenMask: ton_signMessage expects base64-encoded data
-      const result = await ton.send('ton_signMessage', { data: btoa(message) }) as {
-        signature: string;  // base64
-        publicKey: string;  // 64-char hex
-      };
+      // Step 3: try ton_proof first (Tonkeeper ≥3.x / TonConnect), fall back to ton_signMessage
+      // publicKey is NEVER sent to the backend — the server fetches it on-chain.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let verifyBody: Record<string, any>;
+      try {
+        const proofResult = await ton.send('ton_requestProof', {
+          address:   tonAddress,
+          payload:   nonce,
+          domain:    { lengthBytes: window.location.host.length, value: window.location.host },
+          timestamp: Math.floor(Date.now() / 1000),
+        }) as { signature: string; timestamp: number; domain: { lengthBytes: number; value: string }; payload: string };
+
+        verifyBody = {
+          address: tonAddress,
+          nonce,
+          proof: {
+            signature: proofResult.signature,
+            timestamp: proofResult.timestamp,
+            domain:    proofResult.domain,
+            payload:   proofResult.payload,
+          },
+        };
+      } catch {
+        // Wallet doesn't support ton_proof — fall back to ton_signMessage
+        // publicKey intentionally omitted: server fetches on-chain for binding proof
+        const result = await ton.send('ton_signMessage', { data: btoa(message) }) as {
+          signature: string;
+          publicKey: string;
+        };
+        verifyBody = { address: tonAddress, signature: result.signature, nonce };
+      }
 
       setStep('verifying');
-      const data = await api.post<WalletVerifyResponse>('/auth/wallet/verify/ton', {
-        address:   tonAddress,
-        signature: result.signature,
-        publicKey: result.publicKey,
-        nonce,
-      });
+      const data = await api.post<WalletVerifyResponse>('/auth/wallet/verify/ton', verifyBody);
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setStep('done');

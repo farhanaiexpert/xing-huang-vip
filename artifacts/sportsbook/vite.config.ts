@@ -32,10 +32,15 @@ export default defineConfig({
         ]
       : []),
   ],
+  define: {
+    global: "globalThis",
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      "buffer": "buffer",
+      "@ton/crypto": path.resolve(import.meta.dirname, "src/lib/ton-crypto-shim.ts"),
     },
     dedupe: ["react", "react-dom"],
   },

@@ -40,6 +40,7 @@ interface TonApiTransaction {
 }
 
 async function fetchTonApiTx(txHash: string): Promise<TonApiTransaction | null> {
+  // Primary: direct transaction hash lookup
   const url = `${TONAPI_BASE}/blockchain/transactions/${encodeURIComponent(txHash)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -49,13 +50,28 @@ async function fetchTonApiTx(txHash: string): Promise<TonApiTransaction | null> 
       headers: { Accept: "application/json" },
     });
     clearTimeout(timer);
-    if (!resp.ok) {
-      if (resp.status === 404) return null;
-      throw new Error(`TONapi HTTP ${resp.status}`);
-    }
-    return await resp.json() as TonApiTransaction;
+    if (resp.ok) return await resp.json() as TonApiTransaction;
+    if (resp.status !== 404) throw new Error(`TONapi HTTP ${resp.status}`);
   } finally {
     clearTimeout(timer);
+  }
+
+  // Fallback: the client submits an external message BOC hash (not an internal tx hash).
+  // TONapi exposes the containing transaction via /blockchain/messages/{msg_id}/transaction.
+  const msgUrl = `${TONAPI_BASE}/blockchain/messages/${encodeURIComponent(txHash)}/transaction`;
+  const ctrl2 = new AbortController();
+  const timer2 = setTimeout(() => ctrl2.abort(), TIMEOUT_MS);
+  try {
+    const resp2 = await fetch(msgUrl, {
+      signal: ctrl2.signal,
+      headers: { Accept: "application/json" },
+    });
+    clearTimeout(timer2);
+    if (resp2.ok) return await resp2.json() as TonApiTransaction;
+    if (resp2.status === 404) return null;
+    throw new Error(`TONapi msg-lookup HTTP ${resp2.status}`);
+  } finally {
+    clearTimeout(timer2);
   }
 }
 

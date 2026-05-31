@@ -3,7 +3,7 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { verifyMessage, isAddress, getAddress } from "viem";
-import { randomBytes, verify as cryptoVerify, createPublicKey } from "crypto";
+import { randomBytes, verify as cryptoVerify, createPublicKey, createHash } from "crypto";
 import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable, noncesTable } from "@workspace/db";
 import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken } from "../lib/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
@@ -526,7 +526,9 @@ router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
   });
 });
 
-// ── TON Ed25519 helpers ───────────────────────────────────────────────────────
+// ── TON Ed25519 + ton_proof helpers ──────────────────────────────────────────
+
+const TONAPI_BASE = "https://tonapi.io/v2";
 
 function isTonAddress(addr: string): boolean {
   // User-friendly EQ/UQ/EQ bounceable/non-bounceable (48 base64url chars)
@@ -536,13 +538,91 @@ function isTonAddress(addr: string): boolean {
   return false;
 }
 
-function verifyTonSignature(message: string, signatureBase64: string, publicKeyHex: string): boolean {
+/** Fetch the wallet's public key from TON blockchain (tonapi.io).
+ *  Returns null for undeployed wallets or on network error. */
+async function fetchTonOnchainPublicKey(address: string): Promise<string | null> {
+  try {
+    const resp = await fetch(
+      `${TONAPI_BASE}/accounts/${encodeURIComponent(address)}`,
+      { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5_000) },
+    );
+    if (!resp.ok) return null;
+    const data = await resp.json() as { public_key?: string };
+    const key = (data.public_key ?? "").trim();
+    return /^[0-9a-fA-F]{64}$/.test(key) ? key : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Parse a TON address to its workchain + 32-byte hash.
+ *  Supports EQ/UQ user-friendly (48 base64url chars) and raw "wc:<64hex>". */
+function parseTonAddressBytes(addr: string): { workchain: number; hash: Buffer } {
+  const rawMatch = /^(-?[0-9]+):([0-9a-fA-F]{64})$/.exec(addr);
+  if (rawMatch) {
+    return { workchain: parseInt(rawMatch[1], 10), hash: Buffer.from(rawMatch[2], "hex") };
+  }
+  if (/^[A-Za-z0-9_-]{48}$/.test(addr)) {
+    const b64 = addr.replace(/-/g, "+").replace(/_/g, "/");
+    const bytes = Buffer.from(b64 + "==", "base64");
+    // layout: [flags 1B] [workchain 1B signed] [hash 32B] [crc 2B]
+    if (bytes.length >= 34) {
+      const wc = bytes.readInt8(1);
+      return { workchain: wc, hash: Buffer.from(bytes.subarray(2, 34)) };
+    }
+  }
+  throw new Error("Cannot parse TON address");
+}
+
+/** Build the TON Connect ton_proof message hash per TonConnect spec:
+ *  sha256(0xff 0xff "ton-connect" sha256("ton-proof-item-v2/" wc[4BE] hash[32] domainLen[4LE] domain ts[8LE] payload))
+ */
+function buildTonProofMessage(
+  address: string,
+  domain: { value: string; lengthBytes: number },
+  timestamp: number,
+  payload: string,
+): Buffer {
+  const { workchain, hash } = parseTonAddressBytes(address);
+
+  const wcBuf = Buffer.allocUnsafe(4);
+  wcBuf.writeInt32BE(workchain, 0);
+
+  const domainBuf = Buffer.from(domain.value, "utf-8");
+  const domainLenBuf = Buffer.allocUnsafe(4);
+  domainLenBuf.writeUInt32LE(domain.lengthBytes, 0);
+
+  const tsBuf = Buffer.allocUnsafe(8);
+  tsBuf.writeBigUInt64LE(BigInt(timestamp), 0);
+
+  const inner = Buffer.concat([
+    Buffer.from("ton-proof-item-v2/"),
+    wcBuf,
+    hash,
+    domainLenBuf,
+    domainBuf,
+    tsBuf,
+    Buffer.from(payload, "utf-8"),
+  ]);
+
+  const innerHash = createHash("sha256").update(inner).digest();
+  const outer = Buffer.concat([
+    Buffer.from([0xff, 0xff]),
+    Buffer.from("ton-connect"),
+    innerHash,
+  ]);
+  return createHash("sha256").update(outer).digest();
+}
+
+/** Verify an Ed25519 signature. message can be a plain string or raw bytes. */
+function verifyTonSignature(message: Buffer | string, signatureBase64: string, publicKeyHex: string): boolean {
   const pubKeyBytes = Buffer.from(publicKeyHex, "hex");
   if (pubKeyBytes.length !== 32) return false;
   const derKey = Buffer.concat([ED25519_SPKI_PREFIX, pubKeyBytes]);
   const key = createPublicKey({ key: derKey, format: "der", type: "spki" });
   const sigBytes = Buffer.from(signatureBase64, "base64");
-  return cryptoVerify(null, Buffer.from(message), key, sigBytes);
+  const msgBuf = Buffer.isBuffer(message) ? message : Buffer.from(message, "utf-8");
+  return cryptoVerify(null, msgBuf, key, sigBytes);
 }
 
 // ── GET /auth/wallet/nonce/ton?address=... ────────────────────────────────────
@@ -568,23 +648,38 @@ router.get("/auth/wallet/nonce/ton", async (req, res): Promise<void> => {
 });
 
 // ── POST /auth/wallet/verify/ton ──────────────────────────────────────────────
+// Accepts two proof formats:
+//   A) ton_proof  — { address, nonce, proof: { timestamp, domain, signature, payload } }
+//   B) signMessage — { address, nonce, signature }  (publicKey ALWAYS fetched on-chain)
 const TonVerifyBody = z.object({
-  address:   z.string(),
-  signature: z.string(),   // base64-encoded Ed25519 signature (from Tonkeeper/OpenMask)
-  publicKey: z.string().regex(/^[0-9a-fA-F]{64}$/, "publicKey must be 32-byte hex (64 chars)"),
-  nonce:     z.string(),
+  address: z.string(),
+  nonce:   z.string(),
+  // ton_proof format (preferred — Tonkeeper ≥3 / TonConnect)
+  proof: z.object({
+    timestamp: z.number(),
+    domain:    z.object({ lengthBytes: z.number(), value: z.string() }),
+    signature: z.string(),
+    payload:   z.string(),
+  }).optional(),
+  // Legacy ton_signMessage fallback (publicKey NOT accepted from client — fetched on-chain)
+  signature: z.string().optional(),
 });
 
 router.post("/auth/wallet/verify/ton", async (req, res): Promise<void> => {
   const parsed = TonVerifyBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "address, signature, publicKey, and nonce are required" });
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "address and nonce are required, plus either proof or signature" });
     return;
   }
-  const { address, signature, publicKey, nonce } = parsed.data;
+  const { address, nonce, proof, signature } = parsed.data;
 
   if (!isTonAddress(address)) {
     res.status(400).json({ error: "Invalid TON wallet address" });
+    return;
+  }
+
+  if (!proof && !signature) {
+    res.status(400).json({ error: "Either ton_proof or signature (ton_signMessage) is required" });
     return;
   }
 
@@ -603,13 +698,39 @@ router.post("/auth/wallet/verify/ton", async (req, res): Promise<void> => {
     return;
   }
 
-  // Verify the Ed25519 signature using the provided public key
-  const message = buildSignMessage(address, nonce);
+  // Always fetch public key from blockchain — never trust client-supplied key
+  const onchainKey = await fetchTonOnchainPublicKey(address);
+  if (!onchainKey) {
+    res.status(401).json({
+      error: "Unable to verify wallet ownership: public key not found on TON blockchain. " +
+             "Please ensure your wallet is activated (has made at least one transaction) and try again.",
+    });
+    return;
+  }
+
   let valid = false;
-  try {
-    valid = verifyTonSignature(message, signature, publicKey);
-  } catch {
-    valid = false;
+  if (proof) {
+    // ton_proof verification: verify payload matches nonce, then verify signature
+    if (proof.payload !== nonce) {
+      res.status(401).json({ error: "ton_proof payload does not match nonce" });
+      return;
+    }
+    // Reject stale proofs (>5 min clock skew tolerance)
+    const ageSec = Math.abs(Date.now() / 1000 - proof.timestamp);
+    if (ageSec > 5 * 60) {
+      res.status(401).json({ error: "ton_proof timestamp expired" });
+      return;
+    }
+    try {
+      const msgHash = buildTonProofMessage(address, proof.domain, proof.timestamp, proof.payload);
+      valid = verifyTonSignature(msgHash, proof.signature, onchainKey);
+    } catch { valid = false; }
+  } else if (signature) {
+    // ton_signMessage verification using on-chain key (no client-supplied key trusted)
+    try {
+      const message = buildSignMessage(address, nonce);
+      valid = verifyTonSignature(message, signature, onchainKey);
+    } catch { valid = false; }
   }
 
   if (!valid) {
