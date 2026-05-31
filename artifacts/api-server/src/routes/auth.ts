@@ -7,6 +7,7 @@ import { randomBytes } from "crypto";
 import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable, noncesTable } from "@workspace/db";
 import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken } from "../lib/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
+import { isTronAddress, verifyTronSignature } from "../lib/tronUtils.js";
 
 const router = Router();
 
@@ -189,6 +190,149 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
       displayName: shortAddress(user.walletAddress!),
       // email and username are null for wallet-only accounts; kept for
       // contract compatibility with consumers that destructure these fields
+      email: user.email ?? null,
+      username: user.username ?? null,
+      role: user.role,
+      referralCode: user.referralCode,
+    },
+  });
+});
+
+// ── GET /auth/wallet/nonce/tron?address=T... ──────────────────────────────────
+router.get("/auth/wallet/nonce/tron", async (req, res): Promise<void> => {
+  const address = req.query.address as string | undefined;
+  if (!address || !isTronAddress(address)) {
+    res.status(400).json({ error: "Valid TRON wallet address required (starts with T, 34 characters)" });
+    return;
+  }
+
+  const nonce = generateNonce();
+  const expiresAt = new Date(Date.now() + NONCE_TTL_MS);
+
+  await db.insert(noncesTable)
+    .values({ walletAddress: address, nonce, expiresAt })
+    .onConflictDoUpdate({
+      target: noncesTable.walletAddress,
+      set: { nonce, expiresAt },
+    });
+
+  const message = buildSignMessage(address, nonce);
+  res.json({ nonce, message });
+});
+
+// ── POST /auth/wallet/verify/tron ─────────────────────────────────────────────
+const TronVerifyBody = z.object({
+  address: z.string(),
+  signature: z.string(),
+  nonce: z.string(),
+});
+
+router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
+  const parsed = TronVerifyBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "address, signature, and nonce are required" });
+    return;
+  }
+  const { address, signature, nonce } = parsed.data;
+
+  if (!isTronAddress(address)) {
+    res.status(400).json({ error: "Invalid TRON wallet address" });
+    return;
+  }
+
+  // Verify nonce exists and hasn't expired
+  const [storedNonce] = await db.select()
+    .from(noncesTable)
+    .where(and(
+      eq(noncesTable.walletAddress, address),
+      eq(noncesTable.nonce, nonce),
+      gt(noncesTable.expiresAt, new Date()),
+    ))
+    .limit(1);
+
+  if (!storedNonce) {
+    res.status(401).json({ error: "Invalid or expired nonce. Please request a new one." });
+    return;
+  }
+
+  // Verify the TronLink signMessageV2 signature
+  const message = buildSignMessage(address, nonce);
+  const recovered = await verifyTronSignature(message, signature);
+
+  if (!recovered || recovered !== address) {
+    res.status(401).json({ error: "Signature verification failed" });
+    return;
+  }
+
+  // Consume the nonce (one-time use)
+  await db.delete(noncesTable).where(eq(noncesTable.walletAddress, address));
+
+  // Upsert user
+  const existing = await db.select()
+    .from(usersTable)
+    .where(eq(usersTable.walletAddress, address))
+    .limit(1);
+
+  let user = existing[0];
+
+  if (!user) {
+    const referralCode = randomBytes(4).toString("hex").toUpperCase();
+    const [created] = await db.insert(usersTable).values({
+      walletAddress: address,
+      walletNetwork: "TRON",
+      referralCode,
+      role: "user",
+    }).returning();
+    user = created;
+    await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+  } else if (user.walletNetwork !== "TRON") {
+    await db.update(usersTable).set({ walletNetwork: "TRON" }).where(eq(usersTable.id, user.id));
+    user = { ...user, walletNetwork: "TRON" };
+  }
+
+  if (user.isSuspended) {
+    res.status(403).json({ error: "Account is suspended" });
+    return;
+  }
+
+  // Check for active self-exclusion
+  const now = new Date();
+  const [excl] = await db.select().from(selfExclusionsTable)
+    .where(and(
+      eq(selfExclusionsTable.userId, user.id),
+      isNull(selfExclusionsTable.liftedAt),
+      eq(selfExclusionsTable.isTakeABreak, false),
+      or(
+        eq(selfExclusionsTable.isPermanent, true),
+        gt(selfExclusionsTable.endsAt, now),
+      ),
+    ))
+    .limit(1);
+
+  if (excl) {
+    const endsMsg = excl.isPermanent
+      ? "Your account is permanently self-excluded. Please contact support for assistance."
+      : `You have self-excluded until ${new Date(excl.endsAt!).toLocaleDateString()}. Please contact support if you need help.`;
+    res.status(403).json({ error: endsMsg, code: "SELF_EXCLUDED" });
+    return;
+  }
+
+  const payload = { userId: user.id, role: user.role };
+  const accessToken = signAccessToken(payload);
+  const refreshToken = signRefreshToken(payload);
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    refreshToken,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  res.json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      walletAddress: user.walletAddress,
+      displayName: shortAddress(user.walletAddress!),
       email: user.email ?? null,
       username: user.username ?? null,
       role: user.role,

@@ -38,9 +38,8 @@ export const EVM_CHAINS: Record<number, {
   /** Must match backend MIN_CONFIRMATIONS in evmVerify.ts */
   minConfirmations: number;
 }> = {
-  1:   { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6,  network: 'ETH',     label: 'Ethereum',        color: '#627EEA', minConfirmations: 6 },
-  56:  { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, network: 'BSC',     label: 'BNB Smart Chain', color: '#F0B90B', minConfirmations: 3 },
-  137: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6,  network: 'POLYGON', label: 'Polygon',         color: '#8247E5', minConfirmations: 3 },
+  // ERC-20 USDT on Ethereum mainnet only — BSC and Polygon removed intentionally.
+  1: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6, network: 'ETH', label: 'Ethereum (ERC-20)', color: '#627EEA', minConfirmations: 6 },
 };
 
 /** Convert human USDT amount to BigInt base units, avoiding float precision loss */
@@ -105,7 +104,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     const amount = parseFloat(depositAmount);
     if (isNaN(amount) || amount < 10) { setDepositError('Minimum deposit is 10 USDT'); return; }
     if (!chainCfg) {
-      setDepositError('Your wallet is on an unsupported network. Switch to Ethereum, BNB Smart Chain, or Polygon.');
+      setDepositError('Your wallet is on an unsupported network. Switch to Ethereum mainnet to deposit ERC-20 USDT.');
       return;
     }
     setDepositPhase('sending');

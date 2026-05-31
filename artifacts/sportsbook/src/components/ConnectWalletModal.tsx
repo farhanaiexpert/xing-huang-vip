@@ -1107,7 +1107,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
                               <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0 mt-0.5" />
                               <p className="text-[#FACC15]">
-                                Your wallet is on an unsupported network. Switch to <strong>Ethereum, BNB Smart Chain,</strong> or <strong>Polygon</strong> to deposit automatically.
+                                Your wallet is on an unsupported network. Switch to <strong>Ethereum mainnet</strong> to deposit ERC-20 USDT.
                               </p>
                             </div>
                           )}
@@ -1232,6 +1232,121 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               </div>
                             )}
                           </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── TRONLINK STANDALONE: shown when TronLink detected but EVM wallet not connected ── */}
+                  {hasTronLink && reownStep !== 'connected' && (
+                    <div
+                      className="rounded-2xl overflow-hidden"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(0,223,169,0.08) 0%, rgba(0,196,154,0.03) 100%)',
+                        border: '1px solid rgba(0,223,169,0.30)',
+                        boxShadow: '0 0 24px rgba(0,223,169,0.06)',
+                      }}
+                    >
+                      {depositPhase === 'success' && depositResult ? (
+                        <div className="p-4 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                              style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.35)' }}>
+                              <CheckCircle2 className="w-5 h-5 text-[#00DFA9]" />
+                            </div>
+                            <div>
+                              <p className="text-[14px] font-black text-[#00DFA9]">
+                                {depositResult.autoVerified ? 'Deposit Verified!' : 'Deposit Submitted!'}
+                              </p>
+                              <p className="text-[11px] text-[#64748B]">
+                                {depositResult.autoVerified
+                                  ? 'Balance has been credited to your account'
+                                  : 'Under review — usually credited within 5–30 min'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="rounded-xl p-2.5 text-[10px] font-mono text-[#64748B] break-all"
+                            style={{ background: 'rgba(0,0,0,0.2)' }}>
+                            TxHash: {depositResult.txHash}
+                          </div>
+                          <button
+                            onClick={close}
+                            className="w-full py-2 rounded-xl text-[13px] font-black text-[#0B0F14] transition-all"
+                            style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
+                          >
+                            Done
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-4 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                              style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.30)' }}>
+                              <Wallet className="w-4 h-4 text-[#00DFA9]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <p className="text-[13px] font-black text-[#F8FAFC]">TronLink Detected</p>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
+                                  style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>
+                                  TRC-20
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-[#64748B]">Deposit USDT directly from your TRON wallet</p>
+                            </div>
+                          </div>
+
+                          {depositPhase === 'error' && depositError && (
+                            <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]"
+                              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
+                              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                              <p className="text-red-400 flex-1">{depositError}</p>
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">
+                              Amount (USDT)
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min="10"
+                                step="1"
+                                value={depositAmount}
+                                onChange={e => { setDepositAmount(e.target.value); clearError(); }}
+                                disabled={isProcessing}
+                                className="w-full rounded-xl px-4 py-3 text-[15px] font-bold text-[#F8FAFC] pr-16 outline-none disabled:opacity-60"
+                                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,223,169,0.25)' }}
+                                placeholder="50"
+                              />
+                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#00DFA9]">USDT</span>
+                            </div>
+                            <p className="text-[10px] text-[#64748B] mt-1">Minimum: 10 USDT · TRC-20 only</p>
+                          </div>
+
+                          <button
+                            onClick={handleTronDeposit}
+                            disabled={isProcessing}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait disabled:scale-100"
+                            style={{
+                              background: isProcessing
+                                ? 'rgba(0,223,169,0.15)'
+                                : 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)',
+                              color: isProcessing ? '#00DFA9' : '#0B0F14',
+                              boxShadow: isProcessing ? 'none' : '0 0 20px rgba(0,223,169,0.30)',
+                            }}
+                          >
+                            {depositPhase === 'sending' ? (
+                              <><span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> Approve in TronLink…</>
+                            ) : depositPhase === 'confirming' ? (
+                              <><span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> Waiting for confirmation…</>
+                            ) : depositPhase === 'submitting' ? (
+                              <><span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> Verifying on-chain…</>
+                            ) : (
+                              <>Deposit via TronLink TRC-20 <ChevronRight className="w-4 h-4" /></>
+                            )}
+                          </button>
                         </div>
                       )}
                     </div>

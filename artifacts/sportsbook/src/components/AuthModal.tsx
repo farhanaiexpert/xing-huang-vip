@@ -66,6 +66,9 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   const [step,  setStep]  = useState<Step>('idle');
   const [error, setError] = useState('');
   const waitingForConnect = useRef(false);
+  const tronActive        = useRef(false);
+
+  const [hasTronLink, setHasTronLink] = useState(false);
 
   const addrShort = shortAddress(address) ?? '';
   const { copied, copy } = useCopy(address ?? '');
@@ -75,6 +78,12 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       setStep('idle');
       setError('');
       waitingForConnect.current = false;
+      tronActive.current = false;
+    } else {
+      // Detect TronLink when modal opens
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tw = (window as any).tronWeb;
+      setHasTronLink(!!(tw?.defaultAddress?.base58));
     }
   }, [open]);
 
@@ -116,7 +125,6 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setStep('done');
 
-      // Login success toast
       toast.success(`Signed in as ${shortAddress(addr)}`, {
         description: 'Welcome to CupBett',
         duration: 4500,
@@ -138,6 +146,56 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     }
   }
 
+  async function handleTronSign() {
+    setError('');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tw = (window as any).tronWeb;
+    if (!tw?.defaultAddress?.base58) {
+      setError('TronLink is not connected. Please unlock TronLink and try again.');
+      return;
+    }
+    tronActive.current = true;
+    const tronAddr = tw.defaultAddress.base58 as string;
+    setStep('signing');
+    try {
+      const { nonce, message } = await api.get<{ nonce: string; message: string }>(
+        `/auth/wallet/nonce/tron?address=${tronAddr}`
+      );
+      const signature = await tw.trx.signMessageV2(message) as string;
+      setStep('verifying');
+      const data = await api.post<WalletVerifyResponse>('/auth/wallet/verify/tron', {
+        address: tronAddr,
+        signature,
+        nonce,
+      });
+      setTokens(data.accessToken, data.refreshToken);
+      loginWithWallet(data.accessToken, data.refreshToken, data.user);
+      setStep('done');
+
+      const shortTron = tronAddr.slice(0, 6) + '…' + tronAddr.slice(-4);
+      toast.success(`Signed in as ${shortTron}`, {
+        description: 'Welcome to CupBett',
+        duration: 4500,
+        style: {
+          background: '#0D1A26',
+          border: '1px solid rgba(0,223,169,0.22)',
+          color: '#F8FAFC',
+        },
+      });
+
+      setTimeout(onClose, 1400);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      const isRejected = msg.toLowerCase().includes('reject') ||
+                         msg.toLowerCase().includes('cancel') ||
+                         msg.toLowerCase().includes('denied');
+      setError(isRejected ? 'Signature cancelled. Tap below to try again.' : msg);
+      setStep('idle');
+    } finally {
+      tronActive.current = false;
+    }
+  }
+
   function handleConnectWallet() {
     setError('');
     if (isConnected && address) {
@@ -153,6 +211,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
 
   const isWorking    = step === 'waiting_wallet' || step === 'signing' || step === 'verifying';
   const flowStepIdx  = getFlowStep(step);
+  const isTronFlow   = tronActive.current;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center sm:p-4">
@@ -263,7 +322,9 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             {step === 'done'
               ? 'Welcome to CupBett Sports Trading'
               : step === 'signing'
-                ? 'Open your wallet app and approve the message'
+                ? isTronFlow
+                  ? 'Open TronLink and approve the signature request'
+                  : 'Open your wallet app and approve the message'
                 : step === 'verifying'
                   ? 'Confirming your identity…'
                   : step === 'waiting_wallet'
@@ -432,7 +493,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
               <div className="text-center">
                 <p className="text-[14px] font-bold text-[#F8FAFC]">
                   {step === 'waiting_wallet' && 'Opening wallet selector…'}
-                  {step === 'signing'        && 'Check your wallet'}
+                  {step === 'signing'        && (isTronFlow ? 'Approve in TronLink' : 'Check your wallet')}
                   {step === 'verifying'      && 'Verifying signature…'}
                 </p>
                 <p className="text-[12px] text-[#94A3B8]/45 mt-1">
@@ -452,7 +513,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             </div>
           )}
 
-          {/* ── PRIMARY CTA ── */}
+          {/* ── PRIMARY CTA: EVM wallet (MetaMask / WalletConnect / etc.) ── */}
           {step === 'idle' && (
             <button
               onClick={handleConnectWallet}
@@ -465,11 +526,9 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             >
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                 style={{ background: 'linear-gradient(135deg,#12F0C4 0%,#00DFA9 55%,#00C49A 100%)' }} />
-              {/* Left icon — balances the chevron on the right */}
               <Wallet className="relative w-[18px] h-[18px] shrink-0" />
-              {/* Centred label */}
               <span className="relative flex-1 text-center">
-                {isConnected && address ? 'Log In with Wallet' : 'Connect Wallet & Log In'}
+                {isConnected && address ? 'Log In with Wallet' : 'Connect Wallet (ERC-20)'}
               </span>
               <ChevronRight className="relative w-[18px] h-[18px] shrink-0 opacity-60" />
             </button>
@@ -488,8 +547,38 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                   {w.short}
                 </div>
               ))}
-              <span className="text-[10px] text-[#64748B]/70">+300 wallets</span>
+              <span className="text-[10px] text-[#64748B]/70">Ethereum mainnet · ERC-20 USDT</span>
             </div>
+          )}
+
+          {/* ── TRONLINK BUTTON ── */}
+          {step === 'idle' && hasTronLink && (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-white/[0.07]" />
+                <span className="text-[10px] text-[#64748B]/60 uppercase tracking-wider font-bold">or</span>
+                <div className="flex-1 h-px bg-white/[0.07]" />
+              </div>
+
+              <button
+                onClick={handleTronSign}
+                className="relative w-full h-[54px] rounded-xl font-black text-[14px] tracking-tight flex items-center justify-between px-5 transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(0,223,169,0.14) 0%, rgba(0,196,154,0.07) 100%)',
+                  border: '1.5px solid rgba(0,223,169,0.45)',
+                  color: '#00DFA9',
+                  boxShadow: '0 0 24px rgba(0,223,169,0.08)',
+                }}
+              >
+                <Wallet className="relative w-[18px] h-[18px] shrink-0" />
+                <span className="relative flex-1 text-center">Connect with TronLink (TRC-20)</span>
+                <ChevronRight className="relative w-[18px] h-[18px] shrink-0 opacity-60" />
+              </button>
+
+              <p className="text-[10px] text-[#64748B]/60 text-center -mt-1.5">
+                TRON network · T… address · TRC-20 USDT
+              </p>
+            </>
           )}
 
           {/* ── INFO PILL ── */}
