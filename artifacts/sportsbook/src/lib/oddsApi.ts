@@ -160,11 +160,17 @@ export const ODDS_API_SPORTS: OddsApiSportConfig[] = [
 /** sportIds that real data covers — used to suppress mock leagues and show correct empty states */
 export const REAL_DATA_SPORT_IDS = new Set(ODDS_API_SPORTS.map(s => s.sportId));
 
-// ─── Fetch helper — proxied through /api/odds/:sport ─────────────────────────
+// ─── Fetch helpers ────────────────────────────────────────────────────────────
 
 interface ServerOddsResponse {
   data:   OddsApiEvent[];
   cached: boolean;
+}
+
+interface ServerAllOddsResponse {
+  sports:     Record<string, OddsApiEvent[]>;
+  cached:     boolean;
+  sportCount: number;
 }
 
 interface ServerErrorResponse {
@@ -173,27 +179,41 @@ interface ServerErrorResponse {
   error?:      string;
 }
 
+/** Fetch a single sport — kept for MatchDetail / sport-detail page deep links. */
 export async function fetchSportOdds(
   sportKey: string,
 ): Promise<OddsApiEvent[]> {
   const res = await fetch(`/api/odds/${sportKey}`);
 
-  if (res.status === 503) {
-    throw new Error('Odds API not configured on server');
-  }
-
+  if (res.status === 503) throw new Error('Odds API not configured on server');
   if (res.status === 401) {
     const body = await res.json().catch(() => ({} as ServerErrorResponse)) as ServerErrorResponse;
-    if (body.error_code === 'OUT_OF_USAGE_CREDITS') {
-      throw new Error('QUOTA_EXHAUSTED');
-    }
+    if (body.error_code === 'OUT_OF_USAGE_CREDITS') throw new Error('QUOTA_EXHAUSTED');
     throw new Error('INVALID_KEY');
   }
-
   if (res.status === 422) return [];
   if (res.status === 429) throw new Error('Odds API rate limit reached');
   if (!res.ok) throw new Error(`Odds API HTTP ${res.status}`);
 
   const json = await res.json() as ServerOddsResponse;
   return Array.isArray(json.data) ? json.data : [];
+}
+
+/**
+ * Fetch ALL cached sports in one request — replaces 78 individual fetches.
+ * The server reads from PostgreSQL cache only; no Odds API calls are made.
+ */
+export async function fetchAllOdds(): Promise<Record<string, OddsApiEvent[]>> {
+  const res = await fetch('/api/odds/all');
+
+  if (res.status === 503) throw new Error('Odds API not configured on server');
+  if (res.status === 401) {
+    const body = await res.json().catch(() => ({} as ServerErrorResponse)) as ServerErrorResponse;
+    if (body.error_code === 'OUT_OF_USAGE_CREDITS') throw new Error('QUOTA_EXHAUSTED');
+    throw new Error('INVALID_KEY');
+  }
+  if (!res.ok) throw new Error(`Odds API HTTP ${res.status}`);
+
+  const json = await res.json() as ServerAllOddsResponse;
+  return json.sports ?? {};
 }

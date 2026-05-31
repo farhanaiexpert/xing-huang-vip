@@ -283,6 +283,41 @@ export async function fetchAndCacheOdds(sportKey: string): Promise<void> {
   }
 }
 
+// ─── GET /odds/all — single bulk endpoint (reads DB cache only, zero API calls)
+router.get("/odds/all", async (_req, res): Promise<void> => {
+  if (!ODDS_API_KEY) {
+    res.status(503).json({ error: "Odds API not configured" });
+    return;
+  }
+  try {
+    const controls    = await db.select().from(sportControlsTable);
+    const controlMap  = new Map(controls.map(c => [c.sportKey, c]));
+    const globalMargin = await getGlobalMarginPct();
+
+    const result = await db.execute(sql`
+      SELECT sport_key, data FROM odds_cache WHERE expires_at > NOW()
+    `);
+
+    const sports: Record<string, unknown[]> = {};
+    for (const row of result.rows) {
+      const sportKey = row.sport_key as string;
+      const ctrl     = controlMap.get(sportKey);
+      if (ctrl && (!ctrl.isEnabled || ctrl.isSuspended)) continue;
+
+      const data            = Array.isArray(row.data) ? (row.data as unknown[]) : [];
+      const effectiveMargin = ctrl?.marginOverride && parseFloat(ctrl.marginOverride) > 0
+        ? Math.max(0, parseFloat(ctrl.marginOverride)) : globalMargin;
+      const multiplier = ctrl ? parseFloat(ctrl.oddsMultiplier) : 1;
+
+      sports[sportKey] = applyMultiplier(applyMargin(data, effectiveMargin), multiplier) as unknown[];
+    }
+
+    res.json({ sports, cached: true, sportCount: Object.keys(sports).length });
+  } catch {
+    res.status(500).json({ error: "Failed to fetch all odds" });
+  }
+});
+
 // ─── GET /odds/:sport ─────────────────────────────────────────────────────────
 router.get("/odds/:sport", async (req, res): Promise<void> => {
   const sport = Array.isArray(req.params.sport) ? req.params.sport[0] : req.params.sport;
@@ -378,7 +413,7 @@ router.get("/odds/sports/list", async (_req, res): Promise<void> => {
   }
 });
 
-// ─── GET /live/events ─────────────────────────────────────────────────────────
+// ─── GET /live/events — reads from DB cache only (zero direct Odds API calls) ──
 router.get("/live/events", async (_req, res): Promise<void> => {
   if (!ODDS_API_KEY) {
     res.status(503).json({ error: "Odds API not configured" }); return;
@@ -394,43 +429,42 @@ router.get("/live/events", async (_req, res): Promise<void> => {
     const controls    = await db.select().from(sportControlsTable);
     const controlMap  = new Map(controls.map(c => [c.sportKey, c]));
     const globalMargin = await getGlobalMarginPct();
-    const activeSports = await getActiveLiveSports();
     const now          = new Date().toISOString();
 
-    const results = await Promise.allSettled(
-      activeSports.map(async (sportKey) => {
-        const ctrl = controlMap.get(sportKey);
-        if (ctrl && (!ctrl.isEnabled || ctrl.isSuspended)) return [];
-
-        const extraMarkets = sportKey.startsWith('soccer_') ? ',totals,btts' : '';
-        const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
-        const response = await fetch(url);
-        if (!response.ok) return [];
-        const data = (await response.json()) as Record<string, unknown>[];
-        if (!Array.isArray(data)) return [];
-
-        const liveEvents = data.filter(ev =>
-          typeof ev.commence_time === "string" &&
-          ev.commence_time < now &&
-          Array.isArray(ev.bookmakers) &&
-          (ev.bookmakers as unknown[]).length > 0
-        );
-
-        const effectiveMargin = ctrl?.marginOverride && parseFloat(ctrl.marginOverride) > 0
-          ? Math.max(0, parseFloat(ctrl.marginOverride)) : globalMargin;
-        const multiplier = ctrl ? parseFloat(ctrl.oddsMultiplier) : 1;
-
-        const adjusted = applyMultiplier(applyMargin(liveEvents, effectiveMargin), multiplier);
-        return (adjusted as Record<string, unknown>[]).map(ev => ({ ...ev, sport_key: sportKey }));
-      })
-    );
+    // Read all cached sport data from DB — no Odds API calls at all
+    const dbResult = await db.execute(sql`
+      SELECT sport_key, data FROM odds_cache WHERE expires_at > NOW()
+    `);
 
     const events: Record<string, unknown>[] = [];
-    for (const result of results) {
-      if (result.status === "fulfilled") events.push(...result.value);
+
+    for (const row of dbResult.rows) {
+      const sportKey = row.sport_key as string;
+      const ctrl     = controlMap.get(sportKey);
+      if (ctrl && (!ctrl.isEnabled || ctrl.isSuspended)) continue;
+
+      const data = Array.isArray(row.data) ? (row.data as Record<string, unknown>[]) : [];
+
+      const liveEvents = data.filter(ev =>
+        typeof ev.commence_time === "string" &&
+        ev.commence_time < now &&
+        Array.isArray(ev.bookmakers) &&
+        (ev.bookmakers as unknown[]).length > 0
+      );
+
+      if (liveEvents.length === 0) continue;
+
+      const effectiveMargin = ctrl?.marginOverride && parseFloat(ctrl.marginOverride) > 0
+        ? Math.max(0, parseFloat(ctrl.marginOverride)) : globalMargin;
+      const multiplier = ctrl ? parseFloat(ctrl.oddsMultiplier) : 1;
+
+      const adjusted = applyMultiplier(applyMargin(liveEvents, effectiveMargin), multiplier);
+      (adjusted as Record<string, unknown>[]).forEach(ev =>
+        events.push({ ...ev, sport_key: sportKey })
+      );
     }
 
-    const payload = { events, count: events.length, cached: false };
+    const payload = { events, count: events.length, cached: true };
     liveCache.set(cacheKey, { data: payload, expiresAt: Date.now() + LIVE_CACHE_TTL });
     res.json(payload);
   } catch {

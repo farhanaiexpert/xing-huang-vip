@@ -10,7 +10,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { League } from '../types';
-import { ODDS_API_SPORTS, fetchSportOdds } from '../lib/oddsApi';
+import { ODDS_API_SPORTS, fetchAllOdds } from '../lib/oddsApi';
 import { normalizeEvents, buildLeague } from '../lib/normalizeOdds';
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
@@ -108,31 +108,27 @@ export function getLastUpdatedLabel(fetchedAt: Date | null): string {
 // ─── Shared fetch logic ───────────────────────────────────────────────────────
 
 async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | null }> {
-  const fetches = ODDS_API_SPORTS.map(config =>
-    fetchSportOdds(config.key)
-      .then(events => ({ config, events, ok: true  as const }))
-      .catch((err: Error) => ({ config, events: [], ok: false as const, err })),
-  );
-
-  const resolved = await Promise.all(fetches.map(p => p.catch(() => null)));
-
-  const leagues: League[]   = [];
-  let   anyError: string | null = null;
-
-  for (const item of resolved) {
-    if (!item) continue;
-    if (!item.ok) {
-      const msg = 'err' in item ? (item as { err: Error }).err.message : '';
-      // Quota exhausted — propagate immediately, no point processing more
-      if (msg === 'QUOTA_EXHAUSTED') return { leagues: [], error: 'QUOTA_EXHAUSTED' };
-      if (!anyError) anyError = msg;
-      continue;
-    }
-    const matches = normalizeEvents(item.events, item.config);
-    if (matches.length > 0) leagues.push(buildLeague(matches, item.config));
+  // One request to /api/odds/all instead of 78 individual sport fetches.
+  // The server reads from PostgreSQL cache only — zero Odds API calls triggered.
+  let sportsMap: Record<string, import('../lib/oddsApi').OddsApiEvent[]>;
+  try {
+    sportsMap = await fetchAllOdds();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg === 'QUOTA_EXHAUSTED') return { leagues: [], error: 'QUOTA_EXHAUSTED' };
+    return { leagues: [], error: msg };
   }
 
-  return { leagues, error: leagues.length === 0 ? anyError : null };
+  const leagues: League[] = [];
+
+  for (const config of ODDS_API_SPORTS) {
+    const events = sportsMap[config.key];
+    if (!Array.isArray(events) || events.length === 0) continue;
+    const matches = normalizeEvents(events, config);
+    if (matches.length > 0) leagues.push(buildLeague(matches, config));
+  }
+
+  return { leagues, error: leagues.length === 0 ? 'No cached data yet — server is warming up' : null };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
