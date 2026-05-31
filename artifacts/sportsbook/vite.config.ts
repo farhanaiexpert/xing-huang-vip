@@ -43,6 +43,44 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Web3 wallet stack (largest group — reown appkit + wagmi adapters)
+          if (
+            id.includes("node_modules/@reown/") ||
+            id.includes("node_modules/@wagmi/") ||
+            id.includes("node_modules/wagmi/")
+          ) {
+            return "vendor-wallet";
+          }
+          // Crypto primitives (viem + ox — used heavily by wagmi)
+          if (
+            id.includes("node_modules/viem/") ||
+            id.includes("node_modules/ox/")
+          ) {
+            return "vendor-crypto";
+          }
+          // Radix UI component primitives
+          if (id.includes("node_modules/@radix-ui/")) {
+            return "vendor-radix";
+          }
+          // React core
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/scheduler/")
+          ) {
+            return "vendor-react";
+          }
+          // TanStack Query
+          if (id.includes("node_modules/@tanstack/")) {
+            return "vendor-query";
+          }
+        },
+      },
+    },
   },
   server: {
     port,
