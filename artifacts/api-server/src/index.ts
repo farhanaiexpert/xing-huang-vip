@@ -262,6 +262,26 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v15 skipped");
   }
+
+  // v16: unique index on market_liability — required for ON CONFLICT upsert in bet placement
+  // The CREATE TABLE IF NOT EXISTS in v7 included UNIQUE(...) but was a no-op on DBs where
+  // the table already existed, so the constraint was never actually created.
+  try {
+    await db.execute(sql`
+      DELETE FROM market_liability ml
+      WHERE id NOT IN (
+        SELECT MIN(id) FROM market_liability
+        GROUP BY event_id, market_type, selection
+      )
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_market_liability_conflict
+        ON market_liability (event_id, market_type, selection)
+    `);
+    logger.info("DB migration v16 applied (market_liability unique index for ON CONFLICT upsert)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v16 skipped");
+  }
 }
 
 runMigrations().then(() => {
