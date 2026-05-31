@@ -1137,7 +1137,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
                               <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0 mt-0.5" />
                               <p className="text-[#FACC15]">
-                                Your wallet is on an unsupported network. Switch to <strong>ETH, BSC, Polygon, Arbitrum,</strong> or <strong>Optimism</strong> to deposit USDT.
+                                Your wallet is on an unsupported network. Switch to <strong>ETH, BSC, Polygon, Arbitrum, Optimism,</strong> or <strong>Base</strong> to deposit USDT.
                               </p>
                             </div>
                           )}

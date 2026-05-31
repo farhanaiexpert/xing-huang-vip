@@ -549,7 +549,7 @@ export function WalletPage() {
                   <Wallet className="w-4.5 h-4.5 text-[#A78BFA]" />
                 </div>
                 <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">Web3 Wallet</p>
-                <p className="text-[9px] text-[#A78BFA] font-semibold">5 EVM chains · TRC-20</p>
+                <p className="text-[9px] text-[#A78BFA] font-semibold">6 EVM chains · TRC-20 · Solana</p>
                 <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.3)' }}>Auto</span>
               </button>
 

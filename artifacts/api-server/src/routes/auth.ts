@@ -3,7 +3,7 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { verifyMessage, isAddress, getAddress } from "viem";
-import { randomBytes, createVerify, createPublicKey } from "crypto";
+import { randomBytes, verify as cryptoVerify, createPublicKey } from "crypto";
 import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable, noncesTable } from "@workspace/db";
 import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken } from "../lib/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
@@ -373,7 +373,9 @@ function verifySolanaSignature(message: string, signatureHex: string, address: s
   const derKey = Buffer.concat([ED25519_SPKI_PREFIX, pubKeyBytes]);
   const key = createPublicKey({ key: derKey, format: "der", type: "spki" });
   const sigBytes = Buffer.from(signatureHex, "hex");
-  return createVerify("Ed25519").update(Buffer.from(message)).verify(key, sigBytes);
+  // crypto.verify(null, data, key, sig) — null algorithm uses the key's own algorithm (Ed25519)
+  // createVerify("Ed25519") throws "Invalid digest" for Ed25519; this is the correct Node API
+  return cryptoVerify(null, Buffer.from(message), key, sigBytes);
 }
 
 // ── GET /auth/wallet/nonce/solana?address=... ─────────────────────────────────
