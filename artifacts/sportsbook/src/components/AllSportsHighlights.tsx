@@ -22,20 +22,27 @@ interface SportConfig {
 }
 
 const SPORT_CONFIGS: SportConfig[] = [
-  { prefix: 'americanfootball_', label: 'American Football', emoji: '🏈', color: '#38BDF8', marketName: 'Match Winner' },
-  { prefix: 'baseball_',         label: 'Baseball',          emoji: '⚾', color: '#00DFA9', marketName: 'Match Winner' },
-  { prefix: 'mma_',              label: 'MMA / UFC',         emoji: '🥊', color: '#EF4444', marketName: 'Fight Winner' },
-  { prefix: 'rugbyleague_',      label: 'Rugby League',      emoji: '🏉', color: '#A78BFA', marketName: 'Match Winner' },
-  { prefix: 'rugbyunion_',       label: 'Rugby Union',       emoji: '🏉', color: '#7C3AED', marketName: 'Match Winner' },
-  { prefix: 'aussierules_',      label: 'Aussie Rules',      emoji: '🦘', color: '#FACC15', marketName: 'Match Winner' },
-  { prefix: 'cricket_',          label: 'Cricket',           emoji: '🏏', color: '#00DFA9', marketName: 'Match Winner' },
-  { prefix: 'icehockey_',        label: 'Ice Hockey',        emoji: '🏒', color: '#38BDF8', marketName: 'Match Winner' },
-  { prefix: 'golf_',             label: 'Golf',              emoji: '⛳', color: '#22C55E', marketName: 'Tournament Winner' },
-  { prefix: 'handball_',         label: 'Handball',          emoji: '🤾', color: '#F97316', marketName: 'Match Winner' },
-  { prefix: 'volleyball_',       label: 'Volleyball',        emoji: '🏐', color: '#EC4899', marketName: 'Match Winner' },
-  { prefix: 'darts_',            label: 'Darts',             emoji: '🎯', color: '#38BDF8', marketName: 'Match Winner' },
-  { prefix: 'boxing_',           label: 'Boxing',            emoji: '🥊', color: '#EF4444', marketName: 'Fight Winner' },
-  { prefix: 'snooker_',          label: 'Snooker',           emoji: '🎱', color: '#22C55E', marketName: 'Match Winner' },
+  // ── Odds API sports ───────────────────────────────────────────────────────────
+  { prefix: 'americanfootball_',             label: 'American Football', emoji: '🏈', color: '#38BDF8', marketName: 'Match Winner' },
+  { prefix: 'baseball_',                     label: 'Baseball',          emoji: '⚾', color: '#00DFA9', marketName: 'Match Winner' },
+  { prefix: 'mma_',                          label: 'MMA / UFC',         emoji: '🥊', color: '#EF4444', marketName: 'Fight Winner' },
+  { prefix: 'rugbyleague_',                  label: 'Rugby League',      emoji: '🏉', color: '#A78BFA', marketName: 'Match Winner' },
+  { prefix: 'rugbyunion_',                   label: 'Rugby Union',       emoji: '🏉', color: '#7C3AED', marketName: 'Match Winner' },
+  { prefix: 'aussierules_',                  label: 'Aussie Rules',      emoji: '🦘', color: '#FACC15', marketName: 'Match Winner' },
+  { prefix: 'cricket_',                      label: 'Cricket',           emoji: '🏏', color: '#00DFA9', marketName: 'Match Winner' },
+  { prefix: 'icehockey_',                    label: 'Ice Hockey',        emoji: '🏒', color: '#38BDF8', marketName: 'Match Winner' },
+  { prefix: 'golf_',                         label: 'Golf',              emoji: '⛳', color: '#22C55E', marketName: 'Tournament Winner' },
+  { prefix: 'handball_',                     label: 'Handball',          emoji: '🤾', color: '#F97316', marketName: 'Match Winner' },
+  { prefix: 'volleyball_',                   label: 'Volleyball',        emoji: '🏐', color: '#EC4899', marketName: 'Match Winner' },
+  { prefix: 'darts_',                        label: 'Darts',             emoji: '🎯', color: '#38BDF8', marketName: 'Match Winner' },
+  { prefix: 'boxing_',                       label: 'Boxing',            emoji: '🥊', color: '#EF4444', marketName: 'Fight Winner' },
+  { prefix: 'snooker_',                      label: 'Snooker',           emoji: '🎱', color: '#22C55E', marketName: 'Match Winner' },
+  // ── BetsAPI-only sports (no Odds API equivalent) ──────────────────────────────
+  { prefix: 'betsapi_table_tennis',          label: 'Table Tennis',      emoji: '🏓', color: '#00DFA9', marketName: 'Match Winner' },
+  { prefix: 'betsapi_rugby',                 label: 'Rugby',             emoji: '🏉', color: '#7C3AED', marketName: 'Match Winner' },
+  { prefix: 'betsapi_handball',              label: 'Handball',          emoji: '🤾', color: '#F97316', marketName: 'Match Winner' },
+  { prefix: 'betsapi_snooker',               label: 'Snooker',           emoji: '🎱', color: '#22C55E', marketName: 'Match Winner' },
+  { prefix: 'betsapi_darts',                 label: 'Darts',             emoji: '🎯', color: '#38BDF8', marketName: 'Match Winner' },
 ];
 
 const SKIP_PREFIXES = ['soccer_', 'basketball_', 'tennis_'];

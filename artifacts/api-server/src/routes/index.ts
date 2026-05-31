@@ -15,6 +15,7 @@ import boostsRouter from "./boosts.js";
 import loyaltyRouter from "./loyalty.js";
 import statsRouter from "./stats.js";
 import adminRouter from "./admin.js";
+import { betsapiRouter } from "./betsapi.js";
 
 const router = Router();
 
@@ -33,6 +34,7 @@ router.use(rgRouter);
 router.use(boostsRouter);
 router.use(loyaltyRouter);
 router.use(statsRouter);
+router.use(betsapiRouter);
 // Admin router last — its catch-all requireAdmin middleware must not shadow user routes
 router.use(adminRouter);
 

@@ -1,23 +1,25 @@
 /**
- * useOddsApi — fetches real pre-match odds from The Odds API (via API server).
+ * useOddsApi — fetches real pre-match odds from two sources:
+ *   1. The Odds API (via /api/odds/all) — primary source for major leagues
+ *   2. BetsAPI (via /api/betsapi/upcoming) — Table Tennis, extra leagues, etc.
  *
  * Cache strategy (server-cron aligned):
- *  - Server cron refreshes the PostgreSQL odds_cache every 25–35 minutes.
- *  - Client localStorage TTL matches the server cron max (35 min) so users
- *    always see data at most one cron-cycle stale without a manual refresh.
+ *  - Server cron refreshes odds_cache every 25–35 min, betsapi_cache every 30 min.
+ *  - Client localStorage TTL 35 min — at most one cron-cycle stale without refresh.
  *  - Module-level cache provides instant hydration within the same session.
- *  - Server responses are served from DB cache (no extra Odds API credits).
+ *  - Server responses are served from DB cache — no extra API calls triggered.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { League } from '../types';
+import type { League, Match } from '../types';
 import { ODDS_API_SPORTS, fetchAllOdds } from '../lib/oddsApi';
 import { normalizeEvents, buildLeague } from '../lib/normalizeOdds';
+import { fetchBetsApiUpcoming, type BetsApiEvent, type BetsApiSportMeta } from '../lib/betsApi';
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v3'; // bumped to v3 — forces cache bust after API key swap + bulk endpoint migration
+const STORAGE_KEY  = 'oddschain_v4'; // v4 — two-source merge (Odds API + BetsAPI)
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
-const CACHE_TTL_MS = 35 * 60 * 1000; // 35 min — matches server cron max interval
+const CACHE_TTL_MS = 35 * 60 * 1000;
 
 interface StoredEntry {
   leagues:   League[];
@@ -42,7 +44,7 @@ function saveToStorage(entry: StoredEntry): void {
   } catch { /* storage quota exceeded — silently skip */ }
 }
 
-const QUOTA_TTL_MS = 24 * 60 * 60 * 1000; // auto-clear after 24 h
+const QUOTA_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface QuotaEntry { ts: number }
 
@@ -50,7 +52,6 @@ function isQuotaExhausted(): boolean {
   try {
     const raw = localStorage.getItem(QUOTA_KEY);
     if (!raw) return false;
-    // Legacy flag stored as plain '1' — treat as immediately expired
     if (raw === '1') { localStorage.removeItem(QUOTA_KEY); return false; }
     const entry = JSON.parse(raw) as QuotaEntry;
     if (Date.now() - entry.ts >= QUOTA_TTL_MS) {
@@ -69,7 +70,7 @@ function clearQuotaExhausted(): void {
   try { localStorage.removeItem(QUOTA_KEY); } catch {}
 }
 
-// ─── Filter past matches out of cached league data ────────────────────────────
+// ─── Filter past matches ──────────────────────────────────────────────────────
 
 function filterCurrentLeagues(leagues: League[]): League[] {
   const now = Date.now();
@@ -77,18 +78,17 @@ function filterCurrentLeagues(leagues: League[]): League[] {
     .map(league => ({
       ...league,
       matches: league.matches.filter(m =>
-        // Keep mock matches (no commenceIso) and future API matches
         !m.commenceIso || new Date(m.commenceIso).getTime() > now,
       ),
     }))
     .filter(league => league.matches.length > 0);
 }
 
-// ─── Module-level session cache (faster than localStorage) ───────────────────
+// ─── Module-level session cache ───────────────────────────────────────────────
 
 let _sessionCache: StoredEntry | null = null;
 
-// ─── "Last updated" label helper ─────────────────────────────────────────────
+// ─── "Last updated" label helper ──────────────────────────────────────────────
 
 export function getLastUpdatedLabel(fetchedAt: Date | null): string {
   if (!fetchedAt) return '';
@@ -100,35 +100,161 @@ export function getLastUpdatedLabel(fetchedAt: Date | null): string {
   if (diffMin  <  60) return `Updated ${diffMin}m ago`;
   if (diffHour <  24) return `Updated ${diffHour}h ago`;
 
-  const sameDay =
-    fetchedAt.toDateString() === new Date().toDateString();
+  const sameDay = fetchedAt.toDateString() === new Date().toDateString();
   return sameDay ? 'Updated today' : `Updated ${fetchedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+}
+
+// ─── BetsAPI normalisation helpers ────────────────────────────────────────────
+
+function toDisplayDate(unixTs: number): string {
+  const d        = new Date(unixTs * 1000);
+  const now      = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const tomEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+  const hhmm     = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  if (d < todayEnd) return `Today, ${hhmm}`;
+  if (d < tomEnd)   return `Tomorrow, ${hhmm}`;
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + `, ${hhmm}`;
+}
+
+function toDateTag(unixTs: number): 'today' | 'tomorrow' | 'upcoming' {
+  const d        = new Date(unixTs * 1000);
+  const now      = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const tomEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+  if (d < todayEnd) return 'today';
+  if (d < tomEnd)   return 'tomorrow';
+  return 'upcoming';
+}
+
+/**
+ * Sports already covered by The Odds API.
+ * For these, BetsAPI data still contributes to sidebar counts but does NOT
+ * create new AllSportsHighlights sections (Odds API section takes precedence).
+ */
+const ODDS_API_COVERED_SPORTS = new Set([
+  'sp_soccer', 'sp_cricket', 'sp_baseball', 'sp_basketball',
+  'sp_tennis', 'sp_rugby_union', 'sp_rugby_league', 'sp_american_football',
+  'sp_ice_hockey', 'sp_golf', 'sp_handball', 'sp_darts', 'sp_snooker',
+  'sp_aussie_rules', 'sp_mma', 'sp_boxing', 'sp_volleyball',
+]);
+
+function normaliseBetsApiLeagues(
+  sports:    Record<string, BetsApiEvent[]>,
+  sportMeta: Record<string, BetsApiSportMeta>,
+): League[] {
+  const now     = Date.now();
+  const leagues: League[] = [];
+
+  for (const [sportIdStr, events] of Object.entries(sports)) {
+    const meta = sportMeta[sportIdStr];
+    if (!meta || events.length === 0) continue;
+
+    const isOddsApiCovered = ODDS_API_COVERED_SPORTS.has(meta.sportId);
+
+    // Group by league
+    const byLeague = new Map<string, { leagueName: string; evs: BetsApiEvent[] }>();
+    for (const ev of events) {
+      const leagueKey = ev.league.id ?? ev.league.name;
+      if (!byLeague.has(leagueKey)) {
+        byLeague.set(leagueKey, { leagueName: ev.league.name, evs: [] });
+      }
+      byLeague.get(leagueKey)!.evs.push(ev);
+    }
+
+    for (const [leagueKey, { leagueName, evs }] of byLeague) {
+      const leagueId = `betsapi_${sportIdStr}_${leagueKey}`;
+
+      // For Odds-API-covered sports: use no sportKey so AllSportsHighlights
+      // won't pick these up (sidebar count is enough; Odds API section already exists).
+      // For new sports (e.g. Table Tennis): use betsapi_ prefix → new section.
+      const sportKey = isOddsApiCovered
+        ? undefined
+        : `betsapi_${meta.sportId.replace('sp_', '')}`;
+
+      const matches: Match[] = evs
+        .filter(ev => {
+          const ts = parseInt(ev.time, 10);
+          return !isNaN(ts) && ts * 1000 > now;
+        })
+        .slice(0, 10)
+        .map((ev): Match => {
+          const ts   = parseInt(ev.time, 10);
+          const odds = meta.fallbackOdds;
+          return {
+            id:          `betsapi_${ev.id}`,
+            team1:       ev.home.name,
+            team2:       ev.away.name,
+            date:        toDisplayDate(ts),
+            dateTag:     toDateTag(ts),
+            leagueId,
+            sportId:     meta.sportId,
+            sportKey,
+            isLive:      false,
+            marketCount: 10,
+            commenceIso: new Date(ts * 1000).toISOString(),
+            odds: {
+              home: odds.home,
+              ...(meta.hasDraw && odds.draw != null ? { draw: odds.draw } : {}),
+              away: odds.away,
+            },
+          };
+        });
+
+      if (matches.length === 0) continue;
+
+      leagues.push({
+        id:          leagueId,
+        name:        leagueName,
+        sportId:     meta.sportId,
+        sportKey,
+        countryCode: 'GL',
+        matches,
+      });
+    }
+  }
+
+  return leagues;
 }
 
 // ─── Shared fetch logic ───────────────────────────────────────────────────────
 
 async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | null }> {
-  // One request to /api/odds/all instead of 78 individual sport fetches.
-  // The server reads from PostgreSQL cache only — zero Odds API calls triggered.
-  let sportsMap: Record<string, import('../lib/oddsApi').OddsApiEvent[]>;
-  try {
-    sportsMap = await fetchAllOdds();
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg === 'QUOTA_EXHAUSTED') return { leagues: [], error: 'QUOTA_EXHAUSTED' };
-    return { leagues: [], error: msg };
-  }
+  const [oddsResult, betsResult] = await Promise.allSettled([
+    fetchAllOdds(),
+    fetchBetsApiUpcoming().catch(() => null),
+  ]);
 
   const leagues: League[] = [];
+  let oddsError: string | null = null;
 
-  for (const config of ODDS_API_SPORTS) {
-    const events = sportsMap[config.key];
-    if (!Array.isArray(events) || events.length === 0) continue;
-    const matches = normalizeEvents(events, config);
-    if (matches.length > 0) leagues.push(buildLeague(matches, config));
+  // 1. The Odds API — primary source
+  if (oddsResult.status === 'fulfilled') {
+    const sportsMap = oddsResult.value;
+    for (const config of ODDS_API_SPORTS) {
+      const events = sportsMap[config.key];
+      if (!Array.isArray(events) || events.length === 0) continue;
+      const matches = normalizeEvents(events, config);
+      if (matches.length > 0) leagues.push(buildLeague(matches, config));
+    }
+  } else {
+    const msg = oddsResult.reason instanceof Error ? oddsResult.reason.message : String(oddsResult.reason);
+    if (msg === 'QUOTA_EXHAUSTED') return { leagues: [], error: 'QUOTA_EXHAUSTED' };
+    oddsError = msg;
   }
 
-  return { leagues, error: leagues.length === 0 ? 'No cached data yet — server is warming up' : null };
+  // 2. BetsAPI — supplemental source
+  if (betsResult.status === 'fulfilled' && betsResult.value) {
+    const { sports, sportMeta } = betsResult.value;
+    const betsLeagues = normaliseBetsApiLeagues(sports, sportMeta);
+    leagues.push(...betsLeagues);
+  }
+
+  if (leagues.length === 0) {
+    return { leagues: [], error: oddsError ?? 'No cached data yet — server is warming up' };
+  }
+
+  return { leagues, error: null };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -191,8 +317,6 @@ export function useOddsApi(): UseOddsApiResult {
   useEffect(() => {
     isMounted.current = true;
 
-    // If quota is known to be exhausted, surface the error immediately without
-    // making any API calls (saves credits when user revisits the page).
     if (isQuotaExhausted()) {
       setError('QUOTA_EXHAUSTED');
       return () => { isMounted.current = false; };
@@ -201,13 +325,10 @@ export function useOddsApi(): UseOddsApiResult {
     const cached = _sessionCache ?? loadFromStorage();
 
     if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-      // Cache is fresh — hydrate without network call, but drop any matches
-      // whose kick-off time has already passed (stale cache issue).
       _sessionCache = cached;
       setRealLeagues(filterCurrentLeagues(cached.leagues));
       setFetchedAt(new Date(cached.fetchedAt));
     } else {
-      // Cache stale or absent — fetch through API server
       void doFetch(false);
     }
 
@@ -227,9 +348,7 @@ export function useOddsApi(): UseOddsApiResult {
     hasRealData:      realLeagues.length > 0,
     isStale,
     lastUpdatedLabel: getLastUpdatedLabel(fetchedAt),
-    refresh:          () => {
-      // Clear quota flag so a manual refresh always retries
-      // (user may have topped up their credits)
+    refresh: () => {
       clearQuotaExhausted();
       _sessionCache = null;
       try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }

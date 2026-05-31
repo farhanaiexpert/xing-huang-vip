@@ -1,11 +1,14 @@
 /**
- * useLiveOdds — polls /api/live/events and /api/live/scores every 30 s
- * and normalises raw Odds API in-play events into LiveMatch objects
- * ready for the Live betting page.
+ * useLiveOdds — polls two sources every 30 s and merges results:
+ *   1. /api/live/events + /api/live/scores  — Odds API in-play events
+ *   2. /api/betsapi/live                    — BetsAPI inplay (128+ events, real scores)
+ *
+ * BetsAPI events are preferred for score accuracy; Odds API for markets breadth.
  */
 import { useState, useEffect, useCallback } from 'react';
+import { fetchBetsApiLive, type BetsApiEvent } from '../lib/betsApi';
 
-// ─── Raw API response shapes ───────────────────────────────────────────────────
+// ─── Raw Odds API response shapes ─────────────────────────────────────────────
 
 interface RawOutcome   { name: string; price: number; }
 interface RawMarket    { key: string; outcomes: RawOutcome[]; }
@@ -39,7 +42,7 @@ interface LiveScoresResponse { scores: LiveScoreRaw[]; count: number; }
 export interface NormalizedLiveMatch {
   id:        string;
   sport:     string;
-  /** Full Odds API sport key, e.g. "basketball_nba" — used for correct bet settlement */
+  /** Full sport key, e.g. "basketball_nba" or "betsapi_1" */
   sportKey:  string;
   icon:      string;
   league:    string;
@@ -61,14 +64,10 @@ export interface NormalizedLiveMatch {
     color:    string;
     glow:     string;
   }[];
-  /** Real API O/U 2.5 over odds (soccer only, when available) */
-  ouOver25?: number;
-  /** Real API O/U 2.5 under odds (soccer only, when available) */
+  ouOver25?:  number;
   ouUnder25?: number;
-  /** Real API BTTS Yes odds (soccer only, when available) */
-  bttsYes?: number;
-  /** Real API BTTS No odds (soccer only, when available) */
-  bttsNo?: number;
+  bttsYes?:   number;
+  bttsNo?:    number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -117,6 +116,11 @@ function getSportMeta(sportKey: string): { icon: string; accent: string; hasDraw
   if (sportKey.startsWith('baseball_'))          return { icon: '⚾', accent: '#38BDF8', hasDraw: false };
   if (sportKey.startsWith('mma_'))               return { icon: '🥊', accent: '#EF4444', hasDraw: false };
   if (sportKey.startsWith('aussierules_'))       return { icon: '🏉', accent: '#F59E0B', hasDraw: false };
+  if (sportKey.startsWith('rugbyleague_'))       return { icon: '🏉', accent: '#A78BFA', hasDraw: false };
+  if (sportKey.startsWith('rugbyunion_'))        return { icon: '🏉', accent: '#7C3AED', hasDraw: false };
+  if (sportKey.startsWith('icehockey_'))         return { icon: '🏒', accent: '#38BDF8', hasDraw: false };
+  if (sportKey.startsWith('snooker_'))           return { icon: '🎱', accent: '#22C55E', hasDraw: false };
+  if (sportKey.startsWith('darts_'))             return { icon: '🎯', accent: '#38BDF8', hasDraw: false };
   return { icon: '🏆', accent: '#94A3B8', hasDraw: false };
 }
 
@@ -169,7 +173,9 @@ function bestOdds(bookmakers: RawBookmaker[], outcomeName: string): number | und
   return bestOddsForMarket(bookmakers, 'h2h', outcomeName);
 }
 
-function normalizeEvent(
+// ─── Odds API event normaliser ────────────────────────────────────────────────
+
+function normalizeOddsApiEvent(
   event:    LiveEventRaw,
   scoreMap: Map<string, LiveScoreRaw>,
 ): NormalizedLiveMatch | null {
@@ -194,13 +200,12 @@ function normalizeEvent(
   const outcomes = [
     { key: 'home', label: '1', name: event.home_team, baseOdds: homeOdds, color: '#00DFA9', glow: 'rgba(0,223,169,0.25)' },
     ...(hasDraw && drawOdds
-      ? [{ key: 'draw', label: 'X', name: 'Draw',            baseOdds: drawOdds, color: '#FACC15', glow: 'rgba(250,204,21,0.25)' }]
+      ? [{ key: 'draw', label: 'X', name: 'Draw', baseOdds: drawOdds, color: '#FACC15', glow: 'rgba(250,204,21,0.25)' }]
       : []),
     { key: 'away', label: '2', name: event.away_team, baseOdds: awayOdds, color: '#38BDF8', glow: 'rgba(56,189,248,0.25)' },
   ];
 
-  // Extract real totals / BTTS odds for soccer matches
-  const isSoccer = event.sport_key.startsWith('soccer_');
+  const isSoccer  = event.sport_key.startsWith('soccer_');
   const ouOver25  = isSoccer ? bestOddsForMarket(event.bookmakers, 'totals', 'Over')  : undefined;
   const ouUnder25 = isSoccer ? bestOddsForMarket(event.bookmakers, 'totals', 'Under') : undefined;
   const bttsYes   = isSoccer ? bestOddsForMarket(event.bookmakers, 'btts',   'Yes')   : undefined;
@@ -218,8 +223,8 @@ function normalizeEvent(
     homeScore,
     awayScore,
     liveLabel: computeLiveLabel(event.sport_key, event.commence_time),
-    volume:    formatVolume(seededInt(event.id,       200_000, 3_000_000)),
-    bettors:   seededInt(event.id + 'b',  2_000, 14_000),
+    volume:    formatVolume(seededInt(event.id, 200_000, 3_000_000)),
+    bettors:   seededInt(event.id + 'b', 2_000, 14_000),
     isHot:     closeGame,
     accent,
     outcomes,
@@ -230,9 +235,130 @@ function normalizeEvent(
   };
 }
 
+// ─── BetsAPI sport_id → sport string mapping ─────────────────────────────────
+
+const BETSAPI_SPORT_STRING: Record<string, string> = {
+  '1':  'soccer', '3':  'cricket', '8':  'rugby', '12': 'americanfootball',
+  '13': 'baseball', '14': 'icehockey', '16': 'basketball', '17': 'tennis',
+  '18': 'golf', '19': 'handball', '92': 'tabletennis', '94': 'snooker', '95': 'darts',
+};
+
+function getBetsApiSportMeta(sportId: string): { icon: string; accent: string; hasDraw: boolean } {
+  const sport = BETSAPI_SPORT_STRING[sportId] ?? '';
+  if (sport === 'soccer')              return { icon: '⚽', accent: '#EF4444', hasDraw: true  };
+  if (sport === 'basketball')          return { icon: '🏀', accent: '#A855F7', hasDraw: false };
+  if (sport === 'tennis')              return { icon: '🎾', accent: '#00DFA9', hasDraw: false };
+  if (sport === 'americanfootball')    return { icon: '🏈', accent: '#F97316', hasDraw: false };
+  if (sport === 'cricket')             return { icon: '🏏', accent: '#22C55E', hasDraw: false };
+  if (sport === 'baseball')            return { icon: '⚾', accent: '#38BDF8', hasDraw: false };
+  if (sport === 'rugby')               return { icon: '🏉', accent: '#7C3AED', hasDraw: false };
+  if (sport === 'icehockey')           return { icon: '🏒', accent: '#38BDF8', hasDraw: false };
+  if (sport === 'golf')                return { icon: '⛳', accent: '#22C55E', hasDraw: false };
+  if (sport === 'handball')            return { icon: '🤾', accent: '#F97316', hasDraw: false };
+  if (sport === 'tabletennis')         return { icon: '🏓', accent: '#00DFA9', hasDraw: false };
+  if (sport === 'snooker')             return { icon: '🎱', accent: '#22C55E', hasDraw: false };
+  if (sport === 'darts')               return { icon: '🎯', accent: '#38BDF8', hasDraw: false };
+  return { icon: '🏆', accent: '#94A3B8', hasDraw: false };
+}
+
+function getBetsApiStageLiveLabel(ev: BetsApiEvent): { stage: string; liveLabel: string } {
+  const sportId = ev.sport_id;
+  const tm      = ev.timer?.tm;
+  const elMin   = tm ? parseInt(tm, 10) : 0;
+
+  if (sportId === '1') {
+    // Soccer
+    if (elMin <= 45) return { stage: `First Half · ${elMin}'`, liveLabel: `${elMin}'` };
+    if (elMin <= 60) return { stage: 'Half Time', liveLabel: 'HT' };
+    return { stage: `Second Half · ${elMin}'`, liveLabel: `${elMin}'` };
+  }
+  if (sportId === '16') {
+    const q = Math.min(4, Math.floor(elMin / 12) + 1);
+    return { stage: `Q${q} · In Progress`, liveLabel: `Q${q}` };
+  }
+  if (sportId === '3') {
+    return { stage: `In Progress · ${elMin} min`, liveLabel: `${elMin}m` };
+  }
+  return { stage: 'In Progress', liveLabel: 'LIVE' };
+}
+
+/** Normalise a BetsAPI inplay event into a NormalizedLiveMatch */
+function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null {
+  if (!ev.home?.name || !ev.away?.name) return null;
+
+  const { icon, accent, hasDraw } = getBetsApiSportMeta(ev.sport_id);
+  const { stage, liveLabel }       = getBetsApiStageLiveLabel(ev);
+
+  // Parse score from ss field "H-A"
+  let homeScore: number | string = '-';
+  let awayScore: number | string = '-';
+  if (ev.ss) {
+    const parts = ev.ss.split('-');
+    if (parts.length >= 2) {
+      const h = parseInt(parts[0], 10);
+      const a = parseInt(parts[1], 10);
+      if (!isNaN(h)) homeScore = h;
+      if (!isNaN(a)) awayScore = a;
+    }
+  }
+
+  const closeGame =
+    typeof homeScore === 'number' &&
+    typeof awayScore === 'number' &&
+    Math.abs(homeScore - awayScore) <= 1;
+
+  // Fallback odds per sport
+  const metaOdds: Record<string, { home: number; draw?: number; away: number }> = {
+    '1':  { home: 1.90, draw: 3.40, away: 2.10 },
+    '3':  { home: 1.85, away: 1.90 },
+    '8':  { home: 1.80, away: 1.95 },
+    '12': { home: 1.85, away: 1.90 },
+    '13': { home: 1.85, away: 1.90 },
+    '14': { home: 1.90, away: 1.85 },
+    '16': { home: 1.85, away: 1.90 },
+    '17': { home: 1.75, away: 2.00 },
+    '18': { home: 3.50, away: 4.00 },
+    '19': { home: 1.80, away: 1.95 },
+    '92': { home: 1.75, away: 2.00 },
+    '94': { home: 1.75, away: 2.00 },
+    '95': { home: 1.75, away: 2.00 },
+  };
+  const odds = metaOdds[ev.sport_id] ?? { home: 1.85, away: 1.90 };
+
+  const outcomes = [
+    { key: 'home', label: '1', name: ev.home.name, baseOdds: odds.home, color: '#00DFA9', glow: 'rgba(0,223,169,0.25)' },
+    ...(hasDraw && odds.draw
+      ? [{ key: 'draw', label: 'X', name: 'Draw', baseOdds: odds.draw, color: '#FACC15', glow: 'rgba(250,204,21,0.25)' }]
+      : []),
+    { key: 'away', label: '2', name: ev.away.name, baseOdds: odds.away, color: '#38BDF8', glow: 'rgba(56,189,248,0.25)' },
+  ];
+
+  const sport    = BETSAPI_SPORT_STRING[ev.sport_id] ?? 'sport';
+  const sportKey = `betsapi_${ev.sport_id}`;
+
+  return {
+    id:        `betsapi_live_${ev.id}`,
+    sport,
+    sportKey,
+    icon,
+    league:    ev.league?.name ?? sport,
+    stage,
+    homeTeam:  ev.home.name,
+    awayTeam:  ev.away.name,
+    homeScore,
+    awayScore,
+    liveLabel,
+    volume:    formatVolume(seededInt(ev.id, 200_000, 3_000_000)),
+    bettors:   seededInt(ev.id + 'b', 2_000, 14_000),
+    isHot:     closeGame,
+    accent,
+    outcomes,
+  };
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-const POLL_MS = 15 * 60 * 1000; // 15 minutes — aligned with UI odds-refresh cycle
+const POLL_MS = 30 * 1000; // 30 seconds
 
 export interface UseLiveOddsResult {
   matches:     NormalizedLiveMatch[];
@@ -250,9 +376,11 @@ export function useLiveOdds(): UseLiveOddsResult {
 
   const fetchLiveData = useCallback(async () => {
     try {
-      const [eventsRes, scoresRes] = await Promise.all([
+      // Fetch from both sources in parallel
+      const [eventsRes, scoresRes, betsApiLive] = await Promise.all([
         fetch('/api/live/events'),
         fetch('/api/live/scores'),
+        fetchBetsApiLive().catch(() => [] as BetsApiEvent[]),
       ]);
 
       if (!eventsRes.ok) {
@@ -268,12 +396,28 @@ export function useLiveOdds(): UseLiveOddsResult {
         (scoresData.scores ?? []).map(s => [s.id, s]),
       );
 
-      const normalized = (eventsData.events ?? [])
-        .map(ev => normalizeEvent(ev, scoreMap))
-        .filter((m): m is NormalizedLiveMatch => m !== null)
-        .slice(0, 25); // cap at 25 cards (more sports visible in filter)
+      // Normalise Odds API events
+      const oddsApiMatches = (eventsData.events ?? [])
+        .map(ev => normalizeOddsApiEvent(ev, scoreMap))
+        .filter((m): m is NormalizedLiveMatch => m !== null);
 
-      setMatches(normalized);
+      // Track Odds API team pairs to de-dupe BetsAPI events
+      const oddsApiPairs = new Set(
+        oddsApiMatches.map(m => `${m.homeTeam}|${m.awayTeam}`)
+      );
+
+      // Normalise BetsAPI events (de-duplicate vs Odds API)
+      const betsApiMatches = betsApiLive
+        .map(ev => normalizeBetsApiLiveEvent(ev))
+        .filter((m): m is NormalizedLiveMatch => {
+          if (!m) return false;
+          return !oddsApiPairs.has(`${m.homeTeam}|${m.awayTeam}`);
+        });
+
+      // Merge: Odds API first (has real market odds), then BetsAPI extras
+      const merged = [...oddsApiMatches, ...betsApiMatches].slice(0, 50);
+
+      setMatches(merged);
       setError(null);
       setLastUpdated(new Date());
     } catch (err) {

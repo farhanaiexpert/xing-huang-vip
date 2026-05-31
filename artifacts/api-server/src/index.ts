@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import cron from "node-cron";
 import { runSettlementWorker } from "./lib/settlementWorker.js";
 import { fetchAndCacheOdds, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
+import { fetchBetsApiUpcoming, BETSAPI_SPORT_IDS, BETSAPI_KEY } from "./lib/betsapi.js";
 
 const PORT = parseInt(process.env.PORT ?? "5000", 10);
 
@@ -313,6 +314,21 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v17 skipped");
   }
+
+  // v18: betsapi_cache — BetsAPI (Bet365) pre-match events cache
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS betsapi_cache (
+        cache_key  TEXT PRIMARY KEY,
+        data       JSONB NOT NULL,
+        fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+    logger.info("DB migration v18 applied (betsapi_cache table)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v18 skipped");
+  }
 }
 
 runMigrations().then(() => {
@@ -362,6 +378,52 @@ runMigrations().then(() => {
   // up to 5 min for the first cron tick.
   setImmediate(() => {
     runOddsBatch().catch((err) => logger.error({ err }, "Startup odds warm: unhandled error"));
+  });
+
+  // ── BetsAPI cron: refresh upcoming events every 30 minutes ───────────────
+  let isBetsApiRefreshing = false;
+  let lastBetsApiRefreshAt = 0;
+  const BETSAPI_INTERVAL_MS = 30 * 60 * 1000;
+
+  async function runBetsApiBatch() {
+    if (!BETSAPI_KEY || isBetsApiRefreshing) return;
+    isBetsApiRefreshing = true;
+    logger.info({ sportCount: BETSAPI_SPORT_IDS.length }, "BetsAPI cron: starting batch");
+    try {
+      for (const sportId of BETSAPI_SPORT_IDS) {
+        const events = await fetchBetsApiUpcoming(sportId);
+        if (events.length > 0) {
+          await db.execute(sql`
+            INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
+            VALUES (${String(sportId)}, ${JSON.stringify(events)}::jsonb, NOW(), NOW() + INTERVAL '40 minutes')
+            ON CONFLICT (cache_key) DO UPDATE SET
+              data       = EXCLUDED.data,
+              fetched_at = NOW(),
+              expires_at = NOW() + INTERVAL '40 minutes'
+          `);
+        }
+        // 300ms gap to avoid burst rate-limits
+        await new Promise(r => setTimeout(r, 300));
+      }
+      lastBetsApiRefreshAt = Date.now();
+      logger.info({ sportCount: BETSAPI_SPORT_IDS.length }, "BetsAPI cron: batch complete");
+    } catch (err) {
+      logger.error({ err }, "BetsAPI cron: unhandled error");
+    } finally {
+      isBetsApiRefreshing = false;
+    }
+  }
+
+  cron.schedule("*/5 * * * *", async () => {
+    const now = Date.now();
+    if (now - lastBetsApiRefreshAt < BETSAPI_INTERVAL_MS) return;
+    runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
+  });
+  logger.info("BetsAPI cron started (every 30 minutes — PostgreSQL-backed cache)");
+
+  // Warm BetsAPI cache on startup
+  setImmediate(() => {
+    runBetsApiBatch().catch((err) => logger.error({ err }, "Startup BetsAPI warm: unhandled error"));
   });
 
   app.listen(PORT, "0.0.0.0", () => {
