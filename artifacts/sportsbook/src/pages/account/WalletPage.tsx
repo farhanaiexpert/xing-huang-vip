@@ -17,6 +17,10 @@ import {
 interface DepositInfo {
   address: string;
   addressErc20?: string;
+  addressBtc?: string;
+  addressSol?: string;
+  addressTon?: string;
+  addressXrp?: string;
   network: string;
   qrImageUrl: string;
   minDeposit: number;
@@ -119,7 +123,7 @@ export function WalletPage() {
     if (hint === 'cryptomus') return 'cryptomus';
     return 'nowpayments';
   });
-  const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20' | 'BSC' | 'POLYGON' | 'ARBITRUM' | 'OPTIMISM'>('TRC-20');
+  const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20' | 'BSC' | 'POLYGON' | 'ARBITRUM' | 'OPTIMISM' | 'BASE' | 'SOLANA' | 'TON' | 'XRP' | 'BTC'>('TRC-20');
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
   const [nppAmount, setNppAmount]     = useState('');
   const [nppCurrency, setNppCurrency] = useState('usdttrc20');
@@ -211,11 +215,19 @@ export function WalletPage() {
   // Whichever wallet is active, pick its balance
   const walletBalance = w3Connected ? evmBalance : hasTronLink ? tronBalance : null;
 
+  function getManualAddress(network: typeof manualNetwork, info: DepositInfo): string {
+    if (network === 'BTC')    return info.addressBtc ?? '';
+    if (network === 'SOLANA') return info.addressSol ?? '';
+    if (network === 'TON')    return info.addressTon ?? '';
+    if (network === 'XRP')    return info.addressXrp ?? '';
+    if (network !== 'TRC-20') return info.addressErc20 ?? info.address;
+    return info.address;
+  }
+
   function copyAddress() {
     if (!depositInfo) return;
-    const addr = manualNetwork !== 'TRC-20'
-      ? (depositInfo.addressErc20 ?? depositInfo.address)
-      : depositInfo.address;
+    const addr = getManualAddress(manualNetwork, depositInfo);
+    if (!addr) return;
     navigator.clipboard.writeText(addr);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -646,6 +658,9 @@ export function WalletPage() {
                           <option value="usdtpolygon">USDT (Polygon)</option>
                           <option value="usdtsol">USDT (Solana / SPL)</option>
                           <option value="usdtarbi">USDT (Arbitrum)</option>
+                          <option value="usdtton">USDT (TON)</option>
+                          <option value="usdtbase">USDT (Base)</option>
+                          <option value="xrp">XRP (Ripple)</option>
                           <option value="btc">Bitcoin (BTC)</option>
                           <option value="eth">Ethereum (ETH)</option>
                           <option value="bnbbsc">BNB (BSC / BEP-20)</option>
@@ -1246,14 +1261,19 @@ export function WalletPage() {
               {(() => {
                 const MANUAL_NETS = [
                   { val: 'TRC-20'   as const, short: 'TRC-20',   label: 'USDT · Tron',       color: '#00DFA9', badge: 'Auto-verify' },
-                  { val: 'ERC-20'   as const, short: 'ERC-20',   label: 'USDT · Ethereum',   color: '#627EEA', badge: 'Manual' },
-                  { val: 'BSC'      as const, short: 'BEP-20',   label: 'USDT · BSC',        color: '#F0B90B', badge: 'Manual' },
-                  { val: 'POLYGON'  as const, short: 'Polygon',  label: 'USDT · Polygon',    color: '#8247E5', badge: 'Manual' },
-                  { val: 'ARBITRUM' as const, short: 'Arbitrum', label: 'USDT · ARB One',    color: '#28A0F0', badge: 'Manual' },
-                  { val: 'OPTIMISM' as const, short: 'Optimism', label: 'USDT · Optimism',   color: '#FF0420', badge: 'Manual' },
+                  { val: 'ERC-20'   as const, short: 'ERC-20',   label: 'USDT · Ethereum',   color: '#627EEA', badge: 'Auto-verify' },
+                  { val: 'BSC'      as const, short: 'BEP-20',   label: 'USDT · BSC',        color: '#F0B90B', badge: 'Auto-verify' },
+                  { val: 'POLYGON'  as const, short: 'Polygon',  label: 'USDT · Polygon',    color: '#8247E5', badge: 'Auto-verify' },
+                  { val: 'ARBITRUM' as const, short: 'Arbitrum', label: 'USDT · ARB One',    color: '#28A0F0', badge: 'Auto-verify' },
+                  { val: 'OPTIMISM' as const, short: 'Optimism', label: 'USDT · Optimism',   color: '#FF0420', badge: 'Auto-verify' },
+                  { val: 'BASE'     as const, short: 'Base',     label: 'USDT · Base',       color: '#0052FF', badge: 'Auto-verify' },
+                  { val: 'SOLANA'   as const, short: 'Solana',   label: 'USDT · Solana',     color: '#9945FF', badge: 'Manual' },
+                  { val: 'TON'      as const, short: 'TON',      label: 'USDT · TON',        color: '#0098EA', badge: 'Manual' },
+                  { val: 'XRP'      as const, short: 'XRP',      label: 'XRP · Ledger',      color: '#23292F', badge: 'Manual' },
+                  { val: 'BTC'      as const, short: 'Bitcoin',  label: 'BTC · Native',      color: '#F7931A', badge: 'Manual' },
                 ];
                 return (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {MANUAL_NETS.map(net => {
                       const active = manualNetwork === net.val;
                       return (
@@ -1285,14 +1305,14 @@ export function WalletPage() {
               <div className="rounded-2xl border border-white/[0.09] bg-[#0E1520] overflow-hidden">
                 <div className="px-4 py-3 border-b border-white/[0.06]">
                   {(() => {
-                    const NET_COLOR: Record<string, string> = { 'TRC-20': '#00DFA9', 'ERC-20': '#627EEA', 'BSC': '#F0B90B', 'POLYGON': '#8247E5', 'ARBITRUM': '#28A0F0', 'OPTIMISM': '#FF0420' };
+                    const NET_COLOR: Record<string, string> = { 'TRC-20': '#00DFA9', 'ERC-20': '#627EEA', 'BSC': '#F0B90B', 'POLYGON': '#8247E5', 'ARBITRUM': '#28A0F0', 'OPTIMISM': '#FF0420', 'BASE': '#0052FF', 'SOLANA': '#9945FF', 'TON': '#0098EA', 'XRP': '#346AA9', 'BTC': '#F7931A' };
                     const c = NET_COLOR[manualNetwork] ?? '#38BDF8';
                     return (
                       <div className="flex items-center gap-2">
                         <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: `${c}26` }}>
                           <span className="text-[9px] font-black" style={{ color: c }}>1</span>
                         </div>
-                        <p className="text-[12px] font-bold text-[#F8FAFC]">Send USDT to this address</p>
+                        <p className="text-[12px] font-bold text-[#F8FAFC]">{manualNetwork === 'BTC' ? 'Send BTC to this address' : manualNetwork === 'XRP' ? 'Send XRP to this address' : 'Send USDT to this address'}</p>
                         <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full"
                           style={{ color: c, background: `${c}1A`, border: `1px solid ${c}33` }}>
                           {manualNetwork}
@@ -1329,13 +1349,16 @@ export function WalletPage() {
               {/* Address */}
               <div className="flex-1 w-full">
                 <p className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-                  {manualNetwork === 'TRC-20' ? 'Tron (TRC-20) Wallet Address' : `${manualNetwork} Wallet Address (EVM)`}
+                  {manualNetwork === 'TRC-20' ? 'Tron (TRC-20) Wallet Address'
+                    : manualNetwork === 'BTC' ? 'Bitcoin Wallet Address'
+                    : manualNetwork === 'SOLANA' ? 'Solana Wallet Address (USDT SPL)'
+                    : manualNetwork === 'TON' ? 'TON Wallet Address (USDT Jetton)'
+                    : manualNetwork === 'XRP' ? 'XRP Ledger Address'
+                    : `${manualNetwork} Wallet Address (EVM)`}
                 </p>
                 <div className="flex items-center gap-2 bg-[#0B0F14] border border-white/[0.08] rounded-xl p-3">
                   <p className="flex-1 text-[11px] font-mono text-[#94A3B8] break-all leading-relaxed select-all">
-                    {manualNetwork !== 'TRC-20'
-                      ? (depositInfo?.addressErc20 ?? '—')
-                      : (depositInfo?.address ?? '—')}
+                    {depositInfo ? (getManualAddress(manualNetwork, depositInfo) || '— Address not configured yet') : '—'}
                   </p>
                   <button onClick={copyAddress}
                     className={cn(
@@ -1358,7 +1381,15 @@ export function WalletPage() {
                   <p className="text-[10px] text-[#FACC15]/80 leading-relaxed">
                     {manualNetwork === 'TRC-20'
                       ? <>Only send <strong>USDT on TRC-20 (Tron)</strong> to this address. Sending on any other network will result in permanent loss of funds.</>
-                      : <>Only send <strong>USDT on {manualNetwork}</strong> to this EVM address. Sending on TRC-20/Tron will result in permanent loss. EVM deposits go to manual review (5–30 min).</>}
+                      : manualNetwork === 'BTC'
+                        ? <>Only send <strong>native BTC</strong> to this address. Enter the BTC value you sent. Deposits go to manual review (5–30 min).</>
+                        : manualNetwork === 'XRP'
+                          ? <>Only send <strong>XRP</strong> to this address. Enter the XRP value you sent. Deposits go to manual review (5–30 min).</>
+                          : manualNetwork === 'SOLANA'
+                            ? <>Only send <strong>USDT (SPL) on Solana</strong> to this address. Sending other tokens may result in permanent loss. Deposits go to manual review (5–30 min).</>
+                            : manualNetwork === 'TON'
+                              ? <>Only send <strong>USDT (Jetton) on TON</strong> to this address. Deposits go to manual review (5–30 min).</>
+                              : <>Only send <strong>USDT on {manualNetwork}</strong> to this EVM address. Sending on TRC-20/Tron will result in permanent loss. EVM deposits are auto-verified.</>}
                   </p>
                 </div>
               </div>

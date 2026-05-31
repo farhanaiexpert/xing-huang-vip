@@ -35,9 +35,9 @@ export interface PlisioOperation {
   currency: string;
 }
 
-export type PlisioCurrency = "USDTTRC20" | "USDTERC20";
+export type PlisioCurrency = "USDTTRC20" | "USDTERC20" | "BTC" | "ETH" | "LTC" | "BNB" | "XRP";
 
-export const ALLOWED_PLISIO_CURRENCIES: PlisioCurrency[] = ["USDTTRC20", "USDTERC20"];
+export const ALLOWED_PLISIO_CURRENCIES: PlisioCurrency[] = ["USDTTRC20", "USDTERC20", "BTC", "ETH", "LTC", "BNB", "XRP"];
 
 // ── Terminal statuses ──────────────────────────────────────────────────────────
 export const PLISIO_FINISHED_STATUSES = new Set(["completed"]);

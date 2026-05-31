@@ -7,6 +7,10 @@ import { checkDepositLimits, recordDepositUsage, isSelfExcludedFromDeposits } fr
 import { authenticate } from "../middleware/authenticate.js";
 import { verifyTronDeposit } from "../lib/tronVerify.js";
 import { verifyEvmDeposit } from "../lib/evmVerify.js";
+import { verifySolanaDeposit } from "../lib/solanaVerify.js";
+import { verifyTonDeposit } from "../lib/tonVerify.js";
+import { verifyBtcDeposit } from "../lib/btcVerify.js";
+import { verifyXrpDeposit } from "../lib/xrpVerify.js";
 import { createPayment, getPaymentStatus, getMinimumPaymentAmount, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
 import { createInvoice, getOperationStatus, PLISIO_FINISHED_STATUSES, PLISIO_FAILED_STATUSES, ALLOWED_PLISIO_CURRENCIES } from "../lib/plisio.js";
 import { createPayment as cryptomusCreatePayment, getPaymentStatus as cryptomusGetStatus, cryptomusConfigured, FINISHED_STATUSES as CRYPTOMUS_FINISHED, FAILED_STATUSES as CRYPTOMUS_FAILED } from "../lib/cryptomus.js";
@@ -18,6 +22,10 @@ const router = Router();
 export const PLATFORM_DEPOSIT = {
   address:       process.env.DEPOSIT_WALLET_ADDRESS        ?? "PASTE_YOUR_TRC20_WALLET_ADDRESS_HERE",
   addressErc20:  process.env.DEPOSIT_WALLET_ADDRESS_ERC20  ?? "PASTE_YOUR_ERC20_WALLET_ADDRESS_HERE",
+  addressBtc:    process.env.DEPOSIT_WALLET_ADDRESS_BTC    ?? "",
+  addressSol:    process.env.DEPOSIT_WALLET_ADDRESS_SOL    ?? "",
+  addressTon:    process.env.DEPOSIT_WALLET_ADDRESS_TON    ?? "",
+  addressXrp:    process.env.DEPOSIT_WALLET_ADDRESS_XRP    ?? "",
   network: "TRC-20",
   qrImageUrl: "https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Farhan-QR.png",
   minDeposit: 10,
@@ -29,6 +37,10 @@ router.get("/wallet/deposit-info", (_req, res): void => {
   res.json({
     address:      PLATFORM_DEPOSIT.address,
     addressErc20: PLATFORM_DEPOSIT.addressErc20,
+    addressBtc:   PLATFORM_DEPOSIT.addressBtc   || undefined,
+    addressSol:   PLATFORM_DEPOSIT.addressSol   || undefined,
+    addressTon:   PLATFORM_DEPOSIT.addressTon   || undefined,
+    addressXrp:   PLATFORM_DEPOSIT.addressXrp   || undefined,
     network:      PLATFORM_DEPOSIT.network,
     qrImageUrl:   PLATFORM_DEPOSIT.qrImageUrl,
     minDeposit:   PLATFORM_DEPOSIT.minDeposit,
@@ -61,10 +73,11 @@ router.get("/wallet/transactions", authenticate, async (req, res): Promise<void>
 const DepositBody = z.object({
   amount:  z.number().positive().min(PLATFORM_DEPOSIT.minDeposit, `Minimum deposit is ${PLATFORM_DEPOSIT.minDeposit} USDT`),
   txHash:  z.string().min(10, "Please enter a valid transaction hash"),
-  // ETH | BSC | POLYGON | ARBITRUM | OPTIMISM = EVM auto-deposit (verified via evmVerify)
+  // ETH | BSC | POLYGON | ARBITRUM | OPTIMISM | BASE = EVM auto-deposit (verified via evmVerify)
   // TRC-20 = TRON auto or manual deposit (verified via tronVerify)
   // ERC-20 = legacy manual form (falls through to EVM/ETH verifier)
-  network: z.enum(["TRC-20", "ERC-20", "ETH", "BSC", "POLYGON", "ARBITRUM", "OPTIMISM"]).default("TRC-20"),
+  // SOLANA | TON | BTC | XRP = non-EVM chains (verified via dedicated libs)
+  network: z.enum(["TRC-20", "ERC-20", "ETH", "BSC", "POLYGON", "ARBITRUM", "OPTIMISM", "BASE", "SOLANA", "TON", "BTC", "XRP"]).default("TRC-20"),
 });
 
 router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => {
@@ -105,7 +118,15 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
 
   const verification = (network === "TRC-20")
     ? await verifyTronDeposit(txHash, PLATFORM_DEPOSIT.address, amount)
-    : await verifyEvmDeposit(txHash, network === "ERC-20" ? "ETH" : network, PLATFORM_DEPOSIT.addressErc20, amount);
+    : (network === "SOLANA")
+      ? await verifySolanaDeposit(txHash, PLATFORM_DEPOSIT.addressSol, amount)
+      : (network === "TON")
+        ? await verifyTonDeposit(txHash, PLATFORM_DEPOSIT.addressTon, amount)
+        : (network === "BTC")
+          ? await verifyBtcDeposit(txHash, PLATFORM_DEPOSIT.addressBtc, amount)
+          : (network === "XRP")
+            ? await verifyXrpDeposit(txHash, PLATFORM_DEPOSIT.addressXrp, amount)
+            : await verifyEvmDeposit(txHash, network === "ERC-20" ? "ETH" : network, PLATFORM_DEPOSIT.addressErc20, amount);
 
   logger.info({ txHash, verified: verification.verified, note: verification.note, network }, "Verification result");
 
@@ -155,7 +176,7 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
 // ── POST /wallet/deposit/nowpayments/create ───────────────────────────────────
 const ALLOWED_NPP_CURRENCIES = [
   "usdttrc20", "usdterc20", "usdtbsc", "usdtpolygon", "usdtsol", "usdtarbi",
-  "btc", "eth", "bnbbsc", "ltc", "usdtton",
+  "btc", "eth", "bnbbsc", "ltc", "usdtton", "xrp", "usdtbase",
 ] as const;
 
 const NppCreateBody = z.object({
@@ -315,7 +336,7 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
 });
 
 // ── POST /wallet/deposit/plisio/create ───────────────────────────────────────
-const ALLOWED_PLISIO_CURRENCY_VALUES = ["USDTTRC20", "USDTERC20"] as const;
+const ALLOWED_PLISIO_CURRENCY_VALUES = ["USDTTRC20", "USDTERC20", "BTC", "ETH", "LTC", "BNB", "XRP"] as const;
 
 const PlisioCreateBody = z.object({
   amount:   z.number().positive().min(10, "Minimum deposit is 10 USDT"),

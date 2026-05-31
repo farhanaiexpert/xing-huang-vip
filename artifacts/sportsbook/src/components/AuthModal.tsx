@@ -495,7 +495,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                   {step === 'verifying'      && 'Verifying signature…'}
                 </p>
                 <p className="text-[12px] text-[#94A3B8]/45 mt-1">
-                  {step === 'waiting_wallet' && 'Connect any EVM wallet — 5 networks supported'}
+                  {step === 'waiting_wallet' && 'ETH · BSC · Polygon · Arbitrum · Optimism · Base'}
                   {step === 'signing'        && 'Free off-chain signature — zero gas fees'}
                   {step === 'verifying'      && 'Almost there, hold tight'}
                 </p>
@@ -526,7 +526,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                 style={{ background: 'linear-gradient(135deg,#12F0C4 0%,#00DFA9 55%,#00C49A 100%)' }} />
               <Wallet className="relative w-[18px] h-[18px] shrink-0" />
               <span className="relative flex-1 text-center">
-                {isConnected && address ? 'Log In with Wallet' : 'Connect Wallet (ERC-20)'}
+                {isConnected && address ? 'Log In with Wallet' : 'Connect Wallet'}
               </span>
               <ChevronRight className="relative w-[18px] h-[18px] shrink-0 opacity-60" />
             </button>
@@ -545,7 +545,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                   {w.short}
                 </div>
               ))}
-              <span className="text-[10px] text-[#64748B]/70">ETH · BSC · Polygon · Arbitrum · Optimism · TRC-20</span>
+              <span className="text-[10px] text-[#64748B]/70">ETH · BSC · Polygon · Arbitrum · Optimism · Base · TRC-20</span>
             </div>
           )}
 

@@ -209,7 +209,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   // ── Plisio inline flow ───────────────────────────────────────────────────────
   const [plisioAmount, setPlisioAmount] = useState('');
-  const [plisioCurrency, setPlisioCurrency] = useState<'USDTTRC20' | 'USDTERC20'>('USDTTRC20');
+  const [plisioCurrency, setPlisioCurrency] = useState<'USDTTRC20' | 'USDTERC20' | 'BTC' | 'ETH' | 'LTC' | 'BNB' | 'XRP'>('USDTTRC20');
   const [plisioInvoice, setPlisioInvoice] = useState<PlisioInvoice | null>(null);
   const [plisioTimeLeft, setPlisioTimeLeft] = useState(0);
   const [plisioCreating, setPlisioCreating] = useState(false);
@@ -218,7 +218,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   function resetPlisio() {
     setView('methods');
     setPlisioAmount('');
-    setPlisioCurrency('USDTTRC20');
+    setPlisioCurrency('USDTTRC20' as const);
     setPlisioInvoice(null);
     setPlisioTimeLeft(0);
     setPlisioCreating(false);
@@ -390,6 +390,13 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     usdtpolygon: { label: 'Polygon',          color: '#8247E5' },
     usdtsol:     { label: 'Solana SPL',       color: '#9945FF' },
     usdtarbi:    { label: 'Arbitrum',         color: '#28A0F0' },
+    usdtton:     { label: 'TON',              color: '#0098EA' },
+    usdtbase:    { label: 'Base',             color: '#0052FF' },
+    xrp:         { label: 'XRP',             color: '#346AA9' },
+    btc:         { label: 'Bitcoin',          color: '#F7931A' },
+    eth:         { label: 'Ethereum',         color: '#627EEA' },
+    bnbbsc:      { label: 'BNB',             color: '#F0B90B' },
+    ltc:         { label: 'Litecoin',         color: '#A5A9B4' },
   };
   const { label: networkLabel, color: networkColor } = NPP_META[nppCurrency] ?? { label: nppCurrency.toUpperCase(), color: '#38BDF8' };
   const timerPercent = nppPayment
@@ -496,14 +503,20 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">
                       Network
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
                       {([
-                        { val: 'usdttrc20',   label: 'TRC-20',   sub: 'Tron · Best',  color: '#00DFA9' },
-                        { val: 'usdterc20',   label: 'ERC-20',   sub: 'Ethereum',      color: '#627EEA' },
-                        { val: 'usdtbsc',     label: 'BEP-20',   sub: 'BSC',           color: '#F0B90B' },
-                        { val: 'usdtpolygon', label: 'Polygon',  sub: 'MATIC',         color: '#8247E5' },
-                        { val: 'usdtsol',     label: 'Solana',   sub: 'SPL',           color: '#9945FF' },
-                        { val: 'usdtarbi',    label: 'Arbitrum', sub: 'ARB One',       color: '#28A0F0' },
+                        { val: 'usdttrc20',   label: 'TRC-20',   sub: 'Tron·Best',  color: '#00DFA9' },
+                        { val: 'usdterc20',   label: 'ERC-20',   sub: 'Ethereum',   color: '#627EEA' },
+                        { val: 'usdtbsc',     label: 'BEP-20',   sub: 'BSC',        color: '#F0B90B' },
+                        { val: 'usdtpolygon', label: 'Polygon',  sub: 'MATIC',      color: '#8247E5' },
+                        { val: 'usdtarbi',    label: 'Arbitrum', sub: 'ARB One',    color: '#28A0F0' },
+                        { val: 'usdtsol',     label: 'Solana',   sub: 'SPL',        color: '#9945FF' },
+                        { val: 'usdtton',     label: 'TON',      sub: 'TON',        color: '#0098EA' },
+                        { val: 'usdtbase',    label: 'Base',     sub: 'Base',       color: '#0052FF' },
+                        { val: 'btc',         label: 'Bitcoin',  sub: 'BTC',        color: '#F7931A' },
+                        { val: 'eth',         label: 'ETH',      sub: 'Native',     color: '#627EEA' },
+                        { val: 'bnbbsc',      label: 'BNB',      sub: 'BSC',        color: '#F0B90B' },
+                        { val: 'xrp',         label: 'XRP',      sub: 'Ripple',     color: '#346AA9' },
                       ] as { val: string; label: string; sub: string; color: string }[]).map(opt => (
                         <button
                           key={opt.val}
@@ -749,29 +762,34 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">
                       Network
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-4 gap-2">
                       {([
-                        { val: 'USDTTRC20' as const, label: 'TRC-20', sub: 'Tron · Recommended', color: '#00DFA9' },
-                        { val: 'USDTERC20' as const, label: 'ERC-20', sub: 'Ethereum', color: '#627EEA' },
-                      ] as const).map(opt => (
+                        { val: 'USDTTRC20' as const, label: 'TRC-20',  sub: 'Tron·Best', color: '#00DFA9' },
+                        { val: 'USDTERC20' as const, label: 'ERC-20',  sub: 'Ethereum',  color: '#627EEA' },
+                        { val: 'BTC'       as const, label: 'Bitcoin', sub: 'BTC',       color: '#F7931A' },
+                        { val: 'ETH'       as const, label: 'ETH',     sub: 'Native',    color: '#627EEA' },
+                        { val: 'LTC'       as const, label: 'LTC',     sub: 'Litecoin',  color: '#A5A9B4' },
+                        { val: 'BNB'       as const, label: 'BNB',     sub: 'BSC',       color: '#F0B90B' },
+                        { val: 'XRP'       as const, label: 'XRP',     sub: 'Ripple',    color: '#346AA9' },
+                      ]).map(opt => (
                         <button
                           key={opt.val}
                           onClick={() => setPlisioCurrency(opt.val)}
                           disabled={plisioCreating}
-                          className="relative rounded-xl p-3 text-left transition-all"
+                          className="relative rounded-xl p-2.5 text-left transition-all"
                           style={plisioCurrency === opt.val
-                            ? { background: `rgba(${opt.color === '#00DFA9' ? '0,223,169' : '98,126,234'},0.12)`, border: `2px solid ${opt.color}60` }
+                            ? { background: `${opt.color}1A`, border: `2px solid ${opt.color}60` }
                             : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }
                           }
                         >
                           {plisioCurrency === opt.val && (
-                            <span className="absolute top-2 right-2 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                            <span className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full flex items-center justify-center"
                               style={{ background: opt.color }}>
-                              <Check className="w-2 h-2 text-[#0B0F14]" />
+                              <Check className="w-1.5 h-1.5 text-[#0B0F14]" />
                             </span>
                           )}
-                          <p className="text-[13px] font-bold text-[#F8FAFC]">{opt.label}</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: opt.color }}>{opt.sub}</p>
+                          <p className="text-[12px] font-bold text-[#F8FAFC]">{opt.label}</p>
+                          <p className="text-[9px] mt-0.5" style={{ color: opt.color }}>{opt.sub}</p>
                         </button>
                       ))}
                     </div>
