@@ -1003,7 +1003,7 @@ export function LivePage() {
                   style={{ background: 'rgba(255,255,255,0.03)' }}>
                   <Clock className="h-3 w-3 text-[#64748B]" />
                   <span className="font-mono font-bold tabular-nums text-[#94A3B8]">
-                    {secondsAgo < 5 ? 'just now' : `${secondsAgo}s ago`}
+                    {secondsAgo < 5 ? 'just now' : secondsAgo < 60 ? `${secondsAgo}s ago` : `${Math.floor(secondsAgo / 60)}m ${secondsAgo % 60}s ago`}
                   </span>
                   <span className="text-[#475569] text-[10px] hidden sm:inline">updated</span>
                 </div>
@@ -1080,15 +1080,15 @@ export function LivePage() {
                 </h2>
                 <p className="text-[11px] text-[#475569] mt-0.5">
                   {isRealData
-                    ? 'Real in-play events — live scores update every 15 seconds.'
-                    : 'Tap any outcome to add it to your Bet Slip. Live scores refresh every 15 seconds.'}
+                    ? 'Real in-play events — live scores update every 60 seconds.'
+                    : 'Tap any outcome to add it to your Bet Slip. Live scores refresh every 60 seconds.'}
                 </p>
               </div>
               {/* Refresh cadence info */}
               <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border"
                 style={{ background: 'rgba(56,189,248,0.07)', borderColor: 'rgba(56,189,248,0.2)', color: '#38BDF8' }}>
                 <RefreshCw className="h-3 w-3" />
-                15s refresh
+                60s refresh
               </div>
             </div>
 
