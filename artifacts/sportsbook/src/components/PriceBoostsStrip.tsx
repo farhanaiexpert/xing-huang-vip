@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Zap, Clock } from 'lucide-react';
 import { useBetSlip } from '@/hooks/useBetSlip';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 interface PriceBoost {
@@ -41,7 +41,6 @@ function useCountdown(expiresAt: string | null) {
 
 function BoostCard({ boost }: { boost: PriceBoost }) {
   const { addSelection, hasSelection, removeSelection } = useBetSlip();
-  const { toast } = useToast();
   const countdown = useCountdown(boost.expiresAt);
   const selId = `boost-${boost.id}`;
   const isSelected = hasSelection(selId);
@@ -64,7 +63,7 @@ function BoostCard({ boost }: { boost: PriceBoost }) {
       selectionName: `${boost.selectionName} (Boosted)`,
       odds: bstOdds,
     });
-    toast({ description: `${boost.selectionName} @ ${bstOdds.toFixed(2)} added to slip`, duration: 2000 });
+    toast(`${boost.selectionName} @ ${bstOdds.toFixed(2)} added to slip`, { duration: 2000 });
   }
 
   return (

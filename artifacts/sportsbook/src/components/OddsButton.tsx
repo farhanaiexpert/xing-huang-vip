@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Lock } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
-import { useToast } from '../hooks/use-toast';
+import { toast } from 'sonner';
 import { useOddsSimulation, getMovement, getOddsDelta } from '../hooks/useOddsSimulation';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { formatOdds } from '../lib/oddsFormat';
@@ -28,7 +28,6 @@ export function OddsButton({
   selectionType, selectionName, odds, isLive = false, className, sportId, kickoffTime,
 }: OddsButtonProps) {
   const { addSelection, removeSelection, hasSelection, updateSelectionOdds } = useBetSlip();
-  const { toast } = useToast();
   const { tick, suspendedMarketIds } = useOddsSimulation();
   const [isPulsing,  setIsPulsing]  = useState(false);
   const [flashDir,   setFlashDir]   = useState<'up' | 'down' | null>(null);
@@ -96,10 +95,7 @@ export function OddsButton({
       });
       setIsPulsing(true);
       setTimeout(() => setIsPulsing(false), 280);
-      toast({
-        description: `${selectionName} @ ${displayOdds.toFixed(2)} added to slip`,
-        duration: 2000,
-      });
+      toast(`${selectionName} @ ${displayOdds.toFixed(2)} added to slip`, { duration: 2000 });
     }
   };
 

@@ -95,7 +95,7 @@ function App() {
                             <ProfileSetupModal />
                             <Toaster />
                             <SonnerToaster
-                              position="top-right"
+                              position="top-left"
                               toastOptions={{
                                 style: {
                                   background: '#0D1A26',
