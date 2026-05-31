@@ -121,11 +121,6 @@ export function OverviewPage() {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <h1 className="text-[22px] font-black text-[#F8FAFC] leading-tight">{displayLabel}</h1>
-              {user?.walletAddress && (
-                <p className="text-[11px] font-mono text-[#00DFA9]/50 mt-0.5 truncate">
-                  {user.walletAddress}
-                </p>
-              )}
 
               <div className="flex flex-wrap items-center gap-3 mt-3">
                 {/* Member since */}

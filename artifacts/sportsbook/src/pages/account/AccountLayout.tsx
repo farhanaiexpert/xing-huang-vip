@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBetHistory } from '@/hooks/useBetHistory';
 import { Header } from '@/components/Header';
-import { cn, userDisplayLabel, shortAddress, addressInitials } from '@/lib/utils';
+import { cn, userDisplayLabel, addressInitials } from '@/lib/utils';
 import {
   LayoutDashboard, Wallet, Receipt, ArrowLeftRight,
   Users, Gift, Star, Trophy, Settings, LogOut, Shield, BarChart2,
@@ -137,11 +137,6 @@ export function AccountLayout() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[13px] font-bold text-[#F8FAFC] truncate">{displayLabel}</p>
-                  {user.walletAddress && (
-                    <p className="text-[10px] text-[#00DFA9]/60 font-mono truncate">
-                      {shortAddress(user.walletAddress)}
-                    </p>
-                  )}
                 </div>
               </div>
               {user.referralCode && (

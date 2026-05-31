@@ -60,17 +60,5 @@ export function useEvmWallet() {
     setState({ address: undefined, isConnected: false, chainId: 1 });
   }, []);
 
-  const signMessage = useCallback(async (message: string): Promise<string> => {
-    const e = getEth();
-    if (!e) throw new Error('No EVM wallet detected');
-    const accounts: string[] = await e.request({ method: 'eth_accounts' });
-    const from = accounts[0] ?? state.address;
-    if (!from) throw new Error('Wallet not connected');
-    const msgHex = '0x' + Array.from(new TextEncoder().encode(message))
-      .map((b: number) => b.toString(16).padStart(2, '0')).join('');
-    const sig: string = await e.request({ method: 'personal_sign', params: [msgHex, from] });
-    return sig;
-  }, [state.address]);
-
-  return { ...state, connect, disconnect, signMessage };
+  return { ...state, connect, disconnect };
 }

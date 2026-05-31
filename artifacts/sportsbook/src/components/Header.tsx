@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'wouter';
 import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft, Clock } from 'lucide-react';
-import { AuthModal } from './AuthModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { NotificationBell } from './NotificationBell';
 import { useWallet } from '../hooks/useWallet';
@@ -85,23 +84,8 @@ export function Header() {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const { logout, user } = useAuth();
   const pendingDeposit = usePendingNppDeposit();
-  const [, setLocation] = useLocation();
   const { format, setFormat } = useOddsFormat();
 
-  // After login, redirect to the page the user was trying to reach (e.g. /account)
-  const prevUserId = useRef<number | null>(null);
-  useEffect(() => {
-    const currentId = user?.id ?? null;
-    if (prevUserId.current === null && currentId !== null) {
-      const returnTo = sessionStorage.getItem('cb_return_to');
-      if (returnTo && returnTo !== '/' && returnTo !== '') {
-        sessionStorage.removeItem('cb_return_to');
-        setLocation(returnTo);
-      }
-    }
-    prevUserId.current = currentId;
-  }, [user, setLocation]);
-  const [isAuthOpen,       setIsAuthOpen]       = useState(false);
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
   const [showSearch,       setShowSearch]       = useState(false);
 
@@ -127,13 +111,6 @@ export function Header() {
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // Listen for external login-modal open requests (e.g. from AccountLayout auth guard)
-  useEffect(() => {
-    function handler() { setIsAuthOpen(true); }
-    window.addEventListener('openLoginModal', handler);
-    return () => window.removeEventListener('openLoginModal', handler);
   }, []);
 
   // Focus search input when opened
@@ -424,15 +401,6 @@ export function Header() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                {/* Sign In — smaller ghost button */}
-                <button
-                  onClick={() => setIsAuthOpen(true)}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-white/[0.12] text-[#94A3B8] text-xs font-semibold hover:border-white/[0.25] hover:text-[#F8FAFC] hover:bg-white/[0.05] transition-all duration-150"
-                >
-                  <User className="h-3 w-3 shrink-0" />
-                  <span className="hidden sm:inline">Sign In</span>
-                </button>
-
                 {/* Connect Wallet — opens payment methods modal */}
                 <button
                   data-testid="button-connect-wallet-header"
@@ -452,7 +420,6 @@ export function Header() {
         </div>
       </header>
 
-      <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <ConnectWalletModal open={isPaymentOpen} onOpenChange={setIsPaymentOpen} />
     </>
   );
