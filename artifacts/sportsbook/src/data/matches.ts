@@ -563,32 +563,7 @@ export const MATCH_CR2: MatchEntity = {
 // MASTER COLLECTION
 // ═════════════════════════════════════════════════════════════════════════════
 
-export const ALL_MATCHES: MatchEntity[] = [
-  // Premier League
-  MATCH_M1, MATCH_M2, MATCH_M3, MATCH_M3B,
-  // La Liga
-  MATCH_M4, MATCH_M5, MATCH_M5B,
-  // Champions League
-  MATCH_M6, MATCH_M7, MATCH_M7B,
-  // Serie A
-  MATCH_SA1, MATCH_SA2, MATCH_SA3,
-  // Bundesliga
-  MATCH_BL1, MATCH_BL2, MATCH_BL3, MATCH_BL4,
-  // Ligue 1
-  MATCH_LF1, MATCH_LF2, MATCH_LF3, MATCH_LF4,
-  // NBA
-  MATCH_M8, MATCH_M9, MATCH_M9B,
-  // Tennis
-  MATCH_M10, MATCH_M11, MATCH_M11B, MATCH_M11C,
-  // CS2
-  MATCH_M12, MATCH_M13, MATCH_M13B,
-  // LoL Worlds
-  MATCH_LOL1, MATCH_LOL2, MATCH_LOL3,
-  // Horse Racing
-  MATCH_M14, MATCH_M15, MATCH_M16, MATCH_M17, MATCH_M18,
-  // Cricket
-  MATCH_CR1, MATCH_CR2,
-];
+export const ALL_MATCHES: MatchEntity[] = [];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECONDARY MARKETS

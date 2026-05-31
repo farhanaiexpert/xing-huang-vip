@@ -11,6 +11,7 @@ import { SportQuickNav } from "./SportQuickNav";
 import { TennisHighlights } from "./TennisHighlights";
 import { SoccerHighlights } from "./SoccerHighlights";
 import { NBAHighlights } from "./NBAHighlights";
+import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { FlashOdds } from "./FlashOdds";
 import { JackpotPool } from "./JackpotPool";
 import { PriceBoostsStrip } from "./PriceBoostsStrip";
@@ -628,11 +629,15 @@ export function MainContent({
               {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
               {showFeatured && hasRealData && <TopMatchesBanner leagues={realLeagues} />}
+              {showFeatured && <EuropaLeagueFinal />}
               {showFeatured && <SoccerHighlights />}
               {showFeatured && <TennisHighlights />}
               {showFeatured && <NBAHighlights />}
               {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights />
+              )}
+              {!search.trim() && selectedSportId === "ucl-final" && (
+                <EuropaLeagueFinal />
               )}
               {!search.trim() && selectedSportId === "tennis" && (
                 <TennisHighlights />
