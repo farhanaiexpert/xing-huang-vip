@@ -1,17 +1,16 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  Home, Receipt,
+  Home, Grid3X3, Receipt, Gift, MoreHorizontal,
   History, HelpCircle, Star, FileText, ShieldCheck,
   Landmark, ChevronRight, Wallet, X, Zap, Check,
-  TrendingUp, Share2, UserCircle, Radio, Search,
+  TrendingUp, Share2, UserCircle, Radio,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useBetHistory } from '../hooks/useBetHistory';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { useI18n } from '../contexts/I18nContext';
-import { useOddsData } from '../hooks/useOddsData';
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from './ui/drawer';
 import { BetSlip } from './BetSlip';
 import { SPORTS } from '../data/mockData';
@@ -49,11 +48,6 @@ export function MobileBottomNav() {
   const { isConnected, shortAddress, connect } = useWallet();
   const { format, setFormat } = useOddsFormat();
   const { t } = useI18n();
-  const { allLeagues } = useOddsData();
-  const liveCount = useMemo(
-    () => allLeagues.flatMap(l => l.matches).filter(m => m.isLive).length,
-    [allLeagues],
-  );
   const [betSlipOpen, setBetSlipOpen] = useState(false);
   const [sportsOpen,  setSportsOpen]  = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
@@ -65,18 +59,6 @@ export function MobileBottomNav() {
     }
     prevCountRef.current = selections.length;
   }, [selections.length]);
-
-  useEffect(() => {
-    function handler() { setSportsOpen(true); }
-    window.addEventListener('open-sports-drawer', handler);
-    return () => window.removeEventListener('open-sports-drawer', handler);
-  }, []);
-
-  useEffect(() => {
-    function handler() { setMoreOpen(true); }
-    window.addEventListener('open-more-drawer', handler);
-    return () => window.removeEventListener('open-more-drawer', handler);
-  }, []);
 
   function handleSelectSport(sportId: string) {
     window.dispatchEvent(new CustomEvent('mobile-sport-select', { detail: sportId }));
@@ -109,21 +91,15 @@ export function MobileBottomNav() {
             <span>{t('Home')}</span>
           </Link>
 
-          <Link href="/live"
+          <button
+            onClick={() => setSportsOpen(true)}
             className={cn(
               'flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150',
-              location === '/live' && !isBetSlipTab && !isMoreTab ? 'text-[#EF4444]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
+              isSportsTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
             )}>
-            <div className="relative">
-              <Radio className="h-5 w-5" />
-              {liveCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-[#EF4444] border border-[#0B0F14] text-white text-[8px] font-bold flex items-center justify-center px-0.5 tabular-nums">
-                  {liveCount > 9 ? '9+' : liveCount}
-                </span>
-              )}
-            </div>
-            <span>Live</span>
-          </Link>
+            <Grid3X3 className="h-5 w-5" />
+            <span>{t('Sports')}</span>
+          </button>
 
           {/* Bet Slip — centre accent tab */}
           <button onClick={() => setBetSlipOpen(true)} className="flex-1 flex flex-col items-center justify-center gap-0.5">
@@ -161,6 +137,16 @@ export function MobileBottomNav() {
             <span>{t('Account')}</span>
           </Link>
 
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={cn(
+              'flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150',
+              isMoreTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
+            )}>
+            <MoreHorizontal className="h-5 w-5" />
+            <span>{t('More')}</span>
+          </button>
+
         </div>
       </nav>
 
@@ -189,16 +175,24 @@ export function MobileBottomNav() {
             <div className="w-10 h-1 rounded-full bg-[#253241]" />
           </div>
           <div className="px-4 pb-3 shrink-0 border-b border-[#253241]/60">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-[15px] font-bold text-[#F8FAFC]">Browse Sports</h2>
-              <button onClick={() => setSportsOpen(false)} className="p-1.5 rounded-lg text-[#94A3B8]/50 hover:text-[#F8FAFC] hover:bg-[#253241]/50 transition-all">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <SportsSearch onSelect={handleSelectSport} />
+            <h2 className="text-[15px] font-bold text-[#F8FAFC]">Browse Sports</h2>
+            <p className="text-[12px] text-[#94A3B8]/60 mt-0.5">Tap a sport to filter matches</p>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <SportsGrid onSelect={handleSelectSport} />
+            <div className="grid grid-cols-3 gap-2.5 p-4 pb-8">
+              <button onClick={() => handleSelectSport('all')}
+                className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/30 transition-all active:scale-95">
+                <span className="text-2xl">🏆</span>
+                <span className="text-[11px] font-semibold text-[#00DFA9] text-center leading-tight">All Sports</span>
+              </button>
+              {SPORTS.map(sport => (
+                <button key={sport.id} onClick={() => handleSelectSport(sport.id)}
+                  className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#00DFA9]/30 hover:bg-[#18212B] active:scale-95 transition-all duration-150">
+                  <span className="text-2xl">{sport.icon}</span>
+                  <span className="text-[11px] font-medium text-[#94A3B8] text-center leading-tight">{sport.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </DrawerContent>
       </Drawer>
@@ -410,66 +404,5 @@ export function MobileBottomNav() {
         </DrawerContent>
       </Drawer>
     </>
-  );
-}
-
-// ── SportsSearch — search input + filtered suggestions ───────────────────────
-function SportsSearch({ onSelect }: { onSelect: (id: string) => void }) {
-  const [q, setQ] = useState('');
-  const filtered = q.trim()
-    ? SPORTS.filter(s => s.name.toLowerCase().includes(q.toLowerCase()))
-    : [];
-
-  return (
-    <div>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/40 pointer-events-none" />
-        <input
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="Search sports…"
-          className="w-full pl-9 pr-8 h-9 rounded-xl text-sm bg-[#121821] border border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 outline-none focus:border-[#00DFA9]/50 transition-colors"
-        />
-        {q && (
-          <button onClick={() => setQ('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8]/40 hover:text-[#94A3B8]">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-      {filtered.length > 0 && (
-        <div className="mt-2 rounded-xl bg-[#121821] border border-[#253241] overflow-hidden">
-          {filtered.slice(0, 6).map(sport => (
-            <button
-              key={sport.id}
-              onClick={() => { onSelect(sport.id); setQ(''); }}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-left hover:bg-[#18212B] transition-colors border-b border-[#253241]/40 last:border-0"
-            >
-              <span className="text-lg shrink-0">{sport.icon}</span>
-              <span className="text-[13px] font-medium text-[#F8FAFC]">{sport.name}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── SportsGrid — 3-col grid of all sports ────────────────────────────────────
-function SportsGrid({ onSelect }: { onSelect: (id: string) => void }) {
-  return (
-    <div className="grid grid-cols-3 gap-2.5 p-4 pb-8">
-      <button onClick={() => onSelect('all')}
-        className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/30 transition-all active:scale-95">
-        <span className="text-2xl">🏆</span>
-        <span className="text-[11px] font-semibold text-[#00DFA9] text-center leading-tight">All Sports</span>
-      </button>
-      {SPORTS.map(sport => (
-        <button key={sport.id} onClick={() => onSelect(sport.id)}
-          className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#00DFA9]/30 hover:bg-[#18212B] active:scale-95 transition-all duration-150">
-          <span className="text-2xl">{sport.icon}</span>
-          <span className="text-[11px] font-medium text-[#94A3B8] text-center leading-tight">{sport.name}</span>
-        </button>
-      ))}
-    </div>
   );
 }

@@ -157,19 +157,19 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       </div>
 
       {/* Odds buttons */}
-      <div className={cn('flex items-center gap-1.5 shrink-0', isSoccer ? 'w-[160px] sm:w-[192px]' : 'w-[110px] sm:w-[126px]')}>
+      <div className="flex items-center gap-1.5 shrink-0" style={{ width: isSoccer ? '192px' : '126px' }}>
         {isSoccer ? (
           <>
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
             <OddsButton {...sharedOddsProps} selectionType="X" selectionName="Draw"                         odds={match.odds.draw ?? 0} />
             <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
-            <div className="hidden sm:block w-[18px]" />
+            <div className="w-[18px]" />
           </>
         ) : (
           <>
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
             <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
-            <div className="hidden sm:block w-[12px]" />
+            <div className="w-[12px]" />
           </>
         )}
       </div>

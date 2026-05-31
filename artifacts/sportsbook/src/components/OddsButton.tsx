@@ -67,13 +67,13 @@ export function OddsButton({
     prevOddsRef.current = displayOdds;
   }, [displayOdds]);
 
-  if (!odds) return <div className={cn('h-10 sm:h-9 w-[52px] rounded-lg', className)} />;
+  if (!odds) return <div className={cn('h-9 w-[52px] rounded-lg', className)} />;
 
   // ── Suspended state ──────────────────────────────────────────────────────────
   if (isSuspended) {
     return (
       <div className={cn(
-        'w-[52px] h-10 sm:h-9 flex items-center justify-center rounded-lg select-none',
+        'w-[52px] h-9 flex items-center justify-center rounded-lg select-none',
         'bg-[#1A2030] border border-[#253241]/50 text-[#94A3B8]/20',
         className
       )}>
@@ -121,7 +121,7 @@ export function OddsButton({
       onClick={handleClick}
       data-testid={`odds-btn-${matchId}-${selectionType}`}
       className={cn(
-        'relative w-[52px] h-10 sm:h-9 flex flex-col items-center justify-center rounded-lg select-none overflow-hidden',
+        'relative w-[52px] h-9 flex flex-col items-center justify-center rounded-lg select-none overflow-hidden',
         'transition-all duration-200',
         isSelected
           ? [
