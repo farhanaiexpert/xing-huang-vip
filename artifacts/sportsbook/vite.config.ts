@@ -52,21 +52,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Web3 wallet stack (largest group — reown appkit + wagmi adapters)
-          if (
-            id.includes("node_modules/@reown/") ||
-            id.includes("node_modules/@wagmi/") ||
-            id.includes("node_modules/wagmi/")
-          ) {
-            return "vendor-wallet";
-          }
-          // Crypto primitives (viem + ox — used heavily by wagmi)
-          if (
-            id.includes("node_modules/viem/") ||
-            id.includes("node_modules/ox/")
-          ) {
-            return "vendor-crypto";
-          }
           // Radix UI component primitives
           if (id.includes("node_modules/@radix-ui/")) {
             return "vendor-radix";

@@ -9,8 +9,7 @@ import {
 } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { useAuth } from '../contexts/AuthContext';
-import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react';
-import { useDisconnect } from 'wagmi';
+import { useEvmWallet } from '../hooks/useEvmWallet';
 import { useAutoDeposit } from '../hooks/useAutoDeposit';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../lib/apiClient';
@@ -131,10 +130,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   const [authOpen, setAuthOpen] = useState(false);
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const { open: openReown } = useAppKit();
-  const { address, isConnected } = useAppKitAccount();
-  const { open: reownModalOpen } = useAppKitState();
-  const { disconnect } = useDisconnect();
+  const evmWallet = useEvmWallet();
+  const { address, isConnected } = evmWallet;
   const { refreshBalance } = useWallet();
 
   const [connecting, setConnecting] = useState(false);
@@ -162,23 +159,18 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     onClose?.();
   }
 
-  function handleConnectWallet() {
+  async function handleConnectWallet() {
     if (!user) { setAuthOpen(true); return; }
     close();
     setConnecting(true);
-    setTimeout(() => openReown(), 120);
+    await evmWallet.connect();
+    setConnecting(false);
   }
 
   function handleDisconnect() {
-    disconnect();
+    evmWallet.disconnect();
     resetDeposit();
   }
-
-  useEffect(() => {
-    if (!reownModalOpen && connecting && !isConnected) {
-      setConnecting(false);
-    }
-  }, [reownModalOpen, connecting, isConnected]);
 
   useEffect(() => {
     if (!isConnected) resetDeposit();
@@ -1501,7 +1493,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             </div>
                             <div className="flex gap-1.5 shrink-0">
                               <button
-                                onClick={() => { if (!isProcessing) openReown(); }}
+                                onClick={() => { if (!isProcessing) void evmWallet.connect(); }}
                                 disabled={isProcessing}
                                 className="px-2 py-1 rounded-lg text-[10px] font-bold text-[#94A3B8] bg-white/[0.04] border border-white/[0.10] hover:border-white/[0.20] hover:text-[#F8FAFC] transition-all disabled:opacity-50 flex items-center gap-1"
                               >

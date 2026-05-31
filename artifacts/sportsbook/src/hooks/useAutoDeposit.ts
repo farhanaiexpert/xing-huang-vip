@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useChainId, useWriteContract, useConfig } from 'wagmi';
-import { waitForTransactionReceipt } from 'wagmi/actions';
 import { useWallet } from './useWallet';
 import { useToast } from './use-toast';
 import { api } from '../lib/apiClient';
@@ -60,12 +58,36 @@ interface UseAutoDepositOptions {
   onSuccess?: (result: DepositResult) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getEth(): any { return typeof window !== 'undefined' ? (window as any).ethereum ?? null : null; }
+
+function encodeTransfer(to: string, amount: bigint): string {
+  const toHex = to.toLowerCase().replace('0x', '').padStart(64, '0');
+  const amtHex = amount.toString(16).padStart(64, '0');
+  return '0xa9059cbb' + toHex + amtHex;
+}
+
+async function waitForConfirmations(txHash: string, minConfirmations: number): Promise<void> {
+  const e = getEth();
+  if (!e) throw new Error('No EVM wallet');
+  for (let i = 0; i < 120; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const receipt = await e.request({ method: 'eth_getTransactionReceipt', params: [txHash] }) as { blockNumber?: string } | null;
+      if (!receipt?.blockNumber) continue;
+      const receiptBlock = parseInt(receipt.blockNumber, 16);
+      const currentBlockHex: string = await e.request({ method: 'eth_blockNumber' });
+      const confirmations = parseInt(currentBlockHex, 16) - receiptBlock + 1;
+      if (confirmations >= minConfirmations) return;
+    } catch { /* keep polling */ }
+  }
+  throw new Error('Transaction confirmation timed out. Your funds are safe — please use Manual Deposit and paste the TxHash.');
+}
+
 export function useAutoDeposit(options?: UseAutoDepositOptions) {
   const { refreshBalance } = useWallet();
   const { toast } = useToast();
-  const wagmiConfig = useConfig();
-  const chainId = useChainId();
-  const { writeContractAsync } = useWriteContract();
+  const [chainId, setChainId] = useState<number>(1);
 
   const [depositAmount, setDepositAmount] = useState('50');
   const [depositPhase, setDepositPhase] = useState<DepositPhase>('idle');
@@ -85,9 +107,18 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ton = (window as any).ton;
     setHasTon(!!(ton?.send));
+
+    const e = getEth();
+    if (!e) return;
+    e.request({ method: 'eth_chainId' })
+      .then((hex: string) => setChainId(parseInt(hex, 16)))
+      .catch(() => {});
+    const onChain = (hex: string) => setChainId(parseInt(hex, 16));
+    e.on?.('chainChanged', onChain);
+    return () => e.removeListener?.('chainChanged', onChain);
   }, []);
 
-  const chainCfg = chainId ? EVM_CHAINS[chainId] : null;
+  const chainCfg = EVM_CHAINS[chainId] ?? null;
   const isProcessing = depositPhase === 'sending' || depositPhase === 'confirming' || depositPhase === 'submitting';
 
   async function submitToBackend(txHash: string, amount: number, network: string) {
@@ -119,22 +150,26 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
       setDepositError('Your wallet is on an unsupported network. Switch to Ethereum mainnet to deposit ERC-20 USDT.');
       return;
     }
+    const e = getEth();
+    if (!e) { setDepositError('No EVM wallet detected. Please install MetaMask.'); return; }
+
     setDepositPhase('sending');
     setDepositError(null);
     try {
+      const accounts: string[] = await e.request({ method: 'eth_requestAccounts' });
+      if (!accounts.length) throw new Error('No accounts found');
       const rawAmount = toBaseUnits(amount, chainCfg.decimals);
-      const txHash = await writeContractAsync({
-        address: chainCfg.address,
-        abi: USDT_ABI,
-        functionName: 'transfer',
-        args: [ERC20_ADDRESS as `0x${string}`, rawAmount],
+      const data = encodeTransfer(ERC20_ADDRESS, rawAmount);
+      const txHash: string = await e.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: accounts[0], to: chainCfg.address, data }],
       });
       setDepositPhase('confirming');
-      await waitForTransactionReceipt(wagmiConfig, { hash: txHash, confirmations: chainCfg.minConfirmations });
+      await waitForConfirmations(txHash, chainCfg.minConfirmations);
       await submitToBackend(txHash, amount, chainCfg.network);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes('user rejected') || msg.toLowerCase().includes('user denied')) {
+      if (msg.toLowerCase().includes('user rejected') || msg.toLowerCase().includes('user denied') || msg.toLowerCase().includes('rejected')) {
         setDepositError('Transaction was rejected in your wallet.');
       } else if (msg.toLowerCase().includes('insufficient')) {
         setDepositError('Insufficient USDT balance in your wallet for this amount.');

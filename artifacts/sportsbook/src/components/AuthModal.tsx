@@ -4,8 +4,7 @@ import {
   ChevronRight, PenLine, ShieldCheck, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAppKit, useAppKitAccount, useAppKitState } from '@reown/appkit/react';
-import { useSignMessage, useChainId } from 'wagmi';
+import { useEvmWallet } from '../hooks/useEvmWallet';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import { api, setTokens } from '../lib/apiClient';
 import { shortAddress } from '../lib/utils';
@@ -57,11 +56,8 @@ function getFlowStep(step: Step): number {
 
 export function AuthModal({ open, onClose }: AuthModalProps) {
   const { loginWithWallet } = useAuth();
-  const { open: openAppKit }      = useAppKit();
-  const { address, isConnected }  = useAppKitAccount();
-  const { open: appKitModalOpen } = useAppKitState();
-  const { signMessageAsync }      = useSignMessage();
-  const chainId                   = useChainId();
+  const evmWallet                = useEvmWallet();
+  const { address, isConnected } = evmWallet;
 
   const [step,  setStep]  = useState<Step>('idle');
   const [error, setError] = useState('');
@@ -99,25 +95,6 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     }
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    if (!waitingForConnect.current) return;
-    if (appKitModalOpen) return;
-    if (!isConnected || !address) return;
-    waitingForConnect.current = false;
-    void handleSign(address);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appKitModalOpen, isConnected, address, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    if (step !== 'waiting_wallet') return;
-    if (appKitModalOpen) return;
-    if (isConnected && address) return;
-    setStep('idle');
-    waitingForConnect.current = false;
-  }, [appKitModalOpen, step, isConnected, address, open]);
-
   async function handleSign(addr: string) {
     setError('');
     setStep('signing');
@@ -125,13 +102,13 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       const { nonce, message } = await api.get<{ nonce: string; message: string }>(
         `/auth/wallet/nonce?address=${addr.toLowerCase()}`
       );
-      const signature = await signMessageAsync({ message });
+      const signature = await evmWallet.signMessage(message);
       setStep('verifying');
       const data = await api.post<WalletVerifyResponse>('/auth/wallet/verify', {
         address: addr.toLowerCase(),
         signature,
         nonce,
-        chainId,
+        chainId: evmWallet.chainId,
       });
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
@@ -349,9 +326,11 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
     if (isConnected && address) {
       void handleSign(address);
     } else {
-      waitingForConnect.current = true;
       setStep('waiting_wallet');
-      openAppKit();
+      evmWallet.connect().then(addr => {
+        if (addr) void handleSign(addr);
+        else setStep('idle');
+      });
     }
   }
 

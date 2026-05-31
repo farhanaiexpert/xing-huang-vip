@@ -3,8 +3,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
-import { useAppKitAccount, useAppKit } from '@reown/appkit/react';
-import { useReadContract } from 'wagmi';
+import { useEvmWallet } from '@/hooks/useEvmWallet';
 import { useAutoDeposit, USDT_ABI, TRON_USDT_CONTRACT } from '@/hooks/useAutoDeposit';
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
@@ -174,8 +173,9 @@ export function WalletPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const [, navigate] = useLocation();
-  const { address: w3Address, isConnected: w3Connected } = useAppKitAccount();
-  const { open: openReown } = useAppKit();
+  const evmWallet = useEvmWallet();
+  const w3Address   = evmWallet.address;
+  const w3Connected = evmWallet.isConnected;
   const {
     depositAmount: walletDepAmount, setDepositAmount: setWalletDepAmount,
     depositPhase: walletPhase, depositError: walletError, depositResult: walletResult,
@@ -183,14 +183,17 @@ export function WalletPage() {
     handleEvmDeposit, handleTronDeposit, resetDeposit: resetWalletDeposit,
   } = useAutoDeposit({ onSuccess: loadData });
 
-  // ── EVM USDT balance (wagmi read) ────────────────────────────────────────
-  const { data: evmBalanceRaw } = useReadContract({
-    address: chainCfg?.address,
-    abi: USDT_ABI,
-    functionName: 'balanceOf',
-    args: w3Address ? [w3Address as `0x${string}`] : undefined,
-    query: { enabled: !!chainCfg && !!w3Address && w3Connected },
-  });
+  // ── EVM USDT balance (eth_call) ───────────────────────────────────────────
+  const [evmBalanceRaw, setEvmBalanceRaw] = useState<bigint | undefined>(undefined);
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const e = typeof window !== 'undefined' ? (window as any).ethereum : null;
+    if (!e || !w3Address || !w3Connected || !chainCfg) { setEvmBalanceRaw(undefined); return; }
+    const owner = w3Address.toLowerCase().replace('0x', '').padStart(64, '0');
+    e.request({ method: 'eth_call', params: [{ to: chainCfg.address, data: '0x70a08231' + owner }, 'latest'] })
+      .then((hex: string) => { if (hex && hex !== '0x') setEvmBalanceRaw(BigInt(hex)); })
+      .catch(() => {});
+  }, [w3Address, w3Connected, chainCfg]);
   const evmBalance = (evmBalanceRaw !== undefined && chainCfg)
     ? Number(evmBalanceRaw) / Math.pow(10, chainCfg.decimals)
     : null;
@@ -862,7 +865,7 @@ export function WalletPage() {
                       </p>
                     </div>
                     <button
-                      onClick={() => openReown()}
+                      onClick={() => void evmWallet.connect()}
                       className="flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-black text-white transition-all hover:scale-[1.02]"
                       style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)', boxShadow: '0 0 20px rgba(124,58,237,0.4)' }}
                     >
