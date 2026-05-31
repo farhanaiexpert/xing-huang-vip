@@ -17,16 +17,45 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Google Translate: suppress toolbar banner & force body position -->
+    <!-- Google Translate: suppress ALL branding, toolbar, spinner, tooltips -->
     <style>
+      /* Banner / toolbar iframe */
       .goog-te-banner-frame,
       .goog-te-banner-frame.skiptranslate,
-      .skiptranslate > iframe { display: none !important; visibility: hidden !important; }
+      .skiptranslate > iframe,
+      iframe.skiptranslate { display: none !important; visibility: hidden !important; }
+
+      /* Keep body flush — Google pushes it down by 40px */
       body { top: 0px !important; }
+
+      /* Hide the hidden mount point & its gadget */
       #google_translate_element { display: none !important; }
-      .goog-te-gadget { display: none !important; }
-      .goog-logo-link { display: none !important; }
-      #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+      .goog-te-gadget,
+      .goog-te-gadget-icon,
+      .goog-logo-link,
+      .goog-logo-link:link,
+      .goog-logo-link:visited { display: none !important; }
+
+      /* Tooltip popup that appears on selected text */
+      #goog-gt-tt,
+      .goog-te-balloon-frame,
+      .goog-tooltip,
+      .goog-tooltip-content,
+      .goog-tooltip-container { display: none !important; }
+
+      /* Loading spinner shown top-right during translation */
+      .goog-te-spinner,
+      .goog-te-spinner-pos,
+      .goog-te-spinner-animation { display: none !important; }
+
+      /* Menu frame dropdown */
+      .goog-te-menu-frame,
+      .goog-te-menu2 { display: none !important; }
+
+      /* Catch-all for any remaining VIpgJd-prefixed Google widget elements */
+      [class*="VIpgJd"] { display: none !important; }
+
+      /* Prevent colour bleed from Google's injected <font> tags */
       font[color] { color: inherit !important; }
     </style>
 
@@ -48,21 +77,47 @@
         );
       }
 
-      // MutationObserver: continuously fight Google's dynamic body.style.top offset
-      // and ensure the banner iframe stays hidden after translation kicks in.
+      // MutationObserver: aggressively suppress every Google Translate UI element.
       (function () {
-        function suppressGoogleBar() {
+        var HIDE_SELECTORS = [
+          '.goog-te-banner-frame',
+          '.skiptranslate > iframe',
+          'iframe.skiptranslate',
+          '#goog-gt-tt',
+          '.goog-te-balloon-frame',
+          '.goog-tooltip',
+          '.goog-tooltip-content',
+          '.goog-tooltip-container',
+          '.goog-te-spinner',
+          '.goog-te-spinner-pos',
+          '.goog-te-spinner-animation',
+          '.goog-te-menu-frame',
+          '.goog-te-menu2',
+          '.goog-te-gadget',
+          '.goog-logo-link',
+        ].join(',');
+
+        function suppressAll() {
+          // Force body back to top — Google offsets it when the bar would show
           if (document.body && document.body.style.top !== '0px') {
             document.body.style.setProperty('top', '0px', 'important');
           }
-          document.querySelectorAll('.goog-te-banner-frame, .skiptranslate > iframe').forEach(function (el) {
+          // Hide every known Google Translate UI node
+          document.querySelectorAll(HIDE_SELECTORS).forEach(function (el) {
             el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+          });
+          // Hide any VIpgJd-prefixed elements (internal Google widget classes)
+          document.querySelectorAll('[class]').forEach(function (el) {
+            if (el.className && typeof el.className === 'string' && el.className.indexOf('VIpgJd') !== -1) {
+              el.style.setProperty('display', 'none', 'important');
+            }
           });
         }
 
-        var obs = new MutationObserver(suppressGoogleBar);
+        var obs = new MutationObserver(suppressAll);
         document.addEventListener('DOMContentLoaded', function () {
-          suppressGoogleBar();
+          suppressAll();
           obs.observe(document.body, { attributes: true, attributeFilter: ['style'], childList: true, subtree: true });
         });
       })();
