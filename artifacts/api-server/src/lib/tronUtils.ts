@@ -10,8 +10,8 @@
  * hashing with the TRON prefix.
  */
 
-import { createHash }                   from "node:crypto";
-import { keccak256, recoverAddress, toBytes } from "viem";
+import { createHash }              from "node:crypto";
+import { keccak256, recoverAddress } from "viem";
 
 // ── Base58 / Base58Check ────────────────────────────────────────────────────
 
@@ -73,10 +73,7 @@ export function isTronAddress(addr: string): boolean {
  */
 function tronMessageHash(message: string): `0x${string}` {
   const prefix = `\x19TRON Signed Message:\n${message.length}`;
-  const bytes = toBytes(`${prefix}${message}`, { size: undefined } as never);
-  // toBytes won't work for arbitrary strings directly — use TextEncoder
-  const encoder = new TextEncoder();
-  const combined = encoder.encode(prefix + message);
+  const combined = new TextEncoder().encode(prefix + message);
   return keccak256(combined);
 }
 

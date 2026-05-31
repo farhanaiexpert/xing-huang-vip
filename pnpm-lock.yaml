@@ -847,6 +847,9 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.20.0)(pg@8.20.0)
+      viem:
+        specifier: ^2.51.3
+        version: 2.51.3(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
       '@types/bcryptjs':
         specifier: ^2.4.6

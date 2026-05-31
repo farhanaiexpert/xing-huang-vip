@@ -6,12 +6,14 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed:super-admin": "tsx ./src/seed-super-admin.ts",
+    "test:tron": "tsx ./src/test-tron-utils.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
     "bcryptjs": "^2.4.3",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "viem": "^2.51.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
