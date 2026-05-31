@@ -48,6 +48,10 @@ interface LiveMatch {
   bttsYes?: number;
   /** Real API BTTS No odds (soccer only, when available) */
   bttsNo?: number;
+  /** BetsAPI real game clock — minutes elapsed */
+  timerMin?: number;
+  /** BetsAPI real game clock — seconds within the minute */
+  timerSec?: number;
 }
 
 
@@ -81,13 +85,6 @@ function getSportFilterMeta(sport: string): { label: string; icon: string } {
   if (sport === 'aussierules')       return { label: 'AFL',        icon: '🏉' };
   if (sport === 'rugbyleague')       return { label: 'Rugby',      icon: '🏉' };
   return { label: sport.charAt(0).toUpperCase() + sport.slice(1), icon: '🏆' };
-}
-
-/** Format seconds as M:SS */
-function fmtCountdown(s: number): string {
-  const m   = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
 /**
@@ -532,10 +529,62 @@ function LiveMatchCard({
   prevSimOdds: Record<string, number>;
 }) {
   const isSoccer       = match.sport === 'soccer';
+  const isSoccer2      = match.sportKey.startsWith('betsapi_1') || match.sport === 'soccer';
   const [activeTab, setActiveTab] = useState<'result' | 'goals' | 'corners'>('result');
   const probs          = calcProbs(match.outcomes, simOdds);
   const goalsMarkets   = useMemo(() => isSoccer ? generateGoalsMarkets(match)   : [], [match, isSoccer]);
   const cornersMarkets = useMemo(() => isSoccer ? generateCornersMarkets(match) : [], [match, isSoccer]);
+
+  // ── Score change flash ────────────────────────────────────────────────────
+  const prevHomeScoreRef = useRef<number | string>(match.homeScore);
+  const prevAwayScoreRef = useRef<number | string>(match.awayScore);
+  const [homeFlash, setHomeFlash] = useState(false);
+  const [awayFlash, setAwayFlash] = useState(false);
+
+  useEffect(() => {
+    if (prevHomeScoreRef.current !== match.homeScore) {
+      prevHomeScoreRef.current = match.homeScore;
+      setHomeFlash(true);
+      const t = setTimeout(() => setHomeFlash(false), 2000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [match.homeScore]);
+
+  useEffect(() => {
+    if (prevAwayScoreRef.current !== match.awayScore) {
+      prevAwayScoreRef.current = match.awayScore;
+      setAwayFlash(true);
+      const t = setTimeout(() => setAwayFlash(false), 2000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [match.awayScore]);
+
+  // ── Live game clock (ticks every second, seeded from BetsAPI timer) ───────
+  const [clockMin, setClockMin] = useState(match.timerMin ?? 0);
+  const [clockSec, setClockSec] = useState(match.timerSec ?? 0);
+  const hasClock = match.timerMin !== undefined && isSoccer2;
+
+  // Reset clock when BetsAPI sends a new timer value
+  useEffect(() => {
+    if (match.timerMin !== undefined) {
+      setClockMin(match.timerMin);
+      setClockSec(match.timerSec ?? 0);
+    }
+  }, [match.timerMin, match.timerSec]);
+
+  // Tick every second while there's a real clock
+  useEffect(() => {
+    if (!hasClock) return;
+    const t = setInterval(() => {
+      setClockSec(s => {
+        if (s >= 59) { setClockMin(m => Math.min(m + 1, 120)); return 0; }
+        return s + 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [hasClock]);
 
   return (
     <div
@@ -554,11 +603,17 @@ function LiveMatchCard({
       {/* Card header */}
       <div className="flex items-center justify-between px-4 pt-3.5 pb-3 border-b border-white/[0.05]">
         <div className="flex items-center gap-2.5">
-          {/* Live pulse */}
+          {/* Live pulse + clock */}
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20">
             <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
             <span className="text-[10px] font-black text-[#EF4444] tracking-widest">LIVE</span>
-            <span className="text-[10px] font-bold text-[#EF4444]/70">{match.liveLabel}</span>
+            {hasClock ? (
+              <span className="text-[10px] font-black text-[#EF4444] tabular-nums">
+                {clockMin}'
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-[#EF4444]/70">{match.liveLabel}</span>
+            )}
           </div>
           <span className="text-[11px] font-medium text-[#64748B]">{match.icon} {match.league}</span>
         </div>
@@ -595,32 +650,52 @@ function LiveMatchCard({
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[15px] font-black text-[#F8FAFC] leading-tight truncate">{match.homeTeam}</p>
-              <p className="text-[10px] text-[#475569] mt-0.5 font-medium">
-                {match.sport === 'soccer' ? 'Home' : 'Home'}
-              </p>
+              <p className="text-[10px] text-[#475569] mt-0.5 font-medium">Home</p>
             </div>
             {/* Score */}
-            <div className="shrink-0 text-center px-4 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <div
+              className="shrink-0 text-center px-4 py-2 rounded-xl border transition-all duration-500"
+              style={{
+                background: (homeFlash || awayFlash) ? 'rgba(0,223,169,0.07)' : 'rgba(255,255,255,0.03)',
+                borderColor: (homeFlash || awayFlash) ? 'rgba(0,223,169,0.35)' : 'rgba(255,255,255,0.06)',
+                boxShadow: (homeFlash || awayFlash) ? '0 0 16px rgba(0,223,169,0.2)' : undefined,
+              }}
+            >
               <div className="flex items-center gap-2 tabular-nums">
                 <span
-                  className="text-[28px] font-black leading-none"
-                  style={{ color: match.homeScore > match.awayScore ? '#00DFA9' : '#F8FAFC' }}
+                  className="text-[28px] font-black leading-none transition-all duration-300"
+                  style={{
+                    color: homeFlash ? '#00DFA9' : match.homeScore > match.awayScore ? '#00DFA9' : '#F8FAFC',
+                    textShadow: homeFlash ? '0 0 20px rgba(0,223,169,0.8)' : undefined,
+                    transform: homeFlash ? 'scale(1.15)' : 'scale(1)',
+                    display: 'inline-block',
+                  }}
                 >
                   {match.homeScore}
                 </span>
                 <span className="text-[16px] text-[#475569] font-bold">–</span>
                 <span
-                  className="text-[28px] font-black leading-none"
-                  style={{ color: (match.awayScore as number) > (match.homeScore as number) ? '#00DFA9' : '#F8FAFC' }}
+                  className="text-[28px] font-black leading-none transition-all duration-300"
+                  style={{
+                    color: awayFlash ? '#00DFA9' : (match.awayScore as number) > (match.homeScore as number) ? '#00DFA9' : '#F8FAFC',
+                    textShadow: awayFlash ? '0 0 20px rgba(0,223,169,0.8)' : undefined,
+                    transform: awayFlash ? 'scale(1.15)' : 'scale(1)',
+                    display: 'inline-block',
+                  }}
                 >
                   {match.awayScore}
                 </span>
               </div>
-              {match.sport === 'basketball' && (
+              {/* Live clock sub-label */}
+              {hasClock ? (
+                <p className="text-[9px] font-black mt-0.5 tracking-wider tabular-nums" style={{ color: '#EF4444' }}>
+                  {clockMin}:{String(clockSec).padStart(2, '0')}
+                </p>
+              ) : match.sport === 'basketball' ? (
                 <p className="text-[9px] text-[#475569] font-semibold mt-0.5 tracking-wider">
                   {match.stage.split('·')[1]?.trim()}
                 </p>
-              )}
+              ) : null}
             </div>
             <div className="flex-1 min-w-0 text-right">
               <p className="text-[15px] font-black text-[#F8FAFC] leading-tight truncate">{match.awayTeam}</p>
@@ -877,13 +952,13 @@ export function LivePage() {
     }
   }, [displayMatches, activeSport]);
 
-  // Countdown to next odds update (seconds, resets on each API refresh)
-  const [nextUpdateIn, setNextUpdateIn] = useState(15 * 60);
+  // "Updated Xs ago" — counts up from 0 each time data is refreshed
+  const [secondsAgo, setSecondsAgo] = useState(0);
   useEffect(() => {
-    if (lastUpdated) setNextUpdateIn(15 * 60);
+    if (lastUpdated) setSecondsAgo(0);
   }, [lastUpdated]);
   useEffect(() => {
-    const t = setInterval(() => setNextUpdateIn(p => Math.max(0, p - 1)), 1000);
+    const t = setInterval(() => setSecondsAgo(p => p + 1), 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -923,12 +998,14 @@ export function LivePage() {
                   <span>bettors</span>
                 </div>
 
-                {/* Countdown to next update */}
+                {/* Updated X ago */}
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-white/[0.07]"
                   style={{ background: 'rgba(255,255,255,0.03)' }}>
                   <Clock className="h-3 w-3 text-[#64748B]" />
-                  <span className="font-mono font-bold tabular-nums text-[#94A3B8]">{fmtCountdown(nextUpdateIn)}</span>
-                  <span className="text-[#475569] text-[10px] hidden sm:inline">next update</span>
+                  <span className="font-mono font-bold tabular-nums text-[#94A3B8]">
+                    {secondsAgo < 5 ? 'just now' : `${secondsAgo}s ago`}
+                  </span>
+                  <span className="text-[#475569] text-[10px] hidden sm:inline">updated</span>
                 </div>
 
                 {/* Real / demo badge */}
@@ -1003,15 +1080,15 @@ export function LivePage() {
                 </h2>
                 <p className="text-[11px] text-[#475569] mt-0.5">
                   {isRealData
-                    ? 'Real in-play events — odds refresh every 15–20 min. Stable and accurate.'
-                    : 'Tap any outcome to add it to your Bet Slip. Odds update every 15–20 minutes.'}
+                    ? 'Real in-play events — live scores update every 15 seconds.'
+                    : 'Tap any outcome to add it to your Bet Slip. Live scores refresh every 15 seconds.'}
                 </p>
               </div>
               {/* Refresh cadence info */}
               <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border"
                 style={{ background: 'rgba(56,189,248,0.07)', borderColor: 'rgba(56,189,248,0.2)', color: '#38BDF8' }}>
                 <RefreshCw className="h-3 w-3" />
-                15–20 min refresh
+                15s refresh
               </div>
             </div>
 

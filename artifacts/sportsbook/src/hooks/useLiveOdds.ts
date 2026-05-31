@@ -68,6 +68,10 @@ export interface NormalizedLiveMatch {
   ouUnder25?: number;
   bttsYes?:   number;
   bttsNo?:    number;
+  /** BetsAPI real game clock — minutes elapsed (e.g. 37 for 37') */
+  timerMin?:  number;
+  /** BetsAPI real game clock — seconds within the current minute */
+  timerSec?:  number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -336,6 +340,9 @@ function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null
   const sport    = BETSAPI_SPORT_STRING[ev.sport_id] ?? 'sport';
   const sportKey = `betsapi_${ev.sport_id}`;
 
+  const timerMin = ev.timer?.tm ? parseInt(ev.timer.tm, 10) : undefined;
+  const timerSec = ev.timer?.ts ? parseInt(ev.timer.ts, 10) : undefined;
+
   return {
     id:        `betsapi_live_${ev.id}`,
     sport,
@@ -353,12 +360,14 @@ function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null
     isHot:     closeGame,
     accent,
     outcomes,
+    ...(timerMin !== undefined && !isNaN(timerMin) && { timerMin }),
+    ...(timerSec !== undefined && !isNaN(timerSec) && { timerSec }),
   };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-const POLL_MS = 30 * 1000; // 30 seconds
+const POLL_MS = 15 * 1000; // 15 seconds — fast enough for real-time score updates
 
 export interface UseLiveOddsResult {
   matches:     NormalizedLiveMatch[];
