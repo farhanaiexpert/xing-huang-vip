@@ -15,7 +15,7 @@ import { normalizeEvents, buildLeague } from '../lib/normalizeOdds';
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v2'; // bumped from v1 to force cold hydration after TTL change
+const STORAGE_KEY  = 'oddschain_v3'; // bumped to v3 — forces cache bust after API key swap + bulk endpoint migration
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
 const CACHE_TTL_MS = 35 * 60 * 1000; // 35 min — matches server cron max interval
 
