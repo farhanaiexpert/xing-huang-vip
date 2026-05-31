@@ -4,7 +4,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import cron from "node-cron";
 import { runSettlementWorker } from "./lib/settlementWorker.js";
-import { fetchAndCacheOdds, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
+import { fetchAndCacheOdds, getDbCacheRemainingMs, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
 import { fetchBetsApiUpcoming, fetchPrematchOdds, BETSAPI_SPORT_IDS, BETSAPI_SPORT_MAP, BETSAPI_KEY } from "./lib/betsapi.js";
 
 const PORT = parseInt(process.env.PORT ?? "5000", 10);
@@ -340,25 +340,36 @@ runMigrations().then(() => {
   });
   logger.info("Auto-settlement cron started (every 1 minute — dual source: Odds API + API-Football)");
 
-  // ── Odds refresh cron: every 5 min, triggers full batch every 25-35 min ──
+  // ── Odds refresh cron: every 5 min check, batch fires every 55-70 min ────
+  // Key optimisations vs the old 25-35 min cycle:
+  //  1. Skip sports whose DB cache still has >12 min of life (avoids redundant calls).
+  //  2. Empty / off-season sports get a 6-hour TTL so they're never re-fetched each cycle.
+  //  3. Longer base interval (55-70 min) — still well within the 40-min active-sport TTL.
   let isOddsRefreshing = false;
-  // Start lastOddsRefreshAt at 0 so the startup batch (below) counts as first run
   let lastOddsRefreshAt = 0;
-  let nextIntervalMs = (25 + Math.floor(Math.random() * 11)) * 60 * 1000;
+  let nextIntervalMs = (55 + Math.floor(Math.random() * 16)) * 60 * 1000; // 55-70 min
 
   async function runOddsBatch() {
     if (isOddsRefreshing) return;
     isOddsRefreshing = true;
-    nextIntervalMs = (25 + Math.floor(Math.random() * 11)) * 60 * 1000;
-    logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length, nextIntervalMin: Math.round(nextIntervalMs / 60000) }, "Odds refresh cron: starting full batch");
+    nextIntervalMs = (55 + Math.floor(Math.random() * 16)) * 60 * 1000;
+    logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length, nextIntervalMin: Math.round(nextIntervalMs / 60000) }, "Odds refresh cron: starting batch");
+    let fetched = 0, skipped = 0, empty = 0;
     try {
       for (const sportKey of ALL_ODDS_SPORT_KEYS) {
-        await fetchAndCacheOdds(sportKey);
+        // Skip if the existing cache entry still has >12 min remaining.
+        // This prevents re-fetching sports already warmed mid-cycle or by an on-demand request.
+        const remainingMs = await getDbCacheRemainingMs(sportKey);
+        if (remainingMs > 12 * 60 * 1000) { skipped++; continue; }
+
+        const count = await fetchAndCacheOdds(sportKey);
+        if (count === 0) empty++; else fetched++;
+
         // 300ms gap between requests to avoid rate-limit bursts
         await new Promise(r => setTimeout(r, 300));
       }
       lastOddsRefreshAt = Date.now();
-      logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron: batch complete");
+      logger.info({ fetched, skipped, empty }, "Odds refresh cron: batch complete");
     } catch (err) {
       logger.error({ err }, "Odds refresh cron: unhandled error");
     } finally {
@@ -371,50 +382,69 @@ runMigrations().then(() => {
     if (now - lastOddsRefreshAt < nextIntervalMs) return;
     runOddsBatch().catch((err) => logger.error({ err }, "Odds refresh cron: unhandled error"));
   });
-  logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron started (every 25-35 minutes — PostgreSQL-backed cache)");
+  logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron started (every 55-70 minutes — skip-if-fresh, 6h TTL for empty sports)");
 
   // ── Warm the cache immediately on startup (non-blocking) ─────────────────
-  // This ensures new sport keys get cached right away rather than waiting
-  // up to 5 min for the first cron tick.
   setImmediate(() => {
     runOddsBatch().catch((err) => logger.error({ err }, "Startup odds warm: unhandled error"));
   });
 
-  // ── BetsAPI cron: refresh upcoming events every 30 minutes ───────────────
+  // ── BetsAPI cron: refresh upcoming events every 60 minutes ───────────────
+  // Optimisations vs old 30 min cycle:
+  //  1. Check betsapi_cache TTL before fetching each sport — skip if still fresh (>15 min).
+  //  2. Empty sports cached with 4-hour TTL instead of being skipped silently.
+  //  3. Prematch odds enrichment reduced from top-50 to top-20 events per sport.
+  //  4. Interval doubled from 30 → 60 min.
   let isBetsApiRefreshing = false;
   let lastBetsApiRefreshAt = 0;
-  const BETSAPI_INTERVAL_MS = 30 * 60 * 1000;
+  const BETSAPI_INTERVAL_MS = 60 * 60 * 1000; // 60 min (was 30 min)
 
-  /**
-   * Fetch all pages for every sport (up to 6 pages = 300 events per sport),
-   * enrich the top 20 events per sport with real prematch odds from BetsAPI,
-   * then upsert into betsapi_cache with a 40-minute TTL.
-   *
-   * Horse Racing (2) and Greyhounds (4) are fetched for sidebar counts but
-   * we skip prematch odds enrichment for them (countOnly).
-   */
+  /** Returns milliseconds until a betsapi_cache entry expires (0 = expired/missing). */
+  async function getBetsApiCacheRemainingMs(cacheKey: string): Promise<number> {
+    try {
+      const result = await db.execute(sql`
+        SELECT EXTRACT(EPOCH FROM (expires_at - NOW())) * 1000 AS remaining_ms
+        FROM betsapi_cache WHERE cache_key = ${cacheKey}
+      `);
+      if (result.rows.length > 0) return Math.max(0, Number(result.rows[0].remaining_ms));
+      return 0;
+    } catch { return 0; }
+  }
+
   async function runBetsApiBatch() {
     if (!BETSAPI_KEY || isBetsApiRefreshing) return;
     isBetsApiRefreshing = true;
     logger.info({ sportCount: BETSAPI_SPORT_IDS.length }, "BetsAPI cron: starting batch");
+    let fetched = 0, skipped = 0, empty = 0;
     try {
       for (const sportId of BETSAPI_SPORT_IDS) {
         const meta = BETSAPI_SPORT_MAP[sportId];
         if (!meta) continue;
 
-        // Paginate: up to 6 pages (300 events) per sport
+        // Skip if cache for this sport is still fresh (>15 min remaining).
+        const remaining = await getBetsApiCacheRemainingMs(String(sportId));
+        if (remaining > 15 * 60 * 1000) { skipped++; continue; }
+
         const events = await fetchBetsApiUpcoming(sportId);
+
         if (events.length === 0) {
+          // Cache empty result with 4-hour TTL to avoid hammering the API for off-season sports.
+          await db.execute(sql`
+            INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
+            VALUES (${String(sportId)}, '[]'::jsonb, NOW(), NOW() + INTERVAL '4 hours')
+            ON CONFLICT (cache_key) DO UPDATE SET
+              data       = '[]'::jsonb,
+              fetched_at = NOW(),
+              expires_at = NOW() + INTERVAL '4 hours'
+          `);
+          empty++;
           await new Promise(r => setTimeout(r, 300));
           continue;
         }
 
-        // For non-countOnly sports: enrich top 50 events with real prematch odds.
-        // Batch 10 at a time with 200ms gap to stay within rate limits.
-        // Events outside this window keep prematchOdds undefined; the frontend
-        // falls back to fallbackOdds for those, so cards still render.
+        // Enrich top 20 events with real prematch odds (was 50 — reduced to save credits).
         if (!meta.countOnly) {
-          const toEnrich = events.slice(0, 50);
+          const toEnrich = events.slice(0, 20);
           for (let i = 0; i < toEnrich.length; i += 10) {
             const batch = toEnrich.slice(i, i + 10);
             await Promise.all(
@@ -431,20 +461,21 @@ runMigrations().then(() => {
 
         await db.execute(sql`
           INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
-          VALUES (${String(sportId)}, ${JSON.stringify(events)}::jsonb, NOW(), NOW() + INTERVAL '40 minutes')
+          VALUES (${String(sportId)}, ${JSON.stringify(events)}::jsonb, NOW(), NOW() + INTERVAL '70 minutes')
           ON CONFLICT (cache_key) DO UPDATE SET
             data       = EXCLUDED.data,
             fetched_at = NOW(),
-            expires_at = NOW() + INTERVAL '40 minutes'
+            expires_at = NOW() + INTERVAL '70 minutes'
         `);
 
         logger.info({ sportId, name: meta.name, count: events.length }, "BetsAPI cron: sport cached");
+        fetched++;
 
         // 400ms gap between sports to avoid burst rate-limits
         await new Promise(r => setTimeout(r, 400));
       }
       lastBetsApiRefreshAt = Date.now();
-      logger.info({ sportCount: BETSAPI_SPORT_IDS.length }, "BetsAPI cron: batch complete");
+      logger.info({ fetched, skipped, empty }, "BetsAPI cron: batch complete");
     } catch (err) {
       logger.error({ err }, "BetsAPI cron: unhandled error");
     } finally {
@@ -452,17 +483,16 @@ runMigrations().then(() => {
     }
   }
 
-  // BetsAPI cron: poll every 5 min, trigger batch if ≥30 min since last run.
-  // Stagger: only fires if Odds API batch completed ≥2 min ago (avoids simultaneous load).
+  // BetsAPI cron: poll every 5 min, trigger batch if ≥60 min since last run.
+  // Stagger: only fires if Odds API batch completed ≥2 min ago.
   cron.schedule("*/5 * * * *", async () => {
     const now = Date.now();
     if (now - lastBetsApiRefreshAt < BETSAPI_INTERVAL_MS) return;
-    // Stagger: require Odds batch to have finished at least 2 minutes ago
     const oddsBatchAge = now - lastOddsRefreshAt;
     if (isOddsRefreshing || oddsBatchAge < 2 * 60 * 1000) return;
     runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
   });
-  logger.info("BetsAPI cron started (every 30 minutes — staggered 2 min after Odds API batch)");
+  logger.info("BetsAPI cron started (every 60 minutes — skip-if-fresh, 4h TTL for empty sports)");
 
   // Warm BetsAPI cache on startup — 2-minute delay after Odds API warm starts
   setTimeout(() => {

@@ -253,33 +253,67 @@ async function getDbCachedOdds(sportKey: string): Promise<unknown[] | null> {
   }
 }
 
-async function setDbCachedOdds(sportKey: string, data: unknown[]): Promise<void> {
+/** Returns milliseconds until this sport's cache expires (0 = expired or missing). */
+export async function getDbCacheRemainingMs(sportKey: string): Promise<number> {
+  try {
+    const result = await db.execute(sql`
+      SELECT EXTRACT(EPOCH FROM (expires_at - NOW())) * 1000 AS remaining_ms
+      FROM odds_cache WHERE sport_key = ${sportKey}
+    `);
+    if (result.rows.length > 0) {
+      return Math.max(0, Number(result.rows[0].remaining_ms));
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Write odds data to the DB cache.
+ * @param ttlMinutes cache lifetime — use 40 for active sports, 360 for empty/off-season.
+ */
+async function setDbCachedOdds(sportKey: string, data: unknown[], ttlMinutes = 40): Promise<void> {
   try {
     await db.execute(sql`
       INSERT INTO odds_cache (sport_key, data, fetched_at, expires_at)
-      VALUES (${sportKey}, ${JSON.stringify(data)}::jsonb, NOW(), NOW() + INTERVAL '40 minutes')
+      VALUES (
+        ${sportKey},
+        ${JSON.stringify(data)}::jsonb,
+        NOW(),
+        NOW() + (${ttlMinutes} * INTERVAL '1 minute')
+      )
       ON CONFLICT (sport_key) DO UPDATE SET
         data       = EXCLUDED.data,
         fetched_at = NOW(),
-        expires_at = NOW() + INTERVAL '40 minutes'
+        expires_at = NOW() + (${ttlMinutes} * INTERVAL '1 minute')
     `);
   } catch { /* silently ignore cache write failures */ }
 }
 
-// ─── Exported: fetch one sport from Odds API and populate DB cache ────────────
-export async function fetchAndCacheOdds(sportKey: string): Promise<void> {
-  if (!ODDS_API_KEY) return;
+/**
+ * Fetch one sport from Odds API and write to DB cache.
+ * Returns the number of events cached (0 for off-season sports).
+ * Empty sports are cached with a 6-hour TTL to avoid wasting credits.
+ */
+export async function fetchAndCacheOdds(sportKey: string): Promise<number> {
+  if (!ODDS_API_KEY) return 0;
   try {
     const extraMarkets = sportKey.startsWith('soccer_') ? ',totals,btts' : '';
     const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
     const response = await fetch(url);
-    if (!response.ok) return; // skip non-existent / out-of-season sports silently
+    if (!response.ok) return 0; // skip non-existent / out-of-season sports silently
     const data = await response.json() as unknown[];
-    if (!Array.isArray(data)) return;
-    await setDbCachedOdds(sportKey, data);
+    if (!Array.isArray(data)) return 0;
+    // Empty sports (off-season) get a 6-hour TTL so we don't re-hit the API next cycle.
+    // Active sports keep the normal 40-minute TTL.
+    const ttlMinutes = data.length > 0 ? 40 : 360;
+    await setDbCachedOdds(sportKey, data, ttlMinutes);
     await upsertSportControl(sportKey, formatLeagueName(sportKey));
+    return data.length;
   } catch (err) {
     logger.warn({ err, sportKey }, "Odds cron: failed to fetch sport");
+    return 0;
   }
 }
 
@@ -473,6 +507,10 @@ router.get("/live/events", async (_req, res): Promise<void> => {
 });
 
 // ─── GET /live/scores ─────────────────────────────────────────────────────────
+// Cached for 3 minutes — each request fans out to all active sports on Odds API,
+// so a short-but-not-too-short TTL keeps scores reasonably fresh without burning credits.
+const LIVE_SCORES_TTL = 3 * 60 * 1000; // 3 minutes
+
 router.get("/live/scores", async (_req, res): Promise<void> => {
   if (!ODDS_API_KEY) {
     res.status(503).json({ error: "Odds API not configured" }); return;
@@ -505,7 +543,7 @@ router.get("/live/scores", async (_req, res): Promise<void> => {
     }
 
     const payload = { scores, count: scores.length, cached: false };
-    liveCache.set(cacheKey, { data: payload, expiresAt: Date.now() + LIVE_CACHE_TTL });
+    liveCache.set(cacheKey, { data: payload, expiresAt: Date.now() + LIVE_SCORES_TTL });
     res.json(payload);
   } catch {
     res.status(500).json({ error: "Failed to fetch live scores" });
