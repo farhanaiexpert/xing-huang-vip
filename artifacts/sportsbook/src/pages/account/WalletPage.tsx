@@ -119,7 +119,7 @@ export function WalletPage() {
     if (hint === 'cryptomus') return 'cryptomus';
     return 'nowpayments';
   });
-  const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20'>('TRC-20');
+  const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20' | 'BSC' | 'POLYGON' | 'ARBITRUM' | 'OPTIMISM'>('TRC-20');
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
   const [nppAmount, setNppAmount]     = useState('');
   const [nppCurrency, setNppCurrency] = useState('usdttrc20');
@@ -213,7 +213,7 @@ export function WalletPage() {
 
   function copyAddress() {
     if (!depositInfo) return;
-    const addr = manualNetwork === 'ERC-20'
+    const addr = manualNetwork !== 'TRC-20'
       ? (depositInfo.addressErc20 ?? depositInfo.address)
       : depositInfo.address;
     navigator.clipboard.writeText(addr);
@@ -1243,54 +1243,63 @@ export function WalletPage() {
           {depositMethod === 'manual' && (
             <>
               {/* Network selector */}
-              <div className="flex gap-2">
-                {(['TRC-20', 'ERC-20'] as const).map(net => {
-                  const active = manualNetwork === net;
-                  const isTrc = net === 'TRC-20';
-                  const color = isTrc ? '#00DFA9' : '#38BDF8';
-                  const label = isTrc ? 'USDT TRC-20 · Tron' : 'USDT ERC-20 · Ethereum';
-                  const sub   = isTrc ? 'Auto-verified' : 'Manual review';
-                  return (
-                    <button
-                      key={net}
-                      onClick={() => { setManualNetwork(net); setCopied(false); setDepSuccess(false); setDepError(''); }}
-                      className="relative flex-1 rounded-xl p-3 flex flex-col items-center gap-1 transition-all"
-                      style={{
-                        background: active ? `rgba(${isTrc ? '0,223,169' : '56,189,248'},0.10)` : 'rgba(255,255,255,0.03)',
-                        border: `2px solid ${active ? color + '80' : 'rgba(255,255,255,0.07)'}`,
-                        boxShadow: active ? `0 0 16px ${color}18` : 'none',
-                      }}
-                    >
-                      {active && (
-                        <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color }} />
-                      )}
-                      <p className="text-[12px] font-black" style={{ color: active ? color : '#64748B' }}>{net}</p>
-                      <p className="text-[10px] font-semibold text-[#94A3B8]">{label}</p>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full mt-0.5"
-                        style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}>{sub}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {(() => {
+                const MANUAL_NETS = [
+                  { val: 'TRC-20'   as const, short: 'TRC-20',   label: 'USDT · Tron',       color: '#00DFA9', badge: 'Auto-verify' },
+                  { val: 'ERC-20'   as const, short: 'ERC-20',   label: 'USDT · Ethereum',   color: '#627EEA', badge: 'Manual' },
+                  { val: 'BSC'      as const, short: 'BEP-20',   label: 'USDT · BSC',        color: '#F0B90B', badge: 'Manual' },
+                  { val: 'POLYGON'  as const, short: 'Polygon',  label: 'USDT · Polygon',    color: '#8247E5', badge: 'Manual' },
+                  { val: 'ARBITRUM' as const, short: 'Arbitrum', label: 'USDT · ARB One',    color: '#28A0F0', badge: 'Manual' },
+                  { val: 'OPTIMISM' as const, short: 'Optimism', label: 'USDT · Optimism',   color: '#FF0420', badge: 'Manual' },
+                ];
+                return (
+                  <div className="grid grid-cols-3 gap-2">
+                    {MANUAL_NETS.map(net => {
+                      const active = manualNetwork === net.val;
+                      return (
+                        <button
+                          key={net.val}
+                          onClick={() => { setManualNetwork(net.val); setCopied(false); setDepSuccess(false); setDepError(''); }}
+                          className="relative rounded-xl p-3 flex flex-col items-center gap-1 transition-all"
+                          style={{
+                            background: active ? `${net.color}1A` : 'rgba(255,255,255,0.03)',
+                            border: `2px solid ${active ? net.color + '80' : 'rgba(255,255,255,0.07)'}`,
+                            boxShadow: active ? `0 0 14px ${net.color}15` : 'none',
+                          }}
+                        >
+                          {active && (
+                            <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: net.color }} />
+                          )}
+                          <p className="text-[12px] font-black" style={{ color: active ? net.color : '#64748B' }}>{net.short}</p>
+                          <p className="text-[9px] font-semibold text-[#94A3B8] text-center leading-tight">{net.label}</p>
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full mt-0.5"
+                            style={{ background: `${net.color}15`, color: net.color, border: `1px solid ${net.color}30` }}>{net.badge}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {/* QR + Address card */}
               <div className="rounded-2xl border border-white/[0.09] bg-[#0E1520] overflow-hidden">
                 <div className="px-4 py-3 border-b border-white/[0.06]">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-md flex items-center justify-center"
-                      style={{ background: manualNetwork === 'TRC-20' ? 'rgba(0,223,169,0.15)' : 'rgba(56,189,248,0.15)' }}>
-                      <span className="text-[9px] font-black" style={{ color: manualNetwork === 'TRC-20' ? '#00DFA9' : '#38BDF8' }}>1</span>
-                    </div>
-                    <p className="text-[12px] font-bold text-[#F8FAFC]">Send USDT to this address</p>
-                    <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{
-                        color: manualNetwork === 'TRC-20' ? '#00DFA9' : '#38BDF8',
-                        background: manualNetwork === 'TRC-20' ? 'rgba(0,223,169,0.10)' : 'rgba(56,189,248,0.10)',
-                        border: `1px solid ${manualNetwork === 'TRC-20' ? 'rgba(0,223,169,0.20)' : 'rgba(56,189,248,0.20)'}`,
-                      }}>
-                      {manualNetwork}
-                    </span>
-                  </div>
+                  {(() => {
+                    const NET_COLOR: Record<string, string> = { 'TRC-20': '#00DFA9', 'ERC-20': '#627EEA', 'BSC': '#F0B90B', 'POLYGON': '#8247E5', 'ARBITRUM': '#28A0F0', 'OPTIMISM': '#FF0420' };
+                    const c = NET_COLOR[manualNetwork] ?? '#38BDF8';
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: `${c}26` }}>
+                          <span className="text-[9px] font-black" style={{ color: c }}>1</span>
+                        </div>
+                        <p className="text-[12px] font-bold text-[#F8FAFC]">Send USDT to this address</p>
+                        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ color: c, background: `${c}1A`, border: `1px solid ${c}33` }}>
+                          {manualNetwork}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
             <div className="p-4 flex flex-col sm:flex-row items-center gap-5">
@@ -1320,11 +1329,11 @@ export function WalletPage() {
               {/* Address */}
               <div className="flex-1 w-full">
                 <p className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-                  {manualNetwork === 'TRC-20' ? 'Tron (TRC-20) Wallet Address' : 'Ethereum (ERC-20) Wallet Address'}
+                  {manualNetwork === 'TRC-20' ? 'Tron (TRC-20) Wallet Address' : `${manualNetwork} Wallet Address (EVM)`}
                 </p>
                 <div className="flex items-center gap-2 bg-[#0B0F14] border border-white/[0.08] rounded-xl p-3">
                   <p className="flex-1 text-[11px] font-mono text-[#94A3B8] break-all leading-relaxed select-all">
-                    {manualNetwork === 'ERC-20'
+                    {manualNetwork !== 'TRC-20'
                       ? (depositInfo?.addressErc20 ?? '—')
                       : (depositInfo?.address ?? '—')}
                   </p>
@@ -1348,8 +1357,8 @@ export function WalletPage() {
                   <AlertCircle className="h-3.5 w-3.5 text-[#FACC15] shrink-0 mt-0.5" />
                   <p className="text-[10px] text-[#FACC15]/80 leading-relaxed">
                     {manualNetwork === 'TRC-20'
-                      ? <>Only send <strong>USDT on TRC-20 (Tron)</strong> to this address. Sending on ERC-20/Ethereum or any other network will result in permanent loss of funds.</>
-                      : <>Only send <strong>USDT on ERC-20 (Ethereum)</strong> to this address. Sending on TRC-20/Tron or any other network will result in permanent loss of funds. ERC-20 deposits go to manual review (5–30 min).</>}
+                      ? <>Only send <strong>USDT on TRC-20 (Tron)</strong> to this address. Sending on any other network will result in permanent loss of funds.</>
+                      : <>Only send <strong>USDT on {manualNetwork}</strong> to this EVM address. Sending on TRC-20/Tron will result in permanent loss. EVM deposits go to manual review (5–30 min).</>}
                   </p>
                 </div>
               </div>
@@ -1408,7 +1417,7 @@ export function WalletPage() {
                   <div>
                     <p className="text-[16px] font-black text-[#F8FAFC] tracking-tight">Verifying on-chain…</p>
                     <p className="text-[11px] text-[#64748B] mt-1">
-                      {manualNetwork === 'TRC-20' ? 'Checking your transaction on the Tron blockchain' : 'Checking your transaction on the Ethereum blockchain'}
+                      {manualNetwork === 'TRC-20' ? 'Checking your transaction on the Tron blockchain' : `Checking your transaction on the ${manualNetwork} blockchain`}
                     </p>
                   </div>
 

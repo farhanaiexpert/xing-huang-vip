@@ -38,9 +38,7 @@ function useCopy(text: string) {
 const WALLETS = [
   { name: 'MetaMask',      short: 'MM',  color: '#E2761B', bg: 'rgba(226,118,27,0.12)',  border: 'rgba(226,118,27,0.25)' },
   { name: 'WalletConnect', short: 'WC',  color: '#3B99FC', bg: 'rgba(59,153,252,0.12)',  border: 'rgba(59,153,252,0.25)' },
-  { name: 'Coinbase',      short: 'CB',  color: '#4F84FF', bg: 'rgba(79,132,255,0.12)',  border: 'rgba(79,132,255,0.25)' },
-  { name: 'Trust',         short: 'TW',  color: '#3375BB', bg: 'rgba(51,117,187,0.12)',  border: 'rgba(51,117,187,0.25)' },
-  { name: 'Phantom',       short: 'PH',  color: '#AB9FF2', bg: 'rgba(171,159,242,0.12)', border: 'rgba(171,159,242,0.25)' },
+  { name: 'TronLink',      short: 'TL',  color: '#00DFA9', bg: 'rgba(0,223,169,0.12)',   border: 'rgba(0,223,169,0.25)' },
 ];
 
 const FLOW_STEPS = [
@@ -497,7 +495,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                   {step === 'verifying'      && 'Verifying signature…'}
                 </p>
                 <p className="text-[12px] text-[#94A3B8]/45 mt-1">
-                  {step === 'waiting_wallet' && 'Select MetaMask, WalletConnect, or any wallet'}
+                  {step === 'waiting_wallet' && 'Connect any EVM wallet — 5 networks supported'}
                   {step === 'signing'        && 'Free off-chain signature — zero gas fees'}
                   {step === 'verifying'      && 'Almost there, hold tight'}
                 </p>

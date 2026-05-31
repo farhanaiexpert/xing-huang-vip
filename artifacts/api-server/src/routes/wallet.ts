@@ -153,7 +153,10 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
 });
 
 // ── POST /wallet/deposit/nowpayments/create ───────────────────────────────────
-const ALLOWED_NPP_CURRENCIES = ["usdttrc20", "usdterc20"] as const;
+const ALLOWED_NPP_CURRENCIES = [
+  "usdttrc20", "usdterc20", "usdtbsc", "usdtpolygon", "usdtsol", "usdtarbi",
+  "btc", "eth", "bnbbsc", "ltc", "usdtton",
+] as const;
 
 const NppCreateBody = z.object({
   amount:   z.number().positive().min(10, "Minimum deposit is 10 USDT"),

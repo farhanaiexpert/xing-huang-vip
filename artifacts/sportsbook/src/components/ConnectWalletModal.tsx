@@ -383,8 +383,15 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   if (!isVisible && !authOpen) return null;
 
-  const networkLabel = nppCurrency === 'usdttrc20' ? 'TRC-20 (Tron)' : 'ERC-20 (Ethereum)';
-  const networkColor = nppCurrency === 'usdttrc20' ? '#00DFA9' : '#627EEA';
+  const NPP_META: Record<string, { label: string; color: string }> = {
+    usdttrc20:   { label: 'TRC-20 (Tron)',    color: '#00DFA9' },
+    usdterc20:   { label: 'ERC-20 (ETH)',     color: '#627EEA' },
+    usdtbsc:     { label: 'BEP-20 (BSC)',     color: '#F0B90B' },
+    usdtpolygon: { label: 'Polygon',          color: '#8247E5' },
+    usdtsol:     { label: 'Solana SPL',       color: '#9945FF' },
+    usdtarbi:    { label: 'Arbitrum',         color: '#28A0F0' },
+  };
+  const { label: networkLabel, color: networkColor } = NPP_META[nppCurrency] ?? { label: nppCurrency.toUpperCase(), color: '#38BDF8' };
   const timerPercent = nppPayment
     ? (nppTimeLeft / (nppPayment.expiresAt
         ? Math.max(1, Math.floor((new Date(nppPayment.expiresAt).getTime() - Date.now() + nppTimeLeft * 1000) / 1000))
