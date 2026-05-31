@@ -13,6 +13,8 @@ interface MarketGroupProps {
   defaultOpen?: boolean;
   isFeatured?: boolean;
   groupIndex?: number;
+  /** Full Odds API sport key, e.g. "soccer_epl" — passed to OddsButton for settlement */
+  sportKey?: string;
 }
 
 /** Stable "updated X min ago" label seeded by group id */
@@ -23,7 +25,7 @@ function updatedLabel(groupId: string): string {
 }
 
 export function MarketGroup({
-  group, matchId, matchName, leagueName, defaultOpen, isFeatured, groupIndex = 0,
+  group, matchId, matchName, leagueName, defaultOpen, isFeatured, groupIndex = 0, sportKey,
 }: MarketGroupProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen ?? group.isDefaultOpen);
   const totalSelections = group.markets.reduce((acc, m) => acc + m.selections.length, 0);
@@ -93,6 +95,7 @@ export function MarketGroup({
               matchId={matchId}
               matchName={matchName}
               leagueName={leagueName}
+              sportKey={sportKey}
             />
           ))}
         </div>
@@ -108,23 +111,24 @@ type MarketSectionProps = {
   matchId: string;
   matchName: string;
   leagueName: string;
+  sportKey?: string;
 };
 
-function MarketSection({ market, matchId, matchName, leagueName }: MarketSectionProps) {
+function MarketSection({ market, matchId, matchName, leagueName, sportKey }: MarketSectionProps) {
   const isCorrectScore = market.marketTypeId === 'mt_correct_score';
   const isGoalScorer   = market.marketTypeId === 'mt_first_scorer' || market.marketTypeId === 'mt_anytime_scorer';
   const isRunners      = market.marketTypeId === 'mt_win_only' || market.marketTypeId === 'mt_place' || market.marketTypeId === 'mt_each_way';
   const isWide         = market.selections.length <= 3;
 
-  if (isCorrectScore) return <CorrectScoreLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} />;
-  if (isGoalScorer || isRunners) return <PlayerListLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} />;
-  if (isWide) return <WideLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} />;
-  return <GridLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} />;
+  if (isCorrectScore) return <CorrectScoreLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} sportKey={sportKey} />;
+  if (isGoalScorer || isRunners) return <PlayerListLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} sportKey={sportKey} />;
+  if (isWide) return <WideLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} sportKey={sportKey} />;
+  return <GridLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} sportKey={sportKey} />;
 }
 
 // ── Wide layout: up to 3 selections ──────────────────────────────────────────
 
-function WideLayout({ market, matchId, matchName, leagueName }: MarketSectionProps) {
+function WideLayout({ market, matchId, matchName, leagueName, sportKey }: MarketSectionProps) {
   return (
     <div className="px-4 py-3.5">
       {market.name !== '' && (
@@ -142,7 +146,7 @@ function WideLayout({ market, matchId, matchName, leagueName }: MarketSectionPro
               matchId={matchId} marketId={market.id} matchName={matchName}
               leagueName={leagueName} marketName={market.name}
               selectionType={sel.shortName} selectionName={sel.name}
-              odds={sel.odds} className="w-full"
+              odds={sel.odds} className="w-full" sportKey={sportKey}
             />
           </div>
         ))}
@@ -153,7 +157,7 @@ function WideLayout({ market, matchId, matchName, leagueName }: MarketSectionPro
 
 // ── Grid layout: 4+ selections ────────────────────────────────────────────────
 
-function GridLayout({ market, matchId, matchName, leagueName }: MarketSectionProps) {
+function GridLayout({ market, matchId, matchName, leagueName, sportKey }: MarketSectionProps) {
   return (
     <div className="px-4 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
@@ -169,7 +173,7 @@ function GridLayout({ market, matchId, matchName, leagueName }: MarketSectionPro
               matchId={matchId} marketId={market.id} matchName={matchName}
               leagueName={leagueName} marketName={market.name}
               selectionType={sel.shortName} selectionName={sel.name}
-              odds={sel.odds} className="w-full"
+              odds={sel.odds} className="w-full" sportKey={sportKey}
             />
           </div>
         ))}
@@ -180,7 +184,7 @@ function GridLayout({ market, matchId, matchName, leagueName }: MarketSectionPro
 
 // ── Correct score grid ────────────────────────────────────────────────────────
 
-function CorrectScoreLayout({ market, matchId, matchName, leagueName }: MarketSectionProps) {
+function CorrectScoreLayout({ market, matchId, matchName, leagueName, sportKey }: MarketSectionProps) {
   return (
     <div className="px-4 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
@@ -194,7 +198,7 @@ function CorrectScoreLayout({ market, matchId, matchName, leagueName }: MarketSe
               matchId={matchId} marketId={market.id} matchName={matchName}
               leagueName={leagueName} marketName={market.name}
               selectionType={sel.shortName} selectionName={sel.name}
-              odds={sel.odds} className="w-full text-xs"
+              odds={sel.odds} className="w-full text-xs" sportKey={sportKey}
             />
           </div>
         ))}
@@ -205,7 +209,7 @@ function CorrectScoreLayout({ market, matchId, matchName, leagueName }: MarketSe
 
 // ── Player / runner list layout ───────────────────────────────────────────────
 
-function PlayerListLayout({ market, matchId, matchName, leagueName }: MarketSectionProps) {
+function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey }: MarketSectionProps) {
   const [showAll, setShowAll] = useState(false);
   const displayed = showAll ? market.selections : market.selections.slice(0, 6);
   const hasMore   = market.selections.length > 6;
@@ -226,7 +230,7 @@ function PlayerListLayout({ market, matchId, matchName, leagueName }: MarketSect
               matchId={matchId} marketId={market.id} matchName={matchName}
               leagueName={leagueName} marketName={market.name}
               selectionType={sel.shortName} selectionName={sel.name}
-              odds={sel.odds} className="shrink-0"
+              odds={sel.odds} className="shrink-0" sportKey={sportKey}
             />
           </div>
         ))}

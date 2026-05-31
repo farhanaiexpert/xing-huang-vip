@@ -17,6 +17,7 @@ interface PopularBet {
   betCount: number;
   isLive?: boolean;
   badge?: { label: string; color: string };
+  sportKey?: string;
 }
 
 const POPULAR_BETS: PopularBet[] = [
@@ -25,36 +26,40 @@ const POPULAR_BETS: PopularBet[] = [
     matchName: 'Arsenal vs Chelsea', leagueName: 'Premier League', flag: '🇬🇧',
     matchId: 'm1', marketId: 'mkt_m1_mr', selectionType: '1', odds: 1.85,
     betCount: 2847, isLive: true, badge: { label: 'LIVE', color: '#EF4444' },
+    sportKey: 'soccer_epl',
   },
   {
     id: 'pb2', selectionName: 'Both Teams to Score — Yes', marketName: 'BTTS',
     matchName: 'Barcelona vs Real Madrid', leagueName: 'La Liga', flag: '🇪🇸',
     matchId: 'm4', marketId: 'mkt_m4_btts', selectionType: 'Yes', odds: 1.60,
     betCount: 1923, isLive: true, badge: { label: 'LIVE', color: '#EF4444' },
+    sportKey: 'soccer_spain_la_liga',
   },
   {
     id: 'pb3', selectionName: 'Man City Win', marketName: 'Match Result',
     matchName: 'Man City vs Liverpool', leagueName: 'Premier League', flag: '🇬🇧',
     matchId: 'm2', marketId: 'mkt_m2_mr', selectionType: '1', odds: 2.10,
     betCount: 1654, badge: { label: 'ACCA BOOST', color: '#00DFA9' },
+    sportKey: 'soccer_epl',
   },
   {
     id: 'pb4', selectionName: 'Over 2.5 Goals', marketName: 'Over/Under 2.5',
     matchName: 'PSG vs Lyon', leagueName: 'Ligue 1', flag: '🇫🇷',
     matchId: 'lf1', marketId: 'mkt_lf1_ou25', selectionType: 'O 2.5', odds: 1.72,
-    betCount: 1312, isLive: true,
+    betCount: 1312, isLive: true, sportKey: 'soccer_france_ligue_one',
   },
   {
     id: 'pb5', selectionName: 'Djokovic Win', marketName: 'Match Winner',
     matchName: 'Djokovic vs Alcaraz', leagueName: 'ATP Masters Rome', flag: '🇮🇹',
     matchId: 'm10', marketId: 'mkt_m10_mw', selectionType: '1', odds: 1.55,
-    betCount: 1187, isLive: true,
+    betCount: 1187, isLive: true, sportKey: 'tennis_atp_french_open',
   },
   {
     id: 'pb6', selectionName: 'PSG Win', marketName: 'Match Result',
     matchName: 'PSG vs Bayern Munich', leagueName: 'Champions League', flag: '🇪🇺',
     matchId: 'm6', marketId: 'mkt_m6_mr', selectionType: '1', odds: 2.75,
     betCount: 988, badge: { label: 'PRICE BOOST', color: '#FACC15' },
+    sportKey: 'soccer_uefa_champs_league',
   },
 ];
 
@@ -153,6 +158,7 @@ function PopularBetCard({ bet }: { bet: PopularBet }) {
             selectionName={bet.selectionName}
             odds={bet.odds}
             isLive={bet.isLive}
+            sportKey={bet.sportKey}
           />
         </div>
       </div>
