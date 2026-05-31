@@ -188,10 +188,6 @@ export function PromoPopup() {
   // Only show on the homepage
   if (location !== '/') return null;
 
-  // Never show popup or sticky bar if the bonus has already been claimed
-  // (allow showCongrats through so the user sees the celebration on successful claim)
-  if (alreadyClaimed && !showCongrats) return null;
-
   // Sticky claim bar — desktop: fixed bottom strip; mobile: slim top notice below header
   const StickyBar = dismissed && !barStopped ? (
     <>
