@@ -247,6 +247,7 @@ const BETSAPI_SPORT_STRING: Record<string, string> = {
   '16': 'basketball',                     '17': 'tennis',         '18': 'golf',
   '19': 'handball',                       '36': 'aussierules',    '78': 'rugbyleague',
   '91': 'volleyball',                     '92': 'tabletennis',    '94': 'snooker',
+  '161':'mma',
   '95': 'darts',
 };
 
@@ -266,6 +267,7 @@ function getBetsApiSportMeta(sportId: string): { icon: string; accent: string; h
   if (sport === 'aussierules')         return { icon: '🏉', accent: '#F59E0B', hasDraw: false };
   if (sport === 'volleyball')          return { icon: '🏐', accent: '#38BDF8', hasDraw: false };
   if (sport === 'boxing')              return { icon: '🥊', accent: '#EF4444', hasDraw: false };
+  if (sport === 'mma')                 return { icon: '🥋', accent: '#EF4444', hasDraw: false };
   if (sport === 'tabletennis')         return { icon: '🏓', accent: '#00DFA9', hasDraw: false };
   if (sport === 'snooker')             return { icon: '🎱', accent: '#22C55E', hasDraw: false };
   if (sport === 'darts')               return { icon: '🎯', accent: '#38BDF8', hasDraw: false };

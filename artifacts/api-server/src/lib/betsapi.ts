@@ -35,6 +35,7 @@ export const BETSAPI_SPORT_MAP: Record<number, BetsApiSportMeta> = {
   78: { name: 'Rugby League',      sportId: 'sp_rugby_league',      hasDraw: false, countOnly: false, fallbackOdds: { home: 1.80, away: 1.95 } },
   91: { name: 'Volleyball',        sportId: 'sp_volleyball',        hasDraw: false, countOnly: false, fallbackOdds: { home: 1.80, away: 1.95 } },
   92: { name: 'Table Tennis',      sportId: 'sp_table_tennis',      hasDraw: false, countOnly: false, fallbackOdds: { home: 1.75, away: 2.00 } },
+  161:{ name: 'MMA',               sportId: 'sp_mma',               hasDraw: false, countOnly: false, fallbackOdds: { home: 1.75, away: 2.00 } },
   94: { name: 'Snooker',           sportId: 'sp_snooker',           hasDraw: false, countOnly: false, fallbackOdds: { home: 1.75, away: 2.00 } },
   95: { name: 'Darts',             sportId: 'sp_darts',             hasDraw: false, countOnly: false, fallbackOdds: { home: 1.75, away: 2.00 } },
 };

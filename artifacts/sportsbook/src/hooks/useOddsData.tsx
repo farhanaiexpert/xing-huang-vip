@@ -31,6 +31,7 @@ const BETSAPI_ID_TO_SPORT_ID: Record<string, string> = {
   '78': 'sp_rugby_league',
   '91': 'sp_volleyball',
   '92': 'sp_table_tennis',
+  '161':'sp_mma',
   '94': 'sp_snooker',
   '95': 'sp_darts',
 };
