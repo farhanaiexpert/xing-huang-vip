@@ -721,6 +721,38 @@ router.post("/auth/wallet/verify/ton", async (req, res): Promise<void> => {
       res.status(401).json({ error: "ton_proof timestamp expired" });
       return;
     }
+
+    // ── Domain binding: prevent cross-origin proof replay ──────────────────
+    // Build the set of allowed origins from REPLIT_DOMAINS (comma-separated)
+    // plus localhost variants for local development.
+    const replitDomains = (process.env.REPLIT_DOMAINS ?? "")
+      .split(",")
+      .map(d => d.trim())
+      .filter(Boolean);
+    const allowedDomains = new Set<string>([
+      ...replitDomains,
+      "localhost",
+      "127.0.0.1",
+      // Strip port from any localhost:PORT variants the wallet might report
+      ...replitDomains.map(d => d.split(":")[0]),
+    ]);
+
+    // Verify domain value is one of the allowed origins
+    const proofDomain = proof.domain.value;
+    // Some wallets include the port; strip it for the allowlist check
+    const proofHost = proofDomain.split(":")[0];
+    if (!allowedDomains.has(proofDomain) && !allowedDomains.has(proofHost)) {
+      res.status(401).json({ error: "ton_proof domain is not an authorised origin" });
+      return;
+    }
+    // Verify lengthBytes matches the actual UTF-8 byte length of domain.value
+    const domainByteLen = Buffer.byteLength(proofDomain, "utf-8");
+    if (proof.domain.lengthBytes !== domainByteLen) {
+      res.status(401).json({ error: "ton_proof domain lengthBytes mismatch" });
+      return;
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     try {
       const msgHash = buildTonProofMessage(address, proof.domain, proof.timestamp, proof.payload);
       valid = verifyTonSignature(msgHash, proof.signature, onchainKey);
