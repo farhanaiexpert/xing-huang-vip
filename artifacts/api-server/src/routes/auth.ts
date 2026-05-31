@@ -3,7 +3,7 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { verifyMessage, isAddress, getAddress } from "viem";
-import { randomBytes } from "crypto";
+import { randomBytes, createVerify, createPublicKey } from "crypto";
 import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable, noncesTable } from "@workspace/db";
 import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken } from "../lib/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
@@ -288,6 +288,189 @@ router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
   } else if (user.walletNetwork !== "TRON") {
     await db.update(usersTable).set({ walletNetwork: "TRON" }).where(eq(usersTable.id, user.id));
     user = { ...user, walletNetwork: "TRON" };
+  }
+
+  if (user.isSuspended) {
+    res.status(403).json({ error: "Account is suspended" });
+    return;
+  }
+
+  // Check for active self-exclusion
+  const now = new Date();
+  const [excl] = await db.select().from(selfExclusionsTable)
+    .where(and(
+      eq(selfExclusionsTable.userId, user.id),
+      isNull(selfExclusionsTable.liftedAt),
+      eq(selfExclusionsTable.isTakeABreak, false),
+      or(
+        eq(selfExclusionsTable.isPermanent, true),
+        gt(selfExclusionsTable.endsAt, now),
+      ),
+    ))
+    .limit(1);
+
+  if (excl) {
+    const endsMsg = excl.isPermanent
+      ? "Your account is permanently self-excluded. Please contact support for assistance."
+      : `You have self-excluded until ${new Date(excl.endsAt!).toLocaleDateString()}. Please contact support if you need help.`;
+    res.status(403).json({ error: endsMsg, code: "SELF_EXCLUDED" });
+    return;
+  }
+
+  const payload = { userId: user.id, role: user.role };
+  const accessToken = signAccessToken(payload);
+  const refreshToken = signRefreshToken(payload);
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    refreshToken,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  res.json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      walletAddress: user.walletAddress,
+      displayName: shortAddress(user.walletAddress!),
+      email: user.email ?? null,
+      username: user.username ?? null,
+      role: user.role,
+      referralCode: user.referralCode,
+    },
+  });
+});
+
+// ── Solana Ed25519 helpers ────────────────────────────────────────────────────
+
+const BASE58_CHARS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function fromBase58(s: string): Buffer {
+  let n = BigInt(0);
+  for (const c of s) {
+    const d = BASE58_CHARS.indexOf(c);
+    if (d < 0) throw new Error("Invalid base58 character: " + c);
+    n = n * 58n + BigInt(d);
+  }
+  let hex = n.toString(16);
+  if (hex.length % 2) hex = "0" + hex;
+  let leadZeros = 0;
+  for (const c of s) { if (c !== "1") break; leadZeros++; }
+  const raw = Buffer.from(hex, "hex");
+  return leadZeros > 0 ? Buffer.concat([Buffer.alloc(leadZeros), raw]) : raw;
+}
+
+// Ed25519 SubjectPublicKeyInfo DER prefix (RFC 8410)
+const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
+
+function isSolanaAddress(addr: string): boolean {
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
+}
+
+function verifySolanaSignature(message: string, signatureHex: string, address: string): boolean {
+  const pubKeyBytes = fromBase58(address);
+  if (pubKeyBytes.length !== 32) return false;
+  const derKey = Buffer.concat([ED25519_SPKI_PREFIX, pubKeyBytes]);
+  const key = createPublicKey({ key: derKey, format: "der", type: "spki" });
+  const sigBytes = Buffer.from(signatureHex, "hex");
+  return createVerify("Ed25519").update(Buffer.from(message)).verify(key, sigBytes);
+}
+
+// ── GET /auth/wallet/nonce/solana?address=... ─────────────────────────────────
+router.get("/auth/wallet/nonce/solana", async (req, res): Promise<void> => {
+  const address = req.query.address as string | undefined;
+  if (!address || !isSolanaAddress(address)) {
+    res.status(400).json({ error: "Valid Solana wallet address required (base58, 32-44 chars)" });
+    return;
+  }
+
+  const nonce = generateNonce();
+  const expiresAt = new Date(Date.now() + NONCE_TTL_MS);
+
+  await db.insert(noncesTable)
+    .values({ walletAddress: address, nonce, expiresAt })
+    .onConflictDoUpdate({
+      target: noncesTable.walletAddress,
+      set: { nonce, expiresAt },
+    });
+
+  const message = buildSignMessage(address, nonce);
+  res.json({ nonce, message });
+});
+
+// ── POST /auth/wallet/verify/solana ───────────────────────────────────────────
+const SolanaVerifyBody = z.object({
+  address:   z.string(),
+  signature: z.string().regex(/^[0-9a-f]{128}$/i, "signature must be 64-byte hex"),
+  nonce:     z.string(),
+});
+
+router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
+  const parsed = SolanaVerifyBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "address, signature (hex), and nonce are required" });
+    return;
+  }
+  const { address, signature, nonce } = parsed.data;
+
+  if (!isSolanaAddress(address)) {
+    res.status(400).json({ error: "Invalid Solana wallet address" });
+    return;
+  }
+
+  // Verify nonce exists and hasn't expired
+  const [storedNonce] = await db.select()
+    .from(noncesTable)
+    .where(and(
+      eq(noncesTable.walletAddress, address),
+      eq(noncesTable.nonce, nonce),
+      gt(noncesTable.expiresAt, new Date()),
+    ))
+    .limit(1);
+
+  if (!storedNonce) {
+    res.status(401).json({ error: "Invalid or expired nonce. Please request a new one." });
+    return;
+  }
+
+  // Verify the ed25519 signature
+  const message = buildSignMessage(address, nonce);
+  let valid = false;
+  try {
+    valid = verifySolanaSignature(message, signature, address);
+  } catch {
+    valid = false;
+  }
+
+  if (!valid) {
+    res.status(401).json({ error: "Signature verification failed" });
+    return;
+  }
+
+  // Consume the nonce (one-time use)
+  await db.delete(noncesTable).where(eq(noncesTable.walletAddress, address));
+
+  // Upsert user
+  const existing = await db.select()
+    .from(usersTable)
+    .where(eq(usersTable.walletAddress, address))
+    .limit(1);
+
+  let user = existing[0];
+
+  if (!user) {
+    const referralCode = randomBytes(4).toString("hex").toUpperCase();
+    const [created] = await db.insert(usersTable).values({
+      walletAddress: address,
+      walletNetwork: "SOLANA",
+      referralCode,
+      role: "user",
+    }).returning();
+    user = created;
+    await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+  } else if (user.walletNetwork !== "SOLANA") {
+    await db.update(usersTable).set({ walletNetwork: "SOLANA" }).where(eq(usersTable.id, user.id));
+    user = { ...user, walletNetwork: "SOLANA" };
   }
 
   if (user.isSuspended) {

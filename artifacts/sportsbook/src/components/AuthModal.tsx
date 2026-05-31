@@ -66,7 +66,9 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   const waitingForConnect = useRef(false);
   const tronActive        = useRef(false);
 
-  const [hasTronLink, setHasTronLink] = useState(false);
+  const [hasTronLink,  setHasTronLink]  = useState(false);
+  const [hasPhantom,   setHasPhantom]   = useState(false);
+  const phantomActive = useRef(false);
 
   const addrShort = shortAddress(address) ?? '';
   const { copied, copy } = useCopy(address ?? '');
@@ -82,6 +84,10 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const tw = (window as any).tronWeb;
       setHasTronLink(!!(tw?.defaultAddress?.base58));
+      // Detect Phantom (Solana)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ph = (window as any).solana;
+      setHasPhantom(!!(ph?.isPhantom));
     }
   }, [open]);
 
@@ -191,6 +197,63 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       setStep('idle');
     } finally {
       tronActive.current = false;
+    }
+  }
+
+  async function handlePhantomSign() {
+    setError('');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ph = (window as any).solana;
+    if (!ph?.isPhantom) {
+      setError('Phantom wallet not found. Install Phantom from phantom.app and try again.');
+      return;
+    }
+    phantomActive.current = true;
+    setStep('signing');
+    try {
+      // Connect / get public key
+      if (!ph.isConnected) {
+        await ph.connect();
+      }
+      const solanaAddress: string = ph.publicKey.toString();
+
+      const { nonce, message } = await api.get<{ nonce: string; message: string }>(
+        `/auth/wallet/nonce/solana?address=${encodeURIComponent(solanaAddress)}`
+      );
+
+      // Sign message — returns { signature: Uint8Array, publicKey: PublicKey }
+      const encoded = new TextEncoder().encode(message);
+      const { signature } = await ph.signMessage(encoded, 'utf8') as { signature: Uint8Array; publicKey: unknown };
+      const sigHex = Array.from(signature).map((b: unknown) => (b as number).toString(16).padStart(2, '0')).join('');
+
+      setStep('verifying');
+      const data = await api.post<WalletVerifyResponse>('/auth/wallet/verify/solana', {
+        address: solanaAddress,
+        signature: sigHex,
+        nonce,
+      });
+      setTokens(data.accessToken, data.refreshToken);
+      loginWithWallet(data.accessToken, data.refreshToken, data.user);
+      setStep('done');
+
+      const shortSol = solanaAddress.slice(0, 4) + '…' + solanaAddress.slice(-4);
+      toast.success(`Signed in as ${shortSol}`, {
+        description: 'Welcome to CupBett',
+        duration: 4500,
+        style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' },
+      });
+
+      setTimeout(onClose, 1400);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      const isRejected = msg.toLowerCase().includes('reject') ||
+                         msg.toLowerCase().includes('cancel') ||
+                         msg.toLowerCase().includes('denied') ||
+                         msg.toLowerCase().includes('user rejected');
+      setError(isRejected ? 'Signature cancelled. Tap below to try again.' : msg);
+      setStep('idle');
+    } finally {
+      phantomActive.current = false;
     }
   }
 
@@ -320,9 +383,11 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
             {step === 'done'
               ? 'Welcome to CupBett Sports Trading'
               : step === 'signing'
-                ? isTronFlow
-                  ? 'Open TronLink and approve the signature request'
-                  : 'Open your wallet app and approve the message'
+                ? phantomActive.current
+                  ? 'Approve in Phantom — confirm the signature in your wallet'
+                  : isTronFlow
+                    ? 'Open TronLink and approve the signature request'
+                    : 'Open your wallet app and approve the message'
                 : step === 'verifying'
                   ? 'Confirming your identity…'
                   : step === 'waiting_wallet'
@@ -576,6 +641,28 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
               <p className="text-[10px] text-[#64748B]/60 text-center -mt-1.5">
                 TRON network · T… address · TRC-20 USDT
               </p>
+
+              {hasPhantom && (
+                <>
+                  <button
+                    onClick={handlePhantomSign}
+                    className="relative w-full h-[54px] rounded-xl font-black text-[14px] tracking-tight flex items-center justify-between px-5 transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(153,69,255,0.14) 0%, rgba(153,69,255,0.07) 100%)',
+                      border: '1.5px solid rgba(153,69,255,0.45)',
+                      color: '#9945FF',
+                      boxShadow: '0 0 24px rgba(153,69,255,0.08)',
+                    }}
+                  >
+                    <Wallet className="relative w-[18px] h-[18px] shrink-0" />
+                    <span className="relative flex-1 text-center">Connect with Phantom (Solana)</span>
+                    <ChevronRight className="relative w-[18px] h-[18px] shrink-0 opacity-60" />
+                  </button>
+                  <p className="text-[10px] text-[#64748B]/60 text-center -mt-1.5">
+                    Solana network · SOL address · ed25519 signature
+                  </p>
+                </>
+              )}
             </>
           )}
 

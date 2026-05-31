@@ -70,8 +70,20 @@ router.get("/wallet/transactions", authenticate, async (req, res): Promise<void>
 });
 
 // ── POST /wallet/deposit ──────────────────────────────────────────────────────
+// Minimum amount per network (non-USDT networks use coin units)
+const NETWORK_MINIMUMS: Record<string, { min: number; unit: string }> = {
+  BTC:  { min: 0.00001, unit: "BTC"  },
+  XRP:  { min: 1,       unit: "XRP"  },
+  SOLANA: { min: 1,     unit: "USDT" },
+  TON:    { min: 1,     unit: "USDT" },
+};
+
+// These networks use native coin amounts — never auto-credit; always require
+// admin to convert coin amount → USDT equivalent before crediting
+const FORCE_MANUAL_NETWORKS = new Set(["BTC", "XRP"]);
+
 const DepositBody = z.object({
-  amount:  z.number().positive().min(PLATFORM_DEPOSIT.minDeposit, `Minimum deposit is ${PLATFORM_DEPOSIT.minDeposit} USDT`),
+  amount:  z.number().positive(),
   txHash:  z.string().min(10, "Please enter a valid transaction hash"),
   // ETH | BSC | POLYGON | ARBITRUM | OPTIMISM | BASE = EVM auto-deposit (verified via evmVerify)
   // TRC-20 = TRON auto or manual deposit (verified via tronVerify)
@@ -88,6 +100,15 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
   }
   const { amount, txHash, network } = parsed.data;
   const userId = req.user!.userId;
+
+  // ── Network-specific minimum amount check ─────────────────────────────────────
+  const netMin = NETWORK_MINIMUMS[network];
+  const minValue = netMin ? netMin.min : PLATFORM_DEPOSIT.minDeposit;
+  const minUnit  = netMin ? netMin.unit : "USDT";
+  if (amount < minValue) {
+    res.status(400).json({ error: `Minimum deposit is ${minValue} ${minUnit}` });
+    return;
+  }
 
   // ── Self-exclusion blocks deposits (withdrawals still allowed) ───────────────
   const exclusionMsg = await isSelfExcludedFromDeposits(userId);
@@ -130,7 +151,10 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
 
   logger.info({ txHash, verified: verification.verified, note: verification.note, network }, "Verification result");
 
-  if (verification.verified) {
+  // BTC/XRP amounts are in coin units — auto-credit not safe without price conversion
+  const autoVerified = verification.verified && !FORCE_MANUAL_NETWORKS.has(network);
+
+  if (autoVerified) {
     // ── AUTO-APPROVE: verified on-chain → credit balance immediately ─────────
     const [txn] = await db.insert(transactionsTable).values({
       userId,
@@ -154,6 +178,20 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     logger.info({ txHash, amount, userId }, "Deposit auto-approved and balance credited");
 
     res.status(201).json({ ...txn, autoVerified: true });
+  } else if (FORCE_MANUAL_NETWORKS.has(network) && verification.verified) {
+    // BTC/XRP verified on-chain but needs admin to convert & credit USDT equiv.
+    const [txn] = await db.insert(transactionsTable).values({
+      userId,
+      type: "deposit",
+      amount: amount.toString(),
+      status: "pending",
+      txHash,
+      network,
+      verified: true,
+      verificationNote: `${verification.note} — Awaiting admin USDT credit conversion.`,
+    }).returning();
+    logger.info({ txHash, amount, network, userId }, "Native-coin deposit verified; pending admin credit conversion");
+    res.status(201).json({ ...txn, autoVerified: false, reviewReason: "Admin will convert to USDT and credit within 30 min" });
   } else {
     // ── MANUAL REVIEW: could not verify → pending for admin ──────────────────
     const [txn] = await db.insert(transactionsTable).values({

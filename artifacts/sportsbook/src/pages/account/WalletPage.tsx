@@ -1530,24 +1530,41 @@ export function WalletPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Amount */}
                     <div className="group">
-                      <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
-                        <CircleDollarSign className="h-3 w-3" />
-                        Amount Sent (USDT)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="10"
-                          step="0.01"
-                          value={depAmount}
-                          onChange={e => setDepAmount(e.target.value)}
-                          placeholder={`Min ${depositInfo?.minDeposit ?? 10} USDT`}
-                          className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">
-                          USDT
-                        </span>
-                      </div>
+                      {(() => {
+                        const isBtc = manualNetwork === 'BTC';
+                        const isXrp = manualNetwork === 'XRP';
+                        const coinLabel = isBtc ? 'BTC' : isXrp ? 'XRP' : 'USDT';
+                        const minVal   = isBtc ? '0.00001' : isXrp ? '1' : String(depositInfo?.minDeposit ?? 10);
+                        const stepVal  = isBtc ? '0.00000001' : isXrp ? '0.000001' : '0.01';
+                        const pholder  = isBtc ? 'e.g. 0.001 BTC' : isXrp ? 'e.g. 50 XRP' : `Min ${depositInfo?.minDeposit ?? 10} USDT`;
+                        return (
+                          <>
+                            <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                              <CircleDollarSign className="h-3 w-3" />
+                              Amount Sent ({coinLabel})
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min={minVal}
+                                step={stepVal}
+                                value={depAmount}
+                                onChange={e => setDepAmount(e.target.value)}
+                                placeholder={pholder}
+                                className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">
+                                {coinLabel}
+                              </span>
+                            </div>
+                            {(isBtc || isXrp) && (
+                              <p className="text-[10px] text-[#64748B] mt-1">
+                                Admin will convert to USDT and credit within 30 min
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
 
                     {/* TxID / TxHash */}

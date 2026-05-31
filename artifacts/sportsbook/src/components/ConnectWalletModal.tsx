@@ -517,6 +517,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         { val: 'eth',         label: 'ETH',      sub: 'Native',     color: '#627EEA' },
                         { val: 'bnbbsc',      label: 'BNB',      sub: 'BSC',        color: '#F0B90B' },
                         { val: 'xrp',         label: 'XRP',      sub: 'Ripple',     color: '#346AA9' },
+                        { val: 'ltc',         label: 'LTC',      sub: 'Litecoin',   color: '#A5A9B4' },
                       ] as { val: string; label: string; sub: string; color: string }[]).map(opt => (
                         <button
                           key={opt.val}
