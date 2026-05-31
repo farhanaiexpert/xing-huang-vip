@@ -376,7 +376,10 @@ function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-const POLL_MS = 15 * 1000; // 15 seconds — fast enough for real-time score updates
+/** Returns a random interval between 60 and 120 seconds (1–2 minutes). */
+function randomPollMs(): number {
+  return (60 + Math.floor(Math.random() * 61)) * 1000;
+}
 
 export interface UseLiveOddsResult {
   matches:     NormalizedLiveMatch[];
@@ -446,9 +449,16 @@ export function useLiveOdds(): UseLiveOddsResult {
   }, []);
 
   useEffect(() => {
-    void fetchLiveData();
-    const timer = setInterval(() => { void fetchLiveData(); }, POLL_MS);
-    return () => clearInterval(timer);
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const poll = async () => {
+      await fetchLiveData();
+      // Schedule next poll at a new random 60–120 s delay
+      timeoutId = setTimeout(() => { void poll(); }, randomPollMs());
+    };
+
+    void poll();
+    return () => clearTimeout(timeoutId);
   }, [fetchLiveData]);
 
   return {
