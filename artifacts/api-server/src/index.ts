@@ -445,17 +445,22 @@ runMigrations().then(() => {
     }
   }
 
+  // BetsAPI cron: poll every 5 min, trigger batch if ≥30 min since last run.
+  // Stagger: only fires if Odds API batch completed ≥2 min ago (avoids simultaneous load).
   cron.schedule("*/5 * * * *", async () => {
     const now = Date.now();
     if (now - lastBetsApiRefreshAt < BETSAPI_INTERVAL_MS) return;
+    // Stagger: require Odds batch to have finished at least 2 minutes ago
+    const oddsBatchAge = now - lastOddsRefreshAt;
+    if (isOddsRefreshing || oddsBatchAge < 2 * 60 * 1000) return;
     runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
   });
-  logger.info("BetsAPI cron started (every 30 minutes — PostgreSQL-backed cache)");
+  logger.info("BetsAPI cron started (every 30 minutes — staggered 2 min after Odds API batch)");
 
-  // Warm BetsAPI cache on startup
-  setImmediate(() => {
+  // Warm BetsAPI cache on startup — 2-minute delay after Odds API warm starts
+  setTimeout(() => {
     runBetsApiBatch().catch((err) => logger.error({ err }, "Startup BetsAPI warm: unhandled error"));
-  });
+  }, 2 * 60 * 1000);
 
   app.listen(PORT, "0.0.0.0", () => {
     logger.info({ port: PORT }, "CupBett API server started");

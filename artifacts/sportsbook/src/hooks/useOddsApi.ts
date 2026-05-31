@@ -165,38 +165,17 @@ function normaliseBetsApiLeagues(
     for (const [leagueKey, { leagueName, evs }] of byLeague) {
       const leagueId = `betsapi_${sportIdStr}_${leagueKey}`;
 
+      // Count-only sports (Horse Racing, Greyhounds): contribute to sidebar counts
+      // via countBySportId but NEVER push fake match rows into leagues[].
+      // Sidebar counting is done at the sportId level via countBySportId separately.
+      if (meta.countOnly) continue;
+
       // For Odds-API-covered sports: use no sportKey so AllSportsHighlights
       // won't pick these up (sidebar count is enough; Odds API section already exists).
       // For new sports (e.g. Table Tennis): use betsapi_ prefix → new section.
       const sportKey = isOddsApiCovered
         ? undefined
         : `betsapi_${meta.sportId.replace('sp_', '')}`;
-
-      // Skip match card generation for count-only sports (Horse Racing, Greyhounds)
-      if (meta.countOnly) {
-        // Still create a minimal league entry so sidebar counts work
-        leagues.push({
-          id:          leagueId,
-          name:        leagueName,
-          sportId:     meta.sportId,
-          sportKey:    undefined,   // no AllSportsHighlights section
-          countryCode: 'GL',
-          matches:     [{
-            id:          `betsapi_count_${leagueId}`,
-            team1:       '—',
-            team2:       '—',
-            date:        '',
-            dateTag:     'upcoming' as const,
-            leagueId,
-            sportId:     meta.sportId,
-            sportKey:    undefined,
-            isLive:      false,
-            marketCount: 0,
-            odds:        { home: 0, away: 0 },
-          }],
-        });
-        continue;
-      }
 
       const matches: Match[] = evs
         .filter(ev => {
@@ -248,6 +227,25 @@ function normaliseBetsApiLeagues(
   return leagues;
 }
 
+// ─── De-duplicate helper ──────────────────────────────────────────────────────
+
+/**
+ * De-duplicate leagues by normalised (sportId + leagueName) key.
+ * Odds API leagues take precedence; BetsAPI leagues that share a name
+ * with an existing Odds API league are silently dropped.
+ */
+function deduplicateLeagues(leagues: League[]): League[] {
+  const seen = new Set<string>();
+  const out:  League[] = [];
+  for (const league of leagues) {
+    const key = `${league.sportId ?? ''}::${(league.name ?? '').toLowerCase().replace(/\s+/g, ' ').trim()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(league);
+  }
+  return out;
+}
+
 // ─── Shared fetch logic ───────────────────────────────────────────────────────
 
 async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | null }> {
@@ -259,7 +257,7 @@ async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | n
   const leagues: League[] = [];
   let oddsError: string | null = null;
 
-  // 1. The Odds API — primary source
+  // 1. The Odds API — primary source (added first so they win de-dup)
   if (oddsResult.status === 'fulfilled') {
     const sportsMap = oddsResult.value;
     for (const config of ODDS_API_SPORTS) {
@@ -285,7 +283,8 @@ async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | n
     return { leagues: [], error: oddsError ?? 'No cached data yet — server is warming up' };
   }
 
-  return { leagues, error: null };
+  // De-duplicate by (sportId, leagueName) — Odds API entries win (they're first)
+  return { leagues: deduplicateLeagues(leagues), error: null };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
