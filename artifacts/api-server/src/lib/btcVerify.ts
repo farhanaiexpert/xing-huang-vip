@@ -81,10 +81,19 @@ export async function verifyBtcDeposit(
 
   const onChainAmountBtc = platformVout.value / 1e8;
 
-  // Amount comparison is intentionally skipped: the deposit amount is in BTC coin units
-  // which have no stable USDT equivalent at verification time.
-  // The backend will keep these deposits in manual review for admin to credit the
-  // correct USDT equivalent. The on-chain BTC amount is logged for admin reference.
+  // Verify the on-chain amount covers what the user claimed (1% tolerance for dust/rounding).
+  // BTC has no stable USDT peg, so the deposit remains in manual review for admin to credit
+  // the USDT equivalent — but the claimed BTC amount must still match on-chain.
+  const tolerance = claimedAmountBtc * 0.01;
+  if (onChainAmountBtc < claimedAmountBtc - tolerance) {
+    return {
+      verified: false,
+      onChainAmountBtc,
+      toAddress: platformAddress,
+      note: `On-chain amount (${onChainAmountBtc.toFixed(8)} BTC) is less than claimed (${claimedAmountBtc} BTC) — moved to manual review`,
+    };
+  }
+
   return {
     verified: true,
     onChainAmountBtc,

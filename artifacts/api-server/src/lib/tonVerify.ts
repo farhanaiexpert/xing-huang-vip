@@ -115,7 +115,8 @@ function normaliseTonAddress(addr: string): string {
 
 function isUsdtJetton(msg: TonApiMsg): boolean {
   const jetton = msg.decoded_body?.jetton;
-  if (!jetton) return true; // if we can't check, be permissive — amount check provides sufficient guard
+  // Fail-closed: if jetton metadata is absent we cannot confirm this is USDT → manual review
+  if (!jetton) return false;
   const addr = (jetton.address ?? "").toLowerCase();
   const sym  = (jetton.symbol ?? "").toLowerCase();
   const name = (jetton.name ?? "").toLowerCase();
@@ -132,12 +133,14 @@ function extractJettonAmount(body: TonApiMsg["decoded_body"]): number {
 }
 
 function destinationMatches(body: TonApiMsg["decoded_body"], platformAddress: string): boolean {
-  if (!body) return true; // permissive if we can't check
+  // Fail-closed: missing body or missing destination → cannot confirm recipient → manual review
+  if (!body) return false;
   const dest = body.destination;
-  if (!dest) return true;
+  if (!dest) return false;
   const destStr = typeof dest === "string" ? dest : (dest.address ?? "");
+  if (!destStr) return false;
   return normaliseTonAddress(destStr) === normaliseTonAddress(platformAddress) ||
-    // partial match: last 20 hex chars
+    // partial match: last 20 hex chars (handles raw vs user-friendly format differences)
     normaliseTonAddress(destStr).endsWith(normaliseTonAddress(platformAddress).slice(-20));
 }
 

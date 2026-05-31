@@ -115,8 +115,19 @@ export async function verifyXrpDeposit(
     onChainAmountXrp = parseInt(txJson.Amount, 10) / 1_000_000;
   }
 
-  // Amount comparison is intentionally skipped: XRP is a native coin with no stable
-  // USDT peg. Admin will review the on-chain amount and credit USDT equivalent.
+  // Verify the on-chain amount covers what the user claimed (1% tolerance for dust/rounding).
+  // XRP has no stable USDT peg, so the deposit remains in manual review for admin to credit
+  // the USDT equivalent — but the claimed XRP amount must still match on-chain.
+  const tolerance = claimedAmountXrp * 0.01;
+  if (onChainAmountXrp < claimedAmountXrp - tolerance) {
+    return {
+      verified: false,
+      onChainAmountXrp,
+      toAddress: platformAddress,
+      note: `On-chain amount (${onChainAmountXrp.toFixed(6)} XRP) is less than claimed (${claimedAmountXrp} XRP) — moved to manual review`,
+    };
+  }
+
   return {
     verified: true,
     onChainAmountXrp,
