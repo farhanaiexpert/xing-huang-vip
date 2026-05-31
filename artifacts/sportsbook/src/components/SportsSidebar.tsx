@@ -76,13 +76,18 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
   const [location, setLocation] = useLocation();
   const { favSports, recentMatches, toggleFavSport, isFavSport } = useFavorites();
 
-  const { matchCountBySportId } = useOddsData();
+  const { matchCountBySportId, loading: oddsLoading, hasRealData } = useOddsData();
 
   const popularSports  = SPORTS.filter(s => s.isPopular);
   const pinnedSports   = SPORTS.filter(s => favSports.includes(s.id));
   const hasRecent      = recentMatches.length > 0;
 
-  const displayedAZ = showAllAZ ? AZ_SPORTS : AZ_SPORTS.slice(0, AZ_INITIAL);
+  // Only show sports that have confirmed upcoming events.
+  // While data is still loading show all whitelisted sports to avoid an empty list flash.
+  const coveredAZ  = (oddsLoading || !hasRealData)
+    ? AZ_SPORTS
+    : AZ_SPORTS.filter(s => (matchCountBySportId[s.id] ?? 0) > 0);
+  const displayedAZ = showAllAZ ? coveredAZ : coveredAZ.slice(0, AZ_INITIAL);
 
   return (
     <aside className={cn(
@@ -220,7 +225,7 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
             >
               {showAllAZ
                 ? `↑ Show less`
-                : `↓ Show all ${AZ_SPORTS.length} sports`}
+                : `↓ Show all ${coveredAZ.length} sports`}
             </button>
           </div>
 

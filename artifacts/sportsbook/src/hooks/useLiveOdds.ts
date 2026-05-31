@@ -242,9 +242,12 @@ function normalizeOddsApiEvent(
 // ─── BetsAPI sport_id → sport string mapping ─────────────────────────────────
 
 const BETSAPI_SPORT_STRING: Record<string, string> = {
-  '1':  'soccer', '3':  'cricket', '8':  'rugby', '12': 'americanfootball',
-  '13': 'baseball', '14': 'icehockey', '16': 'basketball', '17': 'tennis',
-  '18': 'golf', '19': 'handball', '92': 'tabletennis', '94': 'snooker', '95': 'darts',
+  '1':  'soccer',  '3':  'cricket',       '8':  'rugbyunion',     '9':  'boxing',
+  '12': 'americanfootball',               '13': 'baseball',       '14': 'icehockey',
+  '16': 'basketball',                     '17': 'tennis',         '18': 'golf',
+  '19': 'handball',                       '36': 'aussierules',    '78': 'rugbyleague',
+  '91': 'volleyball',                     '92': 'tabletennis',    '94': 'snooker',
+  '95': 'darts',
 };
 
 function getBetsApiSportMeta(sportId: string): { icon: string; accent: string; hasDraw: boolean } {
@@ -255,10 +258,14 @@ function getBetsApiSportMeta(sportId: string): { icon: string; accent: string; h
   if (sport === 'americanfootball')    return { icon: '🏈', accent: '#F97316', hasDraw: false };
   if (sport === 'cricket')             return { icon: '🏏', accent: '#22C55E', hasDraw: false };
   if (sport === 'baseball')            return { icon: '⚾', accent: '#38BDF8', hasDraw: false };
-  if (sport === 'rugby')               return { icon: '🏉', accent: '#7C3AED', hasDraw: false };
+  if (sport === 'rugbyunion')          return { icon: '🏉', accent: '#7C3AED', hasDraw: false };
+  if (sport === 'rugbyleague')         return { icon: '🏉', accent: '#A78BFA', hasDraw: false };
   if (sport === 'icehockey')           return { icon: '🏒', accent: '#38BDF8', hasDraw: false };
   if (sport === 'golf')                return { icon: '⛳', accent: '#22C55E', hasDraw: false };
   if (sport === 'handball')            return { icon: '🤾', accent: '#F97316', hasDraw: false };
+  if (sport === 'aussierules')         return { icon: '🏉', accent: '#F59E0B', hasDraw: false };
+  if (sport === 'volleyball')          return { icon: '🏐', accent: '#38BDF8', hasDraw: false };
+  if (sport === 'boxing')              return { icon: '🥊', accent: '#EF4444', hasDraw: false };
   if (sport === 'tabletennis')         return { icon: '🏓', accent: '#00DFA9', hasDraw: false };
   if (sport === 'snooker')             return { icon: '🎱', accent: '#22C55E', hasDraw: false };
   if (sport === 'darts')               return { icon: '🎯', accent: '#38BDF8', hasDraw: false };
