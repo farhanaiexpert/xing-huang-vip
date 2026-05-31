@@ -25,6 +25,8 @@ interface Outcome {
 interface LiveMatch {
   id: string;
   sport: string;
+  /** Full Odds API sport key, e.g. "basketball_nba" — used for correct bet settlement */
+  sportKey: string;
   icon: string;
   league: string;
   stage: string;
@@ -54,6 +56,7 @@ const BASE_MATCHES: LiveMatch[] = [
   {
     id: 'live-ucl-rm-mc-2025',
     sport: 'soccer',
+    sportKey: 'soccer_uefa_champs_league',
     icon: '⚽',
     league: 'UEFA Champions League',
     stage: 'Semi-Final · 2nd Leg',
@@ -75,6 +78,7 @@ const BASE_MATCHES: LiveMatch[] = [
   {
     id: 'live-nba-lal-bos-2025',
     sport: 'basketball',
+    sportKey: 'basketball_nba',
     icon: '🏀',
     league: 'NBA Finals',
     stage: 'Game 5 · Q3 8:24',
@@ -95,6 +99,7 @@ const BASE_MATCHES: LiveMatch[] = [
   {
     id: 'live-wimbledon-djok-alca-2025',
     sport: 'tennis',
+    sportKey: 'tennis_atp_wimbledon',
     icon: '🎾',
     league: 'Wimbledon',
     stage: 'Final · 3rd Set  7–5, 5–7, 5–4★',
@@ -115,6 +120,7 @@ const BASE_MATCHES: LiveMatch[] = [
   {
     id: 'live-mlb-nyy-bos-2025',
     sport: 'baseball',
+    sportKey: 'baseball_mlb',
     icon: '⚾',
     league: 'MLB',
     stage: 'Top 7th · 2 Outs',
@@ -135,6 +141,7 @@ const BASE_MATCHES: LiveMatch[] = [
   {
     id: 'live-ufc-por-oli-2025',
     sport: 'mma',
+    sportKey: 'mma_mixed_martial_arts',
     icon: '🥊',
     league: 'UFC 315',
     stage: 'Main Event · Round 2',
@@ -155,6 +162,7 @@ const BASE_MATCHES: LiveMatch[] = [
   {
     id: 'live-nfl-kc-buf-2025',
     sport: 'americanfootball',
+    sportKey: 'americanfootball_nfl',
     icon: '🏈',
     league: 'NFL — Week 12',
     stage: 'Q3 · 4:17 left',
@@ -175,6 +183,7 @@ const BASE_MATCHES: LiveMatch[] = [
   {
     id: 'live-cricket-ind-aus-2025',
     sport: 'cricket',
+    sportKey: 'cricket_international_t20',
     icon: '🏏',
     league: 'ICC World Test Championship',
     stage: 'Day 3 · 2nd Innings',
@@ -473,7 +482,7 @@ function OutcomeRow({
         selectionType: outcome.label,
         selectionName: outcome.name,
         odds: currentOdds,
-        sportId: match.sport,
+        sportId: match.sportKey,
         isLive: true,
       });
       playOddsAdd();
@@ -621,7 +630,7 @@ function OddsButton({
         selectionType: line.label,
         selectionName: line.name,
         odds: currentOdds,
-        sportId: match.sport,
+        sportId: match.sportKey,
         isLive: true,
       });
       playOddsAdd();

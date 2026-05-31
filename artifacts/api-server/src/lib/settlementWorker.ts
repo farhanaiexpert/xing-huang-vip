@@ -37,6 +37,96 @@ const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 /** Bets older than this with no API result are voided and stake refunded */
 const AUTO_VOID_HOURS = 12;
 
+/**
+ * Maps generic / internal sport identifiers to the specific Odds API sport keys
+ * needed for the /scores endpoint.  Covers three formats:
+ *   1. Generic prefix from sport_key.split('_')[0]  — e.g. "basketball"
+ *   2. Internal sp_ IDs                            — e.g. "sp_basketball"
+ *   3. Exact Odds API keys (pass-through if already correct)
+ */
+const SPORT_KEY_EXPANSION: Record<string, string[]> = {
+  // ── Generic names (sport_key prefix) ──────────────────────────────────────
+  basketball:       ['basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl'],
+  soccer:           ['soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
+                     'soccer_germany_bundesliga', 'soccer_usa_mls', 'soccer_turkey_super_league',
+                     'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato', 'soccer_mexico_ligamx',
+                     'soccer_efl_champ', 'soccer_scotland_premiership', 'soccer_portugal_primeira_liga',
+                     'soccer_belgium_first_div', 'soccer_argentina_primera_division',
+                     'soccer_conmebol_copa_libertadores', 'soccer_korea_kleague1', 'soccer_japan_j_league',
+                     'soccer_australia_aleague', 'soccer_india_superleague', 'soccer_conmebol_copa_america',
+                     'soccer_uefa_nations_league', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league'],
+  football:         ['soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
+                     'soccer_germany_bundesliga', 'soccer_usa_mls', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league'],
+  tennis:           ['tennis_atp_french_open', 'tennis_wta_french_open', 'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
+                     'tennis_atp_us_open', 'tennis_wta_us_open', 'tennis_atp_australian_open', 'tennis_wta_australian_open'],
+  americanfootball: ['americanfootball_nfl', 'americanfootball_ncaaf', 'americanfootball_ufl'],
+  cricket:          ['cricket_ipl', 'cricket_international_t20', 'cricket_big_bash', 'cricket_psl', 'cricket_test_match'],
+  baseball:         ['baseball_mlb', 'baseball_npb', 'baseball_kbo'],
+  icehockey:        ['icehockey_nhl', 'icehockey_sweden_hockey_league'],
+  rugbyleague:      ['rugbyleague_nrl', 'rugbyleague_super_league'],
+  rugbyunion:       ['rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+                     'rugbyunion_world_cup', 'rugbyunion_champions_cup'],
+  mma:              ['mma_mixed_martial_arts'],
+  boxing:           ['boxing_boxing'],
+  aussierules:      ['aussierules_afl'],
+
+  // ── Internal sp_ IDs ──────────────────────────────────────────────────────
+  sp_basketball:        ['basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl'],
+  sp_soccer:            ['soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
+                         'soccer_germany_bundesliga', 'soccer_usa_mls', 'soccer_turkey_super_league',
+                         'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato', 'soccer_mexico_ligamx',
+                         'soccer_efl_champ', 'soccer_scotland_premiership', 'soccer_portugal_primeira_liga',
+                         'soccer_belgium_first_div', 'soccer_argentina_primera_division',
+                         'soccer_conmebol_copa_libertadores', 'soccer_korea_kleague1', 'soccer_japan_j_league',
+                         'soccer_australia_aleague', 'soccer_india_superleague', 'soccer_conmebol_copa_america',
+                         'soccer_uefa_nations_league', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league'],
+  sp_ucl:               ['soccer_uefa_champs_league'],
+  sp_tennis:            ['tennis_atp_french_open', 'tennis_wta_french_open', 'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
+                         'tennis_atp_us_open', 'tennis_wta_us_open', 'tennis_atp_australian_open', 'tennis_wta_australian_open'],
+  sp_american_football: ['americanfootball_nfl', 'americanfootball_ncaaf', 'americanfootball_ufl'],
+  sp_cricket:           ['cricket_ipl', 'cricket_international_t20', 'cricket_big_bash', 'cricket_psl', 'cricket_test_match'],
+  sp_baseball:          ['baseball_mlb', 'baseball_npb', 'baseball_kbo'],
+  sp_ice_hockey:        ['icehockey_nhl', 'icehockey_sweden_hockey_league'],
+  sp_rugby_league:      ['rugbyleague_nrl', 'rugbyleague_super_league'],
+  sp_rugby_union:       ['rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+                         'rugbyunion_world_cup', 'rugbyunion_champions_cup'],
+  sp_mma:               ['mma_mixed_martial_arts'],
+  sp_boxing:            ['boxing_boxing'],
+  sp_aussie_rules:      ['aussierules_afl'],
+  sp_horse_racing:      [], // Not available in Odds API scores endpoint
+};
+
+/** Returns the Odds API sport keys to query for a stored sport identifier */
+function expandSportKey(sport: string): string[] {
+  const expansion = SPORT_KEY_EXPANSION[sport];
+  if (expansion) return expansion;
+  // Already a valid Odds API key (contains _ and not an sp_ internal ID)
+  if (sport && sport.includes('_') && !sport.startsWith('sp_')) return [sport];
+  return [];
+}
+
+/** Normalize a team name for fuzzy comparison */
+function normalizeTeam(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Returns true if two team names refer to the same team */
+function teamsMatch(betTeam: string, apiTeam: string): boolean {
+  const a = normalizeTeam(betTeam);
+  const b = normalizeTeam(apiTeam);
+  if (a === b) return true;
+  if (a.includes(b) || b.includes(a)) return true;
+  const aWords = a.split(' ').filter(w => w.length > 2);
+  const bWords = b.split(' ').filter(w => w.length > 2);
+  if (aWords.length === 0 || bWords.length === 0) return false;
+  const shared = aWords.filter(w => bWords.includes(w));
+  return shared.length > 0 && shared.length >= Math.ceil(Math.min(aWords.length, bWords.length) * 0.6);
+}
+
 /** Mutex — skip tick if previous run is still in progress */
 let isRunning = false;
 
@@ -408,6 +498,7 @@ async function processSettlement(): Promise<void> {
   }
 
   // Load all open events with metadata (team names + age)
+  // Note: we include empty-sport events so they can be caught by auto-void
   const openResult = await db.execute(sql`
     SELECT
       event_id,
@@ -415,7 +506,7 @@ async function processSettlement(): Promise<void> {
       sport,
       MIN(created_at) AS earliest_bet
     FROM bet_selections
-    WHERE status = 'open' AND sport != '' AND event_id != ''
+    WHERE status = 'open' AND event_id != ''
     GROUP BY event_id, event_name, sport
   `);
 
@@ -455,17 +546,85 @@ async function processSettlement(): Promise<void> {
   for (const [sport, events] of bySport) {
     const unsettledIds = new Set(events.map(e => e.eventId));
 
-    // ── Step 1: The Odds API ────────────────────────────────────────────────
-    const oddsApiCompleted = await fetchCompletedScoresOddsApi(sport);
-    const oddsApiHits      = oddsApiCompleted.filter(e => unsettledIds.has(e.id));
+    // Build a map: realOddsApiId → syntheticEventId, for events whose IDs
+    // were prefixed with "api_live_" at bet-placement time.
+    const liveIdMap = new Map<string, string>();
+    for (const ev of events) {
+      if (ev.eventId.startsWith("api_live_")) {
+        liveIdMap.set(ev.eventId.slice("api_live_".length), ev.eventId);
+      }
+    }
 
-    for (const event of oddsApiHits) {
+    // ── Step 1: The Odds API (with sport key expansion) ─────────────────────
+    const apiKeys = expandSportKey(sport);
+    const allCompleted: CompletedEvent[] = [];
+
+    for (const key of apiKeys) {
+      try {
+        const completed = await fetchCompletedScoresOddsApi(key);
+        allCompleted.push(...completed);
+      } catch (err) {
+        logger.warn({ err, key }, "Settlement worker: Odds API key fetch error");
+      }
+    }
+
+    // Deduplicate completed events by id
+    const completedMap = new Map<string, CompletedEvent>();
+    for (const ev of allCompleted) {
+      if (!completedMap.has(ev.id)) completedMap.set(ev.id, ev);
+    }
+
+    // Match by exact event ID
+    for (const [id, event] of completedMap) {
+      if (!unsettledIds.has(id)) continue;
       try {
         const n = await processEvent(event, sport, "odds-api");
         grandTotal += n;
-        unsettledIds.delete(event.id);
+        unsettledIds.delete(id);
       } catch (err) {
-        logger.error({ err, eventId: event.id }, "Settlement worker: Odds API event error");
+        logger.error({ err, eventId: id }, "Settlement worker: Odds API event error");
+      }
+    }
+
+    // Match api_live_XXXX events — strip prefix, look up real Odds API UUID
+    for (const [realId, syntheticId] of liveIdMap) {
+      if (!unsettledIds.has(syntheticId)) continue;
+      const apiEvent = completedMap.get(realId);
+      if (!apiEvent) continue;
+      const patchedEvent: CompletedEvent = { ...apiEvent, id: syntheticId };
+      try {
+        const n = await processEvent(patchedEvent, sport, "odds-api");
+        grandTotal += n;
+        unsettledIds.delete(syntheticId);
+        logger.info({ syntheticId, realId }, "Settlement worker: resolved api_live_ event");
+      } catch (err) {
+        logger.error({ err, eventId: syntheticId }, "Settlement worker: api_live_ event error");
+      }
+    }
+
+    if (unsettledIds.size === 0) continue;
+
+    // Fuzzy team-name matching for remaining events whose IDs don't match
+    const remainingForFuzzy = events.filter(e => unsettledIds.has(e.eventId));
+    for (const ev of remainingForFuzzy) {
+      if (!completedMap.size) break;
+      const match = [...completedMap.values()].find(c =>
+        teamsMatch(ev.homeTeam, c.home_team) && teamsMatch(ev.awayTeam, c.away_team)
+      );
+      if (!match) continue;
+      const patchedEvent: CompletedEvent = { ...match, id: ev.eventId };
+      try {
+        const n = await processEvent(patchedEvent, sport, "odds-api");
+        if (n > 0) {
+          grandTotal += n;
+          unsettledIds.delete(ev.eventId);
+          logger.info(
+            { eventId: ev.eventId, matchedTeams: `${match.home_team} vs ${match.away_team}` },
+            "Settlement worker: fuzzy team-name match",
+          );
+        }
+      } catch (err) {
+        logger.error({ err, eventId: ev.eventId }, "Settlement worker: fuzzy match error");
       }
     }
 
@@ -496,14 +655,14 @@ async function processSettlement(): Promise<void> {
 
     if (unsettledIds.size === 0) continue;
 
-    // ── Step 3: Auto-void — old bets with no result from either source ──────
+    // ── Step 3: Auto-void — old bets with no result from any source ─────────
     const toVoid = events.filter(e => unsettledIds.has(e.eventId) && e.earliestBet < cutoff);
 
     for (const ev of toVoid) {
       try {
         const dummyEvent: CompletedEvent = {
           id:        ev.eventId,
-          sport_key: sport,
+          sport_key: sport || "unknown",
           home_team: ev.homeTeam,
           away_team: ev.awayTeam,
           completed: true,

@@ -39,6 +39,8 @@ interface LiveScoresResponse { scores: LiveScoreRaw[]; count: number; }
 export interface NormalizedLiveMatch {
   id:        string;
   sport:     string;
+  /** Full Odds API sport key, e.g. "basketball_nba" — used for correct bet settlement */
+  sportKey:  string;
   icon:      string;
   league:    string;
   stage:     string;
@@ -207,6 +209,7 @@ function normalizeEvent(
   return {
     id:        `api_live_${event.id}`,
     sport:     event.sport_key.split('_')[0],
+    sportKey:  event.sport_key,
     icon,
     league:    formatLeagueName(event.sport_key),
     stage:     computeStage(event.sport_key, event.commence_time),
