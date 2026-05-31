@@ -121,37 +121,42 @@ export function OverviewPage() {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <h1 className="text-[22px] font-black text-[#F8FAFC] leading-tight">{displayLabel}</h1>
+              {user?.walletAddress && (
+                <p className="text-[11px] font-mono text-[#00DFA9]/50 mt-0.5 truncate">
+                  {user.walletAddress}
+                </p>
+              )}
 
               <div className="flex flex-wrap items-center gap-3 mt-3">
                 {/* Member since */}
-                {user!.createdAt && (
+                {user?.createdAt && (
                   <div className="flex items-center gap-1.5 text-[11px] text-[#64748B]">
                     <Calendar className="h-3 w-3" />
-                    Member since {fmtDate(user!.createdAt as string)}
+                    Member since {fmtDate(user.createdAt as string)}
                   </div>
                 )}
                 {/* KYC */}
                 <div className={cn(
                   'flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border',
-                  user!.kycStatus === 'verified'
+                  user?.kycStatus === 'verified'
                     ? 'bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/25'
                     : 'bg-[#64748B]/10 text-[#64748B] border-[#64748B]/20'
                 )}>
                   <ShieldCheck className="h-2.5 w-2.5" />
-                  {user!.kycStatus === 'verified' ? 'Verified' : 'Unverified'}
+                  {user?.kycStatus === 'verified' ? 'Verified' : 'Unverified'}
                 </div>
               </div>
             </div>
 
             {/* Referral code */}
-            {user!.referralCode && (
+            {user?.referralCode && (
               <div className="shrink-0">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#64748B] mb-1.5">Your Referral Code</p>
                 <button
                   onClick={handleCopyRef}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#00DFA9]/25 bg-[#00DFA9]/6 hover:bg-[#00DFA9]/12 transition-all cursor-pointer group"
                 >
-                  <span className="text-[18px] font-black text-[#00DFA9] font-mono tracking-[0.2em]">{user!.referralCode}</span>
+                  <span className="text-[18px] font-black text-[#00DFA9] font-mono tracking-[0.2em]">{user.referralCode}</span>
                   <div className="w-6 h-6 rounded-lg bg-[#00DFA9]/12 flex items-center justify-center group-hover:bg-[#00DFA9]/20 transition-colors">
                     {copied ? <Check className="h-3 w-3 text-[#00DFA9]" /> : <Copy className="h-3 w-3 text-[#00DFA9]/70" />}
                   </div>

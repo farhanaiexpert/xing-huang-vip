@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
-import { Link, useLocation, useParams } from 'wouter';
+import { Link, useParams } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBetHistory } from '@/hooks/useBetHistory';
 import { Header } from '@/components/Header';
-import { cn, userDisplayLabel, addressInitials } from '@/lib/utils';
+import { cn, userDisplayLabel, shortAddress, addressInitials } from '@/lib/utils';
 import {
   LayoutDashboard, Wallet, Receipt, ArrowLeftRight,
   Users, Gift, Star, Trophy, Settings, LogOut, Shield, BarChart2,
@@ -59,37 +58,16 @@ function isSection(s: string): s is SectionId {
 }
 
 export function AccountLayout() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { openBetsCount } = useBetHistory();
   const params = useParams<{ section?: string }>();
-  const [, setLocation] = useLocation();
 
   const raw = params.section ?? 'overview';
   const section: SectionId = isSection(raw) ? raw : 'overview';
   const PageComponent = PAGES[section];
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      sessionStorage.setItem('cb_return_to', window.location.pathname);
-      setLocation('/');
-      setTimeout(() => window.dispatchEvent(new CustomEvent('openLoginModal')), 150);
-    }
-  }, [isAuthenticated, isLoading, setLocation]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0B0F14]">
-        <Header />
-        <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
-  if (!isAuthenticated || !user) return null;
-
-  const displayLabel = userDisplayLabel(user);
-  const initials     = addressInitials(displayLabel);
+  const displayLabel = user ? userDisplayLabel(user) : 'Guest';
+  const initials     = user ? addressInitials(displayLabel) : 'G';
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-20 xl:pb-0">
@@ -137,9 +115,14 @@ export function AccountLayout() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[13px] font-bold text-[#F8FAFC] truncate">{displayLabel}</p>
+                  {user?.walletAddress && (
+                    <p className="text-[10px] text-[#00DFA9]/60 font-mono truncate">
+                      {shortAddress(user.walletAddress)}
+                    </p>
+                  )}
                 </div>
               </div>
-              {user.referralCode && (
+              {user?.referralCode && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#00DFA9]/6 border border-[#00DFA9]/15">
                   <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-widest">REF</span>
                   <span className="text-[11px] font-black text-[#00DFA9] font-mono tracking-wider">{user.referralCode}</span>

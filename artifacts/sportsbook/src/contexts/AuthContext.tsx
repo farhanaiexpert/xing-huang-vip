@@ -17,6 +17,12 @@ interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** True when the user just signed in for the first time (no username set yet) */
+  isNewUser: boolean;
+  /** Dismiss the profile-setup prompt */
+  clearNewUser: () => void;
+  /** Called by AuthModal after successful wallet verify — stores tokens + user */
+  loginWithWallet: (accessToken: string, refreshToken: string, user: AuthUser) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateUser: (partial: Partial<AuthUser>) => void;
@@ -25,8 +31,9 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser]         = useState<AuthUser | null>(null);
   const [isLoading, setLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -40,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUser = useCallback((partial: Partial<AuthUser>) => {
     setUser(prev => prev ? { ...prev, ...partial } : prev);
   }, []);
+
+  const clearNewUser = useCallback(() => setIsNewUser(false), []);
 
   // On mount: restore session from stored tokens
   useEffect(() => {
@@ -86,6 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('cb:session-expired', handleExpired);
   }, []);
 
+  const loginWithWallet = useCallback((accessToken: string, refreshToken: string, authedUser: AuthUser) => {
+    setTokens(accessToken, refreshToken);
+    setUser(authedUser);
+    // No username = brand-new wallet account → trigger profile setup
+    if (!authedUser.username) setIsNewUser(true);
+  }, []);
+
   const logout = useCallback(async () => {
     const refresh = getRefreshToken();
     try {
@@ -93,12 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {}
     clearTokens();
     setUser(null);
+    setIsNewUser(false);
   }, []);
 
   return (
     <AuthContext.Provider value={{
       user, isAuthenticated: !!user, isLoading,
-      logout, refreshUser, updateUser,
+      isNewUser, clearNewUser,
+      loginWithWallet, logout, refreshUser, updateUser,
     }}>
       {children}
     </AuthContext.Provider>

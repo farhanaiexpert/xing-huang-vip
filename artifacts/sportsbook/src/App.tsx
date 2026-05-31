@@ -28,6 +28,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
+import { ProfileSetupModal } from "@/components/ProfileSetupModal";
 import { useTransactionNotifications } from "@/hooks/useTransactionNotifications";
 import { Link } from "wouter";
 
@@ -91,6 +92,7 @@ function App() {
                             <MobileBottomNav />
                             <OnboardingGuide />
                             <TransactionNotifier />
+                            <ProfileSetupModal />
                             <Toaster />
                             <SonnerToaster
                               position="top-left"

@@ -18,45 +18,63 @@ const LIVE_CACHE_TTL = 30 * 1000;
 const inFlight = new Map<string, Promise<unknown[]>>();
 
 // ─── All sport keys the server cron will refresh ──────────────────────────────
-// Trimmed to ~45 year-round / high-activity sports (Change 4).
-// Off-season outright/futures keys and rarely-active leagues removed to cut
-// wasted API calls that return 0 events.
 export const ALL_ODDS_SPORT_KEYS: string[] = [
-  // Soccer — top tier only (year-round coverage)
+  // Soccer
   'soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a',
   'soccer_france_ligue_one', 'soccer_germany_bundesliga',
   'soccer_uefa_champs_league', 'soccer_uefa_europa_league',
   'soccer_usa_mls', 'soccer_turkey_super_league',
   'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato',
-  'soccer_mexico_ligamx', 'soccer_efl_champ', 'soccer_portugal_primeira_liga',
-  'soccer_argentina_primera_division',
+  'soccer_mexico_ligamx', 'soccer_efl_champ', 'soccer_scotland_premiership',
+  'soccer_portugal_primeira_liga', 'soccer_belgium_first_div',
+  'soccer_argentina_primera_division', 'soccer_conmebol_copa_libertadores',
+  'soccer_korea_kleague1', 'soccer_japan_j_league', 'soccer_australia_aleague',
   // American Football
-  'americanfootball_nfl',
+  'americanfootball_nfl', 'americanfootball_ncaaf', 'americanfootball_ufl',
   // Aussie Rules
   'aussierules_afl',
   // Basketball
-  'basketball_nba', 'basketball_euroleague', 'basketball_wnba',
-  // Tennis — active grand slams only (others removed when off-season)
+  'basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl',
+  // Tennis — Grand Slams + hard-court swing
+  'tennis_atp_french_open', 'tennis_wta_french_open',
   'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
   'tennis_atp_us_open', 'tennis_wta_us_open',
+  'tennis_atp_australian_open', 'tennis_wta_australian_open',
   // Cricket
-  'cricket_ipl', 'cricket_international_t20', 'cricket_test_match',
+  'cricket_ipl', 'cricket_international_t20', 'cricket_big_bash',
+  'cricket_psl', 'cricket_test_match',
   // Baseball
-  'baseball_mlb',
+  'baseball_mlb', 'baseball_npb', 'baseball_kbo',
   // Ice Hockey
-  'icehockey_nhl',
+  'icehockey_nhl', 'icehockey_sweden_hockey_league', 'icehockey_nhl_championship_winner',
   // Rugby League
-  'rugbyleague_nrl', 'rugbyleague_super_league',
+  'rugbyleague_nrl', 'rugbyleague_super_league', 'rugbyleague_nrl_premiership_winner',
   // Rugby Union
-  'rugbyunion_super_rugby', 'rugbyunion_champions_cup',
-  // Golf — PGA Tour only (most active)
-  'golf_pga_tour_winner',
-  // Boxing & MMA
-  'boxing_event', 'mma_mixed_martial_arts',
+  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+  'rugbyunion_world_cup', 'rugbyunion_champions_cup',
+  // Golf
+  'golf_masters_tournament_winner', 'golf_pga_championship_winner',
+  'golf_us_open_winner', 'golf_the_open_championship_winner', 'golf_pga_tour_winner',
   // Handball
   'handball_ehf_champions_league',
+  // Volleyball
+  'volleyball_brazil_superliga',
   // Darts
-  'darts_betway_premier_league',
+  'darts_betway_premier_league', 'darts_world_championship',
+  // Boxing
+  'boxing_event',
+  // MMA
+  'mma_mixed_martial_arts',
+  // Snooker
+  'snooker_world_championship', 'snooker_premier_league',
+  // Basketball — WNBA
+  'basketball_wnba',
+  // Soccer — Nordic + more European leagues
+  'soccer_sweden_allsvenskan', 'soccer_norway_eliteserien', 'soccer_denmark_superliga',
+  'soccer_finland_veikkausliiga', 'soccer_spain_segunda_division',
+  'soccer_england_league1', 'soccer_england_league2',
+  'soccer_china_superleague', 'soccer_india_superleague',
+  'soccer_conmebol_copa_america', 'soccer_uefa_nations_league',
 ];
 
 // Live sports (in-play events polling) — all newly wired sports included
@@ -239,52 +257,25 @@ async function setDbCachedOdds(sportKey: string, data: unknown[]): Promise<void>
   try {
     await db.execute(sql`
       INSERT INTO odds_cache (sport_key, data, fetched_at, expires_at)
-      VALUES (${sportKey}, ${JSON.stringify(data)}::jsonb, NOW(), NOW() + INTERVAL '65 minutes')
+      VALUES (${sportKey}, ${JSON.stringify(data)}::jsonb, NOW(), NOW() + INTERVAL '40 minutes')
       ON CONFLICT (sport_key) DO UPDATE SET
         data       = EXCLUDED.data,
         fetched_at = NOW(),
-        expires_at = NOW() + INTERVAL '65 minutes'
+        expires_at = NOW() + INTERVAL '40 minutes'
     `);
   } catch { /* silently ignore cache write failures */ }
 }
 
-// ─── Skip-if-empty backoff tracker (Change 4) ────────────────────────────────
-// If a sport returns 0 events N consecutive times, skip it for 24 h.
-const emptyStreak   = new Map<string, number>();
-const skipUntil     = new Map<string, number>();
-const EMPTY_BACKOFF_AFTER = 3;   // consecutive empty responses before backoff
-const EMPTY_BACKOFF_MS    = 24 * 60 * 60 * 1000; // 24 hours
-
 // ─── Exported: fetch one sport from Odds API and populate DB cache ────────────
 export async function fetchAndCacheOdds(sportKey: string): Promise<void> {
   if (!ODDS_API_KEY) return;
-
-  // Skip if in backoff period (sport returned empty too many times recently)
-  const skipAt = skipUntil.get(sportKey) ?? 0;
-  if (skipAt > Date.now()) return;
-
   try {
-    // Change 1: single region (eu) instead of uk,eu,us — cuts credits ~60%
-    // Change 2: h2h only — removes totals/btts markets, cuts soccer credits ~33%
-    const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal&dateFormat=iso`;
+    const extraMarkets = sportKey.startsWith('soccer_') ? ',totals,btts' : '';
+    const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
     const response = await fetch(url);
     if (!response.ok) return; // skip non-existent / out-of-season sports silently
     const data = await response.json() as unknown[];
     if (!Array.isArray(data)) return;
-
-    // Track consecutive empty responses and apply backoff (Change 4)
-    if (data.length === 0) {
-      const streak = (emptyStreak.get(sportKey) ?? 0) + 1;
-      emptyStreak.set(sportKey, streak);
-      if (streak >= EMPTY_BACKOFF_AFTER) {
-        skipUntil.set(sportKey, Date.now() + EMPTY_BACKOFF_MS);
-        emptyStreak.set(sportKey, 0);
-        logger.info({ sportKey, streak }, "Odds cron: sport backed off for 24h (consistently empty)");
-      }
-      return; // nothing to cache
-    }
-
-    emptyStreak.set(sportKey, 0); // reset streak on non-empty response
     await setDbCachedOdds(sportKey, data);
     await upsertSportControl(sportKey, formatLeagueName(sportKey));
   } catch (err) {
@@ -367,8 +358,8 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
     // Reuse an already in-flight fetch for this sport to avoid burst 429s
     if (!inFlight.has(sport)) {
       const promise = (async (): Promise<unknown[]> => {
-        // Change 1+2: single region, h2h only (consistent with cron fetcher)
-        const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal&dateFormat=iso`;
+        const extraMarkets = sport.startsWith('soccer_') ? ',totals,btts' : '';
+        const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
         const response = await fetch(url);
         if (!response.ok) {
           // Return sentinel to propagate HTTP error to all waiting callers
@@ -482,8 +473,6 @@ router.get("/live/events", async (_req, res): Promise<void> => {
 });
 
 // ─── GET /live/scores ─────────────────────────────────────────────────────────
-// Change 5: Only polls sports that have unsettled open bet selections, not all
-// live sports. Cuts Odds API score calls from ~70/request to typically 2-5.
 router.get("/live/scores", async (_req, res): Promise<void> => {
   if (!ODDS_API_KEY) {
     res.status(503).json({ error: "Odds API not configured" }); return;
@@ -496,31 +485,9 @@ router.get("/live/scores", async (_req, res): Promise<void> => {
   }
 
   try {
-    // Only fetch scores for sports that actually have open (unsettled) bets
-    const openBetRows = await db.execute(sql`
-      SELECT DISTINCT bs.sport_key
-      FROM bet_selections bs
-      JOIN bets b ON b.id = bs.bet_id
-      WHERE bs.status = 'open'
-        AND b.status IN ('pending', 'active')
-        AND bs.sport_key IS NOT NULL
-      LIMIT 20
-    `);
-
-    const sportsWithBets = openBetRows.rows
-      .map(r => r.sport_key as string)
-      .filter(Boolean);
-
-    // If no open bets, return empty (zero API calls)
-    if (sportsWithBets.length === 0) {
-      const payload = { scores: [], count: 0, cached: true };
-      liveCache.set(cacheKey, { data: payload, expiresAt: Date.now() + LIVE_CACHE_TTL });
-      res.json(payload);
-      return;
-    }
-
+    const activeSports = await getActiveLiveSports();
     const results = await Promise.allSettled(
-      sportsWithBets.map(async (sportKey) => {
+      activeSports.map(async (sportKey) => {
         const url = `${ODDS_API_BASE}/sports/${sportKey}/scores?apiKey=${ODDS_API_KEY}&daysFrom=1&dateFormat=iso`;
         const response = await fetch(url);
         if (!response.ok) return [];

@@ -1080,15 +1080,15 @@ export function LivePage() {
                 </h2>
                 <p className="text-[11px] text-[#475569] mt-0.5">
                   {isRealData
-                    ? 'Real in-play events — live scores update every 60 seconds.'
-                    : 'Tap any outcome to add it to your Bet Slip. Live scores refresh every 60 seconds.'}
+                    ? 'Real in-play events — live scores update every 15 seconds.'
+                    : 'Tap any outcome to add it to your Bet Slip. Live scores refresh every 15 seconds.'}
                 </p>
               </div>
               {/* Refresh cadence info */}
               <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border"
                 style={{ background: 'rgba(56,189,248,0.07)', borderColor: 'rgba(56,189,248,0.2)', color: '#38BDF8' }}>
                 <RefreshCw className="h-3 w-3" />
-                60s refresh
+                15s refresh
               </div>
             </div>
 

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'wouter';
 import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft, Clock } from 'lucide-react';
+import { AuthModal } from './AuthModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { NotificationBell } from './NotificationBell';
 import { useWallet } from '../hooks/useWallet';
@@ -84,8 +85,23 @@ export function Header() {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const { logout, user } = useAuth();
   const pendingDeposit = usePendingNppDeposit();
+  const [, setLocation] = useLocation();
   const { format, setFormat } = useOddsFormat();
 
+  // After login, redirect to the page the user was trying to reach (e.g. /account)
+  const prevUserId = useRef<number | null>(null);
+  useEffect(() => {
+    const currentId = user?.id ?? null;
+    if (prevUserId.current === null && currentId !== null) {
+      const returnTo = sessionStorage.getItem('cb_return_to');
+      if (returnTo && returnTo !== '/' && returnTo !== '') {
+        sessionStorage.removeItem('cb_return_to');
+        setLocation(returnTo);
+      }
+    }
+    prevUserId.current = currentId;
+  }, [user, setLocation]);
+  const [isAuthOpen,       setIsAuthOpen]       = useState(false);
   const [showAddressMenu,  setShowAddressMenu]  = useState(false);
   const [showSearch,       setShowSearch]       = useState(false);
 
@@ -111,6 +127,13 @@ export function Header() {
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Listen for external login-modal open requests (e.g. from AccountLayout auth guard)
+  useEffect(() => {
+    function handler() { setIsAuthOpen(true); }
+    window.addEventListener('openLoginModal', handler);
+    return () => window.removeEventListener('openLoginModal', handler);
   }, []);
 
   // Focus search input when opened
@@ -420,6 +443,7 @@ export function Header() {
         </div>
       </header>
 
+      <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <ConnectWalletModal open={isPaymentOpen} onOpenChange={setIsPaymentOpen} />
     </>
   );
