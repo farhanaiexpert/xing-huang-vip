@@ -526,6 +526,172 @@ router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
   });
 });
 
+// ── TON Ed25519 helpers ───────────────────────────────────────────────────────
+
+function isTonAddress(addr: string): boolean {
+  // User-friendly EQ/UQ/EQ bounceable/non-bounceable (48 base64url chars)
+  if (/^[EUu][Qq][A-Za-z0-9_-]{46}$/.test(addr)) return true;
+  // Raw workchain:hex format (e.g. 0:<64 hex> or -1:<64 hex>)
+  if (/^-?[0-9]+:[0-9a-fA-F]{64}$/.test(addr)) return true;
+  return false;
+}
+
+function verifyTonSignature(message: string, signatureBase64: string, publicKeyHex: string): boolean {
+  const pubKeyBytes = Buffer.from(publicKeyHex, "hex");
+  if (pubKeyBytes.length !== 32) return false;
+  const derKey = Buffer.concat([ED25519_SPKI_PREFIX, pubKeyBytes]);
+  const key = createPublicKey({ key: derKey, format: "der", type: "spki" });
+  const sigBytes = Buffer.from(signatureBase64, "base64");
+  return cryptoVerify(null, Buffer.from(message), key, sigBytes);
+}
+
+// ── GET /auth/wallet/nonce/ton?address=... ────────────────────────────────────
+router.get("/auth/wallet/nonce/ton", async (req, res): Promise<void> => {
+  const address = req.query.address as string | undefined;
+  if (!address || !isTonAddress(address)) {
+    res.status(400).json({ error: "Valid TON wallet address required (EQ/UQ user-friendly or raw workchain:hex format)" });
+    return;
+  }
+
+  const nonce = generateNonce();
+  const expiresAt = new Date(Date.now() + NONCE_TTL_MS);
+
+  await db.insert(noncesTable)
+    .values({ walletAddress: address, nonce, expiresAt })
+    .onConflictDoUpdate({
+      target: noncesTable.walletAddress,
+      set: { nonce, expiresAt },
+    });
+
+  const message = buildSignMessage(address, nonce);
+  res.json({ nonce, message });
+});
+
+// ── POST /auth/wallet/verify/ton ──────────────────────────────────────────────
+const TonVerifyBody = z.object({
+  address:   z.string(),
+  signature: z.string(),   // base64-encoded Ed25519 signature (from Tonkeeper/OpenMask)
+  publicKey: z.string().regex(/^[0-9a-fA-F]{64}$/, "publicKey must be 32-byte hex (64 chars)"),
+  nonce:     z.string(),
+});
+
+router.post("/auth/wallet/verify/ton", async (req, res): Promise<void> => {
+  const parsed = TonVerifyBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "address, signature, publicKey, and nonce are required" });
+    return;
+  }
+  const { address, signature, publicKey, nonce } = parsed.data;
+
+  if (!isTonAddress(address)) {
+    res.status(400).json({ error: "Invalid TON wallet address" });
+    return;
+  }
+
+  // Verify nonce exists and hasn't expired
+  const [storedNonce] = await db.select()
+    .from(noncesTable)
+    .where(and(
+      eq(noncesTable.walletAddress, address),
+      eq(noncesTable.nonce, nonce),
+      gt(noncesTable.expiresAt, new Date()),
+    ))
+    .limit(1);
+
+  if (!storedNonce) {
+    res.status(401).json({ error: "Invalid or expired nonce. Please request a new one." });
+    return;
+  }
+
+  // Verify the Ed25519 signature using the provided public key
+  const message = buildSignMessage(address, nonce);
+  let valid = false;
+  try {
+    valid = verifyTonSignature(message, signature, publicKey);
+  } catch {
+    valid = false;
+  }
+
+  if (!valid) {
+    res.status(401).json({ error: "TON signature verification failed" });
+    return;
+  }
+
+  // Consume the nonce (one-time use)
+  await db.delete(noncesTable).where(eq(noncesTable.walletAddress, address));
+
+  // Upsert user
+  const existing = await db.select()
+    .from(usersTable)
+    .where(eq(usersTable.walletAddress, address))
+    .limit(1);
+
+  let user = existing[0];
+  if (!user) {
+    const referralCode = randomBytes(4).toString("hex").toUpperCase();
+    const [created] = await db.insert(usersTable).values({
+      walletAddress: address,
+      walletNetwork: "TON",
+      referralCode,
+      role: "user",
+    }).returning();
+    user = created;
+    await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+  } else if (user.walletNetwork !== "TON") {
+    await db.update(usersTable).set({ walletNetwork: "TON" }).where(eq(usersTable.id, user.id));
+    user = { ...user, walletNetwork: "TON" };
+  }
+
+  if (user.isSuspended) {
+    res.status(403).json({ error: "Account is suspended" });
+    return;
+  }
+
+  const now = new Date();
+  const [excl] = await db.select().from(selfExclusionsTable)
+    .where(and(
+      eq(selfExclusionsTable.userId, user.id),
+      isNull(selfExclusionsTable.liftedAt),
+      eq(selfExclusionsTable.isTakeABreak, false),
+      or(
+        eq(selfExclusionsTable.isPermanent, true),
+        gt(selfExclusionsTable.endsAt, now),
+      ),
+    ))
+    .limit(1);
+
+  if (excl) {
+    const endsMsg = excl.isPermanent
+      ? "Your account is permanently self-excluded. Please contact support for assistance."
+      : `You have self-excluded until ${new Date(excl.endsAt!).toLocaleDateString()}. Please contact support if you need help.`;
+    res.status(403).json({ error: endsMsg, code: "SELF_EXCLUDED" });
+    return;
+  }
+
+  const payload = { userId: user.id, role: user.role };
+  const accessToken = signAccessToken(payload);
+  const refreshToken = signRefreshToken(payload);
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    refreshToken,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  res.json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      walletAddress: user.walletAddress,
+      displayName: shortAddress(user.walletAddress!),
+      email: user.email ?? null,
+      username: user.username ?? null,
+      role: user.role,
+      referralCode: user.referralCode,
+    },
+  });
+});
+
 // ── POST /auth/refresh ────────────────────────────────────────────────────────
 router.post("/auth/refresh", async (req, res): Promise<void> => {
   const { refreshToken } = req.body as { refreshToken?: string };

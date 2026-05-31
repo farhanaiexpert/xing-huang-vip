@@ -15,7 +15,7 @@ import { useAutoDeposit } from '../hooks/useAutoDeposit';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../lib/apiClient';
 
-type ModalView = 'methods' | 'npp-form' | 'npp-invoice' | 'npp-success' | 'npp-failed' | 'plisio-form' | 'plisio-invoice' | 'plisio-success' | 'plisio-failed';
+type ModalView = 'methods' | 'npp-form' | 'npp-invoice' | 'npp-success' | 'npp-failed' | 'plisio-form' | 'plisio-invoice' | 'plisio-success' | 'plisio-failed' | 'phantom-form' | 'ton-form';
 
 interface NppPayment {
   paymentId: string;
@@ -38,6 +38,8 @@ interface PlisioInvoice {
 
 const ERC20_ADDRESS = (import.meta.env.VITE_PLATFORM_ERC20_ADDRESS as string) || '';
 const TRC20_ADDRESS = (import.meta.env.VITE_PLATFORM_TRC20_ADDRESS as string) || '';
+const SOL_ADDRESS   = (import.meta.env.VITE_PLATFORM_SOL_ADDRESS   as string) || '';
+const TON_ADDR      = (import.meta.env.VITE_PLATFORM_TON_ADDRESS   as string) || '';
 
 interface ConnectWalletModalProps {
   open?: boolean;
@@ -141,7 +143,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   const {
     depositAmount, setDepositAmount,
     depositPhase, depositError, depositResult,
-    isProcessing, hasTronLink, chainCfg,
+    isProcessing, hasTronLink, hasPhantom, hasTon, chainCfg,
     handleEvmDeposit: runEvmDeposit, handleTronDeposit: runTronDeposit,
     resetDeposit, clearError,
   } = useAutoDeposit();
@@ -229,6 +231,92 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     if (!user) { setAuthOpen(true); return; }
     setPlisioError('');
     setView('plisio-form');
+  }
+
+  // ── Phantom (Solana USDT) inline flow ────────────────────────────────────────
+  const [phantomAmount,     setPhantomAmount]     = useState('');
+  const [phantomTxHash,     setPhantomTxHash]     = useState('');
+  const [phantomError,      setPhantomError]      = useState('');
+  const [phantomSubmitting, setPhantomSubmitting] = useState(false);
+  const [phantomVerified,   setPhantomVerified]   = useState<boolean | null>(null);
+
+  function resetPhantom() {
+    setView('methods');
+    setPhantomAmount('');
+    setPhantomTxHash('');
+    setPhantomError('');
+    setPhantomSubmitting(false);
+    setPhantomVerified(null);
+  }
+
+  async function submitPhantomDeposit() {
+    const amount = parseFloat(phantomAmount);
+    if (!phantomAmount || isNaN(amount) || amount < 1) {
+      setPhantomError('Minimum deposit is 1 USDT');
+      return;
+    }
+    if (!phantomTxHash.trim()) {
+      setPhantomError('Please paste your Solana transaction signature');
+      return;
+    }
+    setPhantomSubmitting(true);
+    setPhantomError('');
+    try {
+      const result = await api.post<{ autoVerified: boolean }>('/wallet/deposit', {
+        txHash: phantomTxHash.trim(),
+        amount,
+        network: 'SOLANA',
+      });
+      setPhantomVerified(result.autoVerified);
+      await refreshBalance();
+    } catch (err) {
+      setPhantomError(err instanceof Error ? err.message : 'Submission failed. Please try again.');
+    } finally {
+      setPhantomSubmitting(false);
+    }
+  }
+
+  // ── TON USDT inline flow ─────────────────────────────────────────────────────
+  const [tonAmount,     setTonAmount]     = useState('');
+  const [tonTxHash,     setTonTxHash]     = useState('');
+  const [tonError,      setTonError]      = useState('');
+  const [tonSubmitting, setTonSubmitting] = useState(false);
+  const [tonVerified,   setTonVerified]   = useState<boolean | null>(null);
+
+  function resetTon() {
+    setView('methods');
+    setTonAmount('');
+    setTonTxHash('');
+    setTonError('');
+    setTonSubmitting(false);
+    setTonVerified(null);
+  }
+
+  async function submitTonDeposit() {
+    const amount = parseFloat(tonAmount);
+    if (!tonAmount || isNaN(amount) || amount < 1) {
+      setTonError('Minimum deposit is 1 USDT');
+      return;
+    }
+    if (!tonTxHash.trim()) {
+      setTonError('Please paste your TON transaction hash');
+      return;
+    }
+    setTonSubmitting(true);
+    setTonError('');
+    try {
+      const result = await api.post<{ autoVerified: boolean }>('/wallet/deposit', {
+        txHash: tonTxHash.trim(),
+        amount,
+        network: 'TON',
+      });
+      setTonVerified(result.autoVerified);
+      await refreshBalance();
+    } catch (err) {
+      setTonError(err instanceof Error ? err.message : 'Submission failed. Please try again.');
+    } finally {
+      setTonSubmitting(false);
+    }
   }
 
   async function createPlisioPayment() {
@@ -405,16 +493,18 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
         : 20 * 60)) * 100
     : 100;
 
-  const headerConfig: Record<ModalView, { title: string; subtitle: string; showBack: boolean }> = {
-    'methods':       { title: 'Add Funds',        subtitle: 'Choose how you want to deposit USDT',  showBack: false },
-    'npp-form':      { title: 'Crypto Deposit',   subtitle: 'Generate a unique payment address',    showBack: true  },
-    'npp-invoice':   { title: 'Awaiting Payment', subtitle: 'Send exactly the amount shown below',  showBack: false },
-    'npp-success':   { title: 'Deposit Confirmed',subtitle: 'Balance updated successfully',         showBack: false },
-    'npp-failed':    { title: 'Payment Expired',  subtitle: 'This invoice is no longer valid',      showBack: true  },
-    'plisio-form':   { title: 'Pay via Plisio',   subtitle: 'Generate a unique Plisio address',     showBack: true  },
-    'plisio-invoice':{ title: 'Awaiting Payment', subtitle: 'Send exactly the amount shown below',  showBack: false },
-    'plisio-success':{ title: 'Deposit Confirmed',subtitle: 'Balance updated successfully',         showBack: false },
-    'plisio-failed': { title: 'Invoice Expired',  subtitle: 'This invoice is no longer valid',      showBack: true  },
+  const headerConfig: Record<ModalView, { title: string; subtitle: string; showBack: boolean; onBack?: () => void }> = {
+    'methods':        { title: 'Add Funds',          subtitle: 'Choose how you want to deposit USDT',           showBack: false },
+    'npp-form':       { title: 'Crypto Deposit',     subtitle: 'Generate a unique payment address',             showBack: true  },
+    'npp-invoice':    { title: 'Awaiting Payment',   subtitle: 'Send exactly the amount shown below',           showBack: false },
+    'npp-success':    { title: 'Deposit Confirmed',  subtitle: 'Balance updated successfully',                  showBack: false },
+    'npp-failed':     { title: 'Payment Expired',    subtitle: 'This invoice is no longer valid',               showBack: true  },
+    'plisio-form':    { title: 'Pay via Plisio',     subtitle: 'Generate a unique Plisio address',              showBack: true  },
+    'plisio-invoice': { title: 'Awaiting Payment',   subtitle: 'Send exactly the amount shown below',           showBack: false },
+    'plisio-success': { title: 'Deposit Confirmed',  subtitle: 'Balance updated successfully',                  showBack: false },
+    'plisio-failed':  { title: 'Invoice Expired',    subtitle: 'This invoice is no longer valid',               showBack: true  },
+    'phantom-form':   { title: 'Phantom Deposit',    subtitle: 'Send Solana USDT and paste the TxHash',         showBack: true, onBack: resetPhantom },
+    'ton-form':       { title: 'TON Deposit',        subtitle: 'Send TON USDT Jetton and paste the TxHash',     showBack: true, onBack: resetTon     },
   };
   const hdr = headerConfig[view];
 
@@ -437,7 +527,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
               <div className="flex items-center gap-2.5">
                 {hdr.showBack && (
                   <button
-                    onClick={view.startsWith('plisio') ? resetPlisio : resetNpp}
+                    onClick={hdr.onBack ?? (view.startsWith('plisio') ? resetPlisio : resetNpp)}
                     className="p-1.5 rounded-lg text-[#64748B] hover:text-[#F8FAFC] hover:bg-white/[0.07] transition-all"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -459,6 +549,228 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
             </div>
 
             <div className="px-4 py-4 space-y-3 max-h-[80vh] overflow-y-auto">
+
+              {/* ══════════ PHANTOM (SOLANA) FORM VIEW ══════════ */}
+              {view === 'phantom-form' && (
+                <div className="space-y-4">
+                  {phantomVerified !== null ? (
+                    <div className="space-y-4 py-2">
+                      <div className="flex flex-col items-center text-center gap-3">
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                          style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.15)' }}>
+                          <CheckCircle2 className="w-8 h-8 text-[#00DFA9]" />
+                        </div>
+                        <div>
+                          <p className="text-[20px] font-black text-[#00DFA9]">
+                            {phantomVerified ? 'Deposit Verified!' : 'Deposit Submitted!'}
+                          </p>
+                          <p className="text-[13px] text-[#64748B] mt-1">
+                            {phantomVerified ? 'Your balance has been credited instantly.' : 'Under review — usually credited within 5–30 min.'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-xl p-2.5 text-[10px] font-mono text-[#64748B] break-all"
+                        style={{ background: 'rgba(0,0,0,0.2)' }}>
+                        TxHash: {phantomTxHash}
+                      </div>
+                      <button onClick={close}
+                        className="w-full py-3 rounded-xl text-[14px] font-black text-[#0B0F14] transition-all hover:brightness-110"
+                        style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 20px rgba(0,223,169,0.25)' }}>
+                        Done ✓
+                      </button>
+                      <button onClick={() => { close(); navigate('/account/wallet'); sessionStorage.setItem('cupbett_wallet_tab', 'history'); }}
+                        className="w-full py-2.5 rounded-xl text-[12px] font-bold text-[#9945FF] border border-[#9945FF]/20 hover:bg-[#9945FF]/10 transition-all">
+                        View Transaction History →
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-xl p-4 flex items-center gap-3"
+                        style={{ background: 'rgba(153,69,255,0.06)', border: '1px solid rgba(153,69,255,0.20)' }}>
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: 'rgba(153,69,255,0.15)', border: '1px solid rgba(153,69,255,0.30)' }}>
+                          <Wallet className="w-4 h-4 text-[#9945FF]" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-bold text-[#F8FAFC]">Phantom · Solana USDT SPL</p>
+                          <p className="text-[11px] text-[#64748B]">Send USDT (SPL) to the address below, paste TxHash — credited instantly</p>
+                        </div>
+                      </div>
+
+                      {SOL_ADDRESS ? (
+                        <NppAddressCopy address={SOL_ADDRESS} />
+                      ) : (
+                        <div className="flex items-center gap-2 p-3 rounded-xl text-[11px]"
+                          style={{ background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.15)' }}>
+                          <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0" />
+                          <p className="text-[#FACC15]">Solana deposit address not yet configured — contact support</p>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Amount (USDT)</label>
+                        <div className="relative">
+                          <input type="number" min="1" step="1" value={phantomAmount}
+                            onChange={e => { setPhantomAmount(e.target.value); setPhantomError(''); }}
+                            disabled={phantomSubmitting}
+                            className="w-full rounded-xl px-4 py-3.5 text-[16px] font-bold text-[#F8FAFC] pr-16 outline-none disabled:opacity-60"
+                            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(153,69,255,0.25)' }}
+                            placeholder="50" autoFocus
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#9945FF]">USDT</span>
+                        </div>
+                        <p className="text-[10px] text-[#64748B] mt-1">Minimum: 1 USDT · SPL token (Solana network)</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Transaction Signature</label>
+                        <input type="text" value={phantomTxHash}
+                          onChange={e => { setPhantomTxHash(e.target.value); setPhantomError(''); }}
+                          disabled={phantomSubmitting}
+                          className="w-full rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] outline-none disabled:opacity-60"
+                          style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(153,69,255,0.20)' }}
+                          placeholder="Paste Solana tx signature (87–88 base58 chars)"
+                        />
+                        <p className="text-[10px] text-[#64748B] mt-1">Phantom app: Activity → tap transaction → Copy Signature</p>
+                      </div>
+
+                      {phantomError && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]"
+                          style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
+                          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                          <p className="text-red-400">{phantomError}</p>
+                        </div>
+                      )}
+
+                      <button onClick={submitPhantomDeposit} disabled={phantomSubmitting || !SOL_ADDRESS}
+                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-black text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait"
+                        style={{ background: 'linear-gradient(135deg, #9945FF 0%, #7B2FBE 100%)', boxShadow: '0 0 20px rgba(153,69,255,0.25)' }}>
+                        {phantomSubmitting
+                          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Verifying…</>
+                          : <>Submit Deposit <ChevronRight className="w-4 h-4" /></>
+                        }
+                      </button>
+
+                      <div className="flex items-center gap-2 p-3 rounded-xl text-[11px]"
+                        style={{ background: 'rgba(0,223,169,0.04)', border: '1px solid rgba(0,223,169,0.12)' }}>
+                        <Zap className="w-3.5 h-3.5 text-[#00DFA9] shrink-0" />
+                        <p className="text-[#64748B]"><span className="text-[#00DFA9] font-semibold">Auto-verified</span> — balance credited instantly after on-chain confirmation</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ══════════ TON FORM VIEW ══════════ */}
+              {view === 'ton-form' && (
+                <div className="space-y-4">
+                  {tonVerified !== null ? (
+                    <div className="space-y-4 py-2">
+                      <div className="flex flex-col items-center text-center gap-3">
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                          style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.15)' }}>
+                          <CheckCircle2 className="w-8 h-8 text-[#00DFA9]" />
+                        </div>
+                        <div>
+                          <p className="text-[20px] font-black text-[#00DFA9]">
+                            {tonVerified ? 'Deposit Verified!' : 'Deposit Submitted!'}
+                          </p>
+                          <p className="text-[13px] text-[#64748B] mt-1">
+                            {tonVerified ? 'Your balance has been credited instantly.' : 'Under review — usually credited within 5–30 min.'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-xl p-2.5 text-[10px] font-mono text-[#64748B] break-all"
+                        style={{ background: 'rgba(0,0,0,0.2)' }}>
+                        TxHash: {tonTxHash}
+                      </div>
+                      <button onClick={close}
+                        className="w-full py-3 rounded-xl text-[14px] font-black text-[#0B0F14] transition-all hover:brightness-110"
+                        style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 20px rgba(0,223,169,0.25)' }}>
+                        Done ✓
+                      </button>
+                      <button onClick={() => { close(); navigate('/account/wallet'); sessionStorage.setItem('cupbett_wallet_tab', 'history'); }}
+                        className="w-full py-2.5 rounded-xl text-[12px] font-bold text-[#0098EA] border border-[#0098EA]/20 hover:bg-[#0098EA]/10 transition-all">
+                        View Transaction History →
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-xl p-4 flex items-center gap-3"
+                        style={{ background: 'rgba(0,152,234,0.06)', border: '1px solid rgba(0,152,234,0.20)' }}>
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: 'rgba(0,152,234,0.15)', border: '1px solid rgba(0,152,234,0.30)' }}>
+                          <Wallet className="w-4 h-4 text-[#0098EA]" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-bold text-[#F8FAFC]">TON Wallet · USDT Jetton</p>
+                          <p className="text-[11px] text-[#64748B]">Send USDT (Jetton) to the address below, paste TxHash — credited instantly</p>
+                        </div>
+                      </div>
+
+                      {TON_ADDR ? (
+                        <NppAddressCopy address={TON_ADDR} />
+                      ) : (
+                        <div className="flex items-center gap-2 p-3 rounded-xl text-[11px]"
+                          style={{ background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.15)' }}>
+                          <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0" />
+                          <p className="text-[#FACC15]">TON deposit address not yet configured — contact support</p>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Amount (USDT)</label>
+                        <div className="relative">
+                          <input type="number" min="1" step="1" value={tonAmount}
+                            onChange={e => { setTonAmount(e.target.value); setTonError(''); }}
+                            disabled={tonSubmitting}
+                            className="w-full rounded-xl px-4 py-3.5 text-[16px] font-bold text-[#F8FAFC] pr-16 outline-none disabled:opacity-60"
+                            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,152,234,0.25)' }}
+                            placeholder="50" autoFocus
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#0098EA]">USDT</span>
+                        </div>
+                        <p className="text-[10px] text-[#64748B] mt-1">Minimum: 1 USDT · TON network (Jetton)</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">Transaction Hash</label>
+                        <input type="text" value={tonTxHash}
+                          onChange={e => { setTonTxHash(e.target.value); setTonError(''); }}
+                          disabled={tonSubmitting}
+                          className="w-full rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] outline-none disabled:opacity-60"
+                          style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,152,234,0.20)' }}
+                          placeholder="Paste TON transaction hash"
+                        />
+                        <p className="text-[10px] text-[#64748B] mt-1">Tonkeeper: Activity → tap transaction → Copy TxHash</p>
+                      </div>
+
+                      {tonError && (
+                        <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]"
+                          style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
+                          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                          <p className="text-red-400">{tonError}</p>
+                        </div>
+                      )}
+
+                      <button onClick={submitTonDeposit} disabled={tonSubmitting || !TON_ADDR}
+                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-black text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait"
+                        style={{ background: 'linear-gradient(135deg, #0098EA 0%, #0077C2 100%)', boxShadow: '0 0 20px rgba(0,152,234,0.25)' }}>
+                        {tonSubmitting
+                          ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Verifying…</>
+                          : <>Submit Deposit <ChevronRight className="w-4 h-4" /></>
+                        }
+                      </button>
+
+                      <div className="flex items-center gap-2 p-3 rounded-xl text-[11px]"
+                        style={{ background: 'rgba(0,223,169,0.04)', border: '1px solid rgba(0,223,169,0.12)' }}>
+                        <Zap className="w-3.5 h-3.5 text-[#00DFA9] shrink-0" />
+                        <p className="text-[#64748B]"><span className="text-[#00DFA9] font-semibold">Auto-verified</span> — balance credited instantly after on-chain confirmation</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* ══════════ NPP FORM VIEW ══════════ */}
               {view === 'npp-form' && (
@@ -1381,6 +1693,86 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                       )}
                     </div>
                   )}
+
+                  {/* ── PHANTOM (Solana USDT SPL) ── */}
+                  <button
+                    onClick={() => { if (!user) { setAuthOpen(true); return; } setView('phantom-form'); }}
+                    className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(153,69,255,0.11) 0%, rgba(123,47,190,0.05) 100%)',
+                      border: '1px solid rgba(153,69,255,0.28)',
+                      boxShadow: '0 0 20px rgba(153,69,255,0.05)',
+                    }}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(153,69,255,0.22) 0%, rgba(123,47,190,0.10) 100%)',
+                          border: '1px solid rgba(153,69,255,0.38)',
+                          boxShadow: '0 0 12px rgba(153,69,255,0.15)',
+                        }}>
+                        <Wallet className="w-5 h-5 text-[#9945FF]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span className="text-[15px] font-black text-[#F8FAFC]">Phantom Wallet</span>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                            style={{ background: 'rgba(153,69,255,0.15)', color: '#9945FF', border: '1px solid rgba(153,69,255,0.30)' }}>
+                            Solana
+                          </span>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"
+                            style={{ background: 'rgba(0,223,169,0.12)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.25)' }}>
+                            <Zap className="w-2 h-2" />Auto
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-semibold mb-1.5" style={{ color: 'rgba(153,69,255,0.80)' }}>USDT SPL · Solana network</p>
+                        <p className="text-[12px] text-[#94A3B8] leading-relaxed">
+                          Send USDT on Solana and paste the TxHash — auto-verified and credited instantly.
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#64748B] shrink-0 mt-1 group-hover:text-[#9945FF] transition-colors" />
+                    </div>
+                  </button>
+
+                  {/* ── TON USDT (Jetton) ── */}
+                  <button
+                    onClick={() => { if (!user) { setAuthOpen(true); return; } setView('ton-form'); }}
+                    className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(0,152,234,0.11) 0%, rgba(0,120,185,0.05) 100%)',
+                      border: '1px solid rgba(0,152,234,0.28)',
+                      boxShadow: '0 0 20px rgba(0,152,234,0.05)',
+                    }}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(0,152,234,0.22) 0%, rgba(0,120,185,0.10) 100%)',
+                          border: '1px solid rgba(0,152,234,0.38)',
+                          boxShadow: '0 0 12px rgba(0,152,234,0.15)',
+                        }}>
+                        <Wallet className="w-5 h-5 text-[#0098EA]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span className="text-[15px] font-black text-[#F8FAFC]">TON Wallet</span>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                            style={{ background: 'rgba(0,152,234,0.15)', color: '#0098EA', border: '1px solid rgba(0,152,234,0.30)' }}>
+                            TON
+                          </span>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"
+                            style={{ background: 'rgba(0,223,169,0.12)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.25)' }}>
+                            <Zap className="w-2 h-2" />Auto
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-semibold mb-1.5" style={{ color: 'rgba(0,152,234,0.80)' }}>USDT Jetton · TON network</p>
+                        <p className="text-[12px] text-[#94A3B8] leading-relaxed">
+                          Send USDT on TON and paste the TxHash — auto-verified and credited instantly.
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#64748B] shrink-0 mt-1 group-hover:text-[#0098EA] transition-colors" />
+                    </div>
+                  </button>
 
                   {/* ── OPTION 2: NowPayments ── */}
                   <button

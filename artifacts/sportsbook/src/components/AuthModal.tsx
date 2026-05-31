@@ -39,6 +39,8 @@ const WALLETS = [
   { name: 'MetaMask',      short: 'MM',  color: '#E2761B', bg: 'rgba(226,118,27,0.12)',  border: 'rgba(226,118,27,0.25)' },
   { name: 'WalletConnect', short: 'WC',  color: '#3B99FC', bg: 'rgba(59,153,252,0.12)',  border: 'rgba(59,153,252,0.25)' },
   { name: 'TronLink',      short: 'TL',  color: '#00DFA9', bg: 'rgba(0,223,169,0.12)',   border: 'rgba(0,223,169,0.25)' },
+  { name: 'Phantom',       short: 'PHM', color: '#9945FF', bg: 'rgba(153,69,255,0.12)',  border: 'rgba(153,69,255,0.25)' },
+  { name: 'TON Wallet',    short: 'TON', color: '#0098EA', bg: 'rgba(0,152,234,0.12)',   border: 'rgba(0,152,234,0.25)' },
 ];
 
 const FLOW_STEPS = [
@@ -68,7 +70,9 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
 
   const [hasTronLink,  setHasTronLink]  = useState(false);
   const [hasPhantom,   setHasPhantom]   = useState(false);
-  const phantomActive = useRef(false);
+  const [hasTon,       setHasTon]       = useState(false);
+  const phantomActive    = useRef(false);
+  const tonWalletActive  = useRef(false);
 
   const addrShort = shortAddress(address) ?? '';
   const { copied, copy } = useCopy(address ?? '');
@@ -88,6 +92,10 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ph = (window as any).solana;
       setHasPhantom(!!(ph?.isPhantom));
+      // Detect TON wallet (Tonkeeper / OpenMask)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ton = (window as any).ton;
+      setHasTon(!!(ton?.send));
     }
   }, [open]);
 
@@ -254,6 +262,62 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
       setStep('idle');
     } finally {
       phantomActive.current = false;
+    }
+  }
+
+  async function handleTonSign() {
+    setError('');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ton = (window as any).ton;
+    if (!ton?.send) {
+      setError('No TON wallet found. Install Tonkeeper browser extension from tonkeeper.com and try again.');
+      return;
+    }
+    tonWalletActive.current = true;
+    setStep('signing');
+    try {
+      const accounts = await ton.send('ton_requestAccounts') as string[];
+      const tonAddress = accounts?.[0];
+      if (!tonAddress) throw new Error('No TON account returned — please unlock your wallet');
+
+      const { nonce, message } = await api.get<{ nonce: string; message: string }>(
+        `/auth/wallet/nonce/ton?address=${encodeURIComponent(tonAddress)}`
+      );
+
+      // Tonkeeper/OpenMask: ton_signMessage expects base64-encoded data
+      const result = await ton.send('ton_signMessage', { data: btoa(message) }) as {
+        signature: string;  // base64
+        publicKey: string;  // 64-char hex
+      };
+
+      setStep('verifying');
+      const data = await api.post<WalletVerifyResponse>('/auth/wallet/verify/ton', {
+        address:   tonAddress,
+        signature: result.signature,
+        publicKey: result.publicKey,
+        nonce,
+      });
+      setTokens(data.accessToken, data.refreshToken);
+      loginWithWallet(data.accessToken, data.refreshToken, data.user);
+      setStep('done');
+
+      const shortTon = tonAddress.slice(0, 6) + '…' + tonAddress.slice(-4);
+      toast.success(`Signed in as ${shortTon}`, {
+        description: 'Welcome to CupBett',
+        duration: 4500,
+        style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' },
+      });
+
+      setTimeout(onClose, 1400);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      const isRejected = msg.toLowerCase().includes('reject') ||
+                         msg.toLowerCase().includes('cancel') ||
+                         msg.toLowerCase().includes('denied');
+      setError(isRejected ? 'Signature cancelled. Tap below to try again.' : msg);
+      setStep('idle');
+    } finally {
+      tonWalletActive.current = false;
     }
   }
 
@@ -610,7 +674,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                   {w.short}
                 </div>
               ))}
-              <span className="text-[10px] text-[#64748B]/70">ETH · BSC · Polygon · Arbitrum · Optimism · Base · TRC-20</span>
+              <span className="text-[10px] text-[#64748B]/70">ETH · BSC · Polygon · Arbitrum · Optimism · Base · TRC-20 · Solana · TON</span>
             </div>
           )}
 
@@ -641,28 +705,66 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
               <p className="text-[10px] text-[#64748B]/60 text-center -mt-1.5">
                 TRON network · T… address · TRC-20 USDT
               </p>
+            </>
+          )}
 
-              {hasPhantom && (
-                <>
-                  <button
-                    onClick={handlePhantomSign}
-                    className="relative w-full h-[54px] rounded-xl font-black text-[14px] tracking-tight flex items-center justify-between px-5 transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] overflow-hidden"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(153,69,255,0.14) 0%, rgba(153,69,255,0.07) 100%)',
-                      border: '1.5px solid rgba(153,69,255,0.45)',
-                      color: '#9945FF',
-                      boxShadow: '0 0 24px rgba(153,69,255,0.08)',
-                    }}
-                  >
-                    <Wallet className="relative w-[18px] h-[18px] shrink-0" />
-                    <span className="relative flex-1 text-center">Connect with Phantom (Solana)</span>
-                    <ChevronRight className="relative w-[18px] h-[18px] shrink-0 opacity-60" />
-                  </button>
-                  <p className="text-[10px] text-[#64748B]/60 text-center -mt-1.5">
-                    Solana network · SOL address · ed25519 signature
-                  </p>
-                </>
-              )}
+          {/* ── PHANTOM (SOLANA) BUTTON — independent of TronLink ── */}
+          {step === 'idle' && hasPhantom && (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-white/[0.07]" />
+                <span className="text-[10px] text-[#64748B]/60 uppercase tracking-wider font-bold">or</span>
+                <div className="flex-1 h-px bg-white/[0.07]" />
+              </div>
+
+              <button
+                onClick={handlePhantomSign}
+                className="relative w-full h-[54px] rounded-xl font-black text-[14px] tracking-tight flex items-center justify-between px-5 transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(153,69,255,0.14) 0%, rgba(153,69,255,0.07) 100%)',
+                  border: '1.5px solid rgba(153,69,255,0.45)',
+                  color: '#9945FF',
+                  boxShadow: '0 0 24px rgba(153,69,255,0.08)',
+                }}
+              >
+                <Wallet className="relative w-[18px] h-[18px] shrink-0" />
+                <span className="relative flex-1 text-center">Connect with Phantom (Solana)</span>
+                <ChevronRight className="relative w-[18px] h-[18px] shrink-0 opacity-60" />
+              </button>
+
+              <p className="text-[10px] text-[#64748B]/60 text-center -mt-1.5">
+                Solana network · SOL address · ed25519 signature
+              </p>
+            </>
+          )}
+
+          {/* ── TON WALLET BUTTON — independent of TronLink / Phantom ── */}
+          {step === 'idle' && hasTon && (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-white/[0.07]" />
+                <span className="text-[10px] text-[#64748B]/60 uppercase tracking-wider font-bold">or</span>
+                <div className="flex-1 h-px bg-white/[0.07]" />
+              </div>
+
+              <button
+                onClick={handleTonSign}
+                className="relative w-full h-[54px] rounded-xl font-black text-[14px] tracking-tight flex items-center justify-between px-5 transition-all duration-200 hover:scale-[1.015] active:scale-[0.985] overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(0,152,234,0.14) 0%, rgba(0,152,234,0.07) 100%)',
+                  border: '1.5px solid rgba(0,152,234,0.45)',
+                  color: '#0098EA',
+                  boxShadow: '0 0 24px rgba(0,152,234,0.08)',
+                }}
+              >
+                <Wallet className="relative w-[18px] h-[18px] shrink-0" />
+                <span className="relative flex-1 text-center">Connect with TON Wallet</span>
+                <ChevronRight className="relative w-[18px] h-[18px] shrink-0 opacity-60" />
+              </button>
+
+              <p className="text-[10px] text-[#64748B]/60 text-center -mt-1.5">
+                TON network · EQ… address · ed25519 signature
+              </p>
             </>
           )}
 

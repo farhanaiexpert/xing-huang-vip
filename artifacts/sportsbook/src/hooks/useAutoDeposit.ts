@@ -72,11 +72,19 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
   const [depositError, setDepositError] = useState<string | null>(null);
   const [depositResult, setDepositResult] = useState<DepositResult | null>(null);
   const [hasTronLink, setHasTronLink] = useState(false);
+  const [hasPhantom,  setHasPhantom]  = useState(false);
+  const [hasTon,      setHasTon]      = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tronWeb = (window as any).tronWeb;
     setHasTronLink(!!tronWeb?.defaultAddress?.base58);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ph = (window as any).solana;
+    setHasPhantom(!!(ph?.isPhantom));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ton = (window as any).ton;
+    setHasTon(!!(ton?.send));
   }, []);
 
   const chainCfg = chainId ? EVM_CHAINS[chainId] : null;
@@ -192,7 +200,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
   return {
     depositAmount, setDepositAmount,
     depositPhase, depositError, depositResult,
-    isProcessing, hasTronLink, chainCfg,
+    isProcessing, hasTronLink, hasPhantom, hasTon, chainCfg,
     handleEvmDeposit, handleTronDeposit,
     resetDeposit, clearError,
   };
