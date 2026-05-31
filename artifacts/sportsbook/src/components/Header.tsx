@@ -424,7 +424,24 @@ export function Header() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                {/* Connect Wallet — opens payment methods modal */}
+                {/* Sign In button — opens email/password auth modal */}
+                {!user && (
+                  <button
+                    onClick={() => setIsAuthOpen(true)}
+                    className="hidden sm:flex items-center gap-1.5 h-9 px-4 rounded-xl border text-sm font-bold tracking-tight transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] cursor-pointer"
+                    style={{
+                      borderColor: 'rgba(0,223,169,0.35)',
+                      color: '#00DFA9',
+                      background: 'rgba(0,223,169,0.06)',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,223,169,0.6)'; e.currentTarget.style.background = 'rgba(0,223,169,0.10)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,223,169,0.35)'; e.currentTarget.style.background = 'rgba(0,223,169,0.06)'; }}
+                  >
+                    <User className="h-3.5 w-3.5 shrink-0" />
+                    <span>Sign In</span>
+                  </button>
+                )}
+                {/* Deposit / Connect Wallet — opens payment methods modal */}
                 <button
                   data-testid="button-connect-wallet-header"
                   onClick={() => setIsPaymentOpen(true)}

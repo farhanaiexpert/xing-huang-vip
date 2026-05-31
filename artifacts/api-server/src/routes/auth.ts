@@ -973,6 +973,157 @@ router.post("/auth/change-password", authenticate, async (req, res): Promise<voi
   res.json({ success: true });
 });
 
+// ── POST /auth/register ───────────────────────────────────────────────────────
+const RegisterBody = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  referralCode: z.string().optional(),
+});
+
+router.post("/auth/register", async (req, res): Promise<void> => {
+  const parsed = RegisterBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    return;
+  }
+  const { email, password, referralCode } = parsed.data;
+
+  // Check email not already taken
+  const [existing] = await db.select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, email.toLowerCase()))
+    .limit(1);
+
+  if (existing) {
+    res.status(409).json({ error: "An account with this email already exists" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const newReferralCode = randomBytes(4).toString("hex").toUpperCase();
+
+  // Handle referral (optional)
+  let referrerId: number | null = null;
+  if (referralCode) {
+    const [referrer] = await db.select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.referralCode, referralCode.toUpperCase()))
+      .limit(1);
+    if (referrer) referrerId = referrer.id;
+  }
+
+  const [user] = await db.insert(usersTable).values({
+    email: email.toLowerCase(),
+    passwordHash,
+    referralCode: newReferralCode,
+    role: "user",
+  }).returning();
+
+  await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+
+  if (referrerId) {
+    await db.insert(referralsTable).values({ referrerId, refereeId: user.id }).catch(() => {});
+  }
+
+  const payload = { userId: user.id, role: user.role };
+  const accessToken = signAccessToken(payload);
+  const refreshToken = signRefreshToken(payload);
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    refreshToken,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  res.status(201).json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      walletAddress: null,
+      displayName: user.username ?? user.email ?? "User",
+      email: user.email,
+      username: user.username ?? null,
+      role: user.role,
+      referralCode: user.referralCode,
+    },
+  });
+});
+
+// ── POST /auth/login ──────────────────────────────────────────────────────────
+const LoginBody = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+router.post("/auth/login", async (req, res): Promise<void> => {
+  const parsed = LoginBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    return;
+  }
+  const { email, password } = parsed.data;
+
+  const [user] = await db.select()
+    .from(usersTable)
+    .where(eq(usersTable.email, email.toLowerCase()))
+    .limit(1);
+
+  if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+    res.status(401).json({ error: "Invalid email or password" });
+    return;
+  }
+
+  if (user.isSuspended) {
+    res.status(403).json({ error: "Account is suspended" });
+    return;
+  }
+
+  // Check for active self-exclusion
+  const now = new Date();
+  const [excl] = await db.select().from(selfExclusionsTable)
+    .where(and(
+      eq(selfExclusionsTable.userId, user.id),
+      isNull(selfExclusionsTable.liftedAt),
+      eq(selfExclusionsTable.isTakeABreak, false),
+      or(
+        eq(selfExclusionsTable.isPermanent, true),
+        gt(selfExclusionsTable.endsAt, now),
+      ),
+    ))
+    .limit(1);
+
+  if (excl) {
+    const endsMsg = excl.isPermanent
+      ? "Your account is permanently self-excluded. Please contact support for assistance."
+      : `You have self-excluded until ${new Date(excl.endsAt!).toLocaleDateString()}. Please contact support if you need help.`;
+    res.status(403).json({ error: endsMsg, code: "SELF_EXCLUDED" });
+    return;
+  }
+
+  const payload = { userId: user.id, role: user.role };
+  const accessToken = signAccessToken(payload);
+  const refreshToken = signRefreshToken(payload);
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    refreshToken,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  res.json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      walletAddress: user.walletAddress ?? null,
+      displayName: user.username ?? user.email ?? "User",
+      email: user.email,
+      username: user.username ?? null,
+      role: user.role,
+      referralCode: user.referralCode,
+    },
+  });
+});
+
 // ── Admin-only: email/password login (kept for admin portal) ──────────────────
 const AdminLoginBody = z.object({
   email: z.string().email(),
