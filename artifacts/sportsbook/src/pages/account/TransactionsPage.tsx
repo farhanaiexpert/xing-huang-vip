@@ -128,7 +128,7 @@ export function TransactionsPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) { setLoading(false); return; }
     api.get<Transaction[]>('/wallet/transactions')
       .then(data => setAll([...data].reverse()))
       .catch(() => setAll([]))

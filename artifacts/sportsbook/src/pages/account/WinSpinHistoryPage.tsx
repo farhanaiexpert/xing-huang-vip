@@ -32,7 +32,7 @@ export function WinSpinHistoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) { setLoading(false); return; }
     api.get<Spin[]>('/winspin/history')
       .then(data => setSpins(data))
       .catch(() => setSpins([]))

@@ -153,7 +153,7 @@ export function WalletPage() {
   const [bonusBalance, setBonusBalance] = useState<number>(0);
 
   const loadData = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) { setLoading(false); return; }
     try {
       const [info, bal, history, cmCheck] = await Promise.all([
         api.get<DepositInfo>('/wallet/deposit-info'),
