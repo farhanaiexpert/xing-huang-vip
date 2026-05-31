@@ -146,13 +146,20 @@ function filterEvent(ev: BetsApiEventRaw): boolean {
 
 // ─── Fetch functions ──────────────────────────────────────────────────────────
 
-/** Fetch all pages for one sport, up to maxPages (50 events/page). */
-export async function fetchBetsApiUpcoming(sportId: number, maxPages = 6): Promise<BetsApiEventRaw[]> {
+/**
+ * Fetch all pages for one sport until the pager total is reached.
+ * Per-page size is 50; hard ceiling is 500 events (10 pages) to avoid
+ * runaway fetches on sports with thousands of events.
+ */
+export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEventRaw[]> {
   if (!BETSAPI_KEY) return [];
+
+  const PER_PAGE  = 50;
+  const MAX_PAGES = 10; // ceiling: 500 events per sport
 
   const fetchPage = async (page: number): Promise<{ events: BetsApiEventRaw[]; total: number }> => {
     try {
-      const url = `${BETSAPI_BASE}/v1/bet365/upcoming?sport_id=${sportId}&token=${BETSAPI_KEY}&per_page=50&page=${page}`;
+      const url = `${BETSAPI_BASE}/v1/bet365/upcoming?sport_id=${sportId}&token=${BETSAPI_KEY}&per_page=${PER_PAGE}&page=${page}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
       if (!res.ok) return { events: [], total: 0 };
       const json = await res.json() as BetsApiListResponse;
@@ -164,16 +171,16 @@ export async function fetchBetsApiUpcoming(sportId: number, maxPages = 6): Promi
     }
   };
 
-  // Page 1 always fetched
+  // Page 1 always fetched — use pager.total to know full count
   const { events: page1, total } = await fetchPage(1);
   const allEvents = [...page1];
 
-  // Determine how many more pages to fetch
-  const totalPages = Math.min(maxPages, Math.ceil(total / 50));
+  // Compute how many pages are needed, capped at MAX_PAGES
+  const totalPages = Math.min(MAX_PAGES, Math.ceil(total / PER_PAGE));
 
   if (totalPages > 1) {
     const pageNums = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
-    // Fetch remaining pages in parallel (max 5 at a time)
+    // Fetch remaining pages in parallel (max 5 concurrent)
     const batches: number[][] = [];
     for (let i = 0; i < pageNums.length; i += 5) batches.push(pageNums.slice(i, i + 5));
     for (const batch of batches) {

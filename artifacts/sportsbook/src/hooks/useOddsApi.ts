@@ -128,15 +128,15 @@ function toDateTag(unixTs: number): 'today' | 'tomorrow' | 'upcoming' {
 }
 
 /**
- * Sports already covered by The Odds API.
- * For these, BetsAPI data still contributes to sidebar counts but does NOT
- * create new AllSportsHighlights sections (Odds API section takes precedence).
+ * Sports where BetsAPI data should NOT create any AllSportsHighlights section.
+ * Soccer, Basketball, Tennis already have dedicated page-level components;
+ * suppress their BetsAPI sections to avoid redundancy.
+ * All other BetsAPI sports get a `betsapi_*` sportKey so AllSportsHighlights
+ * renders them — Odds API uses different prefixes (golf_, handball_ etc.) so
+ * there is no risk of visual duplication.
  */
-const ODDS_API_COVERED_SPORTS = new Set([
-  'sp_soccer', 'sp_cricket', 'sp_baseball', 'sp_basketball',
-  'sp_tennis', 'sp_rugby_union', 'sp_rugby_league', 'sp_american_football',
-  'sp_ice_hockey', 'sp_golf', 'sp_handball', 'sp_darts', 'sp_snooker',
-  'sp_aussie_rules', 'sp_mma', 'sp_boxing', 'sp_volleyball',
+const BETSAPI_SECTION_SUPPRESSED = new Set([
+  'sp_soccer', 'sp_basketball', 'sp_tennis',
 ]);
 
 function normaliseBetsApiLeagues(
@@ -149,8 +149,6 @@ function normaliseBetsApiLeagues(
   for (const [sportIdStr, events] of Object.entries(sports)) {
     const meta = sportMeta[sportIdStr];
     if (!meta || events.length === 0) continue;
-
-    const isOddsApiCovered = ODDS_API_COVERED_SPORTS.has(meta.sportId);
 
     // Group by league
     const byLeague = new Map<string, { leagueName: string; evs: BetsApiEvent[] }>();
@@ -167,13 +165,11 @@ function normaliseBetsApiLeagues(
 
       // Count-only sports (Horse Racing, Greyhounds): contribute to sidebar counts
       // via countBySportId but NEVER push fake match rows into leagues[].
-      // Sidebar counting is done at the sportId level via countBySportId separately.
       if (meta.countOnly) continue;
 
-      // For Odds-API-covered sports: use no sportKey so AllSportsHighlights
-      // won't pick these up (sidebar count is enough; Odds API section already exists).
-      // For new sports (e.g. Table Tennis): use betsapi_ prefix → new section.
-      const sportKey = isOddsApiCovered
+      // All BetsAPI sports get a betsapi_* sportKey so AllSportsHighlights can
+      // render them — except soccer/basketball/tennis which have dedicated components.
+      const sportKey = BETSAPI_SECTION_SUPPRESSED.has(meta.sportId)
         ? undefined
         : `betsapi_${meta.sportId.replace('sp_', '')}`;
 
@@ -248,7 +244,12 @@ function deduplicateLeagues(leagues: League[]): League[] {
 
 // ─── Shared fetch logic ───────────────────────────────────────────────────────
 
-async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | null }> {
+async function fetchAllLeagues(): Promise<{
+  leagues:        League[];
+  error:          string | null;
+  /** Raw event count per BetsAPI sport_id (includes countOnly sports) */
+  countBySportId: Record<string, number>;
+}> {
   const [oddsResult, betsResult] = await Promise.allSettled([
     fetchAllOdds(),
     fetchBetsApiUpcoming().catch(() => null),
@@ -256,6 +257,7 @@ async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | n
 
   const leagues: League[] = [];
   let oddsError: string | null = null;
+  let countBySportId: Record<string, number> = {};
 
   // 1. The Odds API — primary source (added first so they win de-dup)
   if (oddsResult.status === 'fulfilled') {
@@ -268,23 +270,24 @@ async function fetchAllLeagues(): Promise<{ leagues: League[]; error: string | n
     }
   } else {
     const msg = oddsResult.reason instanceof Error ? oddsResult.reason.message : String(oddsResult.reason);
-    if (msg === 'QUOTA_EXHAUSTED') return { leagues: [], error: 'QUOTA_EXHAUSTED' };
+    if (msg === 'QUOTA_EXHAUSTED') return { leagues: [], error: 'QUOTA_EXHAUSTED', countBySportId };
     oddsError = msg;
   }
 
   // 2. BetsAPI — supplemental source
   if (betsResult.status === 'fulfilled' && betsResult.value) {
-    const { sports, sportMeta } = betsResult.value;
+    const { sports, sportMeta, countBySportId: betsCount } = betsResult.value;
+    countBySportId = betsCount ?? {};
     const betsLeagues = normaliseBetsApiLeagues(sports, sportMeta);
     leagues.push(...betsLeagues);
   }
 
   if (leagues.length === 0) {
-    return { leagues: [], error: oddsError ?? 'No cached data yet — server is warming up' };
+    return { leagues: [], error: oddsError ?? 'No cached data yet — server is warming up', countBySportId };
   }
 
   // De-duplicate by (sportId, leagueName) — Odds API entries win (they're first)
-  return { leagues: deduplicateLeagues(leagues), error: null };
+  return { leagues: deduplicateLeagues(leagues), error: null, countBySportId };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -303,20 +306,27 @@ export interface UseOddsApiResult {
   lastUpdatedLabel:  string;
   /** Bust cache and re-fetch immediately */
   refresh:           () => void;
+  /**
+   * Raw BetsAPI event count per internal BetsAPI sport_id string.
+   * Includes countOnly sports (Horse Racing id="2", Greyhounds id="4").
+   * Used by useOddsData to merge into sidebar matchCountBySportId.
+   */
+  betsApiCountById:  Record<string, number>;
 }
 
 export function useOddsApi(): UseOddsApiResult {
   const stored = _sessionCache ?? loadFromStorage();
 
-  const [realLeagues, setRealLeagues] = useState<League[]>(
+  const [realLeagues,     setRealLeagues]     = useState<League[]>(
     stored ? filterCurrentLeagues(stored.leagues) : [],
   );
-  const [loading,     setLoading]     = useState(false);
-  const [refreshing,  setRefreshing]  = useState(false);
-  const [error,       setError]       = useState<string | null>(null);
-  const [fetchedAt,   setFetchedAt]   = useState<Date | null>(
+  const [loading,         setLoading]         = useState(false);
+  const [refreshing,      setRefreshing]      = useState(false);
+  const [error,           setError]           = useState<string | null>(null);
+  const [fetchedAt,       setFetchedAt]       = useState<Date | null>(
     stored ? new Date(stored.fetchedAt) : null,
   );
+  const [betsApiCountById, setBetsApiCountById] = useState<Record<string, number>>({});
 
   const isMounted = useRef(true);
 
@@ -324,9 +334,11 @@ export function useOddsApi(): UseOddsApiResult {
     background ? setRefreshing(true) : setLoading(true);
     setError(null);
 
-    const { leagues, error: fetchError } = await fetchAllLeagues();
+    const { leagues, error: fetchError, countBySportId } = await fetchAllLeagues();
 
     if (!isMounted.current) return;
+
+    setBetsApiCountById(countBySportId);
 
     if (leagues.length > 0) {
       clearQuotaExhausted();
@@ -378,6 +390,7 @@ export function useOddsApi(): UseOddsApiResult {
     hasRealData:      realLeagues.length > 0,
     isStale,
     lastUpdatedLabel: getLastUpdatedLabel(fetchedAt),
+    betsApiCountById,
     refresh: () => {
       clearQuotaExhausted();
       _sessionCache = null;

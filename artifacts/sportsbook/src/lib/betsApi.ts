@@ -40,10 +40,12 @@ export interface BetsApiSportMeta {
 }
 
 interface AllResponse {
-  sports:    Record<string, BetsApiEvent[]>;
-  sportMeta: Record<string, BetsApiSportMeta>;
-  cached:    boolean;
-  sportCount: number;
+  sports:         Record<string, BetsApiEvent[]>;
+  sportMeta:      Record<string, BetsApiSportMeta>;
+  /** Raw event count per BetsAPI sport_id string — includes countOnly sports */
+  countBySportId: Record<string, number>;
+  cached:         boolean;
+  sportCount:     number;
 }
 
 interface LiveResponse {
@@ -56,11 +58,13 @@ interface LiveResponse {
 
 /** Fetch all upcoming/pre-match events from server cache */
 export async function fetchBetsApiUpcoming(): Promise<AllResponse> {
-  // Use /all as primary; /upcoming is the same but kept for backward compat
   const res = await fetch('/api/betsapi/all');
   if (res.status === 503) throw new Error('BetsAPI not configured');
   if (!res.ok) throw new Error(`BetsAPI HTTP ${res.status}`);
-  return await res.json() as AllResponse;
+  const json = await res.json() as AllResponse;
+  // Ensure countBySportId always exists (older cache may not have it)
+  if (!json.countBySportId) json.countBySportId = {};
+  return json;
 }
 
 /** Fetch live inplay events */

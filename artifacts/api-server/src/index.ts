@@ -403,7 +403,7 @@ runMigrations().then(() => {
         if (!meta) continue;
 
         // Paginate: up to 6 pages (300 events) per sport
-        const events = await fetchBetsApiUpcoming(sportId, 6);
+        const events = await fetchBetsApiUpcoming(sportId);
         if (events.length === 0) {
           await new Promise(r => setTimeout(r, 300));
           continue;
