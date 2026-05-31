@@ -85,112 +85,87 @@ const PROMO_PILLS = [
 ];
 
 function USDTDepositBanner({ onDeposit }: { onDeposit: () => void }) {
-  return (
-    <div
-      className="relative mb-5 rounded-xl p-px"
-      style={{ background: "linear-gradient(105deg, #00DFA9 0%, #1E9E78 40%, #FACC15 100%)" }}
-    >
-      <div
-        className="relative rounded-xl overflow-hidden px-4 py-3"
-        style={{ background: "linear-gradient(105deg, #091812 0%, #0B0F14 55%, #10140E 100%)" }}
-      >
-        {/* Glows */}
-        <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-28 h-28 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(0,223,169,0.18)" }} />
-        <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-24 h-24 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(250,204,21,0.12)" }} />
+  const [dismissed, setDismissed] = useState(() =>
+    sessionStorage.getItem('promo_ribbon_dismissed') === '1'
+  );
 
-        {/* ── MOBILE layout (default) ── */}
-        <div className="relative sm:hidden flex flex-col gap-2.5">
-          {/* Row 1: badge + heading */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg"
+  if (dismissed) return null;
+
+  function handleDismiss() {
+    sessionStorage.setItem('promo_ribbon_dismissed', '1');
+    setDismissed(true);
+  }
+
+  return (
+    <>
+      {/* ── Slim dismissible ribbon (mobile) ── */}
+      <div className="sm:hidden flex items-center gap-2.5 mb-4 px-3 py-2 rounded-xl border border-[#00DFA9]/25 bg-gradient-to-r from-[#00DFA9]/8 to-[#FACC15]/5">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
+        <p className="text-[12px] font-bold text-[#F8FAFC] flex-1 leading-tight">
+          100% deposit bonus up to{" "}
+          <span className="text-[#FACC15]">500 USDT</span>
+        </p>
+        <button
+          onClick={onDeposit}
+          className="shrink-0 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide text-[#071510] active:scale-95 transition-all whitespace-nowrap"
+          style={{ background: "linear-gradient(135deg,#00DFA9 0%,#00C98A 100%)" }}>
+          Claim
+        </button>
+        <button onClick={handleDismiss} className="shrink-0 p-1 rounded-md text-[#94A3B8]/40 hover:text-[#94A3B8] transition-colors">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* ── Full banner (desktop sm+) ── */}
+      <div
+        className="relative hidden sm:block mb-5 rounded-xl p-px"
+        style={{ background: "linear-gradient(105deg, #00DFA9 0%, #1E9E78 40%, #FACC15 100%)" }}
+      >
+        <div
+          className="relative rounded-xl overflow-hidden px-4 py-3"
+          style={{ background: "linear-gradient(105deg, #091812 0%, #0B0F14 55%, #10140E 100%)" }}
+        >
+          <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-28 h-28 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(0,223,169,0.18)" }} />
+          <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-24 h-24 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(250,204,21,0.12)" }} />
+          <div className="relative flex items-center gap-4">
+            <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
               style={{ background: "rgba(0,223,169,0.1)", border: "1px solid rgba(0,223,169,0.2)" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
               <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#00DFA9] whitespace-nowrap">Live Offer</span>
             </div>
-            <p className="text-[14px] font-black leading-tight text-white tracking-tight">
-              Deposit{" "}
-              <span style={{ background: "linear-gradient(90deg,#00DFA9 0%,#FACC15 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                USDT
-              </span>{" "}
-              &amp; Start Gambling
-            </p>
-          </div>
-          {/* Feature tags */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {["Zero fees", "Instant settlement", "TRC-20 · ERC-20"].map((t, i) => (
-              <span key={t} className="flex items-center gap-1">
-                {i > 0 && <span className="text-[#253241] text-[10px]">·</span>}
-                <span className="text-[10px] text-[#6EE7C7] font-medium">{t}</span>
-              </span>
-            ))}
-          </div>
-          {/* Row 2: bonus + CTA */}
-          <div className="flex items-center justify-between gap-3 pt-1">
-            <div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-black leading-tight text-white tracking-tight">
+                Deposit <span style={{ background: "linear-gradient(90deg,#00DFA9 0%,#FACC15 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>USDT</span> &amp; Start Gambling
+              </p>
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                {["Zero fees", "Instant settlement", "TRC-20 · ERC-20"].map((t, i) => (
+                  <span key={t} className="flex items-center gap-1">
+                    {i > 0 && <span className="text-[#253241] text-[10px]">·</span>}
+                    <span className="text-[10px] text-[#6EE7C7] font-medium">{t}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="shrink-0 w-px h-9 rounded-full" style={{ background: "linear-gradient(180deg,transparent,rgba(0,223,169,0.25),transparent)" }} />
+            <div className="shrink-0 text-center">
               <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#94A3B8]/50 leading-none">Bonus up to</p>
-              <p className="text-[20px] font-black tabular-nums leading-none mt-0.5"
-                style={{ background: "linear-gradient(135deg,#FACC15 20%,#FDE68A 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                500 <span className="text-[12px]">USDT</span>
+              <p className="text-[22px] font-black tabular-nums leading-none mt-0.5" style={{ background: "linear-gradient(135deg,#FACC15 20%,#FDE68A 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                500 <span className="text-[13px]">USDT</span>
               </p>
               <p className="text-[8px] text-[#94A3B8]/40 leading-none mt-0.5">100% first deposit match</p>
             </div>
-            <button
-              onClick={onDeposit}
-              className="shrink-0 px-4 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 active:scale-95 whitespace-nowrap"
+            <button onClick={onDeposit}
+              className="shrink-0 px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 hover:brightness-110 hover:scale-105 active:scale-95 hover:shadow-[0_0_20px_rgba(0,223,169,0.5)] whitespace-nowrap"
               style={{ background: "linear-gradient(135deg,#00DFA9 0%,#00C98A 100%)" }}>
               Deposit Now →
             </button>
+            <button onClick={handleDismiss} className="shrink-0 p-1.5 rounded-md text-[#94A3B8]/40 hover:text-[#94A3B8] hover:bg-[#253241]/40 transition-all">
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
-        </div>
-
-        {/* ── DESKTOP layout (sm+) ── */}
-        <div className="relative hidden sm:flex items-center gap-4">
-          {/* Live badge */}
-          <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-            style={{ background: "rgba(0,223,169,0.1)", border: "1px solid rgba(0,223,169,0.2)" }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
-            <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#00DFA9] whitespace-nowrap">Live Offer</span>
-          </div>
-          {/* Main text */}
-          <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-black leading-tight text-white tracking-tight">
-              Deposit{" "}
-              <span style={{ background: "linear-gradient(90deg,#00DFA9 0%,#FACC15 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                USDT
-              </span>{" "}
-              &amp; Start Gambling
-            </p>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {["Zero fees", "Instant settlement", "TRC-20 · ERC-20"].map((t, i) => (
-                <span key={t} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-[#253241] text-[10px]">·</span>}
-                  <span className="text-[10px] text-[#6EE7C7] font-medium">{t}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-          {/* Divider */}
-          <div className="shrink-0 w-px h-9 rounded-full"
-            style={{ background: "linear-gradient(180deg,transparent,rgba(0,223,169,0.25),transparent)" }} />
-          {/* Bonus */}
-          <div className="shrink-0 text-center">
-            <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#94A3B8]/50 leading-none">Bonus up to</p>
-            <p className="text-[22px] font-black tabular-nums leading-none mt-0.5"
-              style={{ background: "linear-gradient(135deg,#FACC15 20%,#FDE68A 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              500 <span className="text-[13px]">USDT</span>
-            </p>
-            <p className="text-[8px] text-[#94A3B8]/40 leading-none mt-0.5">100% first deposit match</p>
-          </div>
-          {/* CTA */}
-          <button
-            onClick={onDeposit}
-            className="shrink-0 px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 hover:brightness-110 hover:scale-105 active:scale-95 hover:shadow-[0_0_20px_rgba(0,223,169,0.5)] whitespace-nowrap"
-            style={{ background: "linear-gradient(135deg,#00DFA9 0%,#00C98A 100%)" }}>
-            Deposit Now →
-          </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

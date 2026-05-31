@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  Home, Receipt, MoreHorizontal,
+  Home, Receipt,
   History, HelpCircle, Star, FileText, ShieldCheck,
   Landmark, ChevronRight, Wallet, X, Zap, Check,
-  TrendingUp, Share2, UserCircle, Radio,
+  TrendingUp, Share2, UserCircle, Radio, Search,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useBetHistory } from '../hooks/useBetHistory';
@@ -155,16 +155,6 @@ export function MobileBottomNav() {
             <span>{t('Account')}</span>
           </Link>
 
-          <button
-            onClick={() => setMoreOpen(true)}
-            className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150',
-              isMoreTab ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50 hover:text-[#94A3B8]'
-            )}>
-            <MoreHorizontal className="h-5 w-5" />
-            <span>{t('More')}</span>
-          </button>
-
         </div>
       </nav>
 
@@ -193,24 +183,16 @@ export function MobileBottomNav() {
             <div className="w-10 h-1 rounded-full bg-[#253241]" />
           </div>
           <div className="px-4 pb-3 shrink-0 border-b border-[#253241]/60">
-            <h2 className="text-[15px] font-bold text-[#F8FAFC]">Browse Sports</h2>
-            <p className="text-[12px] text-[#94A3B8]/60 mt-0.5">Tap a sport to filter matches</p>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-[15px] font-bold text-[#F8FAFC]">Browse Sports</h2>
+              <button onClick={() => setSportsOpen(false)} className="p-1.5 rounded-lg text-[#94A3B8]/50 hover:text-[#F8FAFC] hover:bg-[#253241]/50 transition-all">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <SportsSearch onSelect={handleSelectSport} />
           </div>
           <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-3 gap-2.5 p-4 pb-8">
-              <button onClick={() => handleSelectSport('all')}
-                className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/30 transition-all active:scale-95">
-                <span className="text-2xl">🏆</span>
-                <span className="text-[11px] font-semibold text-[#00DFA9] text-center leading-tight">All Sports</span>
-              </button>
-              {SPORTS.map(sport => (
-                <button key={sport.id} onClick={() => handleSelectSport(sport.id)}
-                  className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#00DFA9]/30 hover:bg-[#18212B] active:scale-95 transition-all duration-150">
-                  <span className="text-2xl">{sport.icon}</span>
-                  <span className="text-[11px] font-medium text-[#94A3B8] text-center leading-tight">{sport.name}</span>
-                </button>
-              ))}
-            </div>
+            <SportsGrid onSelect={handleSelectSport} />
           </div>
         </DrawerContent>
       </Drawer>
@@ -422,5 +404,66 @@ export function MobileBottomNav() {
         </DrawerContent>
       </Drawer>
     </>
+  );
+}
+
+// ── SportsSearch — search input + filtered suggestions ───────────────────────
+function SportsSearch({ onSelect }: { onSelect: (id: string) => void }) {
+  const [q, setQ] = useState('');
+  const filtered = q.trim()
+    ? SPORTS.filter(s => s.name.toLowerCase().includes(q.toLowerCase()))
+    : [];
+
+  return (
+    <div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/40 pointer-events-none" />
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Search sports…"
+          className="w-full pl-9 pr-8 h-9 rounded-xl text-sm bg-[#121821] border border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 outline-none focus:border-[#00DFA9]/50 transition-colors"
+        />
+        {q && (
+          <button onClick={() => setQ('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8]/40 hover:text-[#94A3B8]">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {filtered.length > 0 && (
+        <div className="mt-2 rounded-xl bg-[#121821] border border-[#253241] overflow-hidden">
+          {filtered.slice(0, 6).map(sport => (
+            <button
+              key={sport.id}
+              onClick={() => { onSelect(sport.id); setQ(''); }}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-left hover:bg-[#18212B] transition-colors border-b border-[#253241]/40 last:border-0"
+            >
+              <span className="text-lg shrink-0">{sport.icon}</span>
+              <span className="text-[13px] font-medium text-[#F8FAFC]">{sport.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── SportsGrid — 3-col grid of all sports ────────────────────────────────────
+function SportsGrid({ onSelect }: { onSelect: (id: string) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-2.5 p-4 pb-8">
+      <button onClick={() => onSelect('all')}
+        className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/30 transition-all active:scale-95">
+        <span className="text-2xl">🏆</span>
+        <span className="text-[11px] font-semibold text-[#00DFA9] text-center leading-tight">All Sports</span>
+      </button>
+      {SPORTS.map(sport => (
+        <button key={sport.id} onClick={() => onSelect(sport.id)}
+          className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#00DFA9]/30 hover:bg-[#18212B] active:scale-95 transition-all duration-150">
+          <span className="text-2xl">{sport.icon}</span>
+          <span className="text-[11px] font-medium text-[#94A3B8] text-center leading-tight">{sport.name}</span>
+        </button>
+      ))}
+    </div>
   );
 }
