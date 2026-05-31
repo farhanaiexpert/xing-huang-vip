@@ -72,6 +72,12 @@ export function MobileBottomNav() {
     return () => window.removeEventListener('open-sports-drawer', handler);
   }, []);
 
+  useEffect(() => {
+    function handler() { setMoreOpen(true); }
+    window.addEventListener('open-more-drawer', handler);
+    return () => window.removeEventListener('open-more-drawer', handler);
+  }, []);
+
   function handleSelectSport(sportId: string) {
     window.dispatchEvent(new CustomEvent('mobile-sport-select', { detail: sportId }));
     setSportsOpen(false);

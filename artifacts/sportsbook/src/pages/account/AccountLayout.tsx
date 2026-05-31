@@ -6,7 +6,7 @@ import { Header } from '@/components/Header';
 import { cn, userDisplayLabel, addressInitials } from '@/lib/utils';
 import {
   LayoutDashboard, Wallet, Receipt, ArrowLeftRight,
-  Users, Gift, Star, Trophy, Settings, LogOut, Shield, BarChart2,
+  Users, Gift, Star, Trophy, Settings, LogOut, Shield, BarChart2, MoreHorizontal,
 } from 'lucide-react';
 import { OverviewPage }              from './OverviewPage';
 import { WalletPage }               from './WalletPage';
@@ -121,6 +121,14 @@ export function AccountLayout() {
               </Link>
             );
           })}
+          {/* More quick-links trigger (mobile only) */}
+          <button
+            onClick={() => window.dispatchEvent(new Event('open-more-drawer'))}
+            className="xl:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap border border-white/[0.06] bg-[#0E1520] text-[#94A3B8]/55 active:scale-95 transition-all shrink-0"
+          >
+            <MoreHorizontal className="h-3 w-3 shrink-0" />
+            More
+          </button>
         </div>
       </div>
 

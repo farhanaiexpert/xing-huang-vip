@@ -558,6 +558,16 @@ export function MainContent({
 
         {/* ── Content ─────────────────────────────────────────────────── */}
         <div className="px-4 pt-4 pb-2">
+          {/* Mobile-only sports drawer trigger chip */}
+          <button
+            onClick={() => window.dispatchEvent(new Event('open-sports-drawer'))}
+            className="xl:hidden w-full flex items-center gap-2.5 mb-3 px-3.5 py-2.5 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#00DFA9]/30 hover:bg-[#18212B] active:scale-[0.98] transition-all duration-150 cursor-pointer"
+          >
+            <span className="text-[18px] leading-none">🏆</span>
+            <span className="text-[13px] font-semibold text-[#F8FAFC]">Browse All Sports</span>
+            <ChevronRight className="h-4 w-4 text-[#94A3B8]/40 ml-auto shrink-0" />
+          </button>
+
           {isLoading ? (
             /* ── Skeleton state ─────────────────────────────────── */
             <div className="space-y-3">
