@@ -547,7 +547,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
                   {w.short}
                 </div>
               ))}
-              <span className="text-[10px] text-[#64748B]/70">Ethereum mainnet · ERC-20 USDT</span>
+              <span className="text-[10px] text-[#64748B]/70">ETH · BSC · Polygon · Arbitrum · Optimism · TRC-20</span>
             </div>
           )}
 

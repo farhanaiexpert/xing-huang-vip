@@ -38,8 +38,11 @@ export const EVM_CHAINS: Record<number, {
   /** Must match backend MIN_CONFIRMATIONS in evmVerify.ts */
   minConfirmations: number;
 }> = {
-  // ERC-20 USDT on Ethereum mainnet only — BSC and Polygon removed intentionally.
-  1: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6, network: 'ETH', label: 'Ethereum (ERC-20)', color: '#627EEA', minConfirmations: 6 },
+  1:     { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6,  network: 'ETH',      label: 'Ethereum (ERC-20)',  color: '#627EEA', minConfirmations: 6 },
+  56:    { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, network: 'BSC',      label: 'BSC (BEP-20)',       color: '#F0B90B', minConfirmations: 3 },
+  137:   { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6,  network: 'POLYGON',  label: 'Polygon (MATIC)',    color: '#8247E5', minConfirmations: 3 },
+  42161: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6,  network: 'ARBITRUM', label: 'Arbitrum One',       color: '#28A0F0', minConfirmations: 1 },
+  10:    { address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', decimals: 6,  network: 'OPTIMISM', label: 'Optimism',           color: '#FF0420', minConfirmations: 1 },
 };
 
 /** Convert human USDT amount to BigInt base units, avoiding float precision loss */

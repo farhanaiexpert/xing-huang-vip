@@ -61,10 +61,10 @@ router.get("/wallet/transactions", authenticate, async (req, res): Promise<void>
 const DepositBody = z.object({
   amount:  z.number().positive().min(PLATFORM_DEPOSIT.minDeposit, `Minimum deposit is ${PLATFORM_DEPOSIT.minDeposit} USDT`),
   txHash:  z.string().min(10, "Please enter a valid transaction hash"),
-  // ETH | BSC | POLYGON = EVM auto-deposit (verified via evmVerify)
+  // ETH | BSC | POLYGON | ARBITRUM | OPTIMISM = EVM auto-deposit (verified via evmVerify)
   // TRC-20 = TRON auto or manual deposit (verified via tronVerify)
   // ERC-20 = legacy manual form (falls through to EVM/ETH verifier)
-  network: z.enum(["TRC-20", "ERC-20", "ETH", "BSC", "POLYGON"]).default("TRC-20"),
+  network: z.enum(["TRC-20", "ERC-20", "ETH", "BSC", "POLYGON", "ARBITRUM", "OPTIMISM"]).default("TRC-20"),
 });
 
 router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => {

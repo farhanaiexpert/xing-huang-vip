@@ -36,6 +36,18 @@ const NETWORK_CONFIG: Record<string, EvmNetworkConfig> = {
     rpcUrls: alchemyOrFallback("polygon-mainnet", "https://polygon.drpc.org"),
     label: "Polygon",
   },
+  ARBITRUM: {
+    contract: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+    decimals: 6,
+    rpcUrls: alchemyOrFallback("arb-mainnet", "https://arb1.arbitrum.io/rpc"),
+    label: "Arbitrum One",
+  },
+  OPTIMISM: {
+    contract: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+    decimals: 6,
+    rpcUrls: alchemyOrFallback("opt-mainnet", "https://mainnet.optimism.io"),
+    label: "Optimism",
+  },
 };
 
 export interface EvmVerifyResult {
@@ -60,9 +72,11 @@ interface EthReceipt {
 }
 
 const MIN_CONFIRMATIONS: Record<string, number> = {
-  ETH:     6,
-  BSC:     3,
-  POLYGON: 3,
+  ETH:      6,
+  BSC:      3,
+  POLYGON:  3,
+  ARBITRUM: 1,
+  OPTIMISM: 1,
 };
 
 async function rpcCall(rpcUrl: string, method: string, params: unknown[]): Promise<unknown> {

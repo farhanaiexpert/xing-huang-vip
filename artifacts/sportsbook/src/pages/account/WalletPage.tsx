@@ -537,7 +537,7 @@ export function WalletPage() {
                   <Wallet className="w-4.5 h-4.5 text-[#A78BFA]" />
                 </div>
                 <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">Web3 Wallet</p>
-                <p className="text-[9px] text-[#A78BFA] font-semibold">ETH · BNB · TRC-20</p>
+                <p className="text-[9px] text-[#A78BFA] font-semibold">5 EVM chains · TRC-20</p>
                 <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.3)' }}>Auto</span>
               </button>
 
@@ -642,6 +642,10 @@ export function WalletPage() {
                           className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[13px] font-semibold text-[#F8FAFC] focus:outline-none focus:border-[#38BDF8]/60 focus:ring-1 focus:ring-[#38BDF8]/20 transition-all">
                           <option value="usdttrc20">USDT (TRC-20 / Tron)</option>
                           <option value="usdterc20">USDT (ERC-20 / Ethereum)</option>
+                          <option value="usdtbsc">USDT (BEP-20 / BSC)</option>
+                          <option value="usdtpolygon">USDT (Polygon)</option>
+                          <option value="usdtsol">USDT (Solana / SPL)</option>
+                          <option value="usdtarbi">USDT (Arbitrum)</option>
                           <option value="btc">Bitcoin (BTC)</option>
                           <option value="eth">Ethereum (ETH)</option>
                           <option value="bnbbsc">BNB (BSC / BEP-20)</option>
@@ -849,7 +853,7 @@ export function WalletPage() {
                     >
                       <Wallet className="w-4 h-4" /> Connect Wallet <ChevronRight className="w-4 h-4" />
                     </button>
-                    <p className="text-[10px] text-[#64748B]">Supports 300+ wallets · ETH · BNB Chain · Polygon · TRC-20</p>
+                    <p className="text-[10px] text-[#64748B]">Supports 300+ wallets · ETH · BSC · Polygon · Arbitrum · Optimism · TRC-20</p>
                   </div>
                 )}
 

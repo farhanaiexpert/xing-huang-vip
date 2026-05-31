@@ -185,7 +185,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   // ── NowPayments inline flow ──────────────────────────────────────────────────
   const [view, setView] = useState<ModalView>('methods');
   const [nppAmount, setNppAmount] = useState('');
-  const [nppCurrency, setNppCurrency] = useState<'usdttrc20' | 'usdterc20'>('usdttrc20');
+  const [nppCurrency, setNppCurrency] = useState<string>('usdttrc20');
   const [nppPayment, setNppPayment] = useState<NppPayment | null>(null);
   const [nppTimeLeft, setNppTimeLeft] = useState(0);
   const [nppCreating, setNppCreating] = useState(false);
@@ -489,18 +489,22 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">
                       Network
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {([
-                        { val: 'usdttrc20' as const, label: 'TRC-20', sub: 'Tron · Recommended', color: '#00DFA9' },
-                        { val: 'usdterc20' as const, label: 'ERC-20', sub: 'Ethereum', color: '#627EEA' },
-                      ] as const).map(opt => (
+                        { val: 'usdttrc20',   label: 'TRC-20',   sub: 'Tron · Best',  color: '#00DFA9' },
+                        { val: 'usdterc20',   label: 'ERC-20',   sub: 'Ethereum',      color: '#627EEA' },
+                        { val: 'usdtbsc',     label: 'BEP-20',   sub: 'BSC',           color: '#F0B90B' },
+                        { val: 'usdtpolygon', label: 'Polygon',  sub: 'MATIC',         color: '#8247E5' },
+                        { val: 'usdtsol',     label: 'Solana',   sub: 'SPL',           color: '#9945FF' },
+                        { val: 'usdtarbi',    label: 'Arbitrum', sub: 'ARB One',       color: '#28A0F0' },
+                      ] as { val: string; label: string; sub: string; color: string }[]).map(opt => (
                         <button
                           key={opt.val}
                           onClick={() => setNppCurrency(opt.val)}
                           disabled={nppCreating}
                           className="relative rounded-xl p-3 text-left transition-all"
                           style={nppCurrency === opt.val
-                            ? { background: `rgba(${opt.color === '#00DFA9' ? '0,223,169' : '98,126,234'},0.12)`, border: `2px solid ${opt.color}60` }
+                            ? { background: `${opt.color}1A`, border: `2px solid ${opt.color}60` }
                             : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }
                           }
                         >
@@ -1107,7 +1111,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
                               <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0 mt-0.5" />
                               <p className="text-[#FACC15]">
-                                Your wallet is on an unsupported network. Switch to <strong>Ethereum mainnet</strong> to deposit ERC-20 USDT.
+                                Your wallet is on an unsupported network. Switch to <strong>ETH, BSC, Polygon, Arbitrum,</strong> or <strong>Optimism</strong> to deposit USDT.
                               </p>
                             </div>
                           )}
@@ -1227,7 +1231,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                                   <AddressRow label="USDT" address={TRC20_ADDRESS} network="TRC-20" color="#00DFA9" />
                                 )}
                                 {ERC20_ADDRESS && (
-                                  <AddressRow label="USDT" address={ERC20_ADDRESS} network="ERC-20" color="#627EEA" />
+                                  <AddressRow label="USDT" address={ERC20_ADDRESS} network="ERC-20 / BEP-20 / Polygon / Arbitrum / Optimism" color="#627EEA" />
                                 )}
                               </div>
                             )}

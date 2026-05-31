@@ -1,12 +1,11 @@
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { mainnet } from '@reown/appkit/networks';
+import { mainnet, bsc, polygon, arbitrum, optimism } from '@reown/appkit/networks';
 
 const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID as string) || '';
 
-// ERC-20 USDT deposits use Ethereum mainnet only.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const networks = [mainnet] as any;
+const networks = [mainnet, bsc, polygon, arbitrum, optimism] as any;
 
 export const wagmiAdapter = new WagmiAdapter({
   networks,
