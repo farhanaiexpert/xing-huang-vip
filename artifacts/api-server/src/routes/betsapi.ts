@@ -1,8 +1,9 @@
 /**
  * BetsAPI routes
  *
- * GET /betsapi/upcoming  — returns all sports from DB betsapi_cache
- * GET /betsapi/live      — returns live inplay events (30 s in-memory cache)
+ * GET /betsapi/all       — all upcoming sports from DB betsapi_cache (primary)
+ * GET /betsapi/upcoming  — alias for /betsapi/all (backwards compat)
+ * GET /betsapi/live      — live inplay events (DB cache, 30 s TTL)
  */
 import { Router } from 'express';
 import { db } from '@workspace/db';
@@ -18,36 +19,57 @@ import {
 
 const router = Router();
 
-// ─── In-memory live cache (30 s TTL) ─────────────────────────────────────────
-let liveCache: { data: BetsApiEventRaw[]; expiresAt: number } | null = null;
-const LIVE_TTL_MS = 30 * 1_000;
+// ─── Shared cache reader ──────────────────────────────────────────────────────
 
-// ─── GET /betsapi/upcoming — bulk read from DB cache ─────────────────────────
+async function readUpcomingCache(): Promise<{
+  sports:    Record<string, BetsApiEventRaw[]>;
+  sportMeta: Record<string, typeof BETSAPI_SPORT_MAP[number]>;
+}> {
+  const result = await db.execute(sql`
+    SELECT cache_key, data FROM betsapi_cache WHERE expires_at > NOW()
+  `);
+
+  const sports: Record<string, BetsApiEventRaw[]> = {};
+  for (const row of result.rows) {
+    const key  = row.cache_key as string;
+    const data = Array.isArray(row.data) ? (row.data as BetsApiEventRaw[]) : [];
+    sports[key] = data;
+  }
+
+  const sportMeta: Record<string, typeof BETSAPI_SPORT_MAP[number]> = {};
+  for (const id of BETSAPI_SPORT_IDS) {
+    const meta = BETSAPI_SPORT_MAP[id];
+    if (meta) sportMeta[String(id)] = meta;
+  }
+
+  return { sports, sportMeta };
+}
+
+// ─── GET /betsapi/all — primary endpoint ─────────────────────────────────────
+
+router.get('/betsapi/all', async (_req, res): Promise<void> => {
+  if (!BETSAPI_KEY) {
+    res.status(503).json({ error: 'BetsAPI not configured' });
+    return;
+  }
+  try {
+    const { sports, sportMeta } = await readUpcomingCache();
+    res.json({ sports, sportMeta, cached: true, sportCount: Object.keys(sports).length });
+  } catch (err) {
+    logger.error({ err }, 'BetsAPI: failed to read upcoming cache');
+    res.status(500).json({ error: 'Failed to fetch BetsAPI data' });
+  }
+});
+
+// ─── GET /betsapi/upcoming — alias for backwards compatibility ────────────────
+
 router.get('/betsapi/upcoming', async (_req, res): Promise<void> => {
   if (!BETSAPI_KEY) {
     res.status(503).json({ error: 'BetsAPI not configured' });
     return;
   }
-
   try {
-    const result = await db.execute(sql`
-      SELECT cache_key, data FROM betsapi_cache WHERE expires_at > NOW()
-    `);
-
-    const sports: Record<string, BetsApiEventRaw[]> = {};
-    for (const row of result.rows) {
-      const key  = row.cache_key as string;
-      const data = Array.isArray(row.data) ? (row.data as BetsApiEventRaw[]) : [];
-      sports[key] = data;
-    }
-
-    // Attach sport meta for client normalisation
-    const sportMeta: Record<string, { name: string; sportId: string; hasDraw: boolean; fallbackOdds: { home: number; draw?: number; away: number } }> = {};
-    for (const id of BETSAPI_SPORT_IDS) {
-      const meta = BETSAPI_SPORT_MAP[id];
-      if (meta) sportMeta[String(id)] = meta;
-    }
-
+    const { sports, sportMeta } = await readUpcomingCache();
     res.json({ sports, sportMeta, cached: true, sportCount: Object.keys(sports).length });
   } catch (err) {
     logger.error({ err }, 'BetsAPI: failed to read upcoming cache');
@@ -55,32 +77,57 @@ router.get('/betsapi/upcoming', async (_req, res): Promise<void> => {
   }
 });
 
-// ─── GET /betsapi/live — inplay events ────────────────────────────────────────
+// ─── GET /betsapi/live — inplay events (DB-backed, 30 s TTL) ─────────────────
+
+const LIVE_CACHE_KEY = 'live';
+const LIVE_TTL_SECS  = 30;
+
 router.get('/betsapi/live', async (_req, res): Promise<void> => {
   if (!BETSAPI_KEY) {
     res.status(503).json({ error: 'BetsAPI not configured' });
     return;
   }
 
-  const now = Date.now();
-  if (liveCache && liveCache.expiresAt > now) {
-    res.json({ events: liveCache.data, cached: true, count: liveCache.data.length });
-    return;
-  }
-
   try {
+    // Check DB cache first
+    const cached = await db.execute(sql`
+      SELECT data FROM betsapi_cache
+      WHERE cache_key = ${LIVE_CACHE_KEY} AND expires_at > NOW()
+      LIMIT 1
+    `);
+
+    if (cached.rows.length > 0) {
+      const data = cached.rows[0].data as BetsApiEventRaw[];
+      res.json({ events: Array.isArray(data) ? data : [], cached: true, count: Array.isArray(data) ? data.length : 0 });
+      return;
+    }
+
+    // Fetch fresh live data
     const events = await fetchBetsApiInplay();
 
-    // Attach sport meta to each event for easy client normalisation
     const enriched = events.map(ev => ({
       ...ev,
       _meta: BETSAPI_SPORT_MAP[Number(ev.sport_id)] ?? null,
     }));
 
-    liveCache = { data: enriched as BetsApiEventRaw[], expiresAt: now + LIVE_TTL_MS };
+    // Persist to DB with 30 s TTL
+    await db.execute(sql`
+      INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
+      VALUES (
+        ${LIVE_CACHE_KEY},
+        ${JSON.stringify(enriched)}::jsonb,
+        NOW(),
+        NOW() + INTERVAL '${sql.raw(String(LIVE_TTL_SECS))} seconds'
+      )
+      ON CONFLICT (cache_key) DO UPDATE
+        SET data       = EXCLUDED.data,
+            fetched_at = EXCLUDED.fetched_at,
+            expires_at = EXCLUDED.expires_at
+    `);
+
     res.json({ events: enriched, cached: false, count: enriched.length });
   } catch (err) {
-    logger.error({ err }, 'BetsAPI: failed to fetch inplay');
+    logger.error({ err }, 'BetsAPI: failed to fetch/cache inplay');
     res.status(500).json({ error: 'Failed to fetch live events' });
   }
 });

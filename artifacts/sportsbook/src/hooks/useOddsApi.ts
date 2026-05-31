@@ -172,6 +172,32 @@ function normaliseBetsApiLeagues(
         ? undefined
         : `betsapi_${meta.sportId.replace('sp_', '')}`;
 
+      // Skip match card generation for count-only sports (Horse Racing, Greyhounds)
+      if (meta.countOnly) {
+        // Still create a minimal league entry so sidebar counts work
+        leagues.push({
+          id:          leagueId,
+          name:        leagueName,
+          sportId:     meta.sportId,
+          sportKey:    undefined,   // no AllSportsHighlights section
+          countryCode: 'GL',
+          matches:     [{
+            id:          `betsapi_count_${leagueId}`,
+            team1:       '—',
+            team2:       '—',
+            date:        '',
+            dateTag:     'upcoming' as const,
+            leagueId,
+            sportId:     meta.sportId,
+            sportKey:    undefined,
+            isLive:      false,
+            marketCount: 0,
+            odds:        { home: 0, away: 0 },
+          }],
+        });
+        continue;
+      }
+
       const matches: Match[] = evs
         .filter(ev => {
           const ts = parseInt(ev.time, 10);
@@ -179,8 +205,13 @@ function normaliseBetsApiLeagues(
         })
         .slice(0, 10)
         .map((ev): Match => {
-          const ts   = parseInt(ev.time, 10);
-          const odds = meta.fallbackOdds;
+          const ts = parseInt(ev.time, 10);
+          // Use real prematch odds if available, else fall back
+          const realOdds = ev.prematchOdds;
+          const fallback = meta.fallbackOdds;
+          const home = realOdds?.home  ?? fallback.home;
+          const away = realOdds?.away  ?? fallback.away;
+          const draw = realOdds?.draw  ?? (meta.hasDraw ? fallback.draw : undefined);
           return {
             id:          `betsapi_${ev.id}`,
             team1:       ev.home.name,
@@ -194,9 +225,9 @@ function normaliseBetsApiLeagues(
             marketCount: 10,
             commenceIso: new Date(ts * 1000).toISOString(),
             odds: {
-              home: odds.home,
-              ...(meta.hasDraw && odds.draw != null ? { draw: odds.draw } : {}),
-              away: odds.away,
+              home,
+              ...(meta.hasDraw && draw != null ? { draw } : {}),
+              away,
             },
           };
         });

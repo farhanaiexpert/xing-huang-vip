@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 import cron from "node-cron";
 import { runSettlementWorker } from "./lib/settlementWorker.js";
 import { fetchAndCacheOdds, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
-import { fetchBetsApiUpcoming, BETSAPI_SPORT_IDS, BETSAPI_KEY } from "./lib/betsapi.js";
+import { fetchBetsApiUpcoming, fetchPrematchOdds, BETSAPI_SPORT_IDS, BETSAPI_SPORT_MAP, BETSAPI_KEY } from "./lib/betsapi.js";
 
 const PORT = parseInt(process.env.PORT ?? "5000", 10);
 
@@ -385,25 +385,56 @@ runMigrations().then(() => {
   let lastBetsApiRefreshAt = 0;
   const BETSAPI_INTERVAL_MS = 30 * 60 * 1000;
 
+  /**
+   * Fetch all pages for every sport (up to 6 pages = 300 events per sport),
+   * enrich the top 20 events per sport with real prematch odds from BetsAPI,
+   * then upsert into betsapi_cache with a 40-minute TTL.
+   *
+   * Horse Racing (2) and Greyhounds (4) are fetched for sidebar counts but
+   * we skip prematch odds enrichment for them (countOnly).
+   */
   async function runBetsApiBatch() {
     if (!BETSAPI_KEY || isBetsApiRefreshing) return;
     isBetsApiRefreshing = true;
     logger.info({ sportCount: BETSAPI_SPORT_IDS.length }, "BetsAPI cron: starting batch");
     try {
       for (const sportId of BETSAPI_SPORT_IDS) {
-        const events = await fetchBetsApiUpcoming(sportId);
-        if (events.length > 0) {
-          await db.execute(sql`
-            INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
-            VALUES (${String(sportId)}, ${JSON.stringify(events)}::jsonb, NOW(), NOW() + INTERVAL '40 minutes')
-            ON CONFLICT (cache_key) DO UPDATE SET
-              data       = EXCLUDED.data,
-              fetched_at = NOW(),
-              expires_at = NOW() + INTERVAL '40 minutes'
-          `);
+        const meta = BETSAPI_SPORT_MAP[sportId];
+        if (!meta) continue;
+
+        // Paginate: up to 6 pages (300 events) per sport
+        const events = await fetchBetsApiUpcoming(sportId, 6);
+        if (events.length === 0) {
+          await new Promise(r => setTimeout(r, 300));
+          continue;
         }
-        // 300ms gap to avoid burst rate-limits
-        await new Promise(r => setTimeout(r, 300));
+
+        // For non-countOnly sports: enrich top 20 events with real prematch odds
+        if (!meta.countOnly) {
+          const toEnrich = events.slice(0, 20);
+          await Promise.all(
+            toEnrich.map(async (ev) => {
+              try {
+                const odds = await fetchPrematchOdds(ev.id, meta.hasDraw);
+                if (odds) ev.prematchOdds = odds;
+              } catch { /* silently use fallback */ }
+            })
+          );
+        }
+
+        await db.execute(sql`
+          INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
+          VALUES (${String(sportId)}, ${JSON.stringify(events)}::jsonb, NOW(), NOW() + INTERVAL '40 minutes')
+          ON CONFLICT (cache_key) DO UPDATE SET
+            data       = EXCLUDED.data,
+            fetched_at = NOW(),
+            expires_at = NOW() + INTERVAL '40 minutes'
+        `);
+
+        logger.info({ sportId, name: meta.name, count: events.length }, "BetsAPI cron: sport cached");
+
+        // 400ms gap between sports to avoid burst rate-limits
+        await new Promise(r => setTimeout(r, 400));
       }
       lastBetsApiRefreshAt = Date.now();
       logger.info({ sportCount: BETSAPI_SPORT_IDS.length }, "BetsAPI cron: batch complete");

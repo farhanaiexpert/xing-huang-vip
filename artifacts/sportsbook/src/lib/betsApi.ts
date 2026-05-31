@@ -17,11 +17,14 @@ export interface BetsApiEvent {
   ss?:         string | null;   // score "H-A"
   scores?:     Record<string, { home: string; away: string }>;
   timer?:      { tm?: string; ts?: string; tt?: string; ta?: string };
+  /** Real prematch odds fetched from /v1/bet365/prematch (server-enriched) */
+  prematchOdds?: { home: number; draw?: number; away: number } | null;
   /** Attached by server — sport metadata */
   _meta?: {
     name:    string;
     sportId: string;
     hasDraw: boolean;
+    countOnly: boolean;
     fallbackOdds: { home: number; draw?: number; away: number };
   } | null;
 }
@@ -29,13 +32,14 @@ export interface BetsApiEvent {
 // ─── Server response shapes ───────────────────────────────────────────────────
 
 export interface BetsApiSportMeta {
-  name:    string;
-  sportId: string;
-  hasDraw: boolean;
+  name:      string;
+  sportId:   string;
+  hasDraw:   boolean;
+  countOnly: boolean;
   fallbackOdds: { home: number; draw?: number; away: number };
 }
 
-interface UpcomingResponse {
+interface AllResponse {
   sports:    Record<string, BetsApiEvent[]>;
   sportMeta: Record<string, BetsApiSportMeta>;
   cached:    boolean;
@@ -51,11 +55,12 @@ interface LiveResponse {
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
 /** Fetch all upcoming/pre-match events from server cache */
-export async function fetchBetsApiUpcoming(): Promise<UpcomingResponse> {
-  const res = await fetch('/api/betsapi/upcoming');
+export async function fetchBetsApiUpcoming(): Promise<AllResponse> {
+  // Use /all as primary; /upcoming is the same but kept for backward compat
+  const res = await fetch('/api/betsapi/all');
   if (res.status === 503) throw new Error('BetsAPI not configured');
   if (!res.ok) throw new Error(`BetsAPI HTTP ${res.status}`);
-  return await res.json() as UpcomingResponse;
+  return await res.json() as AllResponse;
 }
 
 /** Fetch live inplay events */
@@ -72,7 +77,9 @@ export async function fetchBetsApiLive(): Promise<BetsApiEvent[]> {
 /** Maps BetsAPI sport_id → the sport key prefix used in AllSportsHighlights */
 export const BETSAPI_SPORT_KEY: Record<string, string> = {
   '1':  'betsapi_soccer',
+  '2':  'betsapi_horse_racing',
   '3':  'betsapi_cricket',
+  '4':  'betsapi_greyhounds',
   '8':  'betsapi_rugby',
   '12': 'betsapi_americanfootball',
   '13': 'betsapi_baseball',

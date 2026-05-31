@@ -39,6 +39,7 @@ const SPORT_CONFIGS: SportConfig[] = [
   { prefix: 'snooker_',                      label: 'Snooker',           emoji: '🎱', color: '#22C55E', marketName: 'Match Winner' },
   // ── BetsAPI-only sports (no Odds API equivalent) ──────────────────────────────
   { prefix: 'betsapi_table_tennis',          label: 'Table Tennis',      emoji: '🏓', color: '#00DFA9', marketName: 'Match Winner' },
+  { prefix: 'betsapi_golf',                  label: 'Golf',              emoji: '⛳', color: '#22C55E', marketName: 'Match Winner' },
   { prefix: 'betsapi_rugby',                 label: 'Rugby',             emoji: '🏉', color: '#7C3AED', marketName: 'Match Winner' },
   { prefix: 'betsapi_handball',              label: 'Handball',          emoji: '🤾', color: '#F97316', marketName: 'Match Winner' },
   { prefix: 'betsapi_snooker',               label: 'Snooker',           emoji: '🎱', color: '#22C55E', marketName: 'Match Winner' },
