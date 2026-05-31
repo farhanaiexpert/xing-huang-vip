@@ -383,7 +383,7 @@ export function WalletPage() {
         );
         if (r.credited || r.status === 'paid' || r.status === 'paid_over') {
           setCmState('success'); loadData();
-        } else if (r.status === 'fail' || r.status === 'cancel' || r.status === 'wrong_amount') {
+        } else if (r.status === 'fail' || r.status === 'cancel' || r.status === 'wrong_amount' || r.status === 'wrong_amount_waiting' || r.status === 'system_fail') {
           setCmState('failed');
         }
       } catch { /* silent */ }

@@ -20,9 +20,16 @@ export function cryptomusConfigured(): boolean {
 
 // ── Signature helpers ──────────────────────────────────────────────────────────
 
-/** Build the Cryptomus HMAC-MD5 sign: md5(base64(jsonBody) + apiKey) */
+/**
+ * Build the Cryptomus sign:
+ *   md5( base64( JSON.stringify(keySorted body) ) + apiKey )
+ *
+ * Keys must be sorted alphabetically before serialising — Cryptomus PHP
+ * reference implementation uses ksort() before json_encode().
+ */
 function buildSign(body: Record<string, unknown>, apiKey: string): string {
-  const encoded = Buffer.from(JSON.stringify(body)).toString("base64");
+  const sorted = Object.fromEntries(Object.keys(body).sort().map(k => [k, body[k]]));
+  const encoded = Buffer.from(JSON.stringify(sorted)).toString("base64");
   return crypto.createHash("md5").update(encoded + apiKey).digest("hex");
 }
 
@@ -142,5 +149,8 @@ export async function getPaymentStatus(uuid: string): Promise<CryptomusPayment> 
 /** Statuses that mean "payment received — credit the wallet" */
 export const FINISHED_STATUSES = new Set(["paid", "paid_over"]);
 
-/** Statuses that mean "payment will never complete — reject" */
-export const FAILED_STATUSES   = new Set(["fail", "wrong_amount", "cancel", "system_fail"]);
+/**
+ * Statuses that mean "payment will never complete — reject"
+ * `wrong_amount_waiting` → user sent wrong amount and the window has now expired
+ */
+export const FAILED_STATUSES   = new Set(["fail", "wrong_amount", "wrong_amount_waiting", "cancel", "system_fail"]);
