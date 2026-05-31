@@ -72,7 +72,7 @@ const IMG_BASE: React.CSSProperties = {
   objectFit: 'contain',
   objectPosition: 'bottom center',
   display: 'block',
-  transform: 'scale(0.58)',
+  transform: 'scale(0.87)',
   transformOrigin: 'bottom center',
   transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
@@ -187,6 +187,10 @@ export function PromoPopup() {
 
   // Only show on the homepage
   if (location !== '/') return null;
+
+  // Never show popup or sticky bar if the bonus has already been claimed
+  // (allow showCongrats through so the user sees the celebration on successful claim)
+  if (alreadyClaimed && !showCongrats) return null;
 
   // Sticky claim bar — desktop: fixed bottom strip; mobile: slim top notice below header
   const StickyBar = dismissed && !barStopped ? (

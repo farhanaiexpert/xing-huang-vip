@@ -450,33 +450,47 @@ export function Promotions() {
 
       <main className="max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
 
-        {/* Hero banner */}
-        <div className="relative rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-[#121821] border border-[#253241]">
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{ background: 'radial-gradient(ellipse at 70% 50%, #00DFA9 0%, transparent 65%), radial-gradient(ellipse at 20% 80%, #38BDF8 0%, transparent 55%)' }}
-          />
-          <div className="relative px-4 sm:px-8 py-6 sm:py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
-            <div>
-              <div className="inline-flex items-center gap-1.5 bg-[#00DFA9]/15 border border-[#00DFA9]/30 px-3 py-1 rounded-full text-[10px] font-bold text-[#00DFA9] uppercase tracking-widest mb-3">
-                <Gift className="h-3 w-3" /> Welcome offer
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">100% Match Bonus</h1>
-              <p className="text-[#94A3B8]/70 text-sm mt-1.5 max-w-sm">
-                New to <span translate="no">CupBett</span>? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">500 USDT</span> in bonus funds.
-              </p>
-              <p className="text-[10px] text-[#94A3B8]/35 mt-3">18+ · T&Cs apply · 5× wagering req. · Min. 20 USDT deposit</p>
+        {/* Hero banner — hidden once bonus is claimed */}
+        {alreadyClaimed ? (
+          <div className="relative rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-[#071A12] border border-[#00DFA9]/25 flex items-center gap-4 px-4 sm:px-8 py-5"
+            style={{ boxShadow: '0 0 24px rgba(0,223,169,0.07)' }}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)' }}>
+              <CheckCircle2 className="h-5 w-5 text-[#0B0F14]" />
             </div>
-            <button
-              onClick={handleClaim}
-              disabled={claiming || alreadyClaimed}
-              className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3.5 sm:py-3 rounded-xl transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {alreadyClaimed ? '✓ Bonus Claimed' : claiming ? 'Claiming…' : 'Claim Now — 120 USDT Free'}
-              {!alreadyClaimed && !claiming && <ChevronRight className="h-4 w-4" />}
-            </button>
+            <div>
+              <p className="text-sm font-black text-[#00DFA9]">Welcome Bonus Received</p>
+              <p className="text-xs text-[#94A3B8]/60 mt-0.5">Your 120 USDT bonus is in your account and ready to use on any market.</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="relative rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-[#121821] border border-[#253241]">
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{ background: 'radial-gradient(ellipse at 70% 50%, #00DFA9 0%, transparent 65%), radial-gradient(ellipse at 20% 80%, #38BDF8 0%, transparent 55%)' }}
+            />
+            <div className="relative px-4 sm:px-8 py-6 sm:py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-[#00DFA9]/15 border border-[#00DFA9]/30 px-3 py-1 rounded-full text-[10px] font-bold text-[#00DFA9] uppercase tracking-widest mb-3">
+                  <Gift className="h-3 w-3" /> Welcome offer
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">100% Match Bonus</h1>
+                <p className="text-[#94A3B8]/70 text-sm mt-1.5 max-w-sm">
+                  New to <span translate="no">CupBett</span>? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">500 USDT</span> in bonus funds.
+                </p>
+                <p className="text-[10px] text-[#94A3B8]/35 mt-3">18+ · T&Cs apply · 5× wagering req. · Min. 20 USDT deposit</p>
+              </div>
+              <button
+                onClick={handleClaim}
+                disabled={claiming}
+                className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3.5 sm:py-3 rounded-xl transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {claiming ? 'Claiming…' : 'Claim Now — 120 USDT Free'}
+                {!claiming && <ChevronRight className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Category filter */}
         <div className="flex items-center gap-2 flex-wrap mb-6">
