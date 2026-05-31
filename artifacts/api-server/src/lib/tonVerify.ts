@@ -21,8 +21,14 @@ const TONAPI_BASE = "https://tonapi.io/v2";
 const USDT_DECIMALS = 6; // USDT Jetton has 6 decimal places on TON
 const TIMEOUT_MS = 15_000;
 
-// Known USDT Jetton master addresses (mainnet)
-const USDT_MASTER_NAMES = ["usdt", "usdtton", "eqcxe6mutqjkfngfarotkot1lzbdii"];
+// Strict USDT Jetton master address allowlist — normalised 64-char lowercase hex account-IDs.
+// ONLY exact master-contract matches trigger auto-credit. Any other Jetton → manual review.
+// Mapping (user-friendly → hex):
+//   EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs  (Tether USDT mainnet)
+//     → b113a994b5024a16719f69139328eb759596cd38a35f49281f5fe1d98d6e0cb
+const USDT_MASTER_HEX = new Set<string>([
+  "b113a994b5024a16719f69139328eb759596cd38a35f49281f5fe1d98d6e0cb",
+]);
 
 interface TonApiMsg {
   decoded_op_name?: string;
@@ -115,13 +121,14 @@ function normaliseTonAddress(addr: string): string {
 
 function isUsdtJetton(msg: TonApiMsg): boolean {
   const jetton = msg.decoded_body?.jetton;
-  // Fail-closed: if jetton metadata is absent we cannot confirm this is USDT → manual review
+  // Fail-closed: if jetton metadata is absent → manual review
   if (!jetton) return false;
-  const addr = (jetton.address ?? "").toLowerCase();
-  const sym  = (jetton.symbol ?? "").toLowerCase();
-  const name = (jetton.name ?? "").toLowerCase();
-  return sym === "usdt" || name.includes("usdt") ||
-    USDT_MASTER_NAMES.some(k => addr.includes(k) || name.includes(k));
+  const addr = (jetton.address ?? "").trim();
+  // Fail-closed: if master address is missing → manual review
+  if (!addr) return false;
+  // Strict allowlist — only the known Tether USDT master contract passes.
+  // Name/symbol fields are NOT used: a fake Jetton can set any metadata it likes.
+  return USDT_MASTER_HEX.has(normaliseTonAddress(addr));
 }
 
 function extractJettonAmount(body: TonApiMsg["decoded_body"]): number {
