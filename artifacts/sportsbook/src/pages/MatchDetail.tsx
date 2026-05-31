@@ -89,7 +89,7 @@ function bettersBadge(matchId: string): string {
 
 // ─── Odds overview quick-panel ────────────────────────────────────────────────
 
-function OddsOverview({ match }: { match: MatchEntity }) {
+function OddsOverview({ match, sportKey }: { match: MatchEntity; sportKey?: string }) {
   const pm = match.primaryMarket;
   if (pm.selections.length === 0) return null;
 
@@ -144,6 +144,7 @@ function OddsOverview({ match }: { match: MatchEntity }) {
             leagueName=""
             marketName={pm.name}
             sel={sel}
+            sportKey={sportKey}
           />
         ))}
       </div>
@@ -152,10 +153,11 @@ function OddsOverview({ match }: { match: MatchEntity }) {
 }
 
 function QuickOddsCell({
-  matchId, marketId, matchName, leagueName, marketName, sel,
+  matchId, marketId, matchName, leagueName, marketName, sel, sportKey,
 }: {
   matchId: string; marketId: string; matchName: string; leagueName: string;
   marketName: string; sel: { id: string; shortName: string; name: string; odds: number };
+  sportKey?: string;
 }) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const selectionId = `${marketId}-${sel.shortName}`;
@@ -165,7 +167,7 @@ function QuickOddsCell({
     <button
       onClick={() => {
         if (isSelected) removeSelection(selectionId);
-        else addSelection({ id: selectionId, marketId, matchId, matchName, leagueName, marketName, selectionType: sel.shortName, selectionName: sel.name, odds: sel.odds });
+        else addSelection({ id: selectionId, marketId, matchId, matchName, leagueName, marketName, selectionType: sel.shortName, selectionName: sel.name, odds: sel.odds, sportKey: sportKey ?? '' });
       }}
       className={cn(
         'flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all duration-200',
@@ -240,9 +242,10 @@ export function MatchDetail() {
     const found = findMatchInLeagues(matchId, allLeagues);
     if (found) {
       return {
-        match:   matchToEntity(found.match),
-        league:  leagueToEntity(found.league),
-        isApi:   true,
+        match:    matchToEntity(found.match),
+        league:   leagueToEntity(found.league),
+        sportKey: found.match.sportKey ?? found.match.sportId ?? '',
+        isApi:    true,
       };
     }
 
@@ -286,7 +289,7 @@ export function MatchDetail() {
     return <MatchNotFound onBack={() => setLocation('/')} />;
   }
 
-  const { match, league } = resolved;
+  const { match, league, sportKey } = resolved as { match: typeof resolved.match; league: typeof resolved.league; sportKey?: string; isApi: boolean };
   const matchName = match.awayTeamName
     ? `${match.homeTeamName} vs ${match.awayTeamName}`
     : match.homeTeamName;
@@ -304,7 +307,7 @@ export function MatchDetail() {
             <MatchHeader match={match} league={league} />
 
             {/* Quick odds overview — primary market prominent at top */}
-            <OddsOverview match={match} />
+            <OddsOverview match={match} sportKey={sportKey} />
 
             {/* Sticky market navigation */}
             <MarketNav
@@ -348,6 +351,7 @@ export function MatchDetail() {
                     defaultOpen={idx < 2}
                     isFeatured={idx === 0}
                     groupIndex={idx}
+                    sportKey={sportKey}
                   />
                 </div>
               ))}
