@@ -99,6 +99,7 @@ export function normalizeEvents(
         dateTag:     toDateTag(commence),
         leagueId:    `api_${config.key}`,
         sportId:     config.sportId,
+        sportKey:    config.key,
         isLive:      false as boolean,
         marketCount: 20,
         commenceIso: event.commence_time,
@@ -121,6 +122,7 @@ export function buildLeague(
     id:          `api_${config.key}`,
     name:        config.leagueName,
     sportId:     config.sportId,
+    sportKey:    config.key,
     countryCode: config.countryCode,
     matches,
   };

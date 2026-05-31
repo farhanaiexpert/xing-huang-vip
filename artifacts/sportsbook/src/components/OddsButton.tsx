@@ -19,13 +19,16 @@ interface OddsButtonProps {
   odds: number;
   isLive?: boolean;
   className?: string;
+  /** Full Odds API sport key, e.g. "soccer_epl" — used for settlement */
+  sportKey?: string;
+  /** Internal sport category (legacy, prefer sportKey) */
   sportId?: string;
   kickoffTime?: string;
 }
 
 export function OddsButton({
   matchId, marketId, matchName, leagueName, marketName,
-  selectionType, selectionName, odds, isLive = false, className, sportId, kickoffTime,
+  selectionType, selectionName, odds, isLive = false, className, sportKey, sportId, kickoffTime,
 }: OddsButtonProps) {
   const { addSelection, removeSelection, hasSelection, updateSelectionOdds } = useBetSlip();
   const { tick, suspendedMarketIds } = useOddsSimulation();
@@ -90,6 +93,7 @@ export function OddsButton({
         id: selectionId, marketId, matchId,
         matchName, leagueName, marketName,
         selectionType, selectionName, odds: displayOdds,
+        sportKey,
         sportId,
         kickoffTime: isLive ? undefined : kickoffTime,
       });

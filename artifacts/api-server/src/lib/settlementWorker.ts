@@ -96,13 +96,36 @@ const SPORT_KEY_EXPANSION: Record<string, string[]> = {
   sp_horse_racing:      [], // Not available in Odds API scores endpoint
 };
 
+/**
+ * Common sport keys to try when the stored sport is empty or unknown.
+ * Ordered by global betting volume so the most-likely matches are checked first.
+ */
+const UNKNOWN_SPORT_FALLBACK: string[] = [
+  'soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
+  'soccer_germany_bundesliga', 'soccer_usa_mls', 'soccer_ukraine_premier_league',
+  'soccer_turkey_super_league', 'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato',
+  'soccer_mexico_ligamx', 'soccer_efl_champ', 'soccer_scotland_premiership',
+  'soccer_portugal_primeira_liga', 'soccer_belgium_first_div',
+  'soccer_argentina_primera_division', 'soccer_conmebol_copa_libertadores',
+  'soccer_korea_kleague1', 'soccer_japan_j_league', 'soccer_australia_aleague',
+  'soccer_conmebol_copa_america', 'soccer_uefa_nations_league',
+  'soccer_uefa_champs_league', 'soccer_uefa_europa_league',
+  'basketball_nba', 'basketball_ncaab', 'basketball_euroleague',
+  'tennis_atp_french_open', 'tennis_wta_french_open', 'tennis_atp_wimbledon',
+  'tennis_wta_wimbledon', 'tennis_atp_us_open',
+  'americanfootball_nfl', 'americanfootball_ncaaf',
+  'mma_mixed_martial_arts', 'boxing_boxing',
+  'cricket_ipl', 'cricket_international_t20',
+];
+
 /** Returns the Odds API sport keys to query for a stored sport identifier */
 function expandSportKey(sport: string): string[] {
   const expansion = SPORT_KEY_EXPANSION[sport];
   if (expansion) return expansion;
   // Already a valid Odds API key (contains _ and not an sp_ internal ID)
   if (sport && sport.includes('_') && !sport.startsWith('sp_')) return [sport];
-  return [];
+  // Empty or completely unknown sport — try all common keys for fuzzy matching
+  return UNKNOWN_SPORT_FALLBACK;
 }
 
 /** Normalize a team name for fuzzy comparison */

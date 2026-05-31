@@ -357,6 +357,7 @@ function MatchRow({
     matchId: match.id, marketId: `sh_1x2_${match.id}`,
     matchName: `${match.home} v ${match.away}`,
     leagueName: match.league, marketName: 'Match Result',
+    sportKey: 'soccer_epl',
   };
   return (
     <div

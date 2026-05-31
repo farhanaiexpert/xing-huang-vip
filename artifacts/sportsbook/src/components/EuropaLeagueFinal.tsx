@@ -166,7 +166,7 @@ function BoostCard({ card }: { card: EuropaBoostCard }) {
 
 function MatchTable() {
   const { home, away, time, day, odds } = EUROPA_MATCHUP;
-  const shared = { matchId: MID, matchName: MATCH_NAME, leagueName: LEAGUE };
+  const shared = { matchId: MID, matchName: MATCH_NAME, leagueName: LEAGUE, sportKey: 'soccer_uefa_europa_league' };
 
   return (
     <div className="rounded-xl overflow-hidden mb-4" style={{ background: '#0F1620', border: '1px solid #253241' }}>

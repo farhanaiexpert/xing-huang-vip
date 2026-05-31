@@ -13,7 +13,9 @@ export type Selection = {
   /** Full display label: "Home Win" | "Draw" | "Away Win" | player name */
   selectionName: string;
   odds: number;
-  /** The Odds API sport key, e.g. "soccer_epl" */
+  /** The Odds API sport key, e.g. "soccer_epl" — preferred for settlement */
+  sportKey?: string;
+  /** Internal sport category ID (legacy, prefer sportKey) */
   sportId?: string;
   /** True when this selection was added from the live betting page */
   isLive?: boolean;
@@ -31,6 +33,8 @@ export type Match = {
   dateTag: 'today' | 'tomorrow' | 'upcoming';
   leagueId: string;
   sportId: string;
+  /** Full Odds API sport key, e.g. "soccer_epl" */
+  sportKey?: string;
   odds: {
     home: number;
     draw?: number;
@@ -58,6 +62,8 @@ export type League = {
   id: string;
   name: string;
   sportId: string;
+  /** Full Odds API sport key, e.g. "soccer_epl" */
+  sportKey?: string;
   countryCode?: string;
   matches: Match[];
 };

@@ -63,7 +63,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
       const apiSelections = selections.map(s => ({
         eventId:          s.matchId,
         eventName:        s.matchName,
-        sport:            s.sportId ?? "",
+        sport:            s.sportKey ?? s.sportId ?? "",
         marketType:       s.marketName,
         selection:        s.selectionName,
         odds:             s.odds,

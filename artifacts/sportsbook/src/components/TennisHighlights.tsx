@@ -108,6 +108,7 @@ function TennisMatchRow({ match }: { match: TennisMatch }) {
     matchName: `${match.player1} v ${match.player2}`,
     leagueName: match.tournament,
     marketName: 'To Win Match',
+    sportKey:  'tennis_atp_wimbledon',
   };
 
   return (
