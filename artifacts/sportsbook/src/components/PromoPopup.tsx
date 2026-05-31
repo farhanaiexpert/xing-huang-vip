@@ -50,13 +50,13 @@ function useCounter(target: number, active: boolean, duration = 1800) {
 }
 
 const AVATARS = [
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=alex&backgroundColor=0a1628',
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=maria&backgroundColor=0a1628',
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=james&backgroundColor=0a1628',
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=sofia&backgroundColor=0a1628',
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=kai&backgroundColor=0a1628',
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=nina&backgroundColor=0a1628',
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=omar&backgroundColor=0a1628',
+  'https://i.pravatar.cc/50?img=1',
+  'https://i.pravatar.cc/50?img=3',
+  'https://i.pravatar.cc/50?img=5',
+  'https://i.pravatar.cc/50?img=8',
+  'https://i.pravatar.cc/50?img=12',
+  'https://i.pravatar.cc/50?img=15',
+  'https://i.pravatar.cc/50?img=20',
 ];
 
 const AVATAR_COLORS = ['#00DFA9','#38BDF8','#FACC15','#F97316','#A855F7','#00DFA9','#38BDF8'];
@@ -72,7 +72,7 @@ const IMG_BASE: React.CSSProperties = {
   objectFit: 'contain',
   objectPosition: 'bottom center',
   display: 'block',
-  transform: 'scale(0.73)',
+  transform: 'scale(0.58)',
   transformOrigin: 'bottom center',
   transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
@@ -514,15 +514,15 @@ export function PromoPopup() {
               className="flex items-center gap-2.5 mb-5 p-2.5 rounded-xl border border-[#1E2A38]"
               style={{ background: 'rgba(18,24,32,0.7)' }}
             >
-              <div className="flex -space-x-2 shrink-0">
+              <div className="flex -space-x-1.5 shrink-0">
                 {AVATARS.map((src, i) => (
                   <div
                     key={i}
-                    className="w-7 h-7 rounded-full border-2 border-[#0A0F16] overflow-hidden shrink-0 relative"
+                    className="w-8 h-8 rounded-full border-2 border-[#0A0F16] overflow-hidden shrink-0 relative"
                     style={{ zIndex: AVATARS.length - i }}
                   >
                     <div
-                      className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#0B0F14]"
+                      className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#0B0F14]"
                       style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
                     >
                       {AVATAR_LETTERS[i % AVATAR_LETTERS.length]}
@@ -538,9 +538,9 @@ export function PromoPopup() {
               </div>
               <div className="min-w-0">
                 <div className="text-[12px] font-semibold text-[#F8FAFC]">
-                  <span className="text-[#00DFA9]">+127 players</span> joined in the last hour
+                  <span className="text-[#00DFA9] font-black">+127 players</span> joined in the last hour
                 </div>
-                <div className="text-[10px] text-[#94A3B8]">50,000+ active worldwide right now</div>
+                <div className="text-[10px] text-[#94A3B8]">50,000+ active players worldwide</div>
               </div>
             </div>
 

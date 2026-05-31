@@ -218,7 +218,7 @@ function PromoCard({
     <div
       className={cn(
         'relative flex flex-col rounded-2xl bg-[#121821] border transition-all duration-200 overflow-hidden',
-        'hover:shadow-lg',
+        'hover:shadow-lg hover:-translate-y-0.5',
         promo.highlight
           ? 'border-[#00DFA9]/40 ring-1 ring-[#00DFA9]/15'
           : 'border-[#253241]',
@@ -236,7 +236,7 @@ function PromoCard({
         </div>
       )}
 
-      <div className="p-5 flex flex-col flex-1 gap-4">
+      <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3 sm:gap-4">
         <div className="flex items-start gap-3">
           <div
             className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', promo.accentBg, `border ${promo.accentBorder}`)}
@@ -282,12 +282,12 @@ function PromoCard({
 // ─── LoyaltySection ────────────────────────────────────────────────────────────
 function LoyaltySection({ onJoin }: { onJoin: () => void }) {
   return (
-    <section className="mt-10">
+    <section className="mt-6 sm:mt-10">
       <div className="flex items-center gap-2 mb-2">
         <Star className="h-4 w-4 text-[#FACC15]" />
         <h2 className="text-base font-black text-[#F8FAFC]">Loyalty Programme</h2>
       </div>
-      <p className="text-[12px] text-[#94A3B8]/55 mb-6 max-w-xl">
+      <p className="text-[12px] text-[#94A3B8]/55 mb-4 sm:mb-6 max-w-xl">
         Earn 1 loyalty point for every 1 USDT wagered. Points unlock higher tiers with better multipliers, faster withdrawals, and exclusive perks — automatically.
       </p>
 
@@ -448,29 +448,29 @@ export function Promotions() {
         </>
       )}
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-10">
 
         {/* Hero banner */}
-        <div className="relative rounded-2xl overflow-hidden mb-8 bg-[#121821] border border-[#253241]">
+        <div className="relative rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-[#121821] border border-[#253241]">
           <div
             className="absolute inset-0 opacity-20"
             style={{ background: 'radial-gradient(ellipse at 70% 50%, #00DFA9 0%, transparent 65%), radial-gradient(ellipse at 20% 80%, #38BDF8 0%, transparent 55%)' }}
           />
-          <div className="relative px-8 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="relative px-4 sm:px-8 py-6 sm:py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
             <div>
               <div className="inline-flex items-center gap-1.5 bg-[#00DFA9]/15 border border-[#00DFA9]/30 px-3 py-1 rounded-full text-[10px] font-bold text-[#00DFA9] uppercase tracking-widest mb-3">
                 <Gift className="h-3 w-3" /> Welcome offer
               </div>
-              <h1 className="text-3xl font-black tracking-tight leading-tight">100% Match Bonus</h1>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">100% Match Bonus</h1>
               <p className="text-[#94A3B8]/70 text-sm mt-1.5 max-w-sm">
-                New to CupBett? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">500 USDT</span> in bonus funds.
+                New to <span translate="no">CupBett</span>? Your first deposit is matched 100% — up to <span className="text-[#00DFA9] font-bold">500 USDT</span> in bonus funds.
               </p>
               <p className="text-[10px] text-[#94A3B8]/35 mt-3">18+ · T&Cs apply · 5× wagering req. · Min. 20 USDT deposit</p>
             </div>
             <button
               onClick={handleClaim}
               disabled={claiming || alreadyClaimed}
-              className="shrink-0 flex items-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3 rounded-xl transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3.5 sm:py-3 rounded-xl transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {alreadyClaimed ? '✓ Bonus Claimed' : claiming ? 'Claiming…' : 'Claim Now — 120 USDT Free'}
               {!alreadyClaimed && !claiming && <ChevronRight className="h-4 w-4" />}
@@ -498,7 +498,7 @@ export function Promotions() {
 
         {/* Promo grid */}
         {active !== 'Loyalty' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {visible.map((promo) => (
               <PromoCard
                 key={promo.id}
