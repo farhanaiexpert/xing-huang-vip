@@ -248,8 +248,8 @@ function StatCard({ label, value, sub, icon, color }: {
   }[color];
   return (
     <div className={cn('rounded-xl border p-3', C.bg, C.border)}>
-      <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center mb-2', C.icon)}>{icon}</div>
-      <p className={cn('text-lg font-black leading-none', C.val)}>{value}</p>
+      <div className={cn('w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center mb-2', C.icon)}>{icon}</div>
+      <p className={cn('text-sm sm:text-lg font-black leading-none truncate', C.val)}>{value}</p>
       <p className="text-[10px] text-[#94A3B8]/60 mt-0.5 leading-none">{label}</p>
       <p className="text-[9px] text-[#94A3B8]/40 mt-1 leading-none truncate">{sub}</p>
     </div>

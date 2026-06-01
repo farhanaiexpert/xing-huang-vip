@@ -87,23 +87,23 @@ function TeamsHeader({ match, sportIcon, isSoccer, isTennis }: {
   match: MatchEntity; sportIcon: string; isSoccer: boolean; isTennis: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between px-4 py-4 gap-4">
+    <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4 gap-2 sm:gap-4">
       {/* Home team */}
-      <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
+      <div className="flex-1 flex flex-col items-center gap-1.5 sm:gap-2 min-w-0">
         <TeamBadge name={match.homeTeamName} sportIcon={sportIcon} size="lg" />
-        <span className="text-[13px] font-bold text-[#F8FAFC] text-center leading-tight">
+        <span className="text-[11px] sm:text-[13px] font-bold text-[#F8FAFC] text-center leading-tight line-clamp-2 w-full">
           {match.homeTeamName}
         </span>
       </div>
 
       {/* Score / status center */}
-      <div className="shrink-0 flex flex-col items-center gap-2">
+      <div className="shrink-0 flex flex-col items-center gap-1.5 sm:gap-2">
         {match.isLive && match.score ? (
           <>
-            <div className="flex items-center gap-3">
-              <span className="text-4xl font-black text-[#F8FAFC] tabular-nums">{match.score.home}</span>
-              <span className="text-[#94A3B8]/40 text-xl font-bold">:</span>
-              <span className="text-4xl font-black text-[#F8FAFC] tabular-nums">{match.score.away}</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="text-[30px] sm:text-4xl font-black text-[#F8FAFC] tabular-nums">{match.score.home}</span>
+              <span className="text-[#94A3B8]/40 text-lg sm:text-xl font-bold">:</span>
+              <span className="text-[30px] sm:text-4xl font-black text-[#F8FAFC] tabular-nums">{match.score.away}</span>
             </div>
             <LivePill match={match} />
           </>
@@ -121,9 +121,9 @@ function TeamsHeader({ match, sportIcon, isSoccer, isTennis }: {
       </div>
 
       {/* Away team */}
-      <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
+      <div className="flex-1 flex flex-col items-center gap-1.5 sm:gap-2 min-w-0">
         <TeamBadge name={match.awayTeamName} sportIcon={sportIcon} size="lg" />
-        <span className="text-[13px] font-bold text-[#F8FAFC] text-center leading-tight">
+        <span className="text-[11px] sm:text-[13px] font-bold text-[#F8FAFC] text-center leading-tight line-clamp-2 w-full">
           {match.awayTeamName}
         </span>
       </div>

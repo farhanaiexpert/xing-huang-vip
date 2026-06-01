@@ -101,20 +101,20 @@ function OddsOverview({ match, sportKey }: { match: MatchEntity; sportKey?: stri
   return (
     <div className="mx-4 mt-3 mb-1 rounded-xl bg-[#121821] border border-[#253241] overflow-hidden">
       {/* Header row */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#253241]/60 bg-[#0F1620]">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-3.5 w-3.5 text-[#00DFA9]" />
-          <span className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-[#253241]/60 bg-[#0F1620] gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <TrendingUp className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
+          <span className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider truncate">
             {pm.name}
           </span>
-          <span className="text-[10px] text-[#94A3B8]/40 bg-[#253241]/60 px-1.5 py-0.5 rounded">
+          <span className="hidden sm:inline text-[10px] text-[#94A3B8]/40 bg-[#253241]/60 px-1.5 py-0.5 rounded shrink-0">
             Most popular
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/50">
             <Users className="h-3 w-3" />
-            {bettors} bettors
+            <span className="hidden xs:inline">{bettors} </span>bettors
           </div>
           <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/50">
             <BarChart2 className="h-3 w-3" />

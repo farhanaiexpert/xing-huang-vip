@@ -1232,8 +1232,8 @@ function StatusBar({
       : "rgba(148,163,184,0.4)";
 
   return (
-    <div className="mx-4 mb-6 mt-4 flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl bg-[#0A0E13] border border-[#253241]/40">
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="mx-4 mb-6 mt-4 flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-[#0A0E13] border border-[#253241]/40">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <span
           className="flex items-center gap-1.5 text-[10px] shrink-0"
           style={{ color: textColor }}
@@ -1272,7 +1272,7 @@ function StatusBar({
           )}
         </span>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="hidden sm:flex items-center gap-2 shrink-0">
         {lastUpdatedLabel && (
           <span className="text-[10px] text-[#94A3B8]/30">
             {lastUpdatedLabel}

@@ -105,17 +105,17 @@ export function ReferralsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-[16px] font-bold text-[#F8FAFC]">Affiliate Program</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {[
             { label: 'Earned',  value: ref.totalEarned,   color: '#00DFA9', decimals: 2 },
             { label: 'Refs',    value: ref.referrals.length, color: '#38BDF8', decimals: 0 },
             { label: 'Pending', value: ref.pendingEarned, color: '#FACC15', decimals: 2 },
           ].map(({ label, value, color, decimals }) => (
-            <div key={label} className="text-center px-3 py-2 rounded-xl border"
+            <div key={label} className="flex-1 sm:flex-none text-center px-2.5 sm:px-3 py-2 rounded-xl border"
               style={{ background: 'rgba(255,255,255,0.03)', borderColor: `${color}20` }}>
-              <div className="text-[16px] font-black" style={{ color }}>
+              <div className="text-[15px] sm:text-[16px] font-black" style={{ color }}>
                 <AnimatedNumber value={value} decimals={decimals} />
                 {decimals > 0 && <span className="text-[9px] ml-0.5 opacity-60">USDT</span>}
               </div>
@@ -126,14 +126,14 @@ export function ReferralsPage() {
       </div>
 
       {/* Commission level cards */}
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
         {LEVELS.map(({ level, pct, color, glow, borderHover, bg, label, desc, example }) => {
           const isHovered = hoveredLevel === level;
           return (
             <div key={level}
               onMouseEnter={() => setHoveredLevel(level)}
               onMouseLeave={() => setHoveredLevel(null)}
-              className="relative rounded-2xl p-4 border cursor-default overflow-hidden transition-all duration-300"
+              className="relative rounded-2xl p-3 sm:p-4 border cursor-default overflow-hidden transition-all duration-300"
               style={{
                 background: isHovered ? bg : '#0E1520',
                 borderColor: isHovered ? borderHover : `${color}20`,
@@ -144,12 +144,12 @@ export function ReferralsPage() {
                 style={{ background: `linear-gradient(90deg, ${color}, transparent)`, opacity: isHovered ? 1 : 0.5 }} />
               <LevelBadge level={level} />
               <div className="mt-2 mb-0.5">
-                <span className="text-[36px] font-black leading-none" style={{ color }}>{pct}</span>
-                <span className="text-[18px] font-black" style={{ color }}>%</span>
+                <span className="text-[26px] sm:text-[36px] font-black leading-none" style={{ color }}>{pct}</span>
+                <span className="text-[13px] sm:text-[18px] font-black" style={{ color }}>%</span>
               </div>
-              <p className="text-[11px] font-semibold text-[#F8FAFC]">{label}</p>
-              <p className="text-[10px] text-[#64748B] mb-2">{desc}</p>
-              <p className="text-[9px] font-mono px-1.5 py-0.5 rounded-md"
+              <p className="text-[11px] font-semibold text-[#F8FAFC] leading-tight">{label}</p>
+              <p className="text-[10px] text-[#64748B] mb-2 leading-tight">{desc}</p>
+              <p className="text-[9px] font-mono px-1 sm:px-1.5 py-0.5 rounded-md leading-snug hidden sm:block"
                 style={{ background: `${color}10`, color: `${color}CC`, border: `1px solid ${color}18` }}>
                 {example}
               </p>

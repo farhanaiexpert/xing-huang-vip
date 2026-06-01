@@ -163,7 +163,7 @@ function GridLayout({ market, matchId, matchName, leagueName, sportKey }: Market
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
         {market.name}
       </p>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1.5">
             <span className="text-[10px] text-[#94A3B8]/60 font-medium leading-none text-center">

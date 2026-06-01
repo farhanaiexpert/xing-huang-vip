@@ -849,7 +849,7 @@ export function LivePage() {
           {/* ── Page content ────────────────────────────────────────────── */}
           <div className="px-4 md:px-6 py-6 pb-28 max-w-5xl mx-auto">
 
-            <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <h2 className="text-[13px] font-bold text-[#94A3B8]">
                   Predict the outcome · Win USDT
@@ -858,7 +858,7 @@ export function LivePage() {
                   Real in-play events with live bookmaker odds — scores update every 60 seconds.
                 </p>
               </div>
-              <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border"
+              <div className="self-start sm:self-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border"
                 style={{ background: 'rgba(56,189,248,0.07)', borderColor: 'rgba(56,189,248,0.2)', color: '#38BDF8' }}>
                 <RefreshCw className="h-3 w-3" />
                 60s refresh
