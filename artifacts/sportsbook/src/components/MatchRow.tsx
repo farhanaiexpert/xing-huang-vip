@@ -81,6 +81,12 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
             </span>
             <LiveIndicator match={match} />
             {(() => {
+              const started = formatKickoffTime(match.commenceIso);
+              return started ? (
+                <span className="text-[9px] text-[#475569] tabular-nums leading-none">{started}</span>
+              ) : null;
+            })()}
+            {(() => {
               const end = estimatedEndTime(match.commenceIso, match.sportId);
               return end ? (
                 <span className="text-[9px] text-[#475569] tabular-nums leading-none">~{end}</span>
