@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Radio, Users, Flame, TrendingUp, TrendingDown, Minus, Zap, Wifi, Clock, RefreshCw } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { BetSlip } from '@/components/BetSlip';
@@ -40,13 +40,13 @@ interface LiveMatch {
   isHot: boolean;
   accent: string;
   outcomes: Outcome[];
-  /** Real API O/U 2.5 over odds (soccer only, when available) */
+  /** Real API O/U 2.5 over odds (soccer only, Odds API events only) */
   ouOver25?: number;
-  /** Real API O/U 2.5 under odds (soccer only, when available) */
+  /** Real API O/U 2.5 under odds (soccer only, Odds API events only) */
   ouUnder25?: number;
-  /** Real API BTTS Yes odds (soccer only, when available) */
+  /** Real API BTTS Yes odds (soccer only, Odds API events only) */
   bttsYes?: number;
-  /** Real API BTTS No odds (soccer only, when available) */
+  /** Real API BTTS No odds (soccer only, Odds API events only) */
   bttsNo?: number;
   /** BetsAPI real game clock — minutes elapsed */
   timerMin?: number;
@@ -54,8 +54,7 @@ interface LiveMatch {
   timerSec?: number;
 }
 
-
-// ─── Market generators for Goals and Corners tabs ────────────────────────────
+// ─── Market types ─────────────────────────────────────────────────────────────
 
 interface MarketLine {
   key: string;
@@ -71,7 +70,7 @@ interface LiveMarketGroup {
   lines: MarketLine[];
 }
 
-function rnd(n: number): number { return Math.max(1.05, Math.round(n * 100) / 100); }
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Map sport string → display label + emoji for filter tabs */
 function getSportFilterMeta(sport: string): { label: string; icon: string } {
@@ -88,181 +87,47 @@ function getSportFilterMeta(sport: string): { label: string; icon: string } {
 }
 
 /**
- * Poisson CDF: P(X <= k) where X ~ Poisson(lambda).
- * Used to compute over/under goal probabilities from expected goals.
+ * Compute implied win probabilities from real bookmaker odds.
+ * Uses the overround-normalised implied probability for each outcome.
  */
-function poissonCdf(lambda: number, k: number): number {
-  let prob = 0;
-  let term = Math.exp(-lambda);
-  for (let i = 0; i <= k; i++) {
-    prob += term;
-    term *= lambda / (i + 1);
-  }
-  return Math.min(1, prob);
-}
-
-/**
- * Generate over/under odds for N.5 goals using Poisson distribution.
- * @param lambda expected total goals for the match
- * @param k      floor of the line (e.g. k=2 for O/U 2.5)
- * @param margin bookmaker margin, applied equally to both sides
- */
-function ouOdds(lambda: number, k: number, margin = 1.10): { over: number; under: number } {
-  const pUnder = poissonCdf(lambda, k);
-  const pOver  = 1 - pUnder;
-  return {
-    over:  rnd(1 / Math.max(0.04, pOver)  * margin),
-    under: rnd(1 / Math.max(0.04, pUnder) * margin),
-  };
-}
-
-function generateGoalsMarkets(match: LiveMatch): LiveMarketGroup[] {
-  const h = match.outcomes.find(o => o.key === 'home')?.baseOdds ?? 2.0;
-  const d = match.outcomes.find(o => o.key === 'draw')?.baseOdds ?? 3.2;
-  const a = match.outcomes.find(o => o.key === 'away')?.baseOdds ?? 3.5;
-  const total = 1/h + 1/d + 1/a;
-  const pd = (1/d) / total;  // normalised draw probability
-
-  // Estimate expected goals (λ) from implied draw probability.
-  // Higher draw prob → defensive match → fewer goals.
-  // Calibrated so pd≈0.28 → λ≈2.5, pd≈0.35 → λ≈2.15, pd≈0.22 → λ≈2.85
-  const lambda = Math.max(1.2, Math.min(4.0, 2.5 - (pd - 0.28) * 5.0));
-
-  // BTTS: assuming roughly equal goal split between teams (λ/2 each),
-  // P(home scores) = 1 − e^{−λ/2}, P(away scores) = 1 − e^{−λ/2}
-  // P(BTTS Yes) ≈ P(home scores) × P(away scores)
-  const halfScoring = 1 - Math.exp(-lambda / 2);
-  const bttsProbYes = Math.min(0.78, halfScoring * halfScoring);
-  const bttsProbNo  = 1 - bttsProbYes;
-
-  const { over: o15o, under: o15u } = ouOdds(lambda, 1);
-  // Prefer real API O/U 2.5 when the live event carried totals market data
-  const o25o = match.ouOver25  ?? ouOdds(lambda, 2).over;
-  const o25u = match.ouUnder25 ?? ouOdds(lambda, 2).under;
-  const { over: o35o, under: o35u } = ouOdds(lambda, 3);
-  const { over: o45o, under: o45u } = ouOdds(lambda, 4);
-
-  // Prefer real API BTTS odds when available
-  const bttsY = match.bttsYes ?? rnd(1 / Math.max(0.05, bttsProbYes) * 1.10);
-  const bttsN = match.bttsNo  ?? rnd(1 / Math.max(0.05, bttsProbNo)  * 1.10);
-
-  return [
-    {
-      marketKey: 'btts', marketName: 'Both Teams to Score', label: 'Both Teams to Score',
-      lines: [
-        { key: 'btts_y', label: 'Yes', name: 'BTTS — Yes', baseOdds: bttsY },
-        { key: 'btts_n', label: 'No',  name: 'BTTS — No',  baseOdds: bttsN },
-      ],
-    },
-    {
-      marketKey: 'ou25', marketName: 'Over/Under 2.5 Goals', label: 'Over / Under 2.5 Goals',
-      lines: [
-        { key: 'ou25_o', label: 'Over 2.5',  name: 'Over 2.5 Goals',  baseOdds: o25o },
-        { key: 'ou25_u', label: 'Under 2.5', name: 'Under 2.5 Goals', baseOdds: o25u },
-      ],
-    },
-    {
-      marketKey: 'ou15', marketName: 'Over/Under 1.5 Goals', label: 'Over / Under 1.5 Goals',
-      lines: [
-        { key: 'ou15_o', label: 'Over 1.5',  name: 'Over 1.5 Goals',  baseOdds: o15o },
-        { key: 'ou15_u', label: 'Under 1.5', name: 'Under 1.5 Goals', baseOdds: o15u },
-      ],
-    },
-    {
-      marketKey: 'ou35', marketName: 'Over/Under 3.5 Goals', label: 'Over / Under 3.5 Goals',
-      lines: [
-        { key: 'ou35_o', label: 'Over 3.5',  name: 'Over 3.5 Goals',  baseOdds: o35o },
-        { key: 'ou35_u', label: 'Under 3.5', name: 'Under 3.5 Goals', baseOdds: o35u },
-      ],
-    },
-    {
-      marketKey: 'ou45', marketName: 'Over/Under 4.5 Goals', label: 'Over / Under 4.5 Goals',
-      lines: [
-        { key: 'ou45_o', label: 'Over 4.5',  name: 'Over 4.5 Goals',  baseOdds: o45o },
-        { key: 'ou45_u', label: 'Under 4.5', name: 'Under 4.5 Goals', baseOdds: o45u },
-      ],
-    },
-  ];
-}
-
-function generateCornersMarkets(match: LiveMatch): LiveMarketGroup[] {
-  const hLabel = (match.homeTeam.split(' ').pop() ?? match.homeTeam).slice(0, 9);
-  const aLabel = (match.awayTeam.split(' ').pop() ?? match.awayTeam).slice(0, 9);
-  return [
-    {
-      marketKey: 'c95',  marketName: 'Total Corners — Over/Under 9.5',  label: 'Over / Under 9.5 Corners',
-      lines: [
-        { key: 'c95_o',  label: 'Over 9.5',  name: 'Over 9.5 Corners',  baseOdds: 2.10 },
-        { key: 'c95_u',  label: 'Under 9.5', name: 'Under 9.5 Corners', baseOdds: 1.72 },
-      ],
-    },
-    {
-      marketKey: 'c105', marketName: 'Total Corners — Over/Under 10.5', label: 'Over / Under 10.5 Corners',
-      lines: [
-        { key: 'c105_o', label: 'Over 10.5',  name: 'Over 10.5 Corners',  baseOdds: 3.20 },
-        { key: 'c105_u', label: 'Under 10.5', name: 'Under 10.5 Corners', baseOdds: 1.35 },
-      ],
-    },
-    {
-      marketKey: 'c85',  marketName: 'Total Corners — Over/Under 8.5',  label: 'Over / Under 8.5 Corners',
-      lines: [
-        { key: 'c85_o',  label: 'Over 8.5',  name: 'Over 8.5 Corners',  baseOdds: 1.90 },
-        { key: 'c85_u',  label: 'Under 8.5', name: 'Under 8.5 Corners', baseOdds: 1.90 },
-      ],
-    },
-    {
-      marketKey: 'first_corner', marketName: 'First Team to Take a Corner', label: 'First Corner',
-      lines: [
-        { key: 'ftc_h', label: hLabel, name: `${match.homeTeam} — First Corner`, baseOdds: 1.58 },
-        { key: 'ftc_a', label: aLabel, name: `${match.awayTeam} — First Corner`, baseOdds: 2.22 },
-      ],
-    },
-  ];
-}
-
-// ─── Probability helpers ──────────────────────────────────────────────────────
-
-function calcProbs(outcomes: Outcome[], simOdds: Record<string, number>): Record<string, number> {
-  const implied = outcomes.reduce<Record<string, number>>((acc, o) => {
-    acc[o.key] = 1 / (simOdds[o.key] ?? o.baseOdds);
-    return acc;
-  }, {});
-  const total = Object.values(implied).reduce((s, v) => s + v, 0);
+function calcProbs(outcomes: Outcome[]): Record<string, number> {
+  const total = outcomes.reduce((s, o) => s + 1 / o.baseOdds, 0);
   const result: Record<string, number> = {};
-  for (const k in implied) result[k] = Math.round((implied[k] / total) * 100);
+  for (const o of outcomes) {
+    result[o.key] = Math.round((1 / o.baseOdds / total) * 100);
+  }
   return result;
 }
 
-// ─── Odds drift simulation ────────────────────────────────────────────────────
+/**
+ * Build real goals markets from Odds API data only.
+ * Only markets with confirmed real bookmaker odds are included.
+ * No Poisson-derived or fake odds are ever generated.
+ */
+function buildRealGoalsMarkets(match: LiveMatch): LiveMarketGroup[] {
+  const groups: LiveMarketGroup[] = [];
 
-type SimState = Record<string, Record<string, number>>; // matchId -> outcomeKey -> odds
-
-function buildInitialSim(matches: LiveMatch[]): SimState {
-  const state: SimState = {};
-  for (const m of matches) {
-    state[m.id] = {};
-    for (const o of m.outcomes) state[m.id][o.key] = o.baseOdds;
-    if (m.sport === 'soccer') {
-      for (const grp of generateGoalsMarkets(m))
-        for (const l of grp.lines) state[m.id][l.key] = l.baseOdds;
-      for (const grp of generateCornersMarkets(m))
-        for (const l of grp.lines) state[m.id][l.key] = l.baseOdds;
-    }
+  if (match.bttsYes !== undefined && match.bttsNo !== undefined) {
+    groups.push({
+      marketKey: 'btts', marketName: 'Both Teams to Score', label: 'Both Teams to Score',
+      lines: [
+        { key: 'btts_y', label: 'Yes', name: 'BTTS — Yes', baseOdds: match.bttsYes },
+        { key: 'btts_n', label: 'No',  name: 'BTTS — No',  baseOdds: match.bttsNo  },
+      ],
+    });
   }
-  return state;
-}
 
-function nudgeOdds(prev: SimState, matches: LiveMatch[]): SimState {
-  const next: SimState = {};
-  for (const m of matches) {
-    next[m.id] = { ...(prev[m.id] ?? {}) };
-    for (const key of Object.keys(next[m.id])) {
-      const curr = next[m.id][key];
-      const delta = (Math.random() - 0.5) * 0.08;
-      next[m.id][key] = Math.max(1.05, Math.round((curr + delta) * 100) / 100);
-    }
+  if (match.ouOver25 !== undefined && match.ouUnder25 !== undefined) {
+    groups.push({
+      marketKey: 'ou25', marketName: 'Over/Under 2.5 Goals', label: 'Over / Under 2.5 Goals',
+      lines: [
+        { key: 'ou25_o', label: 'Over 2.5',  name: 'Over 2.5 Goals',  baseOdds: match.ouOver25  },
+        { key: 'ou25_u', label: 'Under 2.5', name: 'Under 2.5 Goals', baseOdds: match.ouUnder25 },
+      ],
+    });
   }
-  return next;
+
+  return groups;
 }
 
 // ─── OutcomeRow (Polymarket-style clickable row) ──────────────────────────────
@@ -272,7 +137,6 @@ function OutcomeRow({
   outcome,
   prob,
   currentOdds,
-  prevOdds,
   marketKey,
   marketName,
 }: {
@@ -280,7 +144,6 @@ function OutcomeRow({
   outcome: Outcome;
   prob: number;
   currentOdds: number;
-  prevOdds: number;
   marketKey: string;
   marketName: string;
 }) {
@@ -290,13 +153,16 @@ function OutcomeRow({
   const { format } = useOddsFormat();
 
   const selectionId = `live_${match.id}_${marketKey}_${outcome.key}`;
-  const isSelected = hasSelection(selectionId);
-  const direction: 'up' | 'down' | 'stable' =
-    currentOdds > prevOdds ? 'up' : currentOdds < prevOdds ? 'down' : 'stable';
+  const isSelected  = hasSelection(selectionId);
 
-  // Flash effect when odds change
+  // Track previous value to detect real odds changes between API polls
+  const prevOddsRef = useRef(currentOdds);
+  const direction: 'up' | 'down' | 'stable' =
+    currentOdds > prevOddsRef.current ? 'up'
+    : currentOdds < prevOddsRef.current ? 'down'
+    : 'stable';
+
   const [flashing, setFlashing] = useState(false);
-  const prevOddsRef = useRef(prevOdds);
   useEffect(() => {
     if (prevOddsRef.current !== currentOdds) {
       setFlashing(true);
@@ -354,8 +220,8 @@ function OutcomeRow({
         className="w-10 h-8 rounded-lg flex items-center justify-center text-[10px] font-black tracking-wider shrink-0"
         style={{
           background: isSelected ? '#00DFA9' : `${outcome.color}18`,
-          color: isSelected ? '#0B0F14' : outcome.color,
-          border: `1px solid ${isSelected ? '#00DFA9' : outcome.color}30`,
+          color:      isSelected ? '#0B0F14' : outcome.color,
+          border:     `1px solid ${isSelected ? '#00DFA9' : outcome.color}30`,
         }}
       >
         {outcome.label}
@@ -382,7 +248,7 @@ function OutcomeRow({
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
-              width: `${prob}%`,
+              width:     `${prob}%`,
               background: isSelected
                 ? '#00DFA9'
                 : `linear-gradient(90deg, ${outcome.color}CC, ${outcome.color}80)`,
@@ -397,18 +263,20 @@ function OutcomeRow({
         <div className={cn(
           'text-[14px] font-black tabular-nums transition-colors duration-300',
           isSelected ? 'text-[#00DFA9]' : 'text-[#F8FAFC]',
-          flashing && direction === 'up' && 'text-[#22C55E]',
+          flashing && direction === 'up'   && 'text-[#22C55E]',
           flashing && direction === 'down' && 'text-[#EF4444]',
         )}>
           {formatOdds(currentOdds, format)}
         </div>
         <div className={cn(
           'flex items-center justify-end gap-0.5 text-[9px] font-bold mt-0.5',
-          direction === 'up' ? 'text-[#22C55E]' : direction === 'down' ? 'text-[#EF4444]' : 'text-[#475569]'
+          direction === 'up'   ? 'text-[#22C55E]'
+          : direction === 'down' ? 'text-[#EF4444]'
+          : 'text-[#475569]'
         )}>
-          {direction === 'up' ? <TrendingUp className="h-2.5 w-2.5" /> :
-           direction === 'down' ? <TrendingDown className="h-2.5 w-2.5" /> :
-           <Minus className="h-2.5 w-2.5" />}
+          {direction === 'up'   ? <TrendingUp   className="h-2.5 w-2.5" /> :
+           direction === 'down' ? <TrendingDown  className="h-2.5 w-2.5" /> :
+                                  <Minus         className="h-2.5 w-2.5" />}
           {direction === 'stable' ? 'stable' : direction === 'up' ? 'rising' : 'falling'}
         </div>
       </div>
@@ -416,7 +284,7 @@ function OutcomeRow({
   );
 }
 
-// ─── OddsButton (compact button for Goals / Corners tabs) ────────────────────
+// ─── OddsButton (compact button for Goals tab) ────────────────────────────────
 
 function OddsButton({
   match,
@@ -424,14 +292,12 @@ function OddsButton({
   marketKey,
   marketName,
   currentOdds,
-  prevOdds,
 }: {
   match: LiveMatch;
   line: MarketLine;
   marketKey: string;
   marketName: string;
   currentOdds: number;
-  prevOdds: number;
 }) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const { isAuthenticated } = useAuth();
@@ -440,11 +306,14 @@ function OddsButton({
 
   const selectionId = `live_${match.id}_${marketKey}_${line.key}`;
   const isSelected  = hasSelection(selectionId);
+
+  const prevRef = useRef(currentOdds);
   const direction: 'up' | 'down' | 'stable' =
-    currentOdds > prevOdds ? 'up' : currentOdds < prevOdds ? 'down' : 'stable';
+    currentOdds > prevRef.current ? 'up'
+    : currentOdds < prevRef.current ? 'down'
+    : 'stable';
 
   const [flashing, setFlashing] = useState(false);
-  const prevRef = useRef(prevOdds);
   useEffect(() => {
     if (prevRef.current !== currentOdds) {
       setFlashing(true);
@@ -504,9 +373,9 @@ function OddsButton({
       </span>
       <span className={cn(
         'text-[15px] font-black tabular-nums leading-none transition-colors duration-300',
-        isSelected                                         ? 'text-[#00DFA9]'  : 'text-[#F8FAFC]',
-        flashing && direction === 'up'   && !isSelected   && 'text-[#22C55E]',
-        flashing && direction === 'down' && !isSelected   && 'text-[#EF4444]',
+        isSelected                                       ? 'text-[#00DFA9]'  : 'text-[#F8FAFC]',
+        flashing && direction === 'up'   && !isSelected && 'text-[#22C55E]',
+        flashing && direction === 'down' && !isSelected && 'text-[#EF4444]',
       )}>
         {formatOdds(currentOdds, format)}
       </span>
@@ -519,21 +388,16 @@ function OddsButton({
 
 // ─── LiveMatchCard ────────────────────────────────────────────────────────────
 
-function LiveMatchCard({
-  match,
-  simOdds,
-  prevSimOdds,
-}: {
-  match: LiveMatch;
-  simOdds: Record<string, number>;
-  prevSimOdds: Record<string, number>;
-}) {
-  const isSoccer       = match.sport === 'soccer';
-  const isSoccer2      = match.sportKey.startsWith('betsapi_1') || match.sport === 'soccer';
-  const [activeTab, setActiveTab] = useState<'result' | 'goals' | 'corners'>('result');
-  const probs          = calcProbs(match.outcomes, simOdds);
-  const goalsMarkets   = useMemo(() => isSoccer ? generateGoalsMarkets(match)   : [], [match, isSoccer]);
-  const cornersMarkets = useMemo(() => isSoccer ? generateCornersMarkets(match) : [], [match, isSoccer]);
+function LiveMatchCard({ match }: { match: LiveMatch }) {
+  const isSoccer  = match.sport === 'soccer';
+  const isSoccer2 = match.sportKey.startsWith('betsapi_1') || match.sport === 'soccer';
+
+  // Real goals markets — only populated for Odds API soccer events with real data
+  const goalsMarkets  = useMemo(() => isSoccer ? buildRealGoalsMarkets(match) : [], [match, isSoccer]);
+  const showGoalsTab  = goalsMarkets.length > 0;
+
+  const [activeTab, setActiveTab] = useState<'result' | 'goals'>('result');
+  const probs = useMemo(() => calcProbs(match.outcomes), [match.outcomes]);
 
   // ── Score change flash ────────────────────────────────────────────────────
   const prevHomeScoreRef = useRef<number | string>(match.homeScore);
@@ -561,12 +425,11 @@ function LiveMatchCard({
     return undefined;
   }, [match.awayScore]);
 
-  // ── Live game clock (ticks every second, seeded from BetsAPI timer) ───────
+  // ── Live game clock (real BetsAPI timer, ticks every second) ─────────────
   const [clockMin, setClockMin] = useState(match.timerMin ?? 0);
   const [clockSec, setClockSec] = useState(match.timerSec ?? 0);
   const hasClock = match.timerMin !== undefined && isSoccer2;
 
-  // Reset clock when BetsAPI sends a new timer value
   useEffect(() => {
     if (match.timerMin !== undefined) {
       setClockMin(match.timerMin);
@@ -574,7 +437,6 @@ function LiveMatchCard({
     }
   }, [match.timerMin, match.timerSec]);
 
-  // Tick every second while there's a real clock
   useEffect(() => {
     if (!hasClock) return;
     const t = setInterval(() => {
@@ -592,7 +454,7 @@ function LiveMatchCard({
       style={{
         background: 'linear-gradient(160deg, #0D1520 0%, #0A1018 100%)',
         border: '1px solid rgba(255,255,255,0.07)',
-        boxShadow: `0 0 0 1px rgba(255,255,255,0.03) inset, 0 16px 48px rgba(0,0,0,0.5)`,
+        boxShadow: '0 0 0 1px rgba(255,255,255,0.03) inset, 0 16px 48px rgba(0,0,0,0.5)',
       }}
     >
       {/* Top accent stripe */}
@@ -603,14 +465,11 @@ function LiveMatchCard({
       {/* Card header */}
       <div className="flex items-center justify-between px-4 pt-3.5 pb-3 border-b border-white/[0.05]">
         <div className="flex items-center gap-2.5">
-          {/* Live pulse + clock */}
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20">
             <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
             <span className="text-[10px] font-black text-[#EF4444] tracking-widest">LIVE</span>
             {hasClock ? (
-              <span className="text-[10px] font-black text-[#EF4444] tabular-nums">
-                {clockMin}'
-              </span>
+              <span className="text-[10px] font-black text-[#EF4444] tabular-nums">{clockMin}'</span>
             ) : (
               <span className="text-[10px] font-bold text-[#EF4444]/70">{match.liveLabel}</span>
             )}
@@ -631,7 +490,6 @@ function LiveMatchCard({
       {/* Scoreboard */}
       <div className="px-4 py-5">
         {match.sport === 'tennis' ? (
-          /* Tennis: side-by-side with serve indicator */
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1 text-left">
               <p className="text-[15px] font-black text-[#F8FAFC] leading-tight">{match.homeTeam}</p>
@@ -646,29 +504,27 @@ function LiveMatchCard({
             </div>
           </div>
         ) : (
-          /* Soccer / Basketball: scoreboard layout */
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[15px] font-black text-[#F8FAFC] leading-tight truncate">{match.homeTeam}</p>
               <p className="text-[10px] text-[#475569] mt-0.5 font-medium">Home</p>
             </div>
-            {/* Score */}
             <div
               className="shrink-0 text-center px-4 py-2 rounded-xl border transition-all duration-500"
               style={{
-                background: (homeFlash || awayFlash) ? 'rgba(0,223,169,0.07)' : 'rgba(255,255,255,0.03)',
-                borderColor: (homeFlash || awayFlash) ? 'rgba(0,223,169,0.35)' : 'rgba(255,255,255,0.06)',
-                boxShadow: (homeFlash || awayFlash) ? '0 0 16px rgba(0,223,169,0.2)' : undefined,
+                background:   (homeFlash || awayFlash) ? 'rgba(0,223,169,0.07)' : 'rgba(255,255,255,0.03)',
+                borderColor:  (homeFlash || awayFlash) ? 'rgba(0,223,169,0.35)' : 'rgba(255,255,255,0.06)',
+                boxShadow:    (homeFlash || awayFlash) ? '0 0 16px rgba(0,223,169,0.2)' : undefined,
               }}
             >
               <div className="flex items-center gap-2 tabular-nums">
                 <span
                   className="text-[28px] font-black leading-none transition-all duration-300"
                   style={{
-                    color: homeFlash ? '#00DFA9' : match.homeScore > match.awayScore ? '#00DFA9' : '#F8FAFC',
+                    color:      homeFlash ? '#00DFA9' : match.homeScore > match.awayScore ? '#00DFA9' : '#F8FAFC',
                     textShadow: homeFlash ? '0 0 20px rgba(0,223,169,0.8)' : undefined,
-                    transform: homeFlash ? 'scale(1.15)' : 'scale(1)',
-                    display: 'inline-block',
+                    transform:  homeFlash ? 'scale(1.15)' : 'scale(1)',
+                    display:    'inline-block',
                   }}
                 >
                   {match.homeScore}
@@ -677,16 +533,15 @@ function LiveMatchCard({
                 <span
                   className="text-[28px] font-black leading-none transition-all duration-300"
                   style={{
-                    color: awayFlash ? '#00DFA9' : (match.awayScore as number) > (match.homeScore as number) ? '#00DFA9' : '#F8FAFC',
+                    color:      awayFlash ? '#00DFA9' : (match.awayScore as number) > (match.homeScore as number) ? '#00DFA9' : '#F8FAFC',
                     textShadow: awayFlash ? '0 0 20px rgba(0,223,169,0.8)' : undefined,
-                    transform: awayFlash ? 'scale(1.15)' : 'scale(1)',
-                    display: 'inline-block',
+                    transform:  awayFlash ? 'scale(1.15)' : 'scale(1)',
+                    display:    'inline-block',
                   }}
                 >
                   {match.awayScore}
                 </span>
               </div>
-              {/* Live clock sub-label */}
               {hasClock ? (
                 <p className="text-[9px] font-black mt-0.5 tracking-wider tabular-nums" style={{ color: '#EF4444' }}>
                   {clockMin}:{String(clockSec).padStart(2, '0')}
@@ -705,12 +560,12 @@ function LiveMatchCard({
         )}
       </div>
 
-      {/* Market section — tabs for soccer, plain result for other sports */}
-      {isSoccer ? (
+      {/* Market section */}
+      {isSoccer && showGoalsTab ? (
         <>
-          {/* Tab strip */}
+          {/* Tab strip — Result + Goals (only when real data available) */}
           <div className="px-3 pt-1 pb-2.5 flex gap-1.5 border-t border-white/[0.04]">
-            {(['result', 'goals', 'corners'] as const).map(tab => (
+            {(['result', 'goals'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -721,7 +576,7 @@ function LiveMatchCard({
                     : 'text-[#475569] hover:text-[#94A3B8] border border-transparent',
                 )}
               >
-                {tab === 'result' ? '1 X 2' : tab === 'goals' ? '⚽ Goals' : '🚩 Corners'}
+                {tab === 'result' ? '1 X 2' : '⚽ Goals'}
               </button>
             ))}
           </div>
@@ -743,8 +598,7 @@ function LiveMatchCard({
                     match={match}
                     outcome={outcome}
                     prob={probs[outcome.key] ?? 0}
-                    currentOdds={simOdds[outcome.key] ?? outcome.baseOdds}
-                    prevOdds={prevSimOdds[outcome.key] ?? outcome.baseOdds}
+                    currentOdds={outcome.baseOdds}
                     marketKey="h2h"
                     marketName="Match Result"
                   />
@@ -753,7 +607,7 @@ function LiveMatchCard({
             </>
           )}
 
-          {/* Goals tab */}
+          {/* Goals tab — real Odds API markets only */}
           {activeTab === 'goals' && (
             <div className="px-3 pb-4 pt-0.5 space-y-3">
               {goalsMarkets.map(mkt => (
@@ -769,34 +623,7 @@ function LiveMatchCard({
                         line={line}
                         marketKey={mkt.marketKey}
                         marketName={mkt.marketName}
-                        currentOdds={simOdds[line.key] ?? line.baseOdds}
-                        prevOdds={prevSimOdds[line.key] ?? line.baseOdds}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Corners tab */}
-          {activeTab === 'corners' && (
-            <div className="px-3 pb-4 pt-0.5 space-y-3">
-              {cornersMarkets.map(mkt => (
-                <div key={mkt.marketKey}>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#475569] mb-1.5 px-1">
-                    {mkt.label}
-                  </p>
-                  <div className="flex gap-1.5">
-                    {mkt.lines.map(line => (
-                      <OddsButton
-                        key={line.key}
-                        match={match}
-                        line={line}
-                        marketKey={mkt.marketKey}
-                        marketName={mkt.marketName}
-                        currentOdds={simOdds[line.key] ?? line.baseOdds}
-                        prevOdds={prevSimOdds[line.key] ?? line.baseOdds}
+                        currentOdds={line.baseOdds}
                       />
                     ))}
                   </div>
@@ -806,7 +633,7 @@ function LiveMatchCard({
           )}
         </>
       ) : (
-        /* Non-soccer: plain result rows, no tabs */
+        /* No tabs — plain result rows */
         <>
           <div className="px-4 pb-2">
             <div className="flex items-center gap-2">
@@ -822,8 +649,7 @@ function LiveMatchCard({
                 match={match}
                 outcome={outcome}
                 prob={probs[outcome.key] ?? 0}
-                currentOdds={simOdds[outcome.key] ?? outcome.baseOdds}
-                prevOdds={prevSimOdds[outcome.key] ?? outcome.baseOdds}
+                currentOdds={outcome.baseOdds}
                 marketKey="h2h"
                 marketName="Match Result"
               />
@@ -857,43 +683,16 @@ function LiveMatchCard({
 // ─── LivePage ─────────────────────────────────────────────────────────────────
 
 export function LivePage() {
-  // ── Real live data ──────────────────────────────────────────────────────────
   const { matches: realMatches, loading: liveLoading, isRealData, lastUpdated } = useLiveOdds();
 
-  // Show only real live data — no hardcoded fallback
   const displayMatches = useMemo<LiveMatch[]>(
     () => realMatches as LiveMatch[],
     [realMatches],
   );
 
-  // Stable key derived from match IDs — used to detect when the set changes
-  const matchKey = useMemo(() => displayMatches.map(m => m.id).join(','), [displayMatches]);
-
-  // ── Simulation state ────────────────────────────────────────────────────────
-  const [simOdds,     setSimOdds]     = useState<SimState>(() => buildInitialSim([]));
-  const [prevSimOdds, setPrevSimOdds] = useState<SimState>(() => buildInitialSim([]));
-  const [tick, setTick] = useState(0);
-
-  // Re-seed sim whenever the match list changes (real data arrived or changed)
-  const prevMatchKeyRef = useRef('');
-  useEffect(() => {
-    if (prevMatchKeyRef.current !== matchKey) {
-      prevMatchKeyRef.current = matchKey;
-      const fresh = buildInitialSim(displayMatches);
-      setSimOdds(fresh);
-      setPrevSimOdds(fresh);
-    }
-  }, [matchKey, displayMatches]);
-
-  // Keep a ref so the drift timer always sees the latest matches without
-  // being recreated every time displayMatches changes.
-  const displayMatchesRef = useRef(displayMatches);
-  displayMatchesRef.current = displayMatches;
-
   const slipScrollRef = useRef<HTMLDivElement>(null);
   const [slipScrolled, setSlipScrolled] = useState(false);
 
-  // Scroll handler for BetSlip compact mode
   useEffect(() => {
     const el = slipScrollRef.current;
     if (!el) return;
@@ -902,27 +701,9 @@ export function LivePage() {
     return () => el.removeEventListener('scroll', handler);
   }, []);
 
-  // Odds drift every 15–20 minutes (realistic cadence — not instant)
-  const driftRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleNextDrift = useCallback(() => {
-    const delay = 15 * 60 * 1000 + Math.random() * 5 * 60 * 1000; // 15–20 min
-    driftRef.current = setTimeout(() => {
-      setPrevSimOdds(s => ({ ...s }));
-      setSimOdds(prev => nudgeOdds(prev, displayMatchesRef.current));
-      setTick(t => t + 1);
-      scheduleNextDrift();
-    }, delay);
-  }, []);
-
-  useEffect(() => {
-    scheduleNextDrift();
-    return () => { if (driftRef.current) clearTimeout(driftRef.current); };
-  }, [scheduleNextDrift]);
-
   // Sport filter
   const [activeSport, setActiveSport] = useState<string>('all');
 
-  // Unique sports present in current matches, with counts
   const sportFilters = useMemo(() => {
     const map = new Map<string, { label: string; icon: string; count: number }>();
     for (const m of displayMatches) {
@@ -934,7 +715,6 @@ export function LivePage() {
     return [...map.entries()].map(([id, v]) => ({ id, ...v }));
   }, [displayMatches]);
 
-  // Matches after sport filter — auto-fall-back to all if filter produces zero results
   const filteredMatches = useMemo(
     () => {
       if (activeSport === 'all') return displayMatches;
@@ -944,7 +724,6 @@ export function LivePage() {
     [displayMatches, activeSport],
   );
 
-  // If the active sport no longer has any matches, reset to "all"
   useEffect(() => {
     if (activeSport !== 'all') {
       const has = displayMatches.some(m => m.sport === activeSport);
@@ -952,7 +731,7 @@ export function LivePage() {
     }
   }, [displayMatches, activeSport]);
 
-  // "Updated Xs ago" — counts up from 0 each time data is refreshed
+  // "Updated Xs ago" counter
   const [secondsAgo, setSecondsAgo] = useState(0);
   useEffect(() => {
     if (lastUpdated) setSecondsAgo(0);
@@ -962,7 +741,6 @@ export function LivePage() {
     return () => clearInterval(t);
   }, []);
 
-  // Total stats (based on filtered view)
   const totalBettors = filteredMatches.reduce((s, m) => s + m.bettors, 0);
 
   return (
@@ -991,7 +769,6 @@ export function LivePage() {
               </div>
 
               <div className="flex items-center gap-2.5 text-[11px]">
-                {/* Bettors */}
                 <div className="hidden sm:flex items-center gap-1 text-[#64748B]">
                   <Users className="h-3 w-3" />
                   <span className="font-semibold text-[#94A3B8] tabular-nums">{totalBettors.toLocaleString()}</span>
@@ -1008,7 +785,7 @@ export function LivePage() {
                   <span className="text-[#475569] text-[10px] hidden sm:inline">updated</span>
                 </div>
 
-                {/* Real / demo badge */}
+                {/* Real / no data badge */}
                 {isRealData ? (
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#00DFA9]/[0.08] border border-[#00DFA9]/25">
                     <Wifi className="h-3 w-3 text-[#00DFA9]" />
@@ -1017,7 +794,7 @@ export function LivePage() {
                 ) : (
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EF4444]/[0.08] border border-[#EF4444]/20">
                     <Radio className="h-3 w-3 text-[#EF4444]" />
-                    <span className="text-[#EF4444] font-semibold text-[10px]">Demo</span>
+                    <span className="text-[#EF4444] font-semibold text-[10px]">Loading…</span>
                   </div>
                 )}
               </div>
@@ -1072,19 +849,15 @@ export function LivePage() {
           {/* ── Page content ────────────────────────────────────────────── */}
           <div className="px-4 md:px-6 py-6 pb-28 max-w-5xl mx-auto">
 
-            {/* Page description */}
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-[13px] font-bold text-[#94A3B8]">
                   Predict the outcome · Win USDT
                 </h2>
                 <p className="text-[11px] text-[#475569] mt-0.5">
-                  {isRealData
-                    ? 'Real in-play events — live scores update every 60 seconds.'
-                    : 'Tap any outcome to add it to your Bet Slip. Live scores refresh every 60 seconds.'}
+                  Real in-play events with live bookmaker odds — scores update every 60 seconds.
                 </p>
               </div>
-              {/* Refresh cadence info */}
               <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border"
                 style={{ background: 'rgba(56,189,248,0.07)', borderColor: 'rgba(56,189,248,0.2)', color: '#38BDF8' }}>
                 <RefreshCw className="h-3 w-3" />
@@ -1095,16 +868,11 @@ export function LivePage() {
             {/* ── Match cards grid ───────────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-4">
               {filteredMatches.map(match => (
-                <LiveMatchCard
-                  key={match.id}
-                  match={match}
-                  simOdds={simOdds[match.id] ?? {}}
-                  prevSimOdds={prevSimOdds[match.id] ?? {}}
-                />
+                <LiveMatchCard key={match.id} match={match} />
               ))}
             </div>
 
-            {/* ── Empty state — no live events ───────────────────────────── */}
+            {/* ── Empty state ─────────────────────────────────────────────── */}
             {filteredMatches.length === 0 && !liveLoading && (
               <div className="flex flex-col items-center text-center py-16 px-6 bg-[#121821] rounded-2xl border border-[#253241]">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-[#18212B] border border-[#253241] mb-4">

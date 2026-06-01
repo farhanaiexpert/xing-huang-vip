@@ -216,9 +216,74 @@ export async function fetchPrematchOdds(
   }
 }
 
+// ─── In-memory prematch odds cache (30-min TTL) ───────────────────────────────
+// Keyed by event id (same as BetsAPI FI).  Prevents re-fetching on every 30 s
+// live-cache refresh — only new/unseen events hit the prematch API.
+
+interface PrematchCacheEntry {
+  odds:      { home: number; draw?: number; away: number } | null;
+  expiresAt: number;
+}
+
+const prematchOddsCache = new Map<string, PrematchCacheEntry>();
+
 /**
- * Fetch all inplay events using /v1/bet365/inplay_filter per sport.
- * This endpoint returns clean {id, sport_id, home, away, ss, league, timer} objects.
+ * Enrich a batch of events with real Bet365 prematch 1X2 odds.
+ * Events for which no real odds can be fetched are filtered out entirely —
+ * no fake/fallback numbers are ever attached.
+ *
+ * Concurrency: 10 parallel fetches, 3 s timeout per request.
+ * In-memory cache: 30-min TTL so subsequent 30 s live-cache refreshes are fast.
+ */
+async function enrichWithPrematchOdds(events: BetsApiEventRaw[]): Promise<BetsApiEventRaw[]> {
+  const now        = Date.now();
+  const TTL_MS     = 30 * 60 * 1000;
+  const CONCUR     = 10;
+  const PER_FETCH  = 3_000; // ms timeout per prematch API call
+
+  // Apply in-memory cache; collect events that still need a live fetch
+  const withCache: BetsApiEventRaw[] = [];
+  const needFetch: BetsApiEventRaw[] = [];
+
+  for (const ev of events) {
+    const hit = prematchOddsCache.get(ev.id);
+    if (hit && hit.expiresAt > now) {
+      if (hit.odds !== null) {
+        withCache.push({ ...ev, prematchOdds: hit.odds });
+      }
+      // null entry means previously fetched with no odds → skip (filter out)
+    } else {
+      needFetch.push(ev);
+    }
+  }
+
+  // Fetch uncached events in batches of CONCUR
+  for (let i = 0; i < needFetch.length; i += CONCUR) {
+    const batch = needFetch.slice(i, i + CONCUR);
+    const batchResults = await Promise.all(batch.map(async (ev) => {
+      const sportMeta = BETSAPI_SPORT_MAP[Number(ev.sport_id)];
+      const hasDraw   = sportMeta?.hasDraw ?? false;
+      try {
+        const url  = `${BETSAPI_BASE}/v1/bet365/prematch?FI=${ev.id}&token=${BETSAPI_KEY}`;
+        const res  = await fetch(url, { signal: AbortSignal.timeout(PER_FETCH) });
+        const odds = res.ok ? parsePrematchOdds(await res.json() as PrematchResponse, hasDraw) : null;
+        prematchOddsCache.set(ev.id, { odds, expiresAt: now + TTL_MS });
+        return odds !== null ? { ...ev, prematchOdds: odds } : null;
+      } catch {
+        prematchOddsCache.set(ev.id, { odds: null, expiresAt: now + TTL_MS });
+        return null;
+      }
+    }));
+    withCache.push(...(batchResults.filter(Boolean) as BetsApiEventRaw[]));
+  }
+
+  return withCache;
+}
+
+/**
+ * Fetch all inplay events using /v1/bet365/inplay_filter per sport,
+ * then enrich each event with real Bet365 prematch 1X2 odds.
+ * Events for which no real odds are available are excluded from the result.
  */
 export async function fetchBetsApiInplay(): Promise<BetsApiEventRaw[]> {
   if (!BETSAPI_KEY) return [];
@@ -239,5 +304,8 @@ export async function fetchBetsApiInplay(): Promise<BetsApiEventRaw[]> {
   };
 
   const results = await Promise.all(liveSportIds.map(fetchSport));
-  return results.flat();
+  const allEvents = results.flat();
+
+  // Enrich with real prematch odds; events without real odds are dropped
+  return enrichWithPrematchOdds(allEvents);
 }

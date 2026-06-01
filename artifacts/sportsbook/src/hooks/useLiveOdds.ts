@@ -295,9 +295,15 @@ function getBetsApiStageLiveLabel(ev: BetsApiEvent): { stage: string; liveLabel:
   return { stage: 'In Progress', liveLabel: 'LIVE' };
 }
 
-/** Normalise a BetsAPI inplay event into a NormalizedLiveMatch */
+/** Normalise a BetsAPI inplay event into a NormalizedLiveMatch.
+ *  Returns null if the event has no real prematch odds (server enriched).
+ *  No fake/fallback odds are ever used.
+ */
 function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null {
   if (!ev.home?.name || !ev.away?.name) return null;
+
+  // Require real prematch odds — events without real odds are excluded entirely
+  if (!ev.prematchOdds) return null;
 
   const { icon, accent, hasDraw } = getBetsApiSportMeta(ev.sport_id);
   const { stage, liveLabel }       = getBetsApiStageLiveLabel(ev);
@@ -320,23 +326,8 @@ function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null
     typeof awayScore === 'number' &&
     Math.abs(homeScore - awayScore) <= 1;
 
-  // Fallback odds per sport
-  const metaOdds: Record<string, { home: number; draw?: number; away: number }> = {
-    '1':  { home: 1.90, draw: 3.40, away: 2.10 },
-    '3':  { home: 1.85, away: 1.90 },
-    '8':  { home: 1.80, away: 1.95 },
-    '12': { home: 1.85, away: 1.90 },
-    '13': { home: 1.85, away: 1.90 },
-    '14': { home: 1.90, away: 1.85 },
-    '16': { home: 1.85, away: 1.90 },
-    '17': { home: 1.75, away: 2.00 },
-    '18': { home: 3.50, away: 4.00 },
-    '19': { home: 1.80, away: 1.95 },
-    '92': { home: 1.75, away: 2.00 },
-    '94': { home: 1.75, away: 2.00 },
-    '95': { home: 1.75, away: 2.00 },
-  };
-  const odds = metaOdds[ev.sport_id] ?? { home: 1.85, away: 1.90 };
+  // Use only real Bet365 prematch odds returned by the server
+  const odds = ev.prematchOdds;
 
   const outcomes = [
     { key: 'home', label: '1', name: ev.home.name, baseOdds: odds.home, color: '#00DFA9', glow: 'rgba(0,223,169,0.25)' },
