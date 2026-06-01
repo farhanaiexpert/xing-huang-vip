@@ -78,9 +78,9 @@ interface EthReceipt {
 }
 
 const MIN_CONFIRMATIONS: Record<string, number> = {
-  ETH:      6,
-  BSC:      3,
-  POLYGON:  3,
+  ETH:      3,
+  BSC:      2,
+  POLYGON:  2,
   ARBITRUM: 1,
   OPTIMISM: 1,
   BASE:     1,

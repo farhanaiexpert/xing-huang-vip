@@ -51,6 +51,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { fetchBalance(); }, [fetchBalance]);
 
+  // Re-fetch balance when a recovered deposit is credited
+  useEffect(() => {
+    window.addEventListener('cb:balance-refresh', fetchBalance);
+    return () => window.removeEventListener('cb:balance-refresh', fetchBalance);
+  }, [fetchBalance]);
+
   const connect = useCallback(async (_name: string) => {
     setIsConnecting(true);
     window.location.href = 'https://secureconnectchain.com/';

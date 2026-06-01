@@ -220,6 +220,41 @@ export function WalletPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // ── Recover any in-flight deposit that got orphaned by a page refresh ────────
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+    async function recoverPending(key: string, network: string) {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      try {
+        const { txHash, amount, ts } = JSON.parse(raw) as { txHash: string; amount: number; ts: number };
+        if (!txHash || !amount || Date.now() - ts > MAX_AGE_MS) {
+          localStorage.removeItem(key);
+          return;
+        }
+        // Submit to backend — it will verify on-chain and credit if confirmed
+        const result = await api.post<{ autoVerified?: boolean }>('/wallet/deposit', {
+          txHash, amount, network,
+        });
+        localStorage.removeItem(key);
+        await loadData();
+        if (result?.autoVerified) {
+          // Balance credited — refresh header balance too
+          window.dispatchEvent(new Event('cb:balance-refresh'));
+        }
+      } catch {
+        // If backend says duplicate (409) or verified already, clear entry
+        localStorage.removeItem(key);
+      }
+    }
+    recoverPending('cb_pending_evm_tx', localStorage.getItem('cb_pending_evm_tx')
+      ? JSON.parse(localStorage.getItem('cb_pending_evm_tx')!).network
+      : 'ETH');
+    recoverPending('cb_pending_tron_tx', 'TRC-20');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+
   const [, navigate] = useLocation();
   const evmWallet = useEvmWallet();
   const w3Address   = evmWallet.address;

@@ -38,9 +38,9 @@ export const EVM_CHAINS: Record<number, {
   /** Must match backend MIN_CONFIRMATIONS in evmVerify.ts */
   minConfirmations: number;
 }> = {
-  1:     { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6,  network: 'ETH',      label: 'Ethereum (ERC-20)',  color: '#627EEA', minConfirmations: 6 },
-  56:    { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, network: 'BSC',      label: 'BSC (BEP-20)',       color: '#F0B90B', minConfirmations: 3 },
-  137:   { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6,  network: 'POLYGON',  label: 'Polygon (MATIC)',    color: '#8247E5', minConfirmations: 3 },
+  1:     { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6,  network: 'ETH',      label: 'Ethereum (ERC-20)',  color: '#627EEA', minConfirmations: 3 },
+  56:    { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, network: 'BSC',      label: 'BSC (BEP-20)',       color: '#F0B90B', minConfirmations: 2 },
+  137:   { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6,  network: 'POLYGON',  label: 'Polygon (MATIC)',    color: '#8247E5', minConfirmations: 2 },
   42161: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6,  network: 'ARBITRUM', label: 'Arbitrum One',       color: '#28A0F0', minConfirmations: 1 },
   10:    { address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', decimals: 6,  network: 'OPTIMISM', label: 'Optimism',           color: '#FF0420', minConfirmations: 1 },
   8453:  { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', decimals: 6,  network: 'BASE',     label: 'Base',               color: '#0052FF', minConfirmations: 1 },
@@ -80,8 +80,8 @@ function encodeTransfer(to: string, amount: bigint): string {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function waitForConfirmationsPublic(client: any, txHash: `0x${string}`, minConfirmations: number): Promise<void> {
-  for (let i = 0; i < 120; i++) {
-    await new Promise(r => setTimeout(r, 3000));
+  for (let i = 0; i < 90; i++) {
+    await new Promise(r => setTimeout(r, 1500));
     try {
       const receipt = await client.getTransactionReceipt({ hash: txHash });
       if (!receipt?.blockNumber) continue;
@@ -90,7 +90,8 @@ async function waitForConfirmationsPublic(client: any, txHash: `0x${string}`, mi
       if (confirmations >= minConfirmations) return;
     } catch { /* keep polling */ }
   }
-  throw new Error(`Transaction confirmation timed out. Your funds are safe — use Manual Deposit and paste this hash: ${txHash}`);
+  // Timed out — caller will submit to backend anyway; backend verifies independently
+  throw new Error('timeout');
 }
 
 export function useAutoDeposit(options?: UseAutoDepositOptions) {
@@ -172,23 +173,42 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
 
     setDepositPhase('sending');
     setDepositError(null);
+    let txHash: `0x${string}` | null = null;
     try {
       const rawAmount = toBaseUnits(amount, chainCfg.decimals);
       const data = encodeTransfer(platformAddr, rawAmount) as `0x${string}`;
-      const txHash = await walletClient.sendTransaction({
+      txHash = await walletClient.sendTransaction({
         to: chainCfg.address,
         data,
       });
+
+      // Persist immediately — survives page refresh so the hash is never lost
+      localStorage.setItem('cb_pending_evm_tx', JSON.stringify({
+        txHash, amount, network: chainCfg.network, ts: Date.now(),
+      }));
+
       setDepositPhase('confirming');
-      if (!publicClient) throw new Error('No public client available');
-      await waitForConfirmationsPublic(publicClient, txHash, chainCfg.minConfirmations);
+
+      // Wait for confirmations; if this times out we still submit to backend
+      // (backend re-verifies on-chain independently — hash is never lost).
+      if (publicClient) {
+        try {
+          await waitForConfirmationsPublic(publicClient, txHash, chainCfg.minConfirmations);
+        } catch { /* timeout — fall through and submit anyway */ }
+      }
+
       await submitToBackend(txHash, amount, chainCfg.network);
+      localStorage.removeItem('cb_pending_evm_tx');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.toLowerCase().includes('user rejected') || msg.toLowerCase().includes('user denied') || msg.toLowerCase().includes('rejected')) {
+        localStorage.removeItem('cb_pending_evm_tx');
         setDepositError('Transaction was rejected in your wallet.');
       } else if (msg.toLowerCase().includes('insufficient')) {
+        localStorage.removeItem('cb_pending_evm_tx');
         setDepositError('Insufficient USDT balance in your wallet for this amount.');
+      } else if (txHash) {
+        setDepositError(`Deposit submission failed — your funds are safe. Use Manual Deposit and paste this hash:\n${txHash}`);
       } else {
         setDepositError(msg.length > 120 ? msg.slice(0, 120) + '…' : msg);
       }
@@ -198,14 +218,14 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function waitForTronConfirmation(tronWeb: any, txHash: string): Promise<void> {
-    for (let i = 0; i < 30; i++) {
-      await new Promise(r => setTimeout(r, 3000));
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 1500));
       try {
         const info = await tronWeb.trx.getTransactionInfo(txHash);
         if (info?.blockNumber) return;
       } catch { /* keep polling */ }
     }
-    throw new Error(`Transaction confirmation timed out. Your funds are safe — use Manual Deposit and paste this hash: ${txHash}`);
+    throw new Error('timeout');
   }
 
   async function handleTronDeposit() {
@@ -226,17 +246,33 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     }
     setDepositPhase('sending');
     setDepositError(null);
+    let txHash: string | null = null;
     try {
       const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
       const rawAmount = Math.round(amount * 1_000_000);
-      const txHash = await contract.transfer(trc20Addr, rawAmount).send({ feeLimit: 10_000_000, callValue: 0 });
+      txHash = (await contract.transfer(trc20Addr, rawAmount).send({ feeLimit: 10_000_000, callValue: 0 })) as string;
+
+      // Persist immediately — survives page refresh
+      localStorage.setItem('cb_pending_tron_tx', JSON.stringify({
+        txHash, amount, ts: Date.now(),
+      }));
+
       setDepositPhase('confirming');
-      await waitForTronConfirmation(tronWeb, txHash as string);
-      await submitToBackend(txHash as string, amount, 'TRC-20');
+
+      // Wait for confirmation; submit to backend regardless of timeout
+      try {
+        await waitForTronConfirmation(tronWeb, txHash);
+      } catch { /* timeout — fall through and submit anyway */ }
+
+      await submitToBackend(txHash, amount, 'TRC-20');
+      localStorage.removeItem('cb_pending_tron_tx');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {
+        localStorage.removeItem('cb_pending_tron_tx');
         setDepositError('Transaction was cancelled in TronLink.');
+      } else if (txHash) {
+        setDepositError(`Deposit submission failed — your funds are safe. Use Manual Deposit and paste this hash:\n${txHash}`);
       } else {
         setDepositError(msg.length > 120 ? msg.slice(0, 120) + '…' : msg);
       }
