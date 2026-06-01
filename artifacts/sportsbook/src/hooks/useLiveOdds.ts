@@ -72,6 +72,8 @@ export interface NormalizedLiveMatch {
   timerMin?:  number;
   /** BetsAPI real game clock — seconds within the current minute */
   timerSec?:  number;
+  /** ISO 8601 match start time — used to display started/estimated-end times */
+  commenceIso?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -216,22 +218,23 @@ function normalizeOddsApiEvent(
   const bttsNo    = isSoccer ? bestOddsForMarket(event.bookmakers, 'btts',   'No')    : undefined;
 
   return {
-    id:        `api_live_${event.id}`,
-    sport:     event.sport_key.split('_')[0],
-    sportKey:  event.sport_key,
+    id:          `api_live_${event.id}`,
+    sport:       event.sport_key.split('_')[0],
+    sportKey:    event.sport_key,
     icon,
-    league:    formatLeagueName(event.sport_key),
-    stage:     computeStage(event.sport_key, event.commence_time),
-    homeTeam:  event.home_team,
-    awayTeam:  event.away_team,
+    league:      formatLeagueName(event.sport_key),
+    stage:       computeStage(event.sport_key, event.commence_time),
+    homeTeam:    event.home_team,
+    awayTeam:    event.away_team,
     homeScore,
     awayScore,
-    liveLabel: computeLiveLabel(event.sport_key, event.commence_time),
-    volume:    formatVolume(seededInt(event.id, 200_000, 3_000_000)),
-    bettors:   seededInt(event.id + 'b', 2_000, 14_000),
-    isHot:     closeGame,
+    liveLabel:   computeLiveLabel(event.sport_key, event.commence_time),
+    volume:      formatVolume(seededInt(event.id, 200_000, 3_000_000)),
+    bettors:     seededInt(event.id + 'b', 2_000, 14_000),
+    isHot:       closeGame,
     accent,
     outcomes,
+    commenceIso: event.commence_time,
     ...(ouOver25  !== undefined && { ouOver25  }),
     ...(ouUnder25 !== undefined && { ouUnder25 }),
     ...(bttsYes   !== undefined && { bttsYes   }),
@@ -343,6 +346,10 @@ function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null
   const timerMin = ev.timer?.tm ? parseInt(ev.timer.tm, 10) : undefined;
   const timerSec = ev.timer?.ts ? parseInt(ev.timer.ts, 10) : undefined;
 
+  const commenceIso = ev.time
+    ? new Date(parseInt(ev.time, 10) * 1000).toISOString()
+    : undefined;
+
   return {
     id:        `betsapi_live_${ev.id}`,
     sport,
@@ -360,6 +367,7 @@ function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null
     isHot:     closeGame,
     accent,
     outcomes,
+    commenceIso,
     ...(timerMin !== undefined && !isNaN(timerMin) && { timerMin }),
     ...(timerSec !== undefined && !isNaN(timerSec) && { timerSec }),
   };

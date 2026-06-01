@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Radio, Users, Flame, TrendingUp, TrendingDown, Minus, Zap, Wifi, Clock, RefreshCw } from 'lucide-react';
+import { formatKickoffTime, estimatedEndTime } from '@/lib/matchTime';
 import { Header } from '@/components/Header';
 import { BetSlip } from '@/components/BetSlip';
 import { useBetSlip } from '@/hooks/useBetSlip';
@@ -52,6 +53,8 @@ interface LiveMatch {
   timerMin?: number;
   /** BetsAPI real game clock — seconds within the minute */
   timerSec?: number;
+  /** ISO 8601 match start time */
+  commenceIso?: string;
 }
 
 // ─── Market types ─────────────────────────────────────────────────────────────
@@ -486,6 +489,31 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
           <span className="text-[10px] text-[#475569] truncate max-w-[80px] sm:max-w-none">{match.stage}</span>
         </div>
       </div>
+
+      {/* Start / estimated end time row */}
+      {match.commenceIso && (() => {
+        const started = formatKickoffTime(match.commenceIso);
+        const ends    = estimatedEndTime(match.commenceIso, match.sport);
+        if (!started && !ends) return null;
+        return (
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 border-b border-white/[0.04]">
+            <Clock className="h-3 w-3 text-[#475569] shrink-0" />
+            {started && (
+              <span className="text-[10px] text-[#475569]">
+                Started <span className="tabular-nums text-[#64748B] font-medium">{started}</span>
+              </span>
+            )}
+            {ends && (
+              <>
+                <span className="text-[#253241]">·</span>
+                <span className="text-[10px] text-[#475569]">
+                  ~Ends <span className="tabular-nums text-[#64748B] font-medium">{ends}</span>
+                </span>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Scoreboard */}
       <div className="px-4 py-5">

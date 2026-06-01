@@ -4,6 +4,7 @@ import { OddsButton } from './OddsButton';
 import { TeamBadge } from './TeamBadge';
 import { useFavorites } from '../hooks/useFavorites';
 import { cn } from '../lib/utils';
+import { formatKickoffTime, estimatedEndTime } from '../lib/matchTime';
 
 interface MatchRowProps {
   match: Match;
@@ -71,7 +72,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       className="group flex items-center justify-between px-3.5 py-3 gap-3 bg-[#121821] hover:bg-[#18212B] transition-colors duration-100 cursor-pointer"
     >
       {/* Date / time */}
-      <div className="shrink-0 w-[52px] flex flex-col items-center gap-1">
+      <div className="shrink-0 w-[52px] flex flex-col items-center gap-0.5">
         {match.isLive ? (
           <>
             <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#EF4444] leading-none">
@@ -79,6 +80,12 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
               Live
             </span>
             <LiveIndicator match={match} />
+            {(() => {
+              const end = estimatedEndTime(match.commenceIso, match.sportId);
+              return end ? (
+                <span className="text-[9px] text-[#475569] tabular-nums leading-none">~{end}</span>
+              ) : null;
+            })()}
           </>
         ) : (
           <>
@@ -95,6 +102,12 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
                 {timePart}
               </span>
             )}
+            {(() => {
+              const end = estimatedEndTime(match.commenceIso, match.sportId);
+              return end ? (
+                <span className="text-[9px] text-[#475569] tabular-nums leading-none">~{end}</span>
+              ) : null;
+            })()}
           </>
         )}
       </div>

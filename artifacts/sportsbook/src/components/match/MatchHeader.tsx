@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 import { TeamBadge } from '../TeamBadge';
 import type { MatchEntity } from '../../data/types';
 import type { LeagueEntity } from '../../data/types';
+import { formatKickoffTime, estimatedEndTime } from '../../lib/matchTime';
 
 interface MatchHeaderProps {
   match: MatchEntity;
@@ -56,15 +57,24 @@ export function MatchHeader({ match, league }: MatchHeaderProps) {
       )}
 
       {/* Info bar */}
-      <div className="flex items-center gap-3 px-4 pb-3 mt-1">
+      <div className="flex items-center flex-wrap gap-x-3 gap-y-1 px-4 pb-3 mt-1">
         <span className="text-[11px] text-[#94A3B8]/60">
           {flag(league.countryCode)} {league.name}
         </span>
         <span className="text-[#253241]">·</span>
         <span className="flex items-center gap-1 text-[11px] text-[#94A3B8]/60">
           <Clock className="h-3 w-3" />
-          {match.displayDate}
+          {match.isLive ? 'Started' : 'Kicks off'} {formatKickoffTime(match.startTime) ?? match.displayDate}
         </span>
+        {(() => {
+          const end = estimatedEndTime(match.startTime, match.sportId);
+          return end ? (
+            <>
+              <span className="text-[#253241]">·</span>
+              <span className="text-[11px] text-[#94A3B8]/60">~Ends {end}</span>
+            </>
+          ) : null;
+        })()}
         <span className="text-[#253241]">·</span>
         <span className="text-[11px] text-[#94A3B8]/60">
           {match.marketCount} markets

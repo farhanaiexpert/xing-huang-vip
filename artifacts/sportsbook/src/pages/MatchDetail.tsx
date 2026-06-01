@@ -29,7 +29,7 @@ function matchToEntity(match: Match): MatchEntity {
     awayTeamId:    null,
     homeTeamName:  match.team1,
     awayTeamName:  match.team2 ?? '',
-    startTime:     new Date().toISOString(),
+    startTime:     match.commenceIso ?? new Date().toISOString(),
     dateTag:       match.dateTag,
     displayDate:   match.date,
     status:        match.isLive ? 'live' : 'upcoming',
