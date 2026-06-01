@@ -228,7 +228,14 @@ export function WalletPage() {
     depositPhase: walletPhase, depositError: walletError, depositResult: walletResult,
     isProcessing: walletProcessing, hasTronLink, chainCfg,
     handleEvmDeposit, handleTronDeposit, resetDeposit: resetWalletDeposit,
-  } = useAutoDeposit({ onSuccess: loadData });
+  } = useAutoDeposit({
+    onSuccess: loadData,
+    platformAddresses: {
+      addressErc20: depositInfo?.addressErc20,
+      addressBsc:   depositInfo?.addressBsc,
+      addressTrc20: depositInfo?.address,
+    },
+  });
 
   // ── EVM USDT balance (eth_call) ───────────────────────────────────────────
   const [evmBalanceRaw, setEvmBalanceRaw] = useState<bigint | undefined>(undefined);

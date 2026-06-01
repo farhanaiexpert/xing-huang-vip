@@ -4,8 +4,9 @@ import { useWallet } from './useWallet';
 import { useToast } from './use-toast';
 import { api } from '../lib/apiClient';
 
-const ERC20_ADDRESS = (import.meta.env.VITE_PLATFORM_ERC20_ADDRESS as string) || '';
-const TRC20_ADDRESS = (import.meta.env.VITE_PLATFORM_TRC20_ADDRESS as string) || '';
+/** Env-var fallbacks — only used when callers don't pass platformAddresses */
+const ERC20_ADDRESS_ENV = (import.meta.env.VITE_PLATFORM_ERC20_ADDRESS as string) || '';
+const TRC20_ADDRESS_ENV = (import.meta.env.VITE_PLATFORM_TRC20_ADDRESS as string) || '';
 export const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
 export const USDT_ABI = [
@@ -55,8 +56,20 @@ export function toBaseUnits(amount: number, decimals: number): bigint {
 export type DepositPhase = 'idle' | 'sending' | 'confirming' | 'submitting' | 'success' | 'error';
 export interface DepositResult { autoVerified: boolean; txHash: string }
 
+/** Platform deposit addresses sourced from GET /wallet/deposit-info */
+export interface PlatformAddresses {
+  /** ERC-20 / non-BSC EVM destination (Ethereum, Polygon, Arbitrum, Optimism, Base) */
+  addressErc20?: string;
+  /** BEP-20 destination (BSC chain). Falls back to addressErc20 if absent. */
+  addressBsc?: string;
+  /** TRC-20 destination (TronLink) */
+  addressTrc20?: string;
+}
+
 interface UseAutoDepositOptions {
   onSuccess?: (result: DepositResult) => void;
+  /** API-sourced platform addresses. Falls back to VITE_PLATFORM_* env vars if omitted. */
+  platformAddresses?: PlatformAddresses;
 }
 
 function encodeTransfer(to: string, amount: bigint): string {
@@ -139,7 +152,15 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
       setDepositError('Your wallet is on an unsupported network. Switch to Ethereum, BSC, Polygon, Arbitrum, Optimism, or Base to deposit USDT.');
       return;
     }
-    if (!ERC20_ADDRESS || !/^0x[0-9a-fA-F]{40}$/.test(ERC20_ADDRESS)) {
+
+    // Resolve platform destination address: BSC uses its own receiving address; all
+    // other EVM chains use the ERC-20 address. API-sourced addresses take precedence
+    // over VITE_PLATFORM_* env-var fallbacks.
+    const addrErc20 = options?.platformAddresses?.addressErc20 || ERC20_ADDRESS_ENV;
+    const addrBsc   = options?.platformAddresses?.addressBsc   || addrErc20; // fallback to ERC-20 addr
+    const platformAddr = chainCfg.network === 'BSC' ? addrBsc : addrErc20;
+
+    if (!platformAddr || !/^0x[0-9a-fA-F]{40}$/.test(platformAddr)) {
       setDepositError('Web3 wallet deposit is temporarily unavailable. Please use NOWPayments or Manual Deposit instead.');
       setDepositPhase('error');
       return;
@@ -153,7 +174,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     setDepositError(null);
     try {
       const rawAmount = toBaseUnits(amount, chainCfg.decimals);
-      const data = encodeTransfer(ERC20_ADDRESS, rawAmount) as `0x${string}`;
+      const data = encodeTransfer(platformAddr, rawAmount) as `0x${string}`;
       const txHash = await walletClient.sendTransaction({
         to: chainCfg.address,
         data,
@@ -190,7 +211,9 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
   async function handleTronDeposit() {
     const amount = parseFloat(depositAmount);
     if (isNaN(amount) || amount < 10) { setDepositError('Minimum deposit is 10 USDT'); return; }
-    if (!TRC20_ADDRESS) {
+
+    const trc20Addr = options?.platformAddresses?.addressTrc20 || TRC20_ADDRESS_ENV;
+    if (!trc20Addr) {
       setDepositError('Web3 wallet deposit is temporarily unavailable. Please use NOWPayments or Manual Deposit instead.');
       setDepositPhase('error');
       return;
@@ -206,7 +229,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     try {
       const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
       const rawAmount = Math.round(amount * 1_000_000);
-      const txHash = await contract.transfer(TRC20_ADDRESS, rawAmount).send({ feeLimit: 10_000_000, callValue: 0 });
+      const txHash = await contract.transfer(trc20Addr, rawAmount).send({ feeLimit: 10_000_000, callValue: 0 });
       setDepositPhase('confirming');
       await waitForTronConfirmation(tronWeb, txHash as string);
       await submitToBackend(txHash as string, amount, 'TRC-20');

@@ -135,13 +135,38 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   const [connecting, setConnecting] = useState(false);
   const [showManual, setShowManual] = useState(false);
 
+  // ── Fetch platform deposit addresses from backend ─────────────────────────────
+  // Declared before useAutoDeposit so they're available in the options object.
+  const [solAddress, setSolAddress] = useState('');
+  const [tonAddress, setTonAddress] = useState('');
+  const [addrErc20,  setAddrErc20]  = useState('');
+  const [addrBsc,    setAddrBsc]    = useState('');
+  const [addrTrc20,  setAddrTrc20]  = useState('');
+  useEffect(() => {
+    api.get<{ addressSol?: string; addressTon?: string; addressErc20?: string; addressBsc?: string; address?: string }>('/wallet/deposit-info')
+      .then(data => {
+        setSolAddress(data.addressSol  ?? '');
+        setTonAddress(data.addressTon  ?? '');
+        setAddrErc20(data.addressErc20 ?? '');
+        setAddrBsc(data.addressBsc     ?? '');
+        setAddrTrc20(data.address      ?? '');
+      })
+      .catch(() => {});
+  }, []);
+
   const {
     depositAmount, setDepositAmount,
     depositPhase, depositError, depositResult,
     isProcessing, hasTronLink, hasPhantom, hasTon, chainCfg,
     handleEvmDeposit: runEvmDeposit, handleTronDeposit: runTronDeposit,
     resetDeposit, clearError,
-  } = useAutoDeposit();
+  } = useAutoDeposit({
+    platformAddresses: {
+      addressErc20: addrErc20 || undefined,
+      addressBsc:   addrBsc   || undefined,
+      addressTrc20: addrTrc20 || undefined,
+    },
+  });
 
   function handleEvmDeposit() { if (!user) { setAuthOpen(true); return; } runEvmDeposit(); }
   function handleTronDeposit() { if (!user) { setAuthOpen(true); return; } runTronDeposit(); }
@@ -173,18 +198,6 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   useEffect(() => {
     if (!isConnected) resetDeposit();
   }, [isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Fetch SOL / TON platform addresses from backend ──────────────────────────
-  const [solAddress, setSolAddress] = useState('');
-  const [tonAddress, setTonAddress] = useState('');
-  useEffect(() => {
-    api.get<{ addressSol?: string; addressTon?: string }>('/wallet/deposit-info')
-      .then(data => {
-        setSolAddress(data.addressSol ?? '');
-        setTonAddress(data.addressTon ?? '');
-      })
-      .catch(() => {});
-  }, []);
 
   // ── NowPayments inline flow ──────────────────────────────────────────────────
   const [view, setView] = useState<ModalView>('methods');
