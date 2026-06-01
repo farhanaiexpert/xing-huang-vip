@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { usePublicClient } from 'wagmi';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/apiClient';
@@ -237,17 +238,24 @@ export function WalletPage() {
     },
   });
 
-  // ── EVM USDT balance (eth_call) ───────────────────────────────────────────
+  // ── EVM USDT balance (wagmi publicClient — works with MetaMask AND WalletConnect) ──
+  const publicClient = usePublicClient();
   const [evmBalanceRaw, setEvmBalanceRaw] = useState<bigint | undefined>(undefined);
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const e = typeof window !== 'undefined' ? (window as any).ethereum : null;
-    if (!e || !w3Address || !w3Connected || !chainCfg) { setEvmBalanceRaw(undefined); return; }
-    const owner = w3Address.toLowerCase().replace('0x', '').padStart(64, '0');
-    e.request({ method: 'eth_call', params: [{ to: chainCfg.address, data: '0x70a08231' + owner }, 'latest'] })
-      .then((hex: string) => { if (hex && hex !== '0x') setEvmBalanceRaw(BigInt(hex)); })
-      .catch(() => {});
-  }, [w3Address, w3Connected, chainCfg]);
+    if (!publicClient || !w3Address || !w3Connected || !chainCfg) { setEvmBalanceRaw(undefined); return; }
+    let cancelled = false;
+    publicClient.readContract({
+      address: chainCfg.address,
+      abi: USDT_ABI,
+      functionName: 'balanceOf',
+      args: [w3Address as `0x${string}`],
+    }).then((bal) => {
+      if (!cancelled) setEvmBalanceRaw(bal as bigint);
+    }).catch(() => {
+      if (!cancelled) setEvmBalanceRaw(undefined);
+    });
+    return () => { cancelled = true; };
+  }, [publicClient, w3Address, w3Connected, chainCfg]);
   const evmBalance = (evmBalanceRaw !== undefined && chainCfg)
     ? Number(evmBalanceRaw) / Math.pow(10, chainCfg.decimals)
     : null;
