@@ -151,7 +151,7 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
           ? await verifyBtcDeposit(txHash, PLATFORM_DEPOSIT.addressBtc, amount)
           : (network === "XRP")
             ? await verifyXrpDeposit(txHash, PLATFORM_DEPOSIT.addressXrp, amount)
-            : await verifyEvmDeposit(txHash, network === "ERC-20" ? "ETH" : network, PLATFORM_DEPOSIT.addressErc20, amount);
+            : await verifyEvmDeposit(txHash, network === "ERC-20" ? "ETH" : network, network === "BSC" ? PLATFORM_DEPOSIT.addressBsc : PLATFORM_DEPOSIT.addressErc20, amount);
 
   logger.info({ txHash, verified: verification.verified, note: verification.note, network }, "Verification result");
 

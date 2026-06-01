@@ -37,8 +37,6 @@ interface PlisioInvoice {
 
 const ERC20_ADDRESS = (import.meta.env.VITE_PLATFORM_ERC20_ADDRESS as string) || '';
 const TRC20_ADDRESS = (import.meta.env.VITE_PLATFORM_TRC20_ADDRESS as string) || '';
-const SOL_ADDRESS   = (import.meta.env.VITE_PLATFORM_SOL_ADDRESS   as string) || '';
-const TON_ADDR      = (import.meta.env.VITE_PLATFORM_TON_ADDRESS   as string) || '';
 
 interface ConnectWalletModalProps {
   open?: boolean;
@@ -176,6 +174,18 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     if (!isConnected) resetDeposit();
   }, [isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Fetch SOL / TON platform addresses from backend ──────────────────────────
+  const [solAddress, setSolAddress] = useState('');
+  const [tonAddress, setTonAddress] = useState('');
+  useEffect(() => {
+    api.get<{ addressSol?: string; addressTon?: string }>('/wallet/deposit-info')
+      .then(data => {
+        setSolAddress(data.addressSol ?? '');
+        setTonAddress(data.addressTon ?? '');
+      })
+      .catch(() => {});
+  }, []);
+
   // ── NowPayments inline flow ──────────────────────────────────────────────────
   const [view, setView] = useState<ModalView>('methods');
   const [nppAmount, setNppAmount] = useState('');
@@ -270,7 +280,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
       const connection  = new Connection(SOLANA_RPC, 'confirmed');
       const userPubKey  = new PublicKey(userPubKeyStr);
-      const platPubKey  = new PublicKey(SOL_ADDRESS!);
+      const platPubKey  = new PublicKey(solAddress);
       const mintPubKey  = new PublicKey(USDT_MINT);
 
       const fromATA = await getAssociatedTokenAddress(mintPubKey, userPubKey);
@@ -361,7 +371,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
         .storeUint(0x0f8a7ea5, 32)                           // Jetton transfer op
         .storeUint(0n, 64)                                    // query_id
         .storeCoins(BigInt(Math.round(amount * 1_000_000)))   // amount (6 decimals)
-        .storeAddress(Address.parse(TON_ADDR!))               // destination (platform)
+        .storeAddress(Address.parse(tonAddress))               // destination (platform)
         .storeAddress(Address.parse(userAddress))             // response_destination
         .storeBit(false)                                      // no custom_payload
         .storeCoins(1n)                                       // forward_ton_amount (min)
@@ -713,7 +723,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         </div>
                       )}
 
-                      <button onClick={handlePhantomSend} disabled={phantomSubmitting || !SOL_ADDRESS || !phantomAmount}
+                      <button onClick={handlePhantomSend} disabled={phantomSubmitting || !solAddress || !phantomAmount}
                         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-black text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait"
                         style={{ background: 'linear-gradient(135deg, #9945FF 0%, #7B2FBE 100%)', boxShadow: '0 0 20px rgba(153,69,255,0.25)' }}>
                         {phantomSubmitting ? (
@@ -810,7 +820,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         </div>
                       )}
 
-                      <button onClick={handleTonSend} disabled={tonSubmitting || !TON_ADDR || !tonAmount}
+                      <button onClick={handleTonSend} disabled={tonSubmitting || !tonAddress || !tonAmount}
                         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-black text-white transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait"
                         style={{ background: 'linear-gradient(135deg, #0098EA 0%, #0077C2 100%)', boxShadow: '0 0 20px rgba(0,152,234,0.25)' }}>
                         {tonSubmitting ? (

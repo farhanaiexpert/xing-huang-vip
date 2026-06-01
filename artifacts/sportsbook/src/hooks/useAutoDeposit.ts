@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useChainId, useWalletClient, usePublicClient } from 'wagmi';
 import { useWallet } from './useWallet';
 import { useToast } from './use-toast';
 import { api } from '../lib/apiClient';
@@ -58,37 +59,33 @@ interface UseAutoDepositOptions {
   onSuccess?: (result: DepositResult) => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getEth(): any { return typeof window !== 'undefined' ? (window as any).ethereum ?? null : null; }
-
 function encodeTransfer(to: string, amount: bigint): string {
   const toHex = to.toLowerCase().replace('0x', '').padStart(64, '0');
   const amtHex = amount.toString(16).padStart(64, '0');
   return '0xa9059cbb' + toHex + amtHex;
 }
 
-async function waitForConfirmations(txHash: string, minConfirmations: number): Promise<void> {
-  const e = getEth();
-  if (!e) throw new Error('No EVM wallet');
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function waitForConfirmationsPublic(client: any, txHash: `0x${string}`, minConfirmations: number): Promise<void> {
   for (let i = 0; i < 120; i++) {
     await new Promise(r => setTimeout(r, 3000));
     try {
-      const receipt = await e.request({ method: 'eth_getTransactionReceipt', params: [txHash] }) as { blockNumber?: string } | null;
+      const receipt = await client.getTransactionReceipt({ hash: txHash });
       if (!receipt?.blockNumber) continue;
-      const receiptBlock = parseInt(receipt.blockNumber, 16);
-      const currentBlockHex: string = await e.request({ method: 'eth_blockNumber' });
-      const confirmations = parseInt(currentBlockHex, 16) - receiptBlock + 1;
+      const currentBlock = await client.getBlockNumber();
+      const confirmations = Number(currentBlock) - Number(receipt.blockNumber) + 1;
       if (confirmations >= minConfirmations) return;
     } catch { /* keep polling */ }
   }
-  // Surface the TxHash so the user can paste it into Manual Deposit
   throw new Error(`Transaction confirmation timed out. Your funds are safe — use Manual Deposit and paste this hash: ${txHash}`);
 }
 
 export function useAutoDeposit(options?: UseAutoDepositOptions) {
   const { refreshBalance } = useWallet();
   const { toast } = useToast();
-  const [chainId, setChainId] = useState<number>(1);
+  const chainId = useChainId();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
 
   const [depositAmount, setDepositAmount] = useState('50');
   const [depositPhase, setDepositPhase] = useState<DepositPhase>('idle');
@@ -108,15 +105,6 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ton = (window as any).ton;
     setHasTon(!!(ton?.send));
-
-    const e = getEth();
-    if (!e) return;
-    e.request({ method: 'eth_chainId' })
-      .then((hex: string) => setChainId(parseInt(hex, 16)))
-      .catch(() => {});
-    const onChain = (hex: string) => setChainId(parseInt(hex, 16));
-    e.on?.('chainChanged', onChain);
-    return () => e.removeListener?.('chainChanged', onChain);
   }, []);
 
   const chainCfg = EVM_CHAINS[chainId] ?? null;
@@ -148,31 +136,31 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     const amount = parseFloat(depositAmount);
     if (isNaN(amount) || amount < 10) { setDepositError('Minimum deposit is 10 USDT'); return; }
     if (!chainCfg) {
-      setDepositError('Your wallet is on an unsupported network. Switch to Ethereum mainnet to deposit ERC-20 USDT.');
+      setDepositError('Your wallet is on an unsupported network. Switch to Ethereum, BSC, Polygon, Arbitrum, Optimism, or Base to deposit USDT.');
       return;
     }
-    // Guard: platform receiving address must be configured before any transfer
     if (!ERC20_ADDRESS || !/^0x[0-9a-fA-F]{40}$/.test(ERC20_ADDRESS)) {
       setDepositError('Web3 wallet deposit is temporarily unavailable. Please use NOWPayments or Manual Deposit instead.');
       setDepositPhase('error');
       return;
     }
-    const e = getEth();
-    if (!e) { setDepositError('No EVM wallet detected. Please install MetaMask.'); return; }
+    if (!walletClient) {
+      setDepositError('No EVM wallet connected. Please connect your wallet first.');
+      return;
+    }
 
     setDepositPhase('sending');
     setDepositError(null);
     try {
-      const accounts: string[] = await e.request({ method: 'eth_requestAccounts' });
-      if (!accounts.length) throw new Error('No accounts found');
       const rawAmount = toBaseUnits(amount, chainCfg.decimals);
-      const data = encodeTransfer(ERC20_ADDRESS, rawAmount);
-      const txHash: string = await e.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: accounts[0], to: chainCfg.address, data }],
+      const data = encodeTransfer(ERC20_ADDRESS, rawAmount) as `0x${string}`;
+      const txHash = await walletClient.sendTransaction({
+        to: chainCfg.address,
+        data,
       });
       setDepositPhase('confirming');
-      await waitForConfirmations(txHash, chainCfg.minConfirmations);
+      if (!publicClient) throw new Error('No public client available');
+      await waitForConfirmationsPublic(publicClient, txHash, chainCfg.minConfirmations);
       await submitToBackend(txHash, amount, chainCfg.network);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -196,14 +184,12 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
         if (info?.blockNumber) return;
       } catch { /* keep polling */ }
     }
-    // Surface the TxHash so the user can paste it into Manual Deposit
     throw new Error(`Transaction confirmation timed out. Your funds are safe — use Manual Deposit and paste this hash: ${txHash}`);
   }
 
   async function handleTronDeposit() {
     const amount = parseFloat(depositAmount);
     if (isNaN(amount) || amount < 10) { setDepositError('Minimum deposit is 10 USDT'); return; }
-    // Guard: platform receiving address must be configured before any transfer
     if (!TRC20_ADDRESS) {
       setDepositError('Web3 wallet deposit is temporarily unavailable. Please use NOWPayments or Manual Deposit instead.');
       setDepositPhase('error');
