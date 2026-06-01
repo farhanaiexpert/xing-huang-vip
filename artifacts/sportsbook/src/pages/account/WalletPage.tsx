@@ -1137,55 +1137,49 @@ export function WalletPage() {
                         {w3DropdownOpen && (
                           <div className="fixed inset-0 z-10" onClick={() => setW3DropdownOpen(false)} />
                         )}
-                        <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(0,223,169,0.05)', border: '1px solid rgba(0,223,169,0.15)' }}>
-                          <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setW3DropdownOpen(v => !v)}
+                          className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all hover:brightness-110"
+                          style={{ background: 'rgba(0,223,169,0.10)', border: '1px solid rgba(0,223,169,0.30)' }}
+                        >
+                          <div className="flex items-center gap-2.5">
                             <div className="w-2 h-2 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
-                            <button
-                              onClick={() => setW3DropdownOpen(v => !v)}
-                              className="flex items-center gap-1 text-[11px] font-mono text-[#CBD5E1] hover:text-[#00DFA9] transition-colors"
-                            >
-                              {w3Address?.slice(0, 8)}…{w3Address?.slice(-6)}
-                              <ChevronDown className={cn('w-3 h-3 text-[#64748B] transition-transform', w3DropdownOpen && 'rotate-180')} />
-                            </button>
+                            <span className="text-[12px] font-mono font-semibold text-[#00DFA9]">
+                              {w3Address?.slice(0, 10)}…{w3Address?.slice(-8)}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2">
                             {chainCfg ? (
-                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold"
-                                style={{ background: `${chainCfg.color}18`, color: chainCfg.color, border: `1px solid ${chainCfg.color}30` }}>
+                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                                style={{ background: `${chainCfg.color}22`, color: chainCfg.color, border: `1px solid ${chainCfg.color}50` }}>
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: chainCfg.color }} />
                                 {chainCfg.network}
                               </span>
                             ) : (
-                              <>
-                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-[#FACC15]"
-                                  style={{ background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.25)' }}>
-                                  ⚠ Wrong Network
-                                </span>
-                                <button
-                                  onClick={() => evmWallet.openNetworks()}
-                                  className="px-2 py-0.5 rounded-lg text-[9px] font-black text-[#38BDF8] transition-all hover:bg-[#38BDF8]/10"
-                                  style={{ border: '1px solid rgba(56,189,248,0.25)' }}
-                                >
-                                  Switch
-                                </button>
-                              </>
+                              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-[#FACC15]"
+                                style={{ background: 'rgba(250,204,21,0.15)', border: '1px solid rgba(250,204,21,0.40)' }}>
+                                ⚠ Wrong Network
+                              </span>
                             )}
+                            <ChevronDown className={cn('w-4 h-4 text-[#00DFA9] transition-transform', w3DropdownOpen && 'rotate-180')} />
                           </div>
-                        </div>
+                        </button>
 
                         {/* Dropdown menu */}
                         {w3DropdownOpen && (
-                          <div className="absolute top-full mt-1 left-0 right-0 z-20 rounded-xl overflow-hidden py-1"
-                            style={{ background: '#0F1629', border: '1px solid rgba(167,139,250,0.25)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                          <div className="absolute top-full mt-1.5 left-0 right-0 z-20 rounded-xl overflow-hidden py-1.5"
+                            style={{ background: '#0D1526', border: '1px solid rgba(0,223,169,0.25)', boxShadow: '0 12px 40px rgba(0,0,0,0.7)' }}>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(w3Address ?? '');
                                 setW3CopiedAddr(true);
                                 setTimeout(() => setW3CopiedAddr(false), 2000);
                               }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-[12px] text-[#CBD5E1] hover:bg-white/5 transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-semibold text-[#E2E8F0] hover:bg-white/6 transition-colors text-left"
                             >
-                              {w3CopiedAddr ? <Check className="w-3.5 h-3.5 text-[#00DFA9]" /> : <Copy className="w-3.5 h-3.5 text-[#64748B]" />}
+                              {w3CopiedAddr
+                                ? <Check className="w-4 h-4 text-[#00DFA9] shrink-0" />
+                                : <Copy className="w-4 h-4 text-[#00DFA9] shrink-0" />}
                               {w3CopiedAddr ? 'Address copied!' : 'Copy Address'}
                             </button>
                             {chainCfg && (
@@ -1193,25 +1187,34 @@ export function WalletPage() {
                                 href={`${chainCfg.explorerTx.replace('/tx/', '/address/')}${w3Address}`}
                                 target="_blank" rel="noopener noreferrer"
                                 onClick={() => setW3DropdownOpen(false)}
-                                className="flex items-center gap-3 px-4 py-2.5 text-[12px] text-[#CBD5E1] hover:bg-white/5 transition-colors"
+                                className="flex items-center gap-3 px-4 py-3 text-[13px] font-semibold text-[#E2E8F0] hover:bg-white/6 transition-colors"
                               >
-                                <ExternalLink className="w-3.5 h-3.5 text-[#64748B]" />
+                                <ExternalLink className="w-4 h-4 text-[#38BDF8] shrink-0" />
                                 View on Explorer
                               </a>
                             )}
+                            {!chainCfg && (
+                              <button
+                                onClick={() => { evmWallet.openNetworks(); setW3DropdownOpen(false); }}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-semibold text-[#FACC15] hover:bg-white/6 transition-colors text-left"
+                              >
+                                <RotateCcw className="w-4 h-4 text-[#FACC15] shrink-0" />
+                                Switch Network
+                              </button>
+                            )}
                             <button
                               onClick={() => { void evmWallet.connect(); setW3DropdownOpen(false); }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-[12px] text-[#CBD5E1] hover:bg-white/5 transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-semibold text-[#E2E8F0] hover:bg-white/6 transition-colors text-left"
                             >
-                              <RotateCcw className="w-3.5 h-3.5 text-[#64748B]" />
+                              <RotateCcw className="w-4 h-4 text-[#A78BFA] shrink-0" />
                               Switch Wallet / Reconnect
                             </button>
-                            <div className="h-px mx-3 my-0.5" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                            <div className="h-px mx-3 my-0.5" style={{ background: 'rgba(255,255,255,0.08)' }} />
                             <button
                               onClick={() => { evmWallet.disconnect(); setW3DropdownOpen(false); }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-[12px] text-red-400 hover:bg-red-500/8 transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-semibold text-red-400 hover:bg-red-500/10 transition-colors text-left"
                             >
-                              <LogOut className="w-3.5 h-3.5" />
+                              <LogOut className="w-4 h-4 shrink-0" />
                               Disconnect Wallet
                             </button>
                           </div>
@@ -1259,27 +1262,6 @@ export function WalletPage() {
                       </div>
                     )}
 
-                    {/* Deposit destination */}
-                    {w3Connected && chainCfg && platformDepositAddr && (
-                      <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.14)' }}>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide mb-0.5">Deposit Destination · {chainCfg.network}</p>
-                          <p className="text-[11px] font-mono text-[#CBD5E1] truncate">{platformDepositAddr.slice(0, 14)}…{platformDepositAddr.slice(-8)}</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(platformDepositAddr);
-                            setW3DepAddrCopied(true);
-                            setTimeout(() => setW3DepAddrCopied(false), 2000);
-                          }}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold shrink-0 transition-all hover:bg-[#38BDF8]/10"
-                          style={{ color: '#38BDF8', border: '1px solid rgba(56,189,248,0.20)' }}
-                        >
-                          {w3DepAddrCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                          {w3DepAddrCopied ? 'Copied' : 'Copy'}
-                        </button>
-                      </div>
-                    )}
 
                     {/* USDT + Gas balance row */}
                     {(w3Connected || hasTronLink) && (
