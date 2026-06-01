@@ -498,136 +498,183 @@ export function WalletPage() {
         <div className="space-y-4">
 
           {/* ── Method selector ─────────────────────────────────────────── */}
-          <div className="rounded-2xl border border-white/[0.07] bg-[#0E1520] p-4">
-            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Choose Deposit Method</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <div className="space-y-2.5">
+            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider px-0.5">Choose Deposit Method</p>
 
-              {/* NOWPayments — active default */}
-              <button onClick={() => { setDepositMethod('nowpayments'); resetNpp(); }}
-                className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-left"
-                style={depositMethod === 'nowpayments' ? { background: 'rgba(56,189,248,0.10)', border: '2px solid rgba(56,189,248,0.50)', boxShadow: '0 0 16px rgba(56,189,248,0.10)' }
-                  : { background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.14)' }}>
-                {depositMethod === 'nowpayments' && (
-                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#38BDF8] flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
+            {/* NOWPayments */}
+            {(() => {
+              const active = depositMethod === 'nowpayments';
+              return (
+                <button onClick={() => { setDepositMethod('nowpayments'); resetNpp(); }}
+                  className="w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 text-left group"
+                  style={active
+                    ? { background: 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.05) 100%)', border: '2px solid rgba(56,189,248,0.50)', boxShadow: '0 0 28px rgba(56,189,248,0.10)' }
+                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                    style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
+                    <Zap className="w-5 h-5 text-[#38BDF8]" />
                   </div>
-                )}
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
-                  <Zap className="w-4.5 h-4.5 text-[#38BDF8]" />
-                </div>
-                <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">NOWPayments</p>
-                <p className="text-[9px] text-[#38BDF8] font-semibold">300+ coins</p>
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(56,189,248,0.15)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.3)' }}>Auto</span>
-              </button>
-
-              {/* Manual TRC-20 */}
-              <button onClick={() => setDepositMethod('manual')}
-                className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-left"
-                style={depositMethod === 'manual' ? { background: 'rgba(0,223,169,0.10)', border: '2px solid rgba(0,223,169,0.50)', boxShadow: '0 0 16px rgba(0,223,169,0.10)' }
-                  : { background: 'rgba(0,223,169,0.04)', border: '1px solid rgba(0,223,169,0.14)' }}>
-                {depositMethod === 'manual' && (
-                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#00DFA9] flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
-                  </div>
-                )}
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(0,223,169,0.18)', border: '1px solid rgba(0,223,169,0.35)' }}>
-                  <QrCode className="w-4.5 h-4.5 text-[#00DFA9]" />
-                </div>
-                <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">USDT Manual</p>
-                <p className="text-[9px] text-[#00DFA9] font-semibold">TRC-20 / ERC-20</p>
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.3)' }}>Manual</span>
-              </button>
-
-              {/* Coming soon — Binance Pay */}
-              <div className="relative rounded-xl p-3 flex flex-col items-center gap-1.5" style={{ background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.14)', opacity: 0.5 }}>
-                <div className="absolute top-1.5 right-1.5"><Lock className="w-3 h-3 text-[#64748B]" /></div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.14)' }}>
-                  <CreditCard className="w-4.5 h-4.5 text-[#FACC15]" />
-                </div>
-                <p className="text-[11px] font-bold text-[#94A3B8] text-center leading-tight">Binance Pay</p>
-                <p className="text-[9px] text-[#64748B]">0% fee</p>
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>Soon</span>
-              </div>
-
-              {/* Live — Web3 Wallet auto-deposit */}
-              <button onClick={() => setDepositMethod('wallet')}
-                className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-left"
-                style={depositMethod === 'wallet'
-                  ? { background: 'rgba(167,139,250,0.10)', border: '2px solid rgba(167,139,250,0.50)', boxShadow: '0 0 16px rgba(167,139,250,0.10)' }
-                  : { background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.14)' }}>
-                {depositMethod === 'wallet' && (
-                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#A78BFA] flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
-                  </div>
-                )}
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(167,139,250,0.18)', border: '1px solid rgba(167,139,250,0.35)' }}>
-                  <Wallet className="w-4.5 h-4.5 text-[#A78BFA]" />
-                </div>
-                <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">Web3 Wallet</p>
-                <p className="text-[9px] text-[#A78BFA] font-semibold">6 EVM chains · TRC-20 · Solana</p>
-                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.3)' }}>Auto</span>
-              </button>
-
-              {/* Cryptomus — USDT TRC-20 & ERC-20 */}
-              {cmAvailable === false ? (
-                <div className="relative rounded-xl p-3 flex flex-col items-center gap-1.5" style={{ background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.14)', opacity: 0.5 }}>
-                  <div className="absolute top-1.5 right-1.5"><Lock className="w-3 h-3 text-[#64748B]" /></div>
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.14)' }}>
-                    <CircleDollarSign className="w-4.5 h-4.5 text-[#FACC15]" />
-                  </div>
-                  <p className="text-[11px] font-bold text-[#94A3B8] text-center leading-tight">Cryptomus</p>
-                  <p className="text-[9px] text-[#64748B]">USDT only</p>
-                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(100,116,139,0.15)', color: '#64748B', border: '1px solid rgba(100,116,139,0.2)' }}>N/A</span>
-                </div>
-              ) : (
-                <button onClick={() => { setDepositMethod('cryptomus'); resetCm(); }}
-                  className="relative rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-left"
-                  style={depositMethod === 'cryptomus'
-                    ? { background: 'rgba(0,223,169,0.10)', border: '2px solid rgba(0,223,169,0.50)', boxShadow: '0 0 16px rgba(0,223,169,0.10)' }
-                    : { background: 'rgba(0,223,169,0.04)', border: '1px solid rgba(0,223,169,0.14)' }}>
-                  {depositMethod === 'cryptomus' && (
-                    <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#00DFA9] flex items-center justify-center">
-                      <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="text-[14px] font-bold text-[#F8FAFC]">NOWPayments</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(56,189,248,0.20)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.40)' }}>★ Recommended</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
                     </div>
-                  )}
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
-                    <CircleDollarSign className="w-4.5 h-4.5 text-[#00DFA9]" />
+                    <p className="text-[11px] text-[#64748B] leading-tight">300+ cryptocurrencies · ~5–15 min confirmation · No TxHash needed</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {['TRC-20','ERC-20','BEP-20','Polygon','Arbitrum','TON','Solana','+more'].map(n => (
+                        <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">Cryptomus</p>
-                  <p className="text-[9px] text-[#00DFA9] font-semibold">USDT only</p>
-                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.3)' }}>Auto</span>
+                  {active
+                    ? <div className="shrink-0 w-6 h-6 rounded-full bg-[#38BDF8] flex items-center justify-center shadow-[0_0_12px_rgba(56,189,248,0.5)]"><Check className="w-3.5 h-3.5 text-[#0B0F14]" /></div>
+                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
                 </button>
-              )}
+              );
+            })()}
+
+            {/* Cryptomus */}
+            {cmAvailable === false ? (
+              <div className="w-full rounded-2xl p-4 flex items-center gap-4 cursor-not-allowed"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', opacity: 0.45 }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.10)', border: '1px solid rgba(0,223,169,0.20)' }}>
+                  <CircleDollarSign className="w-5 h-5 text-[#00DFA9]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[14px] font-bold text-[#94A3B8]">Cryptomus</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-[#64748B]" style={{ background: 'rgba(100,116,139,0.20)', border: '1px solid rgba(100,116,139,0.25)' }}>Unavailable</span>
+                  </div>
+                  <p className="text-[11px] text-[#475569]">Currently unavailable in your region</p>
+                </div>
+                <Lock className="w-4 h-4 text-[#475569] shrink-0" />
+              </div>
+            ) : (() => {
+              const active = depositMethod === 'cryptomus';
+              return (
+                <button onClick={() => { setDepositMethod('cryptomus'); resetCm(); }}
+                  className="w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 text-left group"
+                  style={active
+                    ? { background: 'linear-gradient(135deg, rgba(0,223,169,0.12) 0%, rgba(0,223,169,0.05) 100%)', border: '2px solid rgba(0,223,169,0.50)', boxShadow: '0 0 28px rgba(0,223,169,0.10)' }
+                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                    style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
+                    <CircleDollarSign className="w-5 h-5 text-[#00DFA9]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="text-[14px] font-bold text-[#F8FAFC]">Cryptomus</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.20)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.40)' }}>Lowest Fees</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
+                    </div>
+                    <p className="text-[11px] text-[#64748B] leading-tight">USDT only · ~15–30 min confirmation · Zero platform fee</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {['TRC-20','ERC-20'].map(n => (
+                        <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {active
+                    ? <div className="shrink-0 w-6 h-6 rounded-full bg-[#00DFA9] flex items-center justify-center shadow-[0_0_12px_rgba(0,223,169,0.5)]"><Check className="w-3.5 h-3.5 text-[#0B0F14]" /></div>
+                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
+                </button>
+              );
+            })()}
+
+            {/* USDT Manual */}
+            {(() => {
+              const active = depositMethod === 'manual';
+              return (
+                <button onClick={() => setDepositMethod('manual')}
+                  className="w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 text-left group"
+                  style={active
+                    ? { background: 'linear-gradient(135deg, rgba(0,223,169,0.10) 0%, rgba(0,223,169,0.04) 100%)', border: '2px solid rgba(0,223,169,0.42)', boxShadow: '0 0 24px rgba(0,223,169,0.08)' }
+                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                    style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
+                    <QrCode className="w-5 h-5 text-[#00DFA9]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="text-[14px] font-bold text-[#F8FAFC]">USDT Manual</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(250,204,21,0.18)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.35)' }}>Most Popular</span>
+                    </div>
+                    <p className="text-[11px] text-[#64748B] leading-tight">Send USDT directly · Manual verification · 11 networks supported</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {['TRC-20','ERC-20','BEP-20','Polygon','Arbitrum','Base','Solana','TON','XRP','BTC'].map(n => (
+                        <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {active
+                    ? <div className="shrink-0 w-6 h-6 rounded-full bg-[#00DFA9] flex items-center justify-center shadow-[0_0_12px_rgba(0,223,169,0.5)]"><Check className="w-3.5 h-3.5 text-[#0B0F14]" /></div>
+                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
+                </button>
+              );
+            })()}
+
+            {/* Web3 Wallet */}
+            {(() => {
+              const active = depositMethod === 'wallet';
+              return (
+                <button onClick={() => setDepositMethod('wallet')}
+                  className="w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 text-left group"
+                  style={active
+                    ? { background: 'linear-gradient(135deg, rgba(167,139,250,0.12) 0%, rgba(167,139,250,0.05) 100%)', border: '2px solid rgba(167,139,250,0.50)', boxShadow: '0 0 28px rgba(167,139,250,0.10)' }
+                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                    style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.30)' }}>
+                    <Wallet className="w-5 h-5 text-[#A78BFA]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="text-[14px] font-bold text-[#F8FAFC]">Web3 Wallet</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.22)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.40)' }}>⚡ Instant</span>
+                    </div>
+                    <p className="text-[11px] text-[#64748B] leading-tight">MetaMask · Trust Wallet · OKX · Coinbase · Auto-verified on-chain</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {['Ethereum','BSC','Polygon','Arbitrum','Base','Optimism','TRC-20','Solana'].map(n => (
+                        <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {active
+                    ? <div className="shrink-0 w-6 h-6 rounded-full bg-[#A78BFA] flex items-center justify-center shadow-[0_0_12px_rgba(167,139,250,0.5)]"><Check className="w-3.5 h-3.5 text-[#0B0F14]" /></div>
+                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
+                </button>
+              );
+            })()}
+
+            {/* Binance Pay — Coming Soon */}
+            <div className="w-full rounded-2xl p-4 flex items-center gap-4 cursor-not-allowed"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(250,204,21,0.20)', opacity: 0.50 }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.20)' }}>
+                <CreditCard className="w-5 h-5 text-[#FACC15]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[14px] font-bold text-[#94A3B8]">Binance Pay</span>
+                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full text-[#64748B]" style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(100,116,139,0.28)' }}>Coming Soon</span>
+                </div>
+                <p className="text-[11px] text-[#475569] leading-tight">Zero fees · Instant · BNB · BUSD · USDT</p>
+              </div>
+              <Lock className="w-4 h-4 text-[#475569] shrink-0" />
             </div>
           </div>
 
-          {/* Trust badges */}
-          <div className="grid grid-cols-3 gap-2">
-            {(depositMethod === 'nowpayments' ? [
-              { icon: Shield, label: 'Secure', sub: '300+ currencies', color: '#38BDF8' },
-              { icon: Zap, label: 'Auto Credit', sub: 'No TxHash needed', color: '#00DFA9' },
-              { icon: CircleDollarSign, label: 'Min 10 USDT', sub: '~20 min window', color: '#FACC15' },
-            ] : depositMethod === 'wallet' ? [
-              { icon: Shield, label: 'Self-custody', sub: 'Your keys', color: '#A78BFA' },
-              { icon: Zap, label: 'Auto Credit', sub: 'No TxHash', color: '#00DFA9' },
-              { icon: CircleDollarSign, label: 'Min 10 USDT', sub: 'Instant verify', color: '#FACC15' },
-            ] : depositMethod === 'cryptomus' ? [
-              { icon: Shield, label: 'Secure', sub: 'USDT only', color: '#00DFA9' },
-              { icon: Zap, label: 'Auto Credit', sub: 'No TxHash needed', color: '#38BDF8' },
-              { icon: CircleDollarSign, label: 'Min 10 USDT', sub: 'TRC-20 · ERC-20', color: '#FACC15' },
-            ] : [
-              { icon: Shield, label: 'Secure', sub: 'TRC-20 Network', color: '#00DFA9' },
-              { icon: Clock, label: 'Fast', sub: '5–30 min', color: '#38BDF8' },
-              { icon: CircleDollarSign, label: 'Min 10 USDT', sub: 'No deposit fees', color: '#FACC15' },
-            ]).map(({ icon: Icon, label, sub, color }) => (
-              <div key={label} className="rounded-xl border border-white/[0.07] bg-[#0E1520] p-3 text-center">
-                <Icon className="h-4 w-4 mx-auto mb-1" style={{ color }} />
-                <p className="text-[11px] font-bold text-[#F8FAFC]">{label}</p>
-                <p className="text-[10px] text-[#64748B]">{sub}</p>
+          {/* Trust elements */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { emoji: '🔒', label: 'Secure Payments', sub: 'All deposits verified automatically', color: '#38BDF8' },
+              { emoji: '⚡', label: 'Fast Processing', sub: 'Most deposits confirmed within minutes', color: '#00DFA9' },
+              { emoji: '💰', label: 'Auto Credit', sub: 'Balance updated after blockchain confirmation', color: '#FACC15' },
+              { emoji: '🌍', label: 'Multiple Networks', sub: 'TRC20, ERC20, BEP20, Polygon & more', color: '#A78BFA' },
+            ].map(({ emoji, label, sub }) => (
+              <div key={label} className="rounded-xl border border-white/[0.06] bg-[#0E1520] p-3.5 text-center">
+                <span className="text-xl block mb-2">{emoji}</span>
+                <p className="text-[11px] font-bold text-[#F8FAFC] leading-tight">{label}</p>
+                <p className="text-[10px] text-[#64748B] mt-1 leading-relaxed">{sub}</p>
               </div>
             ))}
           </div>
@@ -663,6 +710,13 @@ export function WalletPage() {
                             className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/60 focus:ring-1 focus:ring-[#38BDF8]/20 transition-all pr-16" />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#38BDF8] bg-[#38BDF8]/10 px-2 py-0.5 rounded-lg">USDT</span>
                         </div>
+                        {nppAmount && !isNaN(parseFloat(nppAmount)) && parseFloat(nppAmount) > 0 && (
+                          <div className="mt-1.5 px-1">
+                            {parseFloat(nppAmount) < 10
+                              ? <span className="text-[10px] text-red-400 flex items-center gap-1"><AlertCircle className="h-2.5 w-2.5" /> Minimum deposit is 10 USDT</span>
+                              : <span className="text-[10px] text-[#00DFA9]">✓ You will receive ≈ {parseFloat(nppAmount).toFixed(2)} USDT</span>}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
@@ -686,11 +740,11 @@ export function WalletPage() {
                         </select>
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <p className="text-[10px] text-[#64748B] font-semibold">Quick:</p>
-                      {[10, 50, 100, 250, 500].map(amt => (
-                        <button key={amt} type="button" onClick={() => setNppAmount(String(amt))}
-                          className={cn('text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all',
+                    <div className="flex gap-1.5 flex-wrap items-center">
+                      <p className="text-[10px] text-[#64748B] font-semibold mr-0.5">Quick:</p>
+                      {[10, 25, 50, 100, 250, 500, 1000].map(amt => (
+                        <button key={amt} type="button" onClick={() => { setNppAmount(String(amt)); setNppError(''); }}
+                          className={cn('text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-all',
                             nppAmount === String(amt)
                               ? 'bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/40'
                               : 'bg-white/5 text-[#64748B] border border-white/[0.07] hover:bg-white/10 hover:text-white')}>
@@ -749,6 +803,28 @@ export function WalletPage() {
                         {Math.floor(nppTimeLeft / 60)}:{String(nppTimeLeft % 60).padStart(2, '0')}
                       </span>
                     </div>
+
+                    {/* Payment status tracker */}
+                    <div className="flex items-center w-full px-1">
+                      {['Waiting','Detected','Confirming','Confirmed','Credited'].map((step, i, arr) => (
+                        <div key={step} className="flex items-center flex-1 min-w-0">
+                          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                            <div className={cn('w-5 h-5 rounded-full flex items-center justify-center',
+                              i === 0 ? 'border border-[#38BDF8]/50 bg-[#38BDF8]/10' : 'border border-white/[0.08] bg-white/[0.03]')}>
+                              {i === 0
+                                ? <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-pulse block" />
+                                : <span className="text-[8px] font-bold text-[#475569]">{i+1}</span>}
+                            </div>
+                            <span className={cn('text-[8px] font-semibold leading-tight text-center whitespace-nowrap',
+                              i === 0 ? 'text-[#38BDF8]' : 'text-[#475569]')}>{step}</span>
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div className="flex-1 h-px mx-1 mb-4" style={{ background: i === 0 ? 'linear-gradient(90deg, rgba(56,189,248,0.4) 0%, rgba(255,255,255,0.06) 100%)' : 'rgba(255,255,255,0.06)' }} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
                     {/* QR + address */}
                     <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-[#0B0F14] border border-white/[0.07]">
                       <div className="p-2 rounded-xl bg-white flex-shrink-0" style={{ boxShadow: '0 0 0 1px rgba(56,189,248,0.2)' }}>
@@ -1082,6 +1158,13 @@ export function WalletPage() {
                             className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16" />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">USDT</span>
                         </div>
+                        {cmAmount && !isNaN(parseFloat(cmAmount)) && parseFloat(cmAmount) > 0 && (
+                          <div className="mt-1.5 px-1">
+                            {parseFloat(cmAmount) < 10
+                              ? <span className="text-[10px] text-red-400 flex items-center gap-1"><AlertCircle className="h-2.5 w-2.5" /> Minimum deposit is 10 USDT</span>
+                              : <span className="text-[10px] text-[#00DFA9]">✓ You will receive ≈ {parseFloat(cmAmount).toFixed(2)} USDT</span>}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
@@ -1094,11 +1177,11 @@ export function WalletPage() {
                         </select>
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <p className="text-[10px] text-[#64748B] font-semibold">Quick:</p>
-                      {[10, 50, 100, 250, 500].map(amt => (
-                        <button key={amt} type="button" onClick={() => setCmAmount(String(amt))}
-                          className={cn('text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all',
+                    <div className="flex gap-1.5 flex-wrap items-center">
+                      <p className="text-[10px] text-[#64748B] font-semibold mr-0.5">Quick:</p>
+                      {[10, 25, 50, 100, 250, 500, 1000].map(amt => (
+                        <button key={amt} type="button" onClick={() => { setCmAmount(String(amt)); setCmError(''); }}
+                          className={cn('text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-all',
                             cmAmount === String(amt)
                               ? 'bg-[#00DFA9]/20 text-[#00DFA9] border border-[#00DFA9]/40'
                               : 'bg-white/5 text-[#64748B] border border-white/[0.07] hover:bg-white/10 hover:text-white')}>
@@ -1156,6 +1239,27 @@ export function WalletPage() {
                       <span className={`text-[16px] font-black tabular-nums ${cmTimeLeft < 300 ? 'text-red-400' : 'text-[#00DFA9]'}`}>
                         {Math.floor(cmTimeLeft / 3600)}:{String(Math.floor((cmTimeLeft % 3600) / 60)).padStart(2, '0')}:{String(cmTimeLeft % 60).padStart(2, '0')}
                       </span>
+                    </div>
+
+                    {/* Payment status tracker */}
+                    <div className="flex items-center w-full px-1">
+                      {['Waiting','Detected','Confirming','Confirmed','Credited'].map((step, i, arr) => (
+                        <div key={step} className="flex items-center flex-1 min-w-0">
+                          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                            <div className={cn('w-5 h-5 rounded-full flex items-center justify-center',
+                              i === 0 ? 'border border-[#00DFA9]/50 bg-[#00DFA9]/10' : 'border border-white/[0.08] bg-white/[0.03]')}>
+                              {i === 0
+                                ? <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse block" />
+                                : <span className="text-[8px] font-bold text-[#475569]">{i+1}</span>}
+                            </div>
+                            <span className={cn('text-[8px] font-semibold leading-tight text-center whitespace-nowrap',
+                              i === 0 ? 'text-[#00DFA9]' : 'text-[#475569]')}>{step}</span>
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div className="flex-1 h-px mx-1 mb-4" style={{ background: i === 0 ? 'linear-gradient(90deg, rgba(0,223,169,0.4) 0%, rgba(255,255,255,0.06) 100%)' : 'rgba(255,255,255,0.06)' }} />
+                          )}
+                        </div>
+                      ))}
                     </div>
 
                     {/* Pay on Cryptomus button */}
