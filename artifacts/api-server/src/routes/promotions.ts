@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { eq, and, gte, count, sum } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   db,
   promotionsTable,
@@ -7,10 +8,12 @@ import {
   promotionRequirementsTable,
   betsTable,
   transactionsTable,
+  walletsTable,
   referralsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { verifyToken } from "../lib/auth.js";
+import { logger } from "../lib/logger.js";
 import type { Request } from "express";
 
 const router = Router();
@@ -211,12 +214,52 @@ router.post("/promotions/:id/claim", authenticate, async (req, res): Promise<voi
     }
   }
 
-  const [claim] = await db
-    .insert(promotionClaimsTable)
-    .values({ promotionId: id, userId })
-    .returning();
+  const bonusAmount = promo.bonusAmount ?? "0";
+  const bonusNum = parseFloat(bonusAmount);
 
-  res.status(201).json({ success: true, claimId: claim.id });
+  let claimId: number;
+  try {
+    await db.transaction(async (tx) => {
+      // Record the claim
+      const [claim] = await tx
+        .insert(promotionClaimsTable)
+        .values({ promotionId: id, userId })
+        .returning();
+      claimId = claim.id;
+
+      // Credit bonus balance if promo has a monetary reward
+      if (bonusNum > 0) {
+        await tx.insert(transactionsTable).values({
+          userId,
+          type: "bonus",
+          amount: bonusAmount,
+          status: "completed",
+          reference: `promo_${id}`,
+          verified: true,
+          notes: `Promotion bonus: ${promo.title}`,
+        });
+
+        await tx
+          .update(walletsTable)
+          .set({ bonusBalanceUsdt: sql`bonus_balance_usdt + ${bonusAmount}` })
+          .where(eq(walletsTable.userId, userId));
+      }
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const causeMsg = (err as { cause?: { message?: string } })?.cause?.message ?? "";
+    const full = `${msg} ${causeMsg}`.toLowerCase();
+    if (full.includes("duplicate key") || full.includes("unique")) {
+      res.status(409).json({ error: "Already claimed" });
+    } else {
+      logger.error({ err, userId, promotionId: id }, "Failed to claim promotion");
+      res.status(500).json({ error: "Failed to claim promotion. Please try again." });
+    }
+    return;
+  }
+
+  logger.info({ userId, promotionId: id, bonusAmount }, "Promotion claimed");
+  res.status(201).json({ success: true, claimId: claimId!, bonusAmount, currency: "USDT" });
 });
 
 export default router;
