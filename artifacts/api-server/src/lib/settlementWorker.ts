@@ -94,6 +94,37 @@ const SPORT_KEY_EXPANSION: Record<string, string[]> = {
   sp_boxing:            ['boxing_boxing'],
   sp_aussie_rules:      ['aussierules_afl'],
   sp_horse_racing:      [], // Not available in Odds API scores endpoint
+
+  // ── BetsAPI sport_id prefixed keys (e.g. "betsapi_1") ────────────────────
+  // Mapped to the equivalent Odds API sport key lists for score lookups.
+  // Fuzzy team-name matching handles the ID mismatch after scores are fetched.
+  betsapi_1:   ['soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
+                'soccer_germany_bundesliga', 'soccer_usa_mls', 'soccer_turkey_super_league',
+                'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato', 'soccer_mexico_ligamx',
+                'soccer_efl_champ', 'soccer_scotland_premiership', 'soccer_portugal_primeira_liga',
+                'soccer_belgium_first_div', 'soccer_argentina_primera_division',
+                'soccer_conmebol_copa_libertadores', 'soccer_korea_kleague1', 'soccer_japan_j_league',
+                'soccer_australia_aleague', 'soccer_india_superleague', 'soccer_conmebol_copa_america',
+                'soccer_uefa_nations_league', 'soccer_uefa_champs_league', 'soccer_uefa_europa_league'],
+  betsapi_3:   ['cricket_ipl', 'cricket_international_t20', 'cricket_big_bash', 'cricket_psl', 'cricket_test_match'],
+  betsapi_8:   ['rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
+                'rugbyunion_world_cup', 'rugbyunion_champions_cup'],
+  betsapi_9:   ['boxing_boxing'],
+  betsapi_12:  ['americanfootball_nfl', 'americanfootball_ncaaf', 'americanfootball_ufl'],
+  betsapi_13:  ['baseball_mlb', 'baseball_npb', 'baseball_kbo'],
+  betsapi_14:  ['icehockey_nhl', 'icehockey_sweden_hockey_league'],
+  betsapi_16:  ['basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl'],
+  betsapi_17:  ['tennis_atp_french_open', 'tennis_wta_french_open', 'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
+                'tennis_atp_us_open', 'tennis_wta_us_open', 'tennis_atp_australian_open', 'tennis_wta_australian_open'],
+  betsapi_18:  [], // Golf — not in Odds API scores endpoint
+  betsapi_19:  [], // Handball — not in Odds API scores endpoint
+  betsapi_36:  ['aussierules_afl'],
+  betsapi_78:  ['rugbyleague_nrl', 'rugbyleague_super_league'],
+  betsapi_91:  [], // Volleyball — not in Odds API scores endpoint
+  betsapi_92:  [], // Table tennis — not in Odds API scores endpoint
+  betsapi_94:  [], // Snooker — not in Odds API scores endpoint
+  betsapi_95:  [], // Darts — not in Odds API scores endpoint
+  betsapi_161: ['mma_mixed_martial_arts'],
 };
 
 /**

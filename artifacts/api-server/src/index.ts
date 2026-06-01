@@ -329,6 +329,61 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v18 skipped");
   }
+
+  // v19: backfill settled_payout NULL → '0' for historical bets settled before
+  // migration v5 added the column (those rows received no default at the time).
+  try {
+    await db.execute(sql`
+      UPDATE bets SET settled_payout = '0' WHERE settled_payout IS NULL
+    `);
+    logger.info("DB migration v19 applied (backfill settled_payout NULL → 0)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v19 skipped");
+  }
+
+  // v20: repair bets 14 and 16 — incorrectly marked 'won' by a previous buggy
+  // settlement run; all their selections are 'void' so the correct outcome is
+  // void (stake refunded).  Idempotent: guarded by checking current status.
+  try {
+    await db.execute(sql`
+      DO $$
+      DECLARE
+        v_user_id INTEGER;
+        v_stake   NUMERIC;
+        v_bet_id  INTEGER;
+      BEGIN
+        FOR v_bet_id IN SELECT unnest(ARRAY[14, 16]) LOOP
+          SELECT user_id, stake INTO v_user_id, v_stake
+            FROM bets WHERE id = v_bet_id AND status = 'won' AND settled_payout = '0';
+
+          IF FOUND THEN
+            -- Correct the bet status
+            UPDATE bets
+               SET status = 'void', settled_payout = v_stake
+             WHERE id = v_bet_id;
+
+            -- Refund transaction (idempotent: skip if already exists)
+            IF NOT EXISTS (
+              SELECT 1 FROM transactions
+               WHERE user_id = v_user_id
+                 AND notes = 'Bet #' || v_bet_id || ' corrected void — stake refunded'
+            ) THEN
+              INSERT INTO transactions (user_id, type, amount, status, notes)
+              VALUES (v_user_id, 'refund', v_stake, 'completed',
+                      'Bet #' || v_bet_id || ' corrected void — stake refunded');
+
+              UPDATE wallets
+                 SET balance_usdt = balance_usdt + v_stake
+               WHERE user_id = v_user_id;
+            END IF;
+          END IF;
+        END LOOP;
+      END $$
+    `);
+    logger.info("DB migration v20 applied (repair bets 14 and 16 — void + stake refunded)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v20 skipped");
+  }
 }
 
 runMigrations().then(() => {
