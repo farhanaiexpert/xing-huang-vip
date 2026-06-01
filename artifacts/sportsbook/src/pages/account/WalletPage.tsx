@@ -564,9 +564,9 @@ export function WalletPage() {
             <div className="text-right">
               <p className="text-[24px] font-black text-[#F8FAFC] leading-none"
                 style={{ textShadow: '0 0 32px rgba(0,223,169,0.18)' }}>
-                ${fmt(balance + bonusBalance + lockedInBets + pendingDepositsAmt)}
+                ${fmt(balance + lockedInBets + pendingDepositsAmt)}
               </p>
-              <p className="text-[10px] font-semibold text-[#00DFA9]">USDT total</p>
+              <p className="text-[10px] font-semibold text-[#00DFA9]">Withdrawable</p>
             </div>
           </div>
 
@@ -613,14 +613,16 @@ export function WalletPage() {
 
             {/* Bonus */}
             <div className="flex items-center gap-3 rounded-xl p-3 border"
-              style={{ background: 'rgba(167,139,250,0.06)', borderColor: 'rgba(167,139,250,0.14)' }}>
+              style={{ background: 'rgba(250,204,21,0.06)', borderColor: 'rgba(250,204,21,0.14)' }}
+              title="Bonus funds are for betting only — cannot be withdrawn">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.22)' }}>
-                <CircleDollarSign className="h-4 w-4 text-[#A78BFA]" />
+                style={{ background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.22)' }}>
+                <CircleDollarSign className="h-4 w-4 text-[#FACC15]" />
               </div>
               <div className="min-w-0">
                 <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Bonus</p>
-                <p className="text-[15px] font-black text-[#A78BFA] leading-tight">${fmt(bonusBalance)}</p>
+                <p className="text-[15px] font-black text-[#FACC15] leading-tight">${fmt(bonusBalance)}</p>
+                <p className="text-[8px] text-[#FACC15]/50 leading-none mt-0.5">Bet only</p>
               </div>
             </div>
           </div>
