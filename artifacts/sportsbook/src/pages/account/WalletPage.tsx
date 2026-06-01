@@ -614,6 +614,7 @@ export function WalletPage() {
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
                     </div>
                     <p className="text-[11px] text-[#64748B] leading-tight">300+ cryptocurrencies · ~5–15 min confirmation · No TxHash needed</p>
+                    <p className="text-[10px] font-bold mt-1.5" style={{ color: '#38BDF8' }}>Min deposit: <span className="text-[#F8FAFC]">$10 USDT</span></p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {['TRC-20','ERC-20','BEP-20','Polygon','Arbitrum','TON','Solana','+more'].map(n => (
                         <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
@@ -662,6 +663,7 @@ export function WalletPage() {
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
                     </div>
                     <p className="text-[11px] text-[#64748B] leading-tight">USDT only · ~15–30 min confirmation · Zero platform fee</p>
+                    <p className="text-[10px] font-bold mt-1.5" style={{ color: '#00DFA9' }}>Min deposit: <span className="text-[#F8FAFC]">$10 USDT</span></p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {['TRC-20','ERC-20'].map(n => (
                         <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
@@ -693,7 +695,8 @@ export function WalletPage() {
                       <span className="text-[14px] font-bold text-[#F8FAFC]">USDT Manual</span>
                       <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(250,204,21,0.18)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.35)' }}>Most Popular</span>
                     </div>
-                    <p className="text-[11px] text-[#64748B] leading-tight">Send USDT directly · Manual verification · 11 networks supported</p>
+                    <p className="text-[11px] text-[#64748B] leading-tight">Send USDT directly · Manual verification · 11 networks</p>
+                    <p className="text-[10px] font-bold mt-1.5" style={{ color: '#00DFA9' }}>Min deposit: <span className="text-[#F8FAFC]">$10 USDT</span> · BTC/XRP varies</p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {['TRC-20','ERC-20','BEP-20','Polygon','Arbitrum','Base','Solana','TON','XRP','BTC'].map(n => (
                         <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
@@ -726,6 +729,7 @@ export function WalletPage() {
                       <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.22)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.40)' }}>⚡ Instant</span>
                     </div>
                     <p className="text-[11px] text-[#64748B] leading-tight">MetaMask · Trust Wallet · OKX · Coinbase · Auto-verified on-chain</p>
+                    <p className="text-[10px] font-bold mt-1.5" style={{ color: '#A78BFA' }}>Min deposit: <span className="text-[#F8FAFC]">$10 USDT</span></p>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {['Ethereum','BSC','Polygon','Arbitrum','Base','Optimism','TRC-20','Solana'].map(n => (
                         <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
@@ -1471,12 +1475,12 @@ export function WalletPage() {
           {/* ── Manual USDT flow ─────────────────────────────────────────── */}
           {depositMethod === 'manual' && (() => {
             const MANUAL_NETS = [
-              { val: 'TRC-20'   as const, short: 'TRC-20',   fullName: 'Tron (TRC-20)',    coinLabel: 'USDT', color: '#00DFA9', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT on TRC-20 (Tron). Sending on any other network will result in permanent loss.' },
-              { val: 'ERC-20'   as const, short: 'ERC-20',   fullName: 'Ethereum (ERC-20)',coinLabel: 'USDT', color: '#627EEA', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT on Ethereum (ERC-20). Do not send on TRC-20/Tron or other networks.' },
-              { val: 'BSC'      as const, short: 'BEP-20',   fullName: 'BNB Smart Chain',  coinLabel: 'USDT', color: '#F0B90B', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT on BEP-20 (BSC). Sending on TRC-20 or Ethereum will result in loss.' },
-              { val: 'SOLANA'   as const, short: 'Solana',   fullName: 'Solana (SPL)',     coinLabel: 'USDT', color: '#9945FF', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT SPL on Solana. Sending SOL or other tokens will result in permanent loss.' },
-              { val: 'TON'      as const, short: 'TON',      fullName: 'TON Network',      coinLabel: 'USDT', color: '#0098EA', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT Jetton on TON. Sending native TON will result in loss.' },
-              { val: 'BTC'      as const, short: 'Bitcoin',  fullName: 'Bitcoin Network',  coinLabel: 'BTC',  color: '#F7931A', badge: '🕐 Review', autoVerify: false, warning: 'Only send native BTC. Admin converts to USDT and credits within 30 min.' },
+              { val: 'TRC-20'   as const, short: 'TRC-20',   fullName: 'Tron (TRC-20)',    coinLabel: 'USDT', color: '#00DFA9', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT on TRC-20 (Tron). Sending on any other network will result in permanent loss.' },
+              { val: 'ERC-20'   as const, short: 'ERC-20',   fullName: 'Ethereum (ERC-20)',coinLabel: 'USDT', color: '#627EEA', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT on Ethereum (ERC-20). Do not send on TRC-20/Tron or other networks.' },
+              { val: 'BSC'      as const, short: 'BEP-20',   fullName: 'BNB Smart Chain',  coinLabel: 'USDT', color: '#F0B90B', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT on BEP-20 (BSC). Sending on TRC-20 or Ethereum will result in loss.' },
+              { val: 'SOLANA'   as const, short: 'Solana',   fullName: 'Solana (SPL)',     coinLabel: 'USDT', color: '#9945FF', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT SPL on Solana. Sending SOL or other tokens will result in permanent loss.' },
+              { val: 'TON'      as const, short: 'TON',      fullName: 'TON Network',      coinLabel: 'USDT', color: '#0098EA', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT Jetton on TON. Sending native TON will result in loss.' },
+              { val: 'BTC'      as const, short: 'Bitcoin',  fullName: 'Bitcoin Network',  coinLabel: 'BTC',  color: '#F7931A', badge: '🕐 Review', min: 'Admin',   autoVerify: false, warning: 'Only send native BTC. Admin converts to USDT and credits within 30 min.' },
             ];
             const net = MANUAL_NETS.find(n => n.val === manualNetwork) ?? MANUAL_NETS[0];
             const addr = depositInfo ? getManualAddress(manualNetwork, depositInfo) : '';
@@ -1523,6 +1527,7 @@ export function WalletPage() {
                           <span className="text-[11px] font-black" style={{ color: isActive ? n.color : '#94A3B8' }}>{n.short}</span>
                           <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full"
                             style={{ background: `${n.color}15`, color: n.color, border: `1px solid ${n.color}25` }}>{n.badge}</span>
+                          <span className="text-[7px] font-bold" style={{ color: n.color, opacity: 0.65 }}>{n.min}</span>
                         </button>
                       );
                     })}
@@ -1785,6 +1790,32 @@ export function WalletPage() {
               </>
             );
           })()}
+          {/* ── Recent Deposits ─────────────────────────────────────────── */}
+          {txns.filter(t => t.type === 'deposit').slice(0, 3).length > 0 && (
+            <div className="rounded-2xl border border-white/[0.07] bg-[#0E1520] overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/[0.05] flex items-center justify-between">
+                <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="h-3 w-3" /> Recent Deposits
+                </p>
+                <button onClick={() => setTab('history')}
+                  className="text-[10px] font-semibold text-[#38BDF8] hover:opacity-75 transition-opacity">
+                  View All →
+                </button>
+              </div>
+              {txns.filter(t => t.type === 'deposit').slice(0, 3).map((tx, i) => (
+                <div key={tx.id} className={cn('flex items-center gap-3 px-4 py-3', i > 0 && 'border-t border-white/[0.04]')}>
+                  <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/10 flex items-center justify-center shrink-0">
+                    <ArrowDownLeft className="h-3.5 w-3.5 text-[#00DFA9]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold text-[#F8FAFC]">+${fmt(tx.amount)} USDT</p>
+                    <p className="text-[10px] text-[#64748B]">{tx.network ?? 'TRC-20'} · {fmtDate(tx.createdAt)}</p>
+                  </div>
+                  <StatusBadge status={tx.status} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

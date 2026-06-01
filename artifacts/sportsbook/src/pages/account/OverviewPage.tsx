@@ -9,6 +9,7 @@ import {
   Copy, Check, Wallet, Receipt, ArrowLeftRight,
   Users, Gift, Star, Trophy, Settings,
   Calendar, ShieldCheck, TrendingUp, Activity,
+  ArrowDownLeft, ArrowUpRight,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { userDisplayLabel, addressInitials } from '@/lib/utils';
@@ -190,6 +191,29 @@ export function OverviewPage() {
             </Link>
           );
         })}
+      </div>
+
+      {/* ── Quick Actions Bar ── */}
+      <div className="grid grid-cols-4 gap-2.5">
+        {([
+          { label: 'Deposit',     Icon: ArrowDownLeft, href: '/account/wallet',      color: '#00DFA9', bg: 'rgba(0,223,169,0.07)',   border: 'rgba(0,223,169,0.20)',  glow: 'rgba(0,223,169,0.18)' },
+          { label: 'Withdraw',    Icon: ArrowUpRight,  href: '/account/wallet',      color: '#38BDF8', bg: 'rgba(56,189,248,0.07)',  border: 'rgba(56,189,248,0.20)', glow: 'rgba(56,189,248,0.14)' },
+          { label: 'Bet History', Icon: Receipt,       href: '/account/bets',        color: '#FACC15', bg: 'rgba(250,204,21,0.07)', border: 'rgba(250,204,21,0.20)', glow: 'rgba(250,204,21,0.14)' },
+          { label: 'Promotions',  Icon: Gift,          href: '/account/promotions',  color: '#F97316', bg: 'rgba(249,115,22,0.07)', border: 'rgba(249,115,22,0.20)', glow: 'rgba(249,115,22,0.14)' },
+        ] as const).map(({ label, Icon, href, color, bg, border, glow }) => (
+          <Link key={label} href={href}>
+            <div className="relative flex flex-col items-center gap-2.5 py-4 px-2 rounded-2xl border cursor-pointer transition-all duration-150 hover:scale-[1.03] active:scale-[0.97] overflow-hidden"
+              style={{ background: bg, borderColor: border }}>
+              <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px]"
+                style={{ background: `linear-gradient(90deg, transparent, ${color}60, transparent)` }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: `${color}18`, border: `1px solid ${color}30`, boxShadow: `0 0 14px ${glow}` }}>
+                <Icon className="h-5 w-5" style={{ color }} />
+              </div>
+              <span className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">{label}</span>
+            </div>
+          </Link>
+        ))}
       </div>
 
       {/* ── Referral earnings strip ── */}
