@@ -126,7 +126,7 @@ export function ReferralsPage() {
       </div>
 
       {/* Commission level cards */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
         {LEVELS.map(({ level, pct, color, glow, borderHover, bg, label, desc, example }) => {
           const isHovered = hoveredLevel === level;
           return (

@@ -463,9 +463,9 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
       }} />
 
       {/* Card header */}
-      <div className="flex items-center justify-between px-4 pt-3.5 pb-3 border-b border-white/[0.05]">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20">
+      <div className="flex items-center justify-between px-3 sm:px-4 pt-3.5 pb-3 gap-2 border-b border-white/[0.05]">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
             <span className="text-[10px] font-black text-[#EF4444] tracking-widest">LIVE</span>
             {hasClock ? (
@@ -474,16 +474,16 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
               <span className="text-[10px] font-bold text-[#EF4444]/70">{match.liveLabel}</span>
             )}
           </div>
-          <span className="text-[11px] font-medium text-[#64748B]">{match.icon} {match.league}</span>
+          <span className="text-[11px] font-medium text-[#64748B] truncate">{match.icon} {match.league}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {match.isHot && (
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FACC15]/10 border border-[#FACC15]/20">
               <Flame className="h-2.5 w-2.5 text-[#FACC15]" />
               <span className="text-[9px] font-black text-[#FACC15] tracking-wider">HOT</span>
             </div>
           )}
-          <span className="text-[10px] text-[#475569]">{match.stage}</span>
+          <span className="text-[10px] text-[#475569] truncate max-w-[80px] sm:max-w-none">{match.stage}</span>
         </div>
       </div>
 

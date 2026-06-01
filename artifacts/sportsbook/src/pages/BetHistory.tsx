@@ -350,9 +350,9 @@ function BetCard({ bet }: { bet: PlacedBet }) {
         {/* Odds / Stake / Pot. Returns */}
         <div className="flex items-center gap-3 pt-2.5 border-t border-white/5 flex-wrap">
           <DataPill label="Odds"        value={formatOdds(bet.totalOdds, format)} accent="yellow" />
-          <div className="w-px h-6 bg-[#253241]" />
+          <div className="hidden sm:block w-px h-6 bg-[#253241]" />
           <DataPill label="Stake"       value={`${bet.stake.toFixed(2)} USDT`} />
-          <div className="w-px h-6 bg-[#253241]" />
+          <div className="hidden sm:block w-px h-6 bg-[#253241]" />
           <DataPill label="Pot. Return" value={`${bet.estimatedPayout.toFixed(2)} USDT`} accent="green" />
           {isAcca && (
             <button
