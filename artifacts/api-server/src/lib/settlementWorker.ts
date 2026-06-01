@@ -219,6 +219,24 @@ function getNumericScores(event: CompletedEvent): { home: number; away: number }
   return { home, away };
 }
 
+/**
+ * Normalize the raw market_type string stored in bet_selections
+ * (which comes from the frontend's display name) to a canonical key
+ * the settlement worker can branch on.
+ */
+function normalizeMarketType(mt: string): string {
+  const lower = mt.toLowerCase().trim();
+  if (["h2h", "match result", "1x2", "match winner", "moneyline", "winner"].includes(lower))
+    return "h2h";
+  if (lower === "totals" || lower.startsWith("over/under") || lower === "over_under" || lower === "total goals")
+    return "totals";
+  if (["spreads", "point_spread", "handicap", "asian handicap"].includes(lower))
+    return "spreads";
+  if (["btts", "both teams to score", "both teams score", "gg/ng", "gg"].includes(lower))
+    return "btts";
+  return lower;
+}
+
 function mapSelectionOutcome(
   selection: string,
   outcome:   MatchOutcome,
@@ -245,10 +263,33 @@ function mapSelectionOutcome(
     return "lost";
   }
 
-  // Fuzzy fallback — partial team name match
-  if (outcome === "home" && home.split(" ").some(w => sel.includes(w) && w.length > 2)) return "won";
-  if (outcome === "away" && away.split(" ").some(w => sel.includes(w) && w.length > 2)) return "lost";
+  // Fuzzy fallback — partial team name word match
+  const homeWords = home.split(" ").filter(w => w.length > 2);
+  const awayWords = away.split(" ").filter(w => w.length > 2);
+  const selMatchesHome = homeWords.some(w => sel.includes(w));
+  const selMatchesAway = awayWords.some(w => sel.includes(w));
 
+  if (outcome === "home") {
+    if (selMatchesHome) return "won";
+    if (selMatchesAway) return "lost";
+  }
+  if (outcome === "away") {
+    if (selMatchesAway) return "won";
+    if (selMatchesHome) return "lost";
+  }
+
+  return "void";
+}
+
+function mapBttsOutcome(
+  selection: string,
+  homeScore: number,
+  awayScore: number,
+): "won" | "lost" | "void" {
+  const sel = selection.toLowerCase().trim();
+  const bothScored = homeScore > 0 && awayScore > 0;
+  if (sel === "yes") return bothScored ? "won" : "lost";
+  if (sel === "no")  return bothScored ? "lost" : "won";
   return "void";
 }
 
@@ -461,16 +502,20 @@ async function processEvent(
 
   for (const row of openSelectionsResult.rows as { market_type: string; selection: string }[]) {
     let result: "won" | "lost" | "void";
+    const mt = normalizeMarketType(row.market_type);
     if (source === "auto-void") {
       result = "void";
-    } else if (row.market_type === "h2h") {
+    } else if (mt === "h2h") {
       result = mapSelectionOutcome(row.selection, matchOutcome, event.home_team, event.away_team);
-    } else if (row.market_type === "totals") {
+    } else if (mt === "totals") {
       if (!numericScores) continue; // skip — retry next tick when clean scores arrive
       result = mapTotalsOutcome(row.selection, numericScores.home, numericScores.away);
-    } else if (row.market_type === "spreads") {
+    } else if (mt === "spreads") {
       if (!numericScores) continue; // skip — retry next tick when clean scores arrive
       result = mapSpreadsOutcome(row.selection, event.home_team, event.away_team, numericScores.home, numericScores.away);
+    } else if (mt === "btts") {
+      if (!numericScores) continue; // skip — retry next tick when clean scores arrive
+      result = mapBttsOutcome(row.selection, numericScores.home, numericScores.away);
     } else {
       result = "void";
     }
