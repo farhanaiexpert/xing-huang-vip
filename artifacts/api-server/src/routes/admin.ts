@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, gte, lte, sql, count, sum, and, or, ilike, like, inArray, isNull } from "drizzle-orm";
+import { eq, desc, gte, lte, sql, count, sum, and, or, ilike, like, inArray, isNull, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import {
@@ -558,7 +558,7 @@ router.get("/admin/transactions/pending-totals", async (req, res): Promise<void>
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
 router.get("/admin/transactions", async (req, res): Promise<void> => {
-  const { type, status, page = "1", limit = "20" } = req.query as Record<string, string>;
+  const { type, status, gateway, page = "1", limit = "20" } = req.query as Record<string, string>;
   const pageNum = Math.max(1, parseInt(page));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
   const offset = (pageNum - 1) * limitNum;
@@ -566,6 +566,15 @@ router.get("/admin/transactions", async (req, res): Promise<void> => {
   const conditions = [];
   if (type) conditions.push(eq(transactionsTable.type, type));
   if (status) conditions.push(eq(transactionsTable.status, status));
+  if (gateway === "nowpayments") conditions.push(isNotNull(transactionsTable.nowpaymentsPaymentId));
+  else if (gateway === "cryptomus") conditions.push(isNotNull(transactionsTable.cryptomusUuid));
+  else if (gateway === "plisio") conditions.push(isNotNull(transactionsTable.plisioPaymentId));
+  else if (gateway === "manual") {
+    conditions.push(isNotNull(transactionsTable.txHash));
+    conditions.push(isNull(transactionsTable.nowpaymentsPaymentId));
+    conditions.push(isNull(transactionsTable.cryptomusUuid));
+    conditions.push(isNull(transactionsTable.plisioPaymentId));
+  }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const txns = await db
@@ -587,10 +596,15 @@ router.get("/admin/transactions", async (req, res): Promise<void> => {
       nowpaymentsStatus: transactionsTable.nowpaymentsStatus,
       plisioPaymentId: transactionsTable.plisioPaymentId,
       plisioStatus: transactionsTable.plisioStatus,
+      cryptomusUuid: transactionsTable.cryptomusUuid,
+      cryptomusStatus: transactionsTable.cryptomusStatus,
       createdAt: transactionsTable.createdAt,
+      userBalance: walletsTable.balanceUsdt,
+      userBonusBalance: walletsTable.bonusBalanceUsdt,
     })
     .from(transactionsTable)
     .leftJoin(usersTable, eq(usersTable.id, transactionsTable.userId))
+    .leftJoin(walletsTable, eq(walletsTable.userId, transactionsTable.userId))
     .where(where)
     .orderBy(desc(transactionsTable.createdAt))
     .limit(limitNum)

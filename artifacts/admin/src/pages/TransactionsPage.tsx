@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, AdminTransaction, PendingTotals } from "@/lib/api";
 import { fmt, fmtDate, statusBg } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, ArrowDownCircle, ArrowUpCircle, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { DataTable, ColDef } from "@/components/DataTable";
+import {
+  ChevronLeft, ChevronRight, ArrowDownCircle, ArrowUpCircle,
+  ExternalLink, RefreshCw, Gift, Zap, Link2, Hash, Copy, Check,
+} from "lucide-react";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
 
@@ -13,30 +15,188 @@ function isDebit(type: string) {
   return type === "withdrawal" || type === "bet_stake" || type === "debit";
 }
 
-function TxHashLink({ hash, network }: { hash: string | null; network: string | null }) {
-  if (!hash) return <span className="text-[#475569] text-xs">—</span>;
-  const short = hash.length > 16 ? `${hash.slice(0, 8)}…${hash.slice(-6)}` : hash;
-  const url = (network ?? "TRC-20") === "TRC-20"
-    ? `https://tronscan.org/#/transaction/${hash}`
-    : `https://bscscan.com/tx/${hash}`;
+function amountColor(type: string) {
+  if (type === "bonus") return "text-[#FACC15]";
+  if (isDebit(type))   return "text-red-400";
+  return "text-[#00DFA9]";
+}
+
+function amountSign(type: string) {
+  if (type === "bonus")  return "+";
+  if (isDebit(type))     return "−";
+  return "+";
+}
+
+// ── Type badge ────────────────────────────────────────────────────────────────
+const TYPE_STYLES: Record<string, { bg: string; color: string; border: string }> = {
+  deposit:    { bg: "rgba(0,223,169,0.08)",   color: "#00DFA9", border: "rgba(0,223,169,0.20)" },
+  withdrawal: { bg: "rgba(239,68,68,0.08)",   color: "#F87171", border: "rgba(239,68,68,0.20)" },
+  bonus:      { bg: "rgba(250,204,21,0.10)",  color: "#FACC15", border: "rgba(250,204,21,0.25)" },
+  credit:     { bg: "rgba(56,189,248,0.08)",  color: "#38BDF8", border: "rgba(56,189,248,0.20)" },
+  debit:      { bg: "rgba(239,68,68,0.08)",   color: "#F87171", border: "rgba(239,68,68,0.20)" },
+  bet_stake:  { bg: "rgba(100,116,139,0.08)", color: "#94A3B8", border: "rgba(100,116,139,0.20)" },
+  bet_win:    { bg: "rgba(0,223,169,0.08)",   color: "#00DFA9", border: "rgba(0,223,169,0.20)" },
+  commission: { bg: "rgba(167,139,250,0.08)", color: "#A78BFA", border: "rgba(167,139,250,0.20)" },
+  refund:     { bg: "rgba(56,189,248,0.08)",  color: "#38BDF8", border: "rgba(56,189,248,0.20)" },
+};
+
+function TypeBadge({ type }: { type: string }) {
+  const s = TYPE_STYLES[type] ?? { bg: "rgba(100,116,139,0.08)", color: "#94A3B8", border: "rgba(100,116,139,0.20)" };
+  const icon = type === "bonus" ? <Gift className="w-2.5 h-2.5 shrink-0" /> : null;
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-[#38BDF8] text-xs font-mono hover:underline">
-      {short} <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-    </a>
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full capitalize whitespace-nowrap"
+      style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+      {icon}
+      {type.replace(/_/g, " ")}
+    </span>
   );
+}
+
+// ── TxHash / Payment IDs cell ─────────────────────────────────────────────────
+function CopyBtn({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      className="shrink-0 text-[#475569] hover:text-[#94A3B8] transition-colors" title={`Copy ${label}`}>
+      {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+    </button>
+  );
+}
+
+function explorerUrl(hash: string, network: string | null) {
+  const net = network ?? "TRC-20";
+  if (net === "ERC-20") return `https://etherscan.io/tx/${hash}`;
+  if (net === "BSC")    return `https://bscscan.com/tx/${hash}`;
+  if (net === "SOL")    return `https://solscan.io/tx/${hash}`;
+  if (net === "BTC")    return `https://mempool.space/tx/${hash}`;
+  if (net === "TON")    return `https://tonscan.org/tx/${hash}`;
+  return `https://tronscan.org/#/transaction/${hash}`;
+}
+
+function TxRefCell({ txn }: { txn: AdminTransaction }) {
+  const [copiedHash, setCopiedHash] = useState(false);
+  function copyHash() {
+    if (!txn.txHash) return;
+    navigator.clipboard.writeText(txn.txHash);
+    setCopiedHash(true);
+    setTimeout(() => setCopiedHash(false), 2000);
+  }
+
+  // Bonus row: show reference prominently
+  if (txn.type === "bonus" && txn.reference) {
+    const promoNum = txn.reference.replace("promo_", "");
+    const isPromo = txn.reference.startsWith("promo_");
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FACC15]/10 text-[#FACC15] border border-[#FACC15]/25 whitespace-nowrap w-fit">
+          <Gift className="w-2.5 h-2.5" />
+          {isPromo ? `Promo #${promoNum}` : txn.reference}
+        </span>
+        {txn.notes && <span className="text-[10px] text-[#64748B] max-w-[160px] truncate" title={txn.notes}>{txn.notes}</span>}
+      </div>
+    );
+  }
+
+  if (txn.txHash) {
+    const short = `${txn.txHash.slice(0, 8)}…${txn.txHash.slice(-6)}`;
+    return (
+      <div className="flex items-center gap-1.5">
+        <Hash className="w-3 h-3 text-[#475569] shrink-0" />
+        <span className="font-mono text-[11px] text-[#94A3B8]">{short}</span>
+        <button onClick={copyHash} className="text-[#475569] hover:text-[#94A3B8]" title="Copy hash">
+          {copiedHash ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+        </button>
+        <a href={explorerUrl(txn.txHash, txn.network)} target="_blank" rel="noopener noreferrer"
+          className="text-[#38BDF8] hover:text-[#7DD3FC]" title="View on explorer">
+          <ExternalLink className="w-3 h-3" />
+        </a>
+      </div>
+    );
+  }
+
+  if (txn.walletAddress) {
+    const short = txn.walletAddress.length > 14
+      ? `${txn.walletAddress.slice(0, 7)}…${txn.walletAddress.slice(-5)}`
+      : txn.walletAddress;
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] text-[#64748B] font-mono">{short}</span>
+        <CopyBtn value={txn.walletAddress} label="address" />
+      </div>
+    );
+  }
+
+  if (txn.reference) {
+    return <span className="text-[11px] text-[#475569] font-mono">{txn.reference.slice(0, 22)}{txn.reference.length > 22 ? "…" : ""}</span>;
+  }
+
+  return <span className="text-[#334155] text-xs">—</span>;
+}
+
+// ── Gateway notes cell ────────────────────────────────────────────────────────
+function GatewayCell({ txn }: { txn: AdminTransaction }) {
+  const parts: React.ReactNode[] = [];
+
+  if (txn.nowpaymentsPaymentId) {
+    parts.push(
+      <div key="npp" className="flex items-center gap-1">
+        <Zap className="w-3 h-3 text-[#38BDF8] shrink-0" />
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-1.5 py-0.5 rounded-full max-w-[140px] truncate" title={txn.nowpaymentsPaymentId}>
+          NPP · {txn.nowpaymentsStatus ?? "—"} · {txn.nowpaymentsPaymentId.slice(0, 8)}…
+        </span>
+        <a href={`https://nowpayments.io/payment/?iid=${txn.nowpaymentsPaymentId}`} target="_blank" rel="noopener noreferrer"
+          className="text-[#38BDF8]/50 hover:text-[#38BDF8]" title="View on NOWPayments">
+          <Link2 className="w-3 h-3" />
+        </a>
+      </div>
+    );
+  }
+
+  if (txn.cryptomusUuid) {
+    parts.push(
+      <div key="cm" className="flex items-center gap-1">
+        <span className="text-[10px] text-[#A78BFA] font-bold">◈</span>
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/20 px-1.5 py-0.5 rounded-full max-w-[140px] truncate" title={txn.cryptomusUuid}>
+          CM · {txn.cryptomusStatus ?? "—"} · {txn.cryptomusUuid.slice(0, 8)}…
+        </span>
+        <a href="https://app.cryptomus.com/payments" target="_blank" rel="noopener noreferrer"
+          className="text-[#A78BFA]/50 hover:text-[#A78BFA]" title="Open Cryptomus">
+          <Link2 className="w-3 h-3" />
+        </a>
+      </div>
+    );
+  }
+
+  if (txn.plisioPaymentId) {
+    parts.push(
+      <span key="pl" className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#F472B6] bg-[#F472B6]/10 border border-[#F472B6]/20 px-1.5 py-0.5 rounded-full max-w-[140px] truncate" title={txn.plisioPaymentId}>
+        🔷 {txn.plisioStatus ?? "Plisio"} · {txn.plisioPaymentId.slice(0, 8)}…
+      </span>
+    );
+  }
+
+  const note = txn.verificationNote ?? txn.notes;
+  if (note && !txn.nowpaymentsPaymentId && !txn.cryptomusUuid && !txn.plisioPaymentId) {
+    parts.push(
+      <span key="note" className="text-[#475569] text-xs max-w-[150px] truncate block" title={note}>{note}</span>
+    );
+  }
+
+  return parts.length > 0
+    ? <div className="flex flex-col gap-0.5">{parts}</div>
+    : <span className="text-[#334155] text-xs">—</span>;
 }
 
 export default function TransactionsPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
-  const [type, setType] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [status, setStatus] = useState("");
 
   const { data, isLoading } = useQuery<{ transactions: AdminTransaction[]; total: number }>({
-    queryKey: ["admin-txns", page, type, status],
+    queryKey: ["admin-txns", page, typeFilter, status],
     queryFn: () =>
-      api.get(`/admin/transactions?page=${page}&limit=${PAGE_SIZE}${type ? `&type=${type}` : ""}${status ? `&status=${status}` : ""}`),
+      api.get(`/admin/transactions?page=${page}&limit=${PAGE_SIZE}${typeFilter ? `&type=${typeFilter}` : ""}${status ? `&status=${status}` : ""}`),
   });
 
   const { data: pendingTotals } = useQuery<PendingTotals>({
@@ -46,12 +206,12 @@ export default function TransactionsPage() {
   });
 
   const approveMut = useMutation({
-    mutationFn: ({ id, txStatus, notes }: { id: number; txStatus: string; notes?: string }) =>
-      api.patch(`/admin/transactions/${id}`, { status: txStatus, ...(notes ? { notes } : {}) }),
+    mutationFn: ({ id, txStatus }: { id: number; txStatus: string }) =>
+      api.patch(`/admin/transactions/${id}`, { status: txStatus }),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["admin-txns"] });
       qc.invalidateQueries({ queryKey: ["admin-txns-pending-totals"] });
-      toast.success(vars.txStatus === "completed" ? "✅ Transaction approved — balance updated" : "Transaction rejected");
+      toast.success(vars.txStatus === "completed" ? "✅ Transaction approved" : "Transaction rejected");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -61,152 +221,27 @@ export default function TransactionsPage() {
 
   const sel = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors";
 
-  const cols: ColDef<AdminTransaction>[] = [
-    {
-      key: "id", label: "ID", sortable: true,
-      getValue: t => t.id,
-      render: t => <span className="text-[#475569] font-mono text-xs">#{t.id}</span>,
-    },
-    {
-      key: "user", label: "User",
-      render: t => <span className="text-white text-sm font-medium">{t.username ?? `uid:${t.userId}`}</span>,
-    },
-    {
-      key: "type", label: "Type", sortable: true,
-      getValue: t => t.type,
-      render: t => (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[#64748B] capitalize text-xs">{t.type.replace(/_/g, " ")}</span>
-          {t.network && (
-            <span className="text-[10px] text-[#38BDF8] bg-[#38BDF8]/10 px-1.5 py-0.5 rounded-md w-fit">
-              {t.network}
-            </span>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "amount", label: "Amount", sortable: true,
-      getValue: t => parseFloat(t.amount),
-      render: t => (
-        <span className={cn("font-mono text-xs font-semibold", isDebit(t.type) ? "text-red-400" : "text-[#00DFA9]")}>
-          {isDebit(t.type) ? "−" : "+"}${fmt(t.amount)}
-        </span>
-      ),
-    },
-    {
-      key: "status", label: "Status", sortable: true,
-      getValue: t => t.status,
-      render: t => (
-        <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", statusBg(t.status))}>
-          {t.status}
-        </span>
-      ),
-    },
-    {
-      key: "txhash", label: "TxHash / Address",
-      render: t => {
-        if (t.txHash) return (
-          <div className="flex flex-col gap-1">
-            <TxHashLink hash={t.txHash} network={t.network} />
-            {/* Blockchain verification badge — only shown for deposits */}
-            {t.type === "deposit" && (
-              t.verified === true ? (
-                <span
-                  title={t.verificationNote ?? "Auto-verified via Tronscan"}
-                  className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md w-fit bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/20">
-                  ✓ Verified on-chain
-                </span>
-              ) : (
-                <span
-                  title={t.verificationNote ?? "Manual review required"}
-                  className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md w-fit bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  ⚠ Needs review
-                </span>
-              )
-            )}
-          </div>
-        );
-        if (t.walletAddress) return (
-          <span className="text-[#475569] text-xs font-mono">
-            {t.walletAddress.length > 14
-              ? `${t.walletAddress.slice(0, 7)}…${t.walletAddress.slice(-5)}`
-              : t.walletAddress}
-          </span>
-        );
-        if (t.reference) return <span className="text-[#475569] text-xs font-mono">{t.reference.slice(0, 20)}{t.reference.length > 20 ? '…' : ''}</span>;
-        return <span className="text-[#475569] text-xs">—</span>;
-      },
-    },
-    {
-      key: "notes", label: "Notes",
-      render: t => {
-        const note = t.verificationNote ?? t.notes;
-        return (
-          <div className="flex flex-col gap-0.5">
-            {t.nowpaymentsPaymentId && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-1.5 py-0.5 rounded-full max-w-[150px] truncate" title={`NowPayments ID: ${t.nowpaymentsPaymentId}`}>
-                ⚡ {t.nowpaymentsStatus ?? "NPP"} · {t.nowpaymentsPaymentId.slice(0, 8)}…
-              </span>
-            )}
-            {t.plisioPaymentId && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#A855F7] bg-[#A855F7]/10 border border-[#A855F7]/20 px-1.5 py-0.5 rounded-full max-w-[150px] truncate" title={`Plisio ID: ${t.plisioPaymentId}`}>
-                🔷 {t.plisioStatus ?? "Plisio"} · {t.plisioPaymentId.slice(0, 8)}…
-              </span>
-            )}
-            {note
-              ? <span className="text-[#475569] text-xs max-w-[150px] truncate block" title={note}>{note}</span>
-              : !t.nowpaymentsPaymentId && !t.plisioPaymentId && <span className="text-[#475569] text-xs">—</span>}
-          </div>
-        );
-      },
-    },
-    {
-      key: "date", label: "Date", sortable: true,
-      getValue: t => t.createdAt,
-      render: t => <span className="text-[#475569] text-xs whitespace-nowrap">{fmtDate(t.createdAt)}</span>,
-    },
-    {
-      key: "action", label: "Action",
-      render: t => (
-        t.status === "pending" ? (
-          <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => approveMut.mutate({ id: t.id, txStatus: "completed" })}
-              disabled={approveMut.isPending}
-              className="px-2.5 py-1 rounded-lg text-xs bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 transition-colors font-medium disabled:opacity-50">
-              Approve
-            </button>
-            <button
-              onClick={() => approveMut.mutate({ id: t.id, txStatus: "rejected" })}
-              disabled={approveMut.isPending}
-              className="px-2.5 py-1 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-medium disabled:opacity-50">
-              Reject
-            </button>
-          </div>
-        ) : null
-      ),
-    },
-  ];
-
   return (
     <div className="space-y-5">
+
+      {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Transactions</h1>
-          <p className="text-sm text-[#475569] mt-0.5">{total.toLocaleString()} total</p>
+          <p className="text-sm text-[#475569] mt-0.5">{total.toLocaleString()} total records</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <select value={type} onChange={e => { setType(e.target.value); setPage(1); }} className={sel}>
+        <div className="flex gap-2 flex-wrap items-center">
+          <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }} className={sel}>
             <option value="">All types</option>
             <option value="deposit">Deposit</option>
             <option value="withdrawal">Withdrawal</option>
+            <option value="bonus">Bonus (Promo)</option>
             <option value="credit">Credit</option>
             <option value="debit">Debit</option>
-            <option value="bet_stake">Bet stake</option>
-            <option value="bet_win">Bet win</option>
+            <option value="bet_stake">Bet Stake</option>
+            <option value="bet_win">Bet Win</option>
             <option value="commission">Commission</option>
-            <option value="promotion">Promotion</option>
+            <option value="refund">Refund</option>
           </select>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className={sel}>
             <option value="">All statuses</option>
@@ -214,22 +249,28 @@ export default function TransactionsPage() {
             <option value="completed">Completed</option>
             <option value="rejected">Rejected</option>
           </select>
+          {(typeFilter || status) && (
+            <button onClick={() => { setTypeFilter(""); setStatus(""); setPage(1); }}
+              className="px-3 py-2 rounded-lg text-sm text-[#475569] hover:text-white border border-white/10 hover:bg-white/5 transition-colors">
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Pending totals */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* ── Pending totals ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex items-center gap-3 bg-[#00DFA9]/6 border border-[#00DFA9]/15 rounded-xl px-4 py-3">
           <div className="p-2 rounded-lg bg-[#00DFA9]/10">
             <ArrowDownCircle className="w-4 h-4 text-[#00DFA9]" />
           </div>
-          <div>
+          <div className="flex-1">
             <div className="text-xs text-[#475569]">Pending Deposits</div>
             <div className="text-sm font-bold text-[#00DFA9] font-mono">
               ${fmt(pendingTotals?.pendingDepositTotal ?? "0")} USDT
             </div>
           </div>
-          <div className="ml-auto text-xs text-[#00DFA9] font-semibold">
+          <div className="text-xs text-[#00DFA9] font-semibold">
             {pendingTotals?.pendingDepositCount ?? 0} pending
           </div>
         </div>
@@ -237,41 +278,152 @@ export default function TransactionsPage() {
           <div className="p-2 rounded-lg bg-red-500/10">
             <ArrowUpCircle className="w-4 h-4 text-red-400" />
           </div>
-          <div>
+          <div className="flex-1">
             <div className="text-xs text-[#475569]">Pending Withdrawals</div>
             <div className="text-sm font-bold text-red-400 font-mono">
               ${fmt(pendingTotals?.pendingWithdrawalTotal ?? "0")} USDT
             </div>
           </div>
-          <div className="ml-auto text-xs text-red-400 font-semibold">
+          <div className="text-xs text-red-400 font-semibold">
             {pendingTotals?.pendingWithdrawalCount ?? 0} pending
           </div>
         </div>
       </div>
 
-      <DataTable
-        cols={cols}
-        rows={data?.transactions}
-        loading={isLoading}
-        rowKey={t => t.id}
-        empty="No transactions found"
-        footer={
-          <div className="flex items-center justify-between">
-            <span className="text-xs">Page {page} of {pages} · {total} total</span>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-xs px-2">{page}</span>
-              <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
-                className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+      {/* ── Table ── */}
+      <div className="rounded-xl border border-white/8 bg-[#0E1520] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/6 bg-white/2">
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">#</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">User</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Type</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Amount</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Status</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Ref / TxHash</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Gateway</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Date</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && (
+                <tr>
+                  <td colSpan={9} className="px-4 py-14 text-center text-[#334155] text-sm">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#00DFA9]" />
+                    Loading…
+                  </td>
+                </tr>
+              )}
+              {!isLoading && (!data?.transactions || data.transactions.length === 0) && (
+                <tr>
+                  <td colSpan={9} className="px-4 py-14 text-center text-[#334155] text-sm">
+                    No transactions found
+                  </td>
+                </tr>
+              )}
+              {data?.transactions.map(txn => {
+                const isBonus = txn.type === "bonus";
+                return (
+                  <tr key={txn.id}
+                    className={cn(
+                      "border-b border-white/4 transition-colors hover:bg-white/[0.015]",
+                      isBonus && "bg-[#FACC15]/[0.02] hover:bg-[#FACC15]/[0.04]",
+                      txn.status === "pending" && !isBonus && "bg-[#00DFA9]/[0.02]",
+                    )}
+                  >
+                    <td className="px-4 py-3">
+                      <span className="text-[#475569] font-mono text-xs">#{txn.id}</span>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-semibold text-white whitespace-nowrap">
+                        {txn.username ?? `uid:${txn.userId}`}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <TypeBadge type={txn.type} />
+                        {txn.network && (
+                          <span className="text-[10px] text-[#38BDF8] bg-[#38BDF8]/10 px-1.5 py-0.5 rounded-md w-fit">
+                            {txn.network}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className={cn("font-mono text-sm font-bold whitespace-nowrap", amountColor(txn.type))}>
+                        {amountSign(txn.type)}${fmt(txn.amount)}
+                      </span>
+                      {isBonus && (
+                        <p className="text-[9px] text-[#FACC15]/50 mt-0.5">non-withdrawable</p>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium whitespace-nowrap", statusBg(txn.status))}>
+                        {txn.status}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <TxRefCell txn={txn} />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <GatewayCell txn={txn} />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className="text-[#475569] text-xs whitespace-nowrap">{fmtDate(txn.createdAt)}</span>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      {txn.status === "pending" ? (
+                        <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => approveMut.mutate({ id: txn.id, txStatus: "completed" })}
+                            disabled={approveMut.isPending}
+                            className="px-2.5 py-1 rounded-lg text-xs bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 transition-colors font-semibold disabled:opacity-50 whitespace-nowrap">
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => approveMut.mutate({ id: txn.id, txStatus: "rejected" })}
+                            disabled={approveMut.isPending}
+                            className="px-2.5 py-1 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-semibold disabled:opacity-50 whitespace-nowrap">
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[#334155] text-xs">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-white/6 bg-white/[0.01]">
+          <span className="text-xs text-[#334155]">Page {page} of {pages} · {total} total</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors text-[#475569]">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs text-[#475569] px-2 font-mono">{page}</span>
+            <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
+              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors text-[#475569]">
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-        }
-      />
+        </div>
+      </div>
     </div>
   );
 }

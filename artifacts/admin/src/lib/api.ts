@@ -119,7 +119,11 @@ export interface AdminTransaction {
   nowpaymentsStatus: string | null;
   plisioPaymentId: string | null;
   plisioStatus: string | null;
+  cryptomusUuid: string | null;
+  cryptomusStatus: string | null;
   createdAt: string;
+  userBalance: string | null;
+  userBonusBalance: string | null;
 }
 
 export interface AdminReferral {

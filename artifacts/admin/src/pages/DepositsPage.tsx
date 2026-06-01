@@ -6,134 +6,217 @@ import { cn } from "@/lib/utils";
 import {
   ChevronLeft, ChevronRight, ArrowDownCircle,
   ExternalLink, CheckCircle2, AlertTriangle, Clock,
-  RefreshCw, Copy, Check,
+  RefreshCw, Copy, Check, Zap, Link2, Hash,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
 
-function CopyableId({ id, label, color }: { id: string; label: string; color: string }) {
+// ── Gateway detection ─────────────────────────────────────────────────────────
+type GatewayKind = "nowpayments" | "cryptomus" | "plisio" | "manual" | "none";
+
+function detectGateway(txn: AdminTransaction): GatewayKind {
+  if (txn.nowpaymentsPaymentId) return "nowpayments";
+  if (txn.cryptomusUuid) return "cryptomus";
+  if (txn.plisioPaymentId) return "plisio";
+  if (txn.txHash) return "manual";
+  return "none";
+}
+
+const GATEWAY_LABELS: Record<GatewayKind, { label: string; color: string; border: string; bg: string; icon: string }> = {
+  nowpayments: { label: "NOWPayments", color: "#38BDF8", border: "rgba(56,189,248,0.25)", bg: "rgba(56,189,248,0.08)", icon: "⚡" },
+  cryptomus:   { label: "Cryptomus",   color: "#A78BFA", border: "rgba(167,139,250,0.25)", bg: "rgba(167,139,250,0.08)", icon: "◈" },
+  plisio:      { label: "Plisio",      color: "#F472B6", border: "rgba(244,114,182,0.25)", bg: "rgba(244,114,182,0.08)", icon: "🔷" },
+  manual:      { label: "On-chain",    color: "#00DFA9", border: "rgba(0,223,169,0.25)",   bg: "rgba(0,223,169,0.08)",   icon: "#" },
+  none:        { label: "Unknown",     color: "#64748B", border: "rgba(100,116,139,0.15)", bg: "rgba(100,116,139,0.06)", icon: "?" },
+};
+
+function GatewayBadge({ txn }: { txn: AdminTransaction }) {
+  const kind = detectGateway(txn);
+  const cfg = GATEWAY_LABELS[kind];
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+    >
+      {cfg.icon} {cfg.label}
+    </span>
+  );
+}
+
+// ── Copy helper ───────────────────────────────────────────────────────────────
+function CopyBtn({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
   function doCopy() {
-    navigator.clipboard.writeText(id);
+    navigator.clipboard.writeText(value);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="font-mono text-[10px]" style={{ color }}>
-        {id.slice(0, 8)}…{id.slice(-6)}
-      </span>
-      <button onClick={doCopy} className="text-[#475569] hover:text-[#94A3B8] transition-colors" title={`Copy ${label}`}>
-        {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
-      </button>
-    </div>
+    <button onClick={doCopy} className="shrink-0 text-[#475569] hover:text-[#94A3B8] transition-colors" title={`Copy ${label}`}>
+      {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+    </button>
   );
 }
+
+// ── Payment details cell ──────────────────────────────────────────────────────
+const CRYPTOMUS_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  paid:          { bg: "rgba(0,223,169,0.08)",   text: "#00DFA9", border: "rgba(0,223,169,0.20)",   label: "Paid ✓" },
+  paid_over:     { bg: "rgba(0,223,169,0.08)",   text: "#00DFA9", border: "rgba(0,223,169,0.20)",   label: "Paid Over" },
+  check:         { bg: "rgba(250,204,21,0.08)",  text: "#FACC15", border: "rgba(250,204,21,0.20)",  label: "Checking" },
+  waiting:       { bg: "rgba(250,204,21,0.08)",  text: "#FACC15", border: "rgba(250,204,21,0.20)",  label: "Waiting" },
+  cancel:        { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Cancelled" },
+  fail:          { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Failed" },
+  wrong_amount:  { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Wrong Amt" },
+  system_fail:   { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Sys Fail" },
+};
 
 const NPP_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  waiting:      { bg: 'rgba(250,204,21,0.08)',  text: '#FACC15',  border: 'rgba(250,204,21,0.20)',  label: 'Waiting' },
-  confirming:   { bg: 'rgba(56,189,248,0.08)',  text: '#38BDF8',  border: 'rgba(56,189,248,0.20)',  label: 'Confirming' },
-  confirmed:    { bg: 'rgba(0,223,169,0.08)',   text: '#00DFA9',  border: 'rgba(0,223,169,0.20)',   label: 'Confirmed' },
-  finished:     { bg: 'rgba(0,223,169,0.08)',   text: '#00DFA9',  border: 'rgba(0,223,169,0.20)',   label: 'Finished ✓' },
-  failed:       { bg: 'rgba(239,68,68,0.08)',   text: '#F87171',  border: 'rgba(239,68,68,0.20)',   label: 'Failed' },
-  refunded:     { bg: 'rgba(239,68,68,0.08)',   text: '#F87171',  border: 'rgba(239,68,68,0.20)',   label: 'Refunded' },
-  expired:      { bg: 'rgba(100,116,139,0.10)', text: '#94A3B8',  border: 'rgba(100,116,139,0.20)', label: 'Expired' },
-  partially_paid: { bg: 'rgba(250,204,21,0.08)', text: '#FACC15', border: 'rgba(250,204,21,0.20)', label: 'Partial' },
+  waiting:        { bg: "rgba(250,204,21,0.08)",  text: "#FACC15", border: "rgba(250,204,21,0.20)",  label: "Waiting" },
+  confirming:     { bg: "rgba(56,189,248,0.08)",  text: "#38BDF8", border: "rgba(56,189,248,0.20)",  label: "Confirming" },
+  confirmed:      { bg: "rgba(0,223,169,0.08)",   text: "#00DFA9", border: "rgba(0,223,169,0.20)",   label: "Confirmed" },
+  finished:       { bg: "rgba(0,223,169,0.08)",   text: "#00DFA9", border: "rgba(0,223,169,0.20)",   label: "Finished ✓" },
+  failed:         { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Failed" },
+  refunded:       { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Refunded" },
+  expired:        { bg: "rgba(100,116,139,0.10)", text: "#94A3B8", border: "rgba(100,116,139,0.20)", label: "Expired" },
+  partially_paid: { bg: "rgba(250,204,21,0.08)",  text: "#FACC15", border: "rgba(250,204,21,0.20)",  label: "Partial" },
 };
 
-function NppStatusBadge({ status }: { status: string | null }) {
-  if (!status) return null;
-  const cfg = NPP_STATUS_COLORS[status] ?? {
-    bg: 'rgba(100,116,139,0.10)', text: '#94A3B8', border: 'rgba(100,116,139,0.20)', label: status,
-  };
+function StatusPill({ status, colors }: { status: string; colors: Record<string, { bg: string; text: string; border: string; label: string }> }) {
+  const cfg = colors[status] ?? { bg: "rgba(100,116,139,0.10)", text: "#94A3B8", border: "rgba(100,116,139,0.20)", label: status };
   return (
     <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
       style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
-      ⚡ {cfg.label}
+      {cfg.label}
     </span>
   );
 }
 
-const PLISIO_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  completed:          { bg: 'rgba(0,223,169,0.10)',   text: '#00DFA9', border: 'rgba(0,223,169,0.25)',   label: 'Completed' },
-  pending:            { bg: 'rgba(250,204,21,0.10)',  text: '#FACC15', border: 'rgba(250,204,21,0.25)',  label: 'Pending' },
-  'pending internal': { bg: 'rgba(250,204,21,0.10)',  text: '#FACC15', border: 'rgba(250,204,21,0.25)',  label: 'Confirming' },
-  new:                { bg: 'rgba(148,163,184,0.10)', text: '#94A3B8', border: 'rgba(148,163,184,0.20)', label: 'New' },
-  cancelled:          { bg: 'rgba(239,68,68,0.10)',   text: '#F87171', border: 'rgba(239,68,68,0.20)',   label: 'Cancelled' },
-  error:              { bg: 'rgba(239,68,68,0.10)',   text: '#F87171', border: 'rgba(239,68,68,0.20)',   label: 'Error' },
-  expired:            { bg: 'rgba(239,68,68,0.10)',   text: '#F87171', border: 'rgba(239,68,68,0.20)',   label: 'Expired' },
-};
-
-function PlisioStatusBadge({ status }: { status: string | null }) {
-  if (!status) return null;
-  const cfg = PLISIO_STATUS_COLORS[status] ?? {
-    bg: 'rgba(100,116,139,0.10)', text: '#94A3B8', border: 'rgba(100,116,139,0.20)', label: status,
-  };
-  return (
-    <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-      style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
-      🔷 {cfg.label}
-    </span>
-  );
+function explorerUrl(hash: string, network: string | null) {
+  const net = network ?? "TRC-20";
+  if (net === "ERC-20")  return `https://etherscan.io/tx/${hash}`;
+  if (net === "BSC")     return `https://bscscan.com/tx/${hash}`;
+  if (net === "SOL")     return `https://solscan.io/tx/${hash}`;
+  if (net === "BTC")     return `https://mempool.space/tx/${hash}`;
+  if (net === "TON")     return `https://tonscan.org/tx/${hash}`;
+  if (net === "XRP")     return `https://xrpscan.com/tx/${hash}`;
+  return `https://tronscan.org/#/transaction/${hash}`;
 }
 
-function TxHashCell({ hash, network, nowpaymentsPaymentId, nowpaymentsStatus, plisioPaymentId, plisioStatus }: {
-  hash: string | null;
-  network: string | null;
-  nowpaymentsPaymentId: string | null;
-  nowpaymentsStatus: string | null;
-  plisioPaymentId: string | null;
-  plisioStatus: string | null;
-}) {
-  const [copied, setCopied] = useState(false);
-
+function PaymentDetailsCell({ txn }: { txn: AdminTransaction }) {
+  const [copiedHash, setCopiedHash] = useState(false);
   function copyHash() {
-    if (!hash) return;
-    navigator.clipboard.writeText(hash);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (!txn.txHash) return;
+    navigator.clipboard.writeText(txn.txHash);
+    setCopiedHash(true);
+    setTimeout(() => setCopiedHash(false), 2000);
   }
 
-  const url = hash ? ((network ?? "TRC-20") === "ERC-20"
-    ? `https://etherscan.io/tx/${hash}`
-    : `https://tronscan.org/#/transaction/${hash}`) : null;
-
   return (
-    <div className="flex flex-col gap-1">
-      {hash ? (
+    <div className="flex flex-col gap-1.5 min-w-[180px]">
+      {/* Manual on-chain hash */}
+      {txn.txHash && (
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-xs text-[#94A3B8]">
-            {hash.slice(0, 10)}…{hash.slice(-6)}
+          <Hash className="w-3 h-3 text-[#475569] shrink-0" />
+          <span className="font-mono text-[11px] text-[#94A3B8]">
+            {txn.txHash.slice(0, 10)}…{txn.txHash.slice(-6)}
           </span>
-          <button onClick={copyHash} className="text-[#475569] hover:text-[#94A3B8] transition-colors" title="Copy hash">
-            {copied ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
+          <button onClick={copyHash} className="text-[#475569] hover:text-[#94A3B8] transition-colors" title="Copy tx hash">
+            {copiedHash ? <Check className="w-3 h-3 text-[#00DFA9]" /> : <Copy className="w-3 h-3" />}
           </button>
-          {url && (
-            <a href={url} target="_blank" rel="noopener noreferrer"
-              className="text-[#38BDF8] hover:text-[#7DD3FC] transition-colors" title="View on explorer">
-              <ExternalLink className="w-3 h-3" />
+          <a href={explorerUrl(txn.txHash, txn.network)} target="_blank" rel="noopener noreferrer"
+            className="text-[#38BDF8] hover:text-[#7DD3FC] transition-colors" title="View on explorer">
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+
+      {/* NOWPayments */}
+      {txn.nowpaymentsPaymentId && (
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-3 h-3 text-[#38BDF8] shrink-0" />
+            <span className="font-mono text-[11px] text-[#38BDF8]">
+              {txn.nowpaymentsPaymentId.slice(0, 10)}…
+            </span>
+            <CopyBtn value={txn.nowpaymentsPaymentId} label="NOWPay ID" />
+            <a href={`https://nowpayments.io/payment/?iid=${txn.nowpaymentsPaymentId}`}
+              target="_blank" rel="noopener noreferrer"
+              className="text-[#38BDF8]/60 hover:text-[#38BDF8] transition-colors" title="Open in NOWPayments">
+              <Link2 className="w-3 h-3" />
             </a>
+          </div>
+          {txn.nowpaymentsStatus && <StatusPill status={txn.nowpaymentsStatus} colors={NPP_STATUS_COLORS} />}
+        </div>
+      )}
+
+      {/* Cryptomus */}
+      {txn.cryptomusUuid && (
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-[#A78BFA] font-bold">◈</span>
+            <span className="font-mono text-[11px] text-[#A78BFA]">
+              {txn.cryptomusUuid.slice(0, 10)}…
+            </span>
+            <CopyBtn value={txn.cryptomusUuid} label="Cryptomus UUID" />
+            <a href="https://app.cryptomus.com/payments"
+              target="_blank" rel="noopener noreferrer"
+              className="text-[#A78BFA]/60 hover:text-[#A78BFA] transition-colors" title="Open Cryptomus dashboard">
+              <Link2 className="w-3 h-3" />
+            </a>
+          </div>
+          {txn.cryptomusStatus && <StatusPill status={txn.cryptomusStatus} colors={CRYPTOMUS_STATUS_COLORS} />}
+        </div>
+      )}
+
+      {/* Plisio */}
+      {txn.plisioPaymentId && (
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-[#F472B6]">🔷</span>
+            <span className="font-mono text-[11px] text-[#F472B6]">
+              {txn.plisioPaymentId.slice(0, 10)}…
+            </span>
+            <CopyBtn value={txn.plisioPaymentId} label="Plisio ID" />
+          </div>
+          {txn.plisioStatus && (
+            <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-[#F472B6]/10 text-[#F472B6] border border-[#F472B6]/20">
+              {txn.plisioStatus}
+            </span>
           )}
         </div>
-      ) : null}
-      {nowpaymentsPaymentId && (
-        <div className="flex flex-col gap-0.5">
-          <CopyableId id={nowpaymentsPaymentId} label="NOWPay ID" color="#38BDF8" />
-          {nowpaymentsStatus && <NppStatusBadge status={nowpaymentsStatus} />}
-        </div>
       )}
-      {plisioPaymentId && (
-        <div className="flex flex-col gap-0.5">
-          <CopyableId id={plisioPaymentId} label="Plisio ID" color="#A855F7" />
-          {plisioStatus && <PlisioStatusBadge status={plisioStatus} />}
-        </div>
+
+      {!txn.txHash && !txn.nowpaymentsPaymentId && !txn.cryptomusUuid && !txn.plisioPaymentId && (
+        <span className="text-[#334155] text-xs">—</span>
       )}
-      {!hash && !nowpaymentsPaymentId && !plisioPaymentId && <span className="text-[#334155] text-xs">—</span>}
     </div>
   );
 }
 
+// ── Network badge ─────────────────────────────────────────────────────────────
+const NETWORK_STYLES: Record<string, { color: string; border: string; bg: string }> = {
+  "TRC-20": { color: "#00DFA9", border: "rgba(0,223,169,0.25)",   bg: "rgba(0,223,169,0.08)" },
+  "ERC-20": { color: "#627EEA", border: "rgba(98,126,234,0.25)",  bg: "rgba(98,126,234,0.08)" },
+  "BSC":    { color: "#FACC15", border: "rgba(250,204,21,0.25)",  bg: "rgba(250,204,21,0.08)" },
+  "SOL":    { color: "#9945FF", border: "rgba(153,69,255,0.25)",  bg: "rgba(153,69,255,0.08)" },
+  "BTC":    { color: "#F7931A", border: "rgba(247,147,26,0.25)",  bg: "rgba(247,147,26,0.08)" },
+  "TON":    { color: "#38BDF8", border: "rgba(56,189,248,0.25)",  bg: "rgba(56,189,248,0.08)" },
+  "XRP":    { color: "#346AA9", border: "rgba(52,106,169,0.25)",  bg: "rgba(52,106,169,0.08)" },
+};
+
+function NetworkBadge({ network }: { network: string | null }) {
+  if (!network) return <span className="text-[#334155] text-xs">—</span>;
+  const s = NETWORK_STYLES[network] ?? { color: "#94A3B8", border: "rgba(148,163,184,0.20)", bg: "rgba(148,163,184,0.08)" };
+  return (
+    <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap"
+      style={{ color: s.color, borderColor: s.border, background: s.bg }}>
+      {network}
+    </span>
+  );
+}
+
+// ── Verification badge ────────────────────────────────────────────────────────
 function VerificationBadge({ verified, note }: { verified: boolean | null; note: string | null }) {
   if (verified === true) return (
     <span title={note ?? "Auto-verified on-chain"}
@@ -150,43 +233,32 @@ function VerificationBadge({ verified, note }: { verified: boolean | null; note:
   return <span className="text-[#334155] text-xs">—</span>;
 }
 
-function NetworkBadge({ network }: { network: string | null }) {
-  if (!network) return <span className="text-[#334155] text-xs">—</span>;
-  const isErc = network === "ERC-20";
-  return (
-    <span className={cn(
-      "inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border",
-      isErc
-        ? "bg-[#627EEA]/10 text-[#627EEA] border-[#627EEA]/20"
-        : "bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/20"
-    )}>
-      {network}
-    </span>
-  );
-}
-
 function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={cn("px-2.5 py-0.5 rounded-full text-[11px] border font-semibold", statusBg(status))}>
+    <span className={cn("px-2.5 py-0.5 rounded-full text-[11px] border font-semibold whitespace-nowrap", statusBg(status))}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 }
+
+const selClass = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors";
 
 export default function DepositsPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
   const [network, setNetwork] = useState("");
+  const [gateway, setGateway] = useState("");
 
-  const queryKey = ["admin-deposits", page, status, network];
+  const queryKey = ["admin-deposits", page, status, network, gateway];
 
   const { data, isLoading, refetch, isFetching } = useQuery<{ transactions: AdminTransaction[]; total: number }>({
     queryKey,
     queryFn: () => {
       let url = `/admin/transactions?page=${page}&limit=${PAGE_SIZE}&type=deposit`;
-      if (status) url += `&status=${status}`;
+      if (status)  url += `&status=${status}`;
       if (network) url += `&network=${encodeURIComponent(network)}`;
+      if (gateway) url += `&gateway=${gateway}`;
       return api.get(url);
     },
     refetchInterval: 30_000,
@@ -211,25 +283,23 @@ export default function DepositsPage() {
 
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  const selClass = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors";
-
   const pendingCount = pendingTotals?.pendingDepositCount ?? 0;
   const pendingTotal = pendingTotals?.pendingDepositTotal ?? "0";
+  const hasFilters = !!(status || network || gateway);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* Page header */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center">
               <ArrowDownCircle className="w-4 h-4 text-[#00DFA9]" />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Deposits</h1>
           </div>
-          <p className="text-sm text-[#475569] mt-1 ml-10">{total.toLocaleString()} total deposits</p>
+          <p className="text-sm text-[#475569] mt-1 ml-[42px]">{total.toLocaleString()} total deposits</p>
         </div>
         <button
           onClick={() => refetch()}
@@ -241,7 +311,7 @@ export default function DepositsPage() {
         </button>
       </div>
 
-      {/* KPI cards */}
+      {/* ── KPI cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-xl border border-[#00DFA9]/20 bg-[#00DFA9]/5 p-4">
           <div className="flex items-center justify-between mb-2">
@@ -269,7 +339,7 @@ export default function DepositsPage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* ── Filters ── */}
       <div className="flex items-center gap-2 flex-wrap">
         <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className={selClass}>
           <option value="">All statuses</option>
@@ -277,56 +347,69 @@ export default function DepositsPage() {
           <option value="completed">Completed</option>
           <option value="rejected">Rejected</option>
         </select>
+        <select value={gateway} onChange={e => { setGateway(e.target.value); setPage(1); }} className={selClass}>
+          <option value="">All gateways</option>
+          <option value="manual">On-chain / Manual</option>
+          <option value="nowpayments">⚡ NOWPayments</option>
+          <option value="cryptomus">◈ Cryptomus</option>
+          <option value="plisio">🔷 Plisio</option>
+        </select>
         <select value={network} onChange={e => { setNetwork(e.target.value); setPage(1); }} className={selClass}>
           <option value="">All networks</option>
           <option value="TRC-20">TRC-20 (Tron)</option>
           <option value="ERC-20">ERC-20 (Ethereum)</option>
+          <option value="BSC">BSC (BNB Chain)</option>
+          <option value="SOL">Solana</option>
+          <option value="BTC">Bitcoin</option>
+          <option value="TON">TON</option>
+          <option value="XRP">XRP</option>
         </select>
-        {(status || network) && (
-          <button onClick={() => { setStatus(""); setNetwork(""); setPage(1); }}
+        {hasFilters && (
+          <button onClick={() => { setStatus(""); setNetwork(""); setGateway(""); setPage(1); }}
             className="px-3 py-2 rounded-lg text-sm text-[#475569] hover:text-white border border-white/10 hover:bg-white/5 transition-colors">
             Clear filters
           </button>
         )}
       </div>
 
-      {/* Table */}
+      {/* ── Table ── */}
       <div className="rounded-xl border border-white/8 bg-[#0E1520] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/6 bg-white/2">
-                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">User</th>
-                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Amount</th>
-                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Network</th>
-                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">TxHash</th>
-                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Verification</th>
-                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Status</th>
-                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Date</th>
-                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider">Action</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">User</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">Amount</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">Gateway</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">Network</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">Payment Details</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">Verification</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">Date</th>
+                <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#334155] uppercase tracking-wider whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-[#334155] text-sm">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
+                  <td colSpan={9} className="px-4 py-14 text-center text-[#334155] text-sm">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#00DFA9]" />
                     Loading deposits…
                   </td>
                 </tr>
               )}
               {!isLoading && (!data?.transactions || data.transactions.length === 0) && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-[#334155] text-sm">
+                  <td colSpan={9} className="px-4 py-14 text-center text-[#334155] text-sm">
                     No deposits found
                   </td>
                 </tr>
               )}
-              {data?.transactions.map((txn, i) => (
+              {data?.transactions.map(txn => (
                 <tr key={txn.id}
                   className={cn(
-                    "border-b border-white/4 transition-colors hover:bg-white/2",
-                    txn.status === "pending" && "bg-[#00DFA9]/2"
+                    "border-b border-white/4 transition-colors hover:bg-white/[0.015]",
+                    txn.status === "pending" && "bg-[#00DFA9]/[0.025]"
                   )}
                 >
                   {/* User */}
@@ -339,9 +422,15 @@ export default function DepositsPage() {
 
                   {/* Amount */}
                   <td className="px-4 py-3">
-                    <span className="font-mono text-sm font-bold text-[#00DFA9]">
-                      +${fmt(txn.amount)} USDT
+                    <span className="font-mono text-sm font-bold text-[#00DFA9] whitespace-nowrap">
+                      +${fmt(txn.amount)}
                     </span>
+                    <p className="text-[10px] text-[#475569]">USDT</p>
+                  </td>
+
+                  {/* Gateway */}
+                  <td className="px-4 py-3">
+                    <GatewayBadge txn={txn} />
                   </td>
 
                   {/* Network */}
@@ -349,16 +438,9 @@ export default function DepositsPage() {
                     <NetworkBadge network={txn.network} />
                   </td>
 
-                  {/* TxHash / NOWPay */}
+                  {/* Payment details */}
                   <td className="px-4 py-3">
-                    <TxHashCell
-                      hash={txn.txHash}
-                      network={txn.network}
-                      nowpaymentsPaymentId={txn.nowpaymentsPaymentId}
-                      nowpaymentsStatus={txn.nowpaymentsStatus}
-                      plisioPaymentId={txn.plisioPaymentId}
-                      plisioStatus={txn.plisioStatus}
-                    />
+                    <PaymentDetailsCell txn={txn} />
                   </td>
 
                   {/* Verification */}
@@ -383,16 +465,16 @@ export default function DepositsPage() {
                         <button
                           onClick={() => approveMut.mutate({ id: txn.id, txStatus: "completed" })}
                           disabled={approveMut.isPending}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 border border-[#00DFA9]/20 hover:border-[#00DFA9]/40 transition-all disabled:opacity-50"
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 border border-[#00DFA9]/20 hover:border-[#00DFA9]/40 transition-all disabled:opacity-50 whitespace-nowrap"
                         >
-                          Approve
+                          ✓ Approve
                         </button>
                         <button
                           onClick={() => approveMut.mutate({ id: txn.id, txStatus: "rejected" })}
                           disabled={approveMut.isPending}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 transition-all disabled:opacity-50"
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 transition-all disabled:opacity-50 whitespace-nowrap"
                         >
-                          Reject
+                          ✕ Reject
                         </button>
                       </div>
                     ) : (
@@ -406,7 +488,7 @@ export default function DepositsPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-white/6 bg-white/1">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-white/6 bg-white/[0.01]">
           <span className="text-xs text-[#334155]">Page {page} of {pages} · {total} total</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
