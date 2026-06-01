@@ -20,6 +20,7 @@ interface DepositInfo {
   addressSol?: string;
   addressTon?: string;
   addressXrp?: string;
+  addressBsc?: string;
   network: string;
   qrImageUrl: string;
   minDeposit: number;
@@ -274,6 +275,7 @@ export function WalletPage() {
     if (network === 'SOLANA') return cleanAddr(info.addressSol);
     if (network === 'TON')    return cleanAddr(info.addressTon);
     if (network === 'XRP')    return cleanAddr(info.addressXrp);
+    if (network === 'BSC')    return cleanAddr(info.addressBsc) || cleanAddr(info.addressErc20) || cleanAddr(info.address);
     if (network !== 'TRC-20') return cleanAddr(info.addressErc20) || cleanAddr(info.address);
     return cleanAddr(info.address);
   }
@@ -1416,419 +1418,326 @@ export function WalletPage() {
             </div>
           )}
 
-          {/* ── Manual USDT flow (TRC-20 or ERC-20) ────────────────────── */}
-          {depositMethod === 'manual' && (
-            <>
-              {/* Network selector */}
-              {(() => {
-                const MANUAL_NETS = [
-                  { val: 'TRC-20'   as const, short: 'TRC-20',   label: 'USDT · Tron',       color: '#00DFA9', badge: 'Auto-verify' },
-                  { val: 'ERC-20'   as const, short: 'ERC-20',   label: 'USDT · Ethereum',   color: '#627EEA', badge: 'Auto-verify' },
-                  { val: 'BSC'      as const, short: 'BEP-20',   label: 'USDT · BSC',        color: '#F0B90B', badge: 'Auto-verify' },
-                  { val: 'POLYGON'  as const, short: 'Polygon',  label: 'USDT · Polygon',    color: '#8247E5', badge: 'Auto-verify' },
-                  { val: 'ARBITRUM' as const, short: 'Arbitrum', label: 'USDT · ARB One',    color: '#28A0F0', badge: 'Auto-verify' },
-                  { val: 'OPTIMISM' as const, short: 'Optimism', label: 'USDT · Optimism',   color: '#FF0420', badge: 'Auto-verify' },
-                  { val: 'BASE'     as const, short: 'Base',     label: 'USDT · Base',       color: '#0052FF', badge: 'Auto-verify' },
-                  { val: 'SOLANA'   as const, short: 'Solana',   label: 'USDT · Solana',     color: '#9945FF', badge: 'Manual' },
-                  { val: 'TON'      as const, short: 'TON',      label: 'USDT · TON',        color: '#0098EA', badge: 'Manual' },
-                  { val: 'XRP'      as const, short: 'XRP',      label: 'XRP · Ledger',      color: '#23292F', badge: 'Manual' },
-                  { val: 'BTC'      as const, short: 'Bitcoin',  label: 'BTC · Native',      color: '#F7931A', badge: 'Manual' },
-                ];
-                return (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {MANUAL_NETS.map(net => {
-                      const active = manualNetwork === net.val;
+          {/* ── Manual USDT flow ─────────────────────────────────────────── */}
+          {depositMethod === 'manual' && (() => {
+            const MANUAL_NETS = [
+              { val: 'TRC-20'   as const, short: 'TRC-20',   fullName: 'Tron (TRC-20)',       coinLabel: 'USDT', color: '#00DFA9', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on TRC-20 (Tron). Sending on any other network will result in permanent loss.' },
+              { val: 'ERC-20'   as const, short: 'ERC-20',   fullName: 'Ethereum (ERC-20)',    coinLabel: 'USDT', color: '#627EEA', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on Ethereum (ERC-20). Do not send on TRC-20/Tron or other networks.' },
+              { val: 'BSC'      as const, short: 'BEP-20',   fullName: 'BNB Smart Chain',      coinLabel: 'USDT', color: '#F0B90B', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on BEP-20 (BSC). Sending on TRC-20 or Ethereum will result in loss.' },
+              { val: 'POLYGON'  as const, short: 'Polygon',  fullName: 'Polygon (MATIC)',       coinLabel: 'USDT', color: '#8247E5', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on Polygon. Do not send on other EVM networks.' },
+              { val: 'ARBITRUM' as const, short: 'Arbitrum', fullName: 'Arbitrum One',          coinLabel: 'USDT', color: '#28A0F0', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on Arbitrum One. Do not send on other EVM networks.' },
+              { val: 'SOLANA'   as const, short: 'Solana',   fullName: 'Solana (SPL)',          coinLabel: 'USDT', color: '#9945FF', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT SPL on Solana. Sending SOL or other tokens will result in permanent loss.' },
+              { val: 'TON'      as const, short: 'TON',      fullName: 'TON Network',           coinLabel: 'USDT', color: '#0098EA', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT Jetton on TON. Sending native TON will result in loss.' },
+              { val: 'BTC'      as const, short: 'Bitcoin',  fullName: 'Bitcoin Network',       coinLabel: 'BTC',  color: '#F7931A', badge: '🕐 Review', autoVerify: false, warning: 'Only send native BTC. Admin converts to USDT and credits within 30 min.' },
+              { val: 'XRP'      as const, short: 'XRP',      fullName: 'XRP Ledger',            coinLabel: 'XRP',  color: '#346AA9', badge: '🕐 Review', autoVerify: false, warning: 'Only send native XRP. Admin converts to USDT and credits within 30 min.' },
+            ];
+            const net = MANUAL_NETS.find(n => n.val === manualNetwork) ?? MANUAL_NETS[0];
+            const addr = depositInfo ? getManualAddress(manualNetwork, depositInfo) : '';
+            const qrData = addr ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(addr)}&bgcolor=ffffff&color=000000&margin=6` : '';
+
+            return (
+              <>
+                {/* ── Step indicator ── */}
+                <div className="flex items-center gap-2 px-1">
+                  {['Select Network', 'Send Funds', 'Confirm TxID'].map((s, i) => (
+                    <div key={s} className="flex items-center gap-2 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0"
+                          style={{ background: i === 0 ? net.color : i === 1 && addr ? net.color : 'rgba(255,255,255,0.07)', color: (i === 0 || (i === 1 && addr)) ? '#0B0F14' : '#64748B' }}>
+                          {i + 1}
+                        </div>
+                        <span className="text-[10px] font-semibold hidden sm:block" style={{ color: i === 0 ? net.color : '#64748B' }}>{s}</span>
+                      </div>
+                      {i < 2 && <div className="flex-1 h-px bg-white/[0.07]" />}
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Network selector ── */}
+                <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #0A1628 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="px-4 py-3 border-b border-white/[0.06]">
+                    <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
+                      <Zap className="h-3 w-3" /> Choose Network
+                    </p>
+                  </div>
+                  <div className="p-3 grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {MANUAL_NETS.map(n => {
+                      const isActive = manualNetwork === n.val;
                       return (
-                        <button
-                          key={net.val}
-                          onClick={() => { setManualNetwork(net.val); setCopied(false); setDepSuccess(false); setDepError(''); }}
-                          className="relative rounded-xl p-3 flex flex-col items-center gap-1 transition-all"
+                        <button key={n.val}
+                          onClick={() => { setManualNetwork(n.val); setCopied(false); setDepSuccess(false); setDepError(''); }}
+                          className="relative rounded-xl p-2.5 flex flex-col items-center gap-1 transition-all"
                           style={{
-                            background: active ? `${net.color}1A` : 'rgba(255,255,255,0.03)',
-                            border: `2px solid ${active ? net.color + '80' : 'rgba(255,255,255,0.07)'}`,
-                            boxShadow: active ? `0 0 14px ${net.color}15` : 'none',
-                          }}
-                        >
-                          {active && (
-                            <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: net.color }} />
-                          )}
-                          <p className="text-[12px] font-black" style={{ color: active ? net.color : '#64748B' }}>{net.short}</p>
-                          <p className="text-[9px] font-semibold text-[#94A3B8] text-center leading-tight">{net.label}</p>
-                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full mt-0.5"
-                            style={{ background: `${net.color}15`, color: net.color, border: `1px solid ${net.color}30` }}>{net.badge}</span>
+                            background: isActive ? `${n.color}18` : 'rgba(255,255,255,0.03)',
+                            border: `1.5px solid ${isActive ? n.color + '70' : 'rgba(255,255,255,0.07)'}`,
+                            boxShadow: isActive ? `0 0 12px ${n.color}18` : 'none',
+                          }}>
+                          {isActive && <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: n.color }} />}
+                          <span className="text-[11px] font-black" style={{ color: isActive ? n.color : '#94A3B8' }}>{n.short}</span>
+                          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full"
+                            style={{ background: `${n.color}15`, color: n.color, border: `1px solid ${n.color}25` }}>{n.badge}</span>
                         </button>
                       );
                     })}
                   </div>
-                );
-              })()}
-
-              {/* QR + Address card */}
-              <div className="rounded-2xl border border-white/[0.09] bg-[#0E1520] overflow-hidden">
-                <div className="px-4 py-3 border-b border-white/[0.06]">
-                  {(() => {
-                    const NET_COLOR: Record<string, string> = { 'TRC-20': '#00DFA9', 'ERC-20': '#627EEA', 'BSC': '#F0B90B', 'POLYGON': '#8247E5', 'ARBITRUM': '#28A0F0', 'OPTIMISM': '#FF0420', 'BASE': '#0052FF', 'SOLANA': '#9945FF', 'TON': '#0098EA', 'XRP': '#346AA9', 'BTC': '#F7931A' };
-                    const c = NET_COLOR[manualNetwork] ?? '#38BDF8';
-                    return (
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: `${c}26` }}>
-                          <span className="text-[9px] font-black" style={{ color: c }}>1</span>
-                        </div>
-                        <p className="text-[12px] font-bold text-[#F8FAFC]">{manualNetwork === 'BTC' ? 'Send BTC to this address' : manualNetwork === 'XRP' ? 'Send XRP to this address' : 'Send USDT to this address'}</p>
-                        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ color: c, background: `${c}1A`, border: `1px solid ${c}33` }}>
-                          {manualNetwork}
-                        </span>
-                      </div>
-                    );
-                  })()}
                 </div>
 
-            <div className="p-4 flex flex-col sm:flex-row items-center gap-5">
-              {/* QR Code — only shown for TRC-20 (has a configured QR image) */}
-              {manualNetwork === 'TRC-20' && (
-                <div className="relative flex-shrink-0">
-                  <div className="p-2.5 rounded-xl bg-white" style={{ boxShadow: '0 0 0 1px rgba(0,223,169,0.2), 0 4px 24px rgba(0,0,0,0.4)' }}>
-                    {depositInfo?.qrImageUrl ? (
-                      <img
-                        src={depositInfo.qrImageUrl}
-                        alt="USDT TRC-20 deposit address QR code"
-                        className="w-[130px] h-[130px] object-contain"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
+                {/* ── Address card ── */}
+                <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #0A1628 100%)', border: `1px solid ${net.color}30` }}>
+                  {/* Header */}
+                  <div className="px-4 py-3 flex items-center gap-3 border-b border-white/[0.06]"
+                    style={{ background: `linear-gradient(90deg, ${net.color}0A 0%, transparent 100%)` }}>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${net.color}20`, border: `1px solid ${net.color}40` }}>
+                      <span className="text-[9px] font-black" style={{ color: net.color }}>1</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-[#F8FAFC]">Send {net.coinLabel} to this address</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: net.color }}>{net.fullName}</p>
+                    </div>
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                      style={{ background: `${net.color}18`, color: net.color, border: `1px solid ${net.color}35` }}>
+                      {net.badge}
+                    </span>
+                  </div>
+
+                  <div className="p-4">
+                    {addr ? (
+                      <div className="flex flex-col sm:flex-row items-center gap-5">
+                        {/* QR Code — generated dynamically for active address */}
+                        <div className="relative shrink-0">
+                          <div className="p-2.5 rounded-xl bg-white" style={{ boxShadow: `0 0 0 2px ${net.color}30, 0 8px 32px rgba(0,0,0,0.5)` }}>
+                            <img src={qrData} alt={`${net.fullName} QR code`}
+                              className="w-[140px] h-[140px] object-contain"
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          </div>
+                          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2.5 py-0.5 rounded-full border whitespace-nowrap"
+                            style={{ background: '#0B0F14', color: net.color, borderColor: `${net.color}40` }}>
+                            Scan to deposit
+                          </div>
+                        </div>
+
+                        {/* Address + copy */}
+                        <div className="flex-1 w-full space-y-3">
+                          <div>
+                            <p className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">
+                              {net.fullName} Wallet Address
+                            </p>
+                            <div className="flex items-start gap-2 rounded-xl p-3"
+                              style={{ background: '#0B0F14', border: '1px solid rgba(255,255,255,0.08)' }}>
+                              <p className="flex-1 text-[11px] font-mono leading-relaxed break-all select-all" style={{ color: net.color }}>{addr}</p>
+                              <button onClick={copyAddress}
+                                className="shrink-0 p-2 rounded-lg transition-all mt-0.5"
+                                style={{ background: copied ? `${net.color}20` : 'rgba(255,255,255,0.05)', color: copied ? net.color : '#64748B' }}>
+                                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                              </button>
+                            </div>
+                            {copied && (
+                              <p className="text-[10px] mt-1 flex items-center gap-1" style={{ color: net.color }}>
+                                <Check className="h-2.5 w-2.5" /> Address copied!
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Warning */}
+                          <div className="flex items-start gap-2 rounded-xl p-3"
+                            style={{ background: 'rgba(250,204,21,0.05)', border: '1px solid rgba(250,204,21,0.15)' }}>
+                            <AlertCircle className="h-3.5 w-3.5 text-[#FACC15] shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-[#FACC15]/80 leading-relaxed">{net.warning}</p>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="w-[130px] h-[130px] flex items-center justify-center bg-white rounded">
-                        <p className="text-[10px] text-gray-400 text-center px-2">QR Code<br/>Loading...</p>
+                      <div className="flex flex-col items-center py-6 gap-2 text-center">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.2)' }}>
+                          <Lock className="h-5 w-5 text-[#64748B]" />
+                        </div>
+                        <p className="text-[13px] font-bold text-[#F8FAFC]">Address not configured</p>
+                        <p className="text-[11px] text-[#64748B] max-w-xs">This network is not available right now. Please use NOWPayments or choose a different network.</p>
                       </div>
                     )}
                   </div>
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold text-[#00DFA9] bg-[#0B0F14] px-2 rounded-full border border-[#00DFA9]/30 whitespace-nowrap">
-                    Scan to deposit
-                  </div>
                 </div>
-              )}
 
-              {/* Address */}
-              <div className="flex-1 w-full">
-                <p className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider mb-2">
-                  {manualNetwork === 'TRC-20' ? 'Tron (TRC-20) Wallet Address'
-                    : manualNetwork === 'BTC' ? 'Bitcoin Wallet Address'
-                    : manualNetwork === 'SOLANA' ? 'Solana Wallet Address (USDT SPL)'
-                    : manualNetwork === 'TON' ? 'TON Wallet Address (USDT Jetton)'
-                    : manualNetwork === 'XRP' ? 'XRP Ledger Address'
-                    : `${manualNetwork} Wallet Address (EVM)`}
-                </p>
-                <div className="flex items-center gap-2 bg-[#0B0F14] border border-white/[0.08] rounded-xl p-3">
-                  <p className="flex-1 text-[11px] font-mono text-[#94A3B8] break-all leading-relaxed select-all">
-                    {depositInfo ? (getManualAddress(manualNetwork, depositInfo) || '— Address not configured yet') : '—'}
-                  </p>
-                  <button onClick={copyAddress}
-                    className={cn(
-                      'shrink-0 p-2 rounded-lg transition-all',
-                      copied
-                        ? 'bg-[#00DFA9]/20 text-[#00DFA9]'
-                        : 'bg-white/5 text-[#64748B] hover:bg-white/10 hover:text-white'
-                    )}>
-                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  </button>
-                </div>
-                {copied && (
-                  <p className="text-[10px] text-[#00DFA9] mt-1 flex items-center gap-1">
-                    <Check className="h-2.5 w-2.5" /> Address copied to clipboard
-                  </p>
-                )}
-
-                <div className="mt-3 flex items-start gap-2 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-xl p-3">
-                  <AlertCircle className="h-3.5 w-3.5 text-[#FACC15] shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-[#FACC15]/80 leading-relaxed">
-                    {manualNetwork === 'TRC-20'
-                      ? <>Only send <strong>USDT on TRC-20 (Tron)</strong> to this address. Sending on any other network will result in permanent loss of funds.</>
-                      : manualNetwork === 'BTC'
-                        ? <>Only send <strong>native BTC</strong> to this address. Enter the BTC value you sent. Deposits go to manual review (5–30 min).</>
-                        : manualNetwork === 'XRP'
-                          ? <>Only send <strong>XRP</strong> to this address. Enter the XRP value you sent. Deposits go to manual review (5–30 min).</>
-                          : manualNetwork === 'SOLANA'
-                            ? <>Only send <strong>USDT (SPL) on Solana</strong> to this address. Sending other tokens may result in permanent loss. Deposits go to manual review (5–30 min).</>
-                            : manualNetwork === 'TON'
-                              ? <>Only send <strong>USDT (Jetton) on TON</strong> to this address. Deposits go to manual review (5–30 min).</>
-                              : <>Only send <strong>USDT on {manualNetwork}</strong> to this EVM address. Sending on TRC-20/Tron will result in permanent loss. EVM deposits are auto-verified.</>}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 2 – Submit TxID (redesigned) */}
-          <div className="rounded-2xl"
-            style={{ background: 'linear-gradient(135deg, #0A1628 0%, #0E1520 100%)', border: '1px solid rgba(56,189,248,0.20)' }}>
-
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-white/[0.06]"
-              style={{ background: 'linear-gradient(90deg, rgba(56,189,248,0.06) 0%, transparent 100%)' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
-                  <span className="text-[11px] font-black text-[#38BDF8]">2</span>
-                </div>
-                <div>
-                  <p className="text-[14px] font-bold text-[#F8FAFC]">Submit Your Transaction ID</p>
-                  <p className="text-[11px] text-[#64748B] mt-0.5">
-                    After sending USDT, paste your TxHash below to confirm
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-5">
-              {depSubmitting ? (
-                /* ── Verifying state ── */
-                <div className="flex flex-col items-center py-10 gap-5 text-center">
-                  {/* Outer pulsing ring */}
-                  <div className="relative flex items-center justify-center">
-                    <div className="absolute w-24 h-24 rounded-full animate-ping opacity-10"
-                      style={{ background: 'radial-gradient(circle, #38BDF8, transparent)', animationDuration: '1.4s' }} />
-                    <div className="absolute w-20 h-20 rounded-full opacity-20 animate-pulse"
-                      style={{ background: 'conic-gradient(from 0deg, #38BDF8, #00DFA9, #38BDF8)', animationDuration: '2s' }} />
-                    {/* Spinning arc */}
-                    <svg className="w-20 h-20 animate-spin" style={{ animationDuration: '1.1s' }} viewBox="0 0 80 80">
-                      <circle cx="40" cy="40" r="34" fill="none" stroke="#38BDF8" strokeWidth="3"
-                        strokeDasharray="160" strokeDashoffset="120" strokeLinecap="round"
-                        style={{ opacity: 0.9 }} />
-                      <circle cx="40" cy="40" r="34" fill="none" stroke="#00DFA9" strokeWidth="1"
-                        strokeDasharray="213" strokeLinecap="round" style={{ opacity: 0.15 }} />
-                    </svg>
-                    {/* Centre icon */}
-                    <div className="absolute w-12 h-12 rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)' }}>
-                      <svg className="w-6 h-6 text-[#38BDF8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                        <path strokeLinecap="round" strokeLinejoin="round"
-                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-[16px] font-black text-[#F8FAFC] tracking-tight">Verifying on-chain…</p>
-                    <p className="text-[11px] text-[#64748B] mt-1">
-                      {manualNetwork === 'TRC-20' ? 'Checking your transaction on the Tron blockchain' : `Checking your transaction on the ${manualNetwork} blockchain`}
-                    </p>
-                  </div>
-
-                  {/* Animated step list */}
-                  <div className="w-full max-w-xs space-y-2">
-                    {[
-                      'Looking up transaction hash',
-                      `Confirming USDT ${manualNetwork} transfer`,
-                      'Validating recipient & amount',
-                    ].map((step, i) => (
-                      <div key={step}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl border border-white/[0.06] bg-white/[0.02]"
-                        style={{ animationDelay: `${i * 0.3}s` }}>
-                        <div className="w-4 h-4 rounded-full border-2 border-[#38BDF8]/40 flex items-center justify-center shrink-0">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-pulse" style={{ animationDelay: `${i * 0.4}s` }} />
-                        </div>
-                        <span className="text-[11px] text-[#64748B] text-left">{step}</span>
+                {/* ── Step 2: Submit TxID ── */}
+                <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A1628 0%, #0E1520 100%)', border: '1px solid rgba(56,189,248,0.18)' }}>
+                  <div className="px-4 py-3 border-b border-white/[0.06]"
+                    style={{ background: 'linear-gradient(90deg, rgba(56,189,248,0.06) 0%, transparent 100%)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
+                        <span className="text-[9px] font-black text-[#38BDF8]">2</span>
                       </div>
-                    ))}
+                      <div>
+                        <p className="text-[13px] font-bold text-[#F8FAFC]">Submit Your Transaction ID</p>
+                        <p className="text-[10px] text-[#64748B] mt-0.5">After sending, paste your TxHash to confirm</p>
+                      </div>
+                    </div>
                   </div>
 
-                  <p className="text-[10px] text-[#334155] italic">This usually completes in a few seconds</p>
-                </div>
-              ) : depSuccess ? (
-                /* ── Success state ── */
-                <div className="flex flex-col items-center py-8 gap-4 text-center">
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center"
-                      style={{
-                        background: depAutoVerified ? 'rgba(0,223,169,0.12)' : 'rgba(250,204,21,0.10)',
-                        border: depAutoVerified ? '2px solid rgba(0,223,169,0.35)' : '2px solid rgba(250,204,21,0.30)',
-                        boxShadow: depAutoVerified ? '0 0 32px rgba(0,223,169,0.2)' : '0 0 32px rgba(250,204,21,0.15)',
-                      }}>
-                      <CheckCircle2 className={`h-8 w-8 ${depAutoVerified ? 'text-[#00DFA9]' : 'text-[#FACC15]'}`} />
-                    </div>
-                    <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${depAutoVerified ? 'bg-[#00DFA9]' : 'bg-[#FACC15]'}`}>
-                      <Check className="w-3 h-3 text-[#0B0F14]" />
-                    </div>
-                  </div>
-                  <div>
-                    {depAutoVerified ? (
-                      <>
-                        <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Credited! ⚡</p>
-                        <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
-                          Your transaction was <span className="text-[#00DFA9] font-semibold">verified on-chain instantly</span>. Your balance has been updated.
-                        </p>
-                      </>
+                  <div className="p-4">
+                    {depSubmitting ? (
+                      <div className="flex flex-col items-center py-10 gap-5 text-center">
+                        <div className="relative flex items-center justify-center">
+                          <div className="absolute w-24 h-24 rounded-full animate-ping opacity-10"
+                            style={{ background: 'radial-gradient(circle, #38BDF8, transparent)', animationDuration: '1.4s' }} />
+                          <svg className="w-20 h-20 animate-spin" style={{ animationDuration: '1.1s' }} viewBox="0 0 80 80">
+                            <circle cx="40" cy="40" r="34" fill="none" stroke="#38BDF8" strokeWidth="3"
+                              strokeDasharray="160" strokeDashoffset="120" strokeLinecap="round" style={{ opacity: 0.9 }} />
+                          </svg>
+                          <div className="absolute w-12 h-12 rounded-full flex items-center justify-center"
+                            style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)' }}>
+                            <Loader2 className="w-5 h-5 text-[#38BDF8] animate-spin" />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[16px] font-black text-[#F8FAFC]">Verifying on-chain…</p>
+                          <p className="text-[11px] text-[#64748B] mt-1">Checking your transaction on the {manualNetwork} blockchain</p>
+                        </div>
+                        <div className="w-full max-w-xs space-y-2">
+                          {['Looking up transaction hash', `Confirming ${net.coinLabel} transfer`, 'Validating recipient & amount'].map((step, i) => (
+                            <div key={step} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                              <div className="w-4 h-4 rounded-full border-2 border-[#38BDF8]/40 flex items-center justify-center shrink-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-pulse" style={{ animationDelay: `${i * 0.4}s` }} />
+                              </div>
+                              <span className="text-[11px] text-[#64748B] text-left">{step}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : depSuccess ? (
+                      <div className="flex flex-col items-center py-8 gap-4 text-center">
+                        <div className="relative">
+                          <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                            style={{
+                              background: depAutoVerified ? 'rgba(0,223,169,0.12)' : 'rgba(250,204,21,0.10)',
+                              border: depAutoVerified ? '2px solid rgba(0,223,169,0.35)' : '2px solid rgba(250,204,21,0.30)',
+                              boxShadow: depAutoVerified ? '0 0 32px rgba(0,223,169,0.2)' : '0 0 32px rgba(250,204,21,0.15)',
+                            }}>
+                            <CheckCircle2 className={`h-8 w-8 ${depAutoVerified ? 'text-[#00DFA9]' : 'text-[#FACC15]'}`} />
+                          </div>
+                          <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${depAutoVerified ? 'bg-[#00DFA9]' : 'bg-[#FACC15]'}`}>
+                            <Check className="w-3 h-3 text-[#0B0F14]" />
+                          </div>
+                        </div>
+                        <div>
+                          {depAutoVerified ? (
+                            <>
+                              <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Credited! ⚡</p>
+                              <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                                Your transaction was <span className="text-[#00DFA9] font-semibold">verified on-chain instantly</span>. Balance updated.
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Submitted!</p>
+                              <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
+                                Under manual review — credited within <span className="text-[#38BDF8] font-semibold">5–30 minutes</span>.
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        {depAutoVerified ? (
+                          <div className="flex items-center gap-2 bg-[#00DFA9]/5 border border-[#00DFA9]/15 rounded-xl px-4 py-2.5">
+                            <Check className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
+                            <p className="text-[11px] text-[#00DFA9]/80">Funds are available in your wallet now</p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-xl px-4 py-2.5">
+                            <Clock className="h-3.5 w-3.5 text-[#FACC15] shrink-0" />
+                            <p className="text-[11px] text-[#FACC15]/80">You'll be notified when your deposit is approved</p>
+                          </div>
+                        )}
+                        <button onClick={() => { setDepSuccess(false); setDepAutoVerified(false); }}
+                          className="mt-1 px-5 py-2 rounded-xl text-[12px] font-bold text-[#38BDF8] border border-[#38BDF8]/25 hover:bg-[#38BDF8]/10 transition-all">
+                          Submit another deposit
+                        </button>
+                      </div>
                     ) : (
-                      <>
-                        <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Submitted! 🎉</p>
-                        <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
-                          Your transaction is under manual review and will be credited within{' '}
-                          <span className="text-[#38BDF8] font-semibold">5–30 minutes</span>.
-                        </p>
-                      </>
-                    )}
-                  </div>
-                  {depAutoVerified ? (
-                    <div className="flex items-center gap-2 bg-[#00DFA9]/5 border border-[#00DFA9]/15 rounded-xl px-4 py-2.5">
-                      <Check className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
-                      <p className="text-[11px] text-[#00DFA9]/80">Funds are available in your wallet now</p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-xl px-4 py-2.5">
-                      <Clock className="h-3.5 w-3.5 text-[#FACC15] shrink-0" />
-                      <p className="text-[11px] text-[#FACC15]/80">You'll be notified when your deposit is approved</p>
-                    </div>
-                  )}
-                  <button onClick={() => { setDepSuccess(false); setDepAutoVerified(false); }}
-                    className="mt-1 px-5 py-2 rounded-xl text-[12px] font-bold text-[#38BDF8] border border-[#38BDF8]/25 hover:bg-[#38BDF8]/10 transition-all">
-                    Submit another deposit
-                  </button>
-                </div>
-              ) : (
-                /* ── Form ── */
-                <form onSubmit={submitDeposit} className="space-y-4">
-
-                  {/* Amount + TxID side by side on larger screens */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Amount */}
-                    <div className="group">
-                      {(() => {
-                        const isBtc = manualNetwork === 'BTC';
-                        const isXrp = manualNetwork === 'XRP';
-                        const isSolana = manualNetwork === 'SOLANA';
-                        const isTon = manualNetwork === 'TON';
-                        const coinLabel = isBtc ? 'BTC' : isXrp ? 'XRP' : 'USDT';
-                        const minVal   = isBtc ? '0.00001' : isXrp ? '1' : String(depositInfo?.minDeposit ?? 10);
-                        const stepVal  = isBtc ? '0.00000001' : isXrp ? '0.000001' : '0.01';
-                        const pholder  = isBtc ? 'e.g. 0.001 BTC' : isXrp ? 'e.g. 50 XRP' : `Min ${depositInfo?.minDeposit ?? 10} USDT`;
-                        return (
-                          <>
+                      <form onSubmit={submitDeposit} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* Amount */}
+                          <div>
                             <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
-                              <CircleDollarSign className="h-3 w-3" />
-                              Amount Sent ({coinLabel})
+                              <CircleDollarSign className="h-3 w-3" /> Amount Sent ({net.coinLabel})
                             </label>
                             <div className="relative">
-                              <input
-                                type="number"
-                                min={minVal}
-                                step={stepVal}
-                                value={depAmount}
-                                onChange={e => setDepAmount(e.target.value)}
-                                placeholder={pholder}
-                                className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16"
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">
-                                {coinLabel}
-                              </span>
+                              <input type="number"
+                                min={net.coinLabel === 'BTC' ? '0.00001' : net.coinLabel === 'XRP' ? '1' : String(depositInfo?.minDeposit ?? 10)}
+                                step={net.coinLabel === 'BTC' ? '0.00000001' : net.coinLabel === 'XRP' ? '0.000001' : '0.01'}
+                                value={depAmount} onChange={e => setDepAmount(e.target.value)}
+                                placeholder={net.coinLabel === 'BTC' ? 'e.g. 0.001 BTC' : net.coinLabel === 'XRP' ? 'e.g. 50 XRP' : `Min ${depositInfo?.minDeposit ?? 10} USDT`}
+                                className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16" />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">{net.coinLabel}</span>
                             </div>
-                            {(isBtc || isXrp) && (
-                              <p className="text-[10px] text-[#64748B] mt-1">
-                                Admin will convert to USDT and credit within 30 min
+                            {!net.autoVerify ? (
+                              <p className="text-[10px] text-[#64748B] mt-1.5 flex items-center gap-1">
+                                <Clock className="h-2.5 w-2.5" /> Admin converts to USDT and credits within 30 min
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-[#00DFA9] mt-1.5 flex items-center gap-1">
+                                <Zap className="h-2.5 w-2.5" /> Auto-credited once confirmed on-chain
                               </p>
                             )}
-                            {(isSolana || isTon) && (
-                              <p className="text-[10px] text-[#00DFA9] mt-1 flex items-center gap-1">
-                                <span>⚡</span> Auto-credited once confirmed on-chain (usually &lt; 1 min)
-                              </p>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
+                          </div>
 
-                    {/* TxID / TxHash */}
-                    <div className="group">
-                      <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
-                        <ExternalLink className="h-3 w-3" />
-                        Transaction Hash (TxID)
-                      </label>
-                      <input
-                        type="text"
-                        value={depTxHash}
-                        onChange={e => setDepTxHash(e.target.value)}
-                        placeholder="Paste TxHash — e.g. abc123...xyz"
-                        className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/60 focus:ring-1 focus:ring-[#38BDF8]/20 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Where to find TxID help box */}
-                  <div className="rounded-xl bg-[#0B0F14]/80 border border-white/[0.06] p-3">
-                    <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Info className="h-3 w-3" /> Where to find your TxID
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {[
-                        { app: 'Trust Wallet', steps: 'Wallet → History → tap transaction → copy TxID' },
-                        { app: 'Binance',      steps: 'Wallet → Withdraw History → tap transaction → TxID' },
-                        { app: 'OKX / Others', steps: 'Transaction History → Details → Transaction Hash' },
-                      ].map(({ app, steps }) => (
-                        <div key={app} className="flex flex-col gap-0.5">
-                          <p className="text-[10px] font-bold text-[#38BDF8]">{app}</p>
-                          <p className="text-[10px] text-[#64748B] leading-relaxed">{steps}</p>
+                          {/* TxID */}
+                          <div>
+                            <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
+                              <ExternalLink className="h-3 w-3" /> Transaction Hash (TxID)
+                            </label>
+                            <input type="text" value={depTxHash} onChange={e => setDepTxHash(e.target.value)}
+                              placeholder="Paste your TxHash here…"
+                              className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/60 focus:ring-1 focus:ring-[#38BDF8]/20 transition-all" />
+                            <p className="text-[10px] text-[#64748B] mt-1.5">Find in your wallet's transaction history</p>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Error */}
-                  {depError && (
-                    <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl p-3.5">
-                      <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-                      <p className="text-[12px] text-red-400">{depError}</p>
-                    </div>
-                  )}
+                        {/* Help box */}
+                        <div className="rounded-xl p-3" style={{ background: '#0B0F14', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <Info className="h-3 w-3" /> Where to find your TxID
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {[
+                              { app: 'Trust Wallet', steps: 'History → tap tx → copy TxID' },
+                              { app: 'Binance', steps: 'Wallet → Withdraw History → TxID' },
+                              { app: 'OKX / Others', steps: 'Transaction History → Hash' },
+                            ].map(({ app, steps }) => (
+                              <div key={app} className="flex items-start gap-2">
+                                <div className="w-1 h-1 rounded-full bg-[#38BDF8] mt-1.5 shrink-0" />
+                                <div>
+                                  <p className="text-[10px] font-bold text-[#38BDF8]">{app}</p>
+                                  <p className="text-[10px] text-[#64748B] leading-relaxed">{steps}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
 
-                  {/* Submit */}
-                  <button
-                    type="submit"
-                    disabled={depSubmitting}
-                    className="w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.30)' }}
-                  >
-                    {depSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Verifying & Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        Confirm Deposit
-                      </>
+                        {depError && (
+                          <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl p-3.5">
+                            <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                            <p className="text-[12px] text-red-400">{depError}</p>
+                          </div>
+                        )}
+
+                        <button type="submit" disabled={depSubmitting || !addr}
+                          className="w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.25)' }}>
+                          <CheckCircle2 className="h-4 w-4" />
+                          Confirm Deposit
+                        </button>
+
+                        <p className="text-center text-[10px] text-[#334155]">
+                          Secured by on-chain verification · Min {depositInfo?.minDeposit ?? 10} USDT
+                        </p>
+                      </form>
                     )}
-                  </button>
-
-                  <p className="text-center text-[10px] text-[#64748B]">
-                    ⚡ Deposits are verified on-chain within {depositInfo?.processingTime ?? '5–30 min'} of submission
-                  </p>
-                </form>
-              )}
-            </div>
-          </div>
-
-          {/* How it works */}
-          <div className="rounded-xl border border-white/[0.06] bg-[#0E1520] p-4">
-            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-3">How deposits work</p>
-            <div className="space-y-2.5">
-              {[
-                { n: '1', text: 'Copy the TRC-20 wallet address above or scan the QR code' },
-                { n: '2', text: 'Send USDT from Trust Wallet, Binance, or any TRC-20 wallet' },
-                { n: '3', text: 'Copy your Transaction Hash (TxID) from your wallet history' },
-                { n: '4', text: 'Paste it in the form above and click Confirm Deposit' },
-                { n: '5', text: 'Our team verifies on-chain and credits your account within 30 min' },
-              ].map(({ n, text }) => (
-                <div key={n} className="flex items-start gap-3">
-                  <span className="w-5 h-5 rounded-full bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center text-[9px] font-black text-[#00DFA9] shrink-0 mt-0.5">
-                    {n}
-                  </span>
-                  <p className="text-[11px] text-[#94A3B8]">{text}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </div>
       )}
 
