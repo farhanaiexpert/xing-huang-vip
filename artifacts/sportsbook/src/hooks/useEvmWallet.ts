@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { useAccount, useChainId, useDisconnect, useWalletClient } from 'wagmi';
+import { useAccount, useChainId, useDisconnect, useWalletClient, useSwitchChain } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
 import { wagmiAdapter } from '../lib/reown';
 
@@ -28,6 +28,7 @@ export function useEvmWallet() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { disconnect: wagmiDisconnect } = useDisconnect();
+  const { switchChain: wagmiSwitchChain } = useSwitchChain();
   const { open } = useAppKit();
   const { data: walletClient } = useWalletClient();
 
@@ -60,6 +61,16 @@ export function useEvmWallet() {
     wagmiDisconnect();
   }, [wagmiDisconnect]);
 
+  const switchChain = useCallback((targetChainId: number) => {
+    wagmiSwitchChain({ chainId: targetChainId });
+  }, [wagmiSwitchChain]);
+
+  /** Open the Reown AppKit network picker */
+  const openNetworks = useCallback(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    void (open as any)({ view: 'Networks' });
+  }, [open]);
+
   const signMessage = useCallback(async (message: string): Promise<string> => {
     // walletClientRef.current is updated on every render, so this always sees
     // the latest value — even when called in a .then() after connect(), before
@@ -80,5 +91,5 @@ export function useEvmWallet() {
     return client.signMessage({ message });
   }, []); // walletClientRef is stable — no deps needed
 
-  return { address, isConnected, chainId, connect, disconnect, signMessage };
+  return { address, isConnected, chainId, connect, disconnect, signMessage, switchChain, openNetworks };
 }

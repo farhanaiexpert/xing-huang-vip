@@ -1,0 +1,82 @@
+Improve the Web3 Wallet Deposit UI and functionality.
+
+Implement these features:
+
+1. Disconnect Wallet
+
+* Add a clear "Disconnect" button.
+* When clicked, disconnect the wallet from Reown/AppKit/Wagmi.
+* Clear connected wallet state.
+* User must reconnect wallet before making another Web3 deposit.
+
+2. Wallet Dropdown Menu
+
+* Replace the plain wallet address display with a dropdown.
+* Dropdown options:
+
+  * Copy wallet address
+  * View wallet on explorer
+  * Switch wallet / reconnect
+  * Disconnect wallet
+
+3. Network Badge
+
+* Show the active network clearly.
+* Example: "BNB Chain · BEP-20"
+* Use different badge states:
+
+  * Connected network supported
+  * Wrong/unsupported network
+* If unsupported network, disable deposit button.
+
+4. Switch Network Button
+
+* If user is on the wrong or unsupported network, show "Switch Network".
+* Allow switching to supported networks like BNB Chain, Polygon, Ethereum, Base, Arbitrum, Optimism.
+* Use Wagmi/Reown network switching.
+
+5. Deposit Destination Display
+
+* Show the platform deposit wallet address based on the active network.
+* Include a copy button.
+* Example:
+  "Deposit Destination: 0x2EE16...98923"
+* Make sure the displayed address matches the selected/active network.
+
+6. Transaction Explorer Link
+
+* After transaction is submitted, show the transaction hash.
+* Add "View Transaction" button linking to the correct explorer:
+
+  * Ethereum → Etherscan
+  * BNB Chain → BscScan
+  * Polygon → Polygonscan
+  * Arbitrum → Arbiscan
+  * Optimism → Optimistic Etherscan
+  * Base → Basescan
+
+7. Wallet Balance Display
+
+* Improve wallet balance display.
+* Show:
+
+  * USDT balance
+  * Native gas token balance
+* Examples:
+
+  * BNB Chain: "Available: 7.97 USDT · Gas: 0.014 BNB"
+  * Ethereum: "Available: 7.97 USDT · Gas: 0.021 ETH"
+  * Polygon: "Available: 7.97 USDT · Gas: 12.5 POL/MATIC"
+
+8. UX Rules
+
+* Disable deposit button if amount is greater than available USDT balance.
+* Disable deposit button if gas balance is too low.
+* Disable deposit button if network is unsupported.
+* Show clear error messages.
+* Keep existing deposit recovery/localStorage logic unchanged.
+* Do not break backend verification.
+* Do not trust frontend values for crediting balance.
+
+Goal:
+Make the Web3 deposit section more professional, safer, and user-friendly while preserving the current working Reown deposit flow.

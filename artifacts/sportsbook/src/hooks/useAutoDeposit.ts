@@ -37,13 +37,17 @@ export const EVM_CHAINS: Record<number, {
   color: string;
   /** Must match backend MIN_CONFIRMATIONS in evmVerify.ts */
   minConfirmations: number;
+  /** Native gas token symbol (ETH / BNB / MATIC) */
+  nativeToken: string;
+  /** Block explorer tx base URL (append txHash) */
+  explorerTx: string;
 }> = {
-  1:     { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6,  network: 'ETH',      label: 'Ethereum (ERC-20)',  color: '#627EEA', minConfirmations: 3 },
-  56:    { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, network: 'BSC',      label: 'BSC (BEP-20)',       color: '#F0B90B', minConfirmations: 2 },
-  137:   { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6,  network: 'POLYGON',  label: 'Polygon (MATIC)',    color: '#8247E5', minConfirmations: 2 },
-  42161: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6,  network: 'ARBITRUM', label: 'Arbitrum One',       color: '#28A0F0', minConfirmations: 1 },
-  10:    { address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', decimals: 6,  network: 'OPTIMISM', label: 'Optimism',           color: '#FF0420', minConfirmations: 1 },
-  8453:  { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', decimals: 6,  network: 'BASE',     label: 'Base',               color: '#0052FF', minConfirmations: 1 },
+  1:     { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6,  network: 'ETH',      label: 'Ethereum (ERC-20)',  color: '#627EEA', minConfirmations: 3, nativeToken: 'ETH',   explorerTx: 'https://etherscan.io/tx/' },
+  56:    { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, network: 'BSC',      label: 'BSC (BEP-20)',       color: '#F0B90B', minConfirmations: 2, nativeToken: 'BNB',   explorerTx: 'https://bscscan.com/tx/' },
+  137:   { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6,  network: 'POLYGON',  label: 'Polygon (MATIC)',    color: '#8247E5', minConfirmations: 2, nativeToken: 'MATIC', explorerTx: 'https://polygonscan.com/tx/' },
+  42161: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6,  network: 'ARBITRUM', label: 'Arbitrum One',       color: '#28A0F0', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://arbiscan.io/tx/' },
+  10:    { address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', decimals: 6,  network: 'OPTIMISM', label: 'Optimism',           color: '#FF0420', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://optimistic.etherscan.io/tx/' },
+  8453:  { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', decimals: 6,  network: 'BASE',     label: 'Base',               color: '#0052FF', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://basescan.org/tx/' },
 };
 
 /** Convert human USDT amount to BigInt base units, avoiding float precision loss */
@@ -54,7 +58,12 @@ export function toBaseUnits(amount: number, decimals: number): bigint {
 }
 
 export type DepositPhase = 'idle' | 'sending' | 'confirming' | 'submitting' | 'success' | 'error';
-export interface DepositResult { autoVerified: boolean; txHash: string }
+export interface DepositResult {
+  autoVerified: boolean;
+  txHash: string;
+  /** Full block-explorer URL for the transaction (undefined for unsupported chains) */
+  explorerUrl?: string;
+}
 
 /** Platform deposit addresses sourced from GET /wallet/deposit-info */
 export interface PlatformAddresses {
@@ -197,8 +206,28 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
         } catch { /* timeout — fall through and submit anyway */ }
       }
 
-      await submitToBackend(txHash, amount, chainCfg.network);
+      const result = await (async () => {
+        setDepositPhase('submitting');
+        const r = await api.post<{ autoVerified: boolean }>('/wallet/deposit', { txHash, amount, network: chainCfg.network });
+        return r;
+      })();
+
+      const dr: DepositResult = {
+        autoVerified: result.autoVerified,
+        txHash,
+        explorerUrl: `${chainCfg.explorerTx}${txHash}`,
+      };
+      setDepositResult(dr);
+      setDepositPhase('success');
       localStorage.removeItem('cb_pending_evm_tx');
+      await refreshBalance();
+      toast({
+        title: result.autoVerified ? '✅ Deposit verified!' : '⏳ Deposit submitted',
+        description: result.autoVerified
+          ? `$${amount} USDT has been credited to your account.`
+          : `$${amount} USDT is under review and will be credited shortly.`,
+      });
+      options?.onSuccess?.(dr);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.toLowerCase().includes('user rejected') || msg.toLowerCase().includes('user denied') || msg.toLowerCase().includes('rejected')) {
@@ -264,8 +293,24 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
         await waitForTronConfirmation(tronWeb, txHash);
       } catch { /* timeout — fall through and submit anyway */ }
 
-      await submitToBackend(txHash, amount, 'TRC-20');
+      setDepositPhase('submitting');
+      const result = await api.post<{ autoVerified: boolean }>('/wallet/deposit', { txHash, amount, network: 'TRC-20' });
+      const dr: DepositResult = {
+        autoVerified: result.autoVerified,
+        txHash,
+        explorerUrl: `https://tronscan.org/#/transaction/${txHash}`,
+      };
+      setDepositResult(dr);
+      setDepositPhase('success');
       localStorage.removeItem('cb_pending_tron_tx');
+      await refreshBalance();
+      toast({
+        title: result.autoVerified ? '✅ Deposit verified!' : '⏳ Deposit submitted',
+        description: result.autoVerified
+          ? `$${amount} USDT has been credited to your account.`
+          : `$${amount} USDT is under review and will be credited shortly.`,
+      });
+      options?.onSuccess?.(dr);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.toLowerCase().includes('cancel') || msg.toLowerCase().includes('reject')) {

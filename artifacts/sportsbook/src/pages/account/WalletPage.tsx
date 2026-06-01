@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { usePublicClient } from 'wagmi';
+import { usePublicClient, useBalance } from 'wagmi';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBetHistory } from '@/hooks/useBetHistory';
@@ -11,7 +11,7 @@ import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
   Clock, XCircle, RefreshCw, Loader2, CircleDollarSign, Shield,
   AlertCircle, ExternalLink, Info, QrCode, Zap, CreditCard, Lock,
-  ChevronRight,
+  ChevronRight, ChevronDown, LogOut, RotateCcw,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -261,6 +261,9 @@ export function WalletPage() {
   const evmWallet = useEvmWallet();
   const w3Address   = evmWallet.address;
   const w3Connected = evmWallet.isConnected;
+  const [w3DropdownOpen, setW3DropdownOpen] = useState(false);
+  const [w3CopiedAddr, setW3CopiedAddr]     = useState(false);
+  const [w3DepAddrCopied, setW3DepAddrCopied] = useState(false);
   const {
     depositAmount: walletDepAmount, setDepositAmount: setWalletDepAmount,
     depositPhase: walletPhase, depositError: walletError, depositResult: walletResult,
@@ -274,6 +277,13 @@ export function WalletPage() {
       addressTrc20: depositInfo?.address,
     },
   });
+
+  // ── Native gas balance (BNB / ETH / MATIC) ───────────────────────────────
+  const { data: gasData } = useBalance({
+    address: w3Address as `0x${string}` | undefined,
+    query: { enabled: !!w3Address && w3Connected },
+  });
+  const gasBalance = gasData ? Number(gasData.value) / Math.pow(10, gasData.decimals) : null;
 
   // ── EVM USDT balance (wagmi publicClient — works with MetaMask AND WalletConnect) ──
   const publicClient = usePublicClient();
@@ -316,6 +326,13 @@ export function WalletPage() {
 
   // Whichever wallet is active, pick its balance
   const walletBalance = w3Connected ? evmBalance : hasTronLink ? tronBalance : null;
+
+  // Platform deposit destination address for the active EVM chain
+  const platformDepositAddr = (depositInfo && chainCfg)
+    ? (chainCfg.network === 'BSC'
+        ? cleanAddr(depositInfo.addressBsc ?? '') || cleanAddr(depositInfo.addressErc20 ?? '')
+        : cleanAddr(depositInfo.addressErc20 ?? ''))
+    : '';
 
   function cleanAddr(addr: string | undefined): string {
     if (!addr || addr.startsWith('PASTE_YOUR') || addr.startsWith('CONFIGURE_')) return '';
@@ -1112,29 +1129,125 @@ export function WalletPage() {
 
                 {/* Connected — deposit form */}
                 {(w3Connected || hasTronLink) && walletPhase !== 'success' && (
-                  <div className="space-y-4">
-                    {/* Connected status */}
-                    <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(0,223,169,0.05)', border: '1px solid rgba(0,223,169,0.15)' }}>
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.25)' }}>
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#00DFA9]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-bold text-[#00DFA9]">Wallet Connected</p>
-                        {w3Address && (
-                          <p className="text-[10px] font-mono text-[#64748B] truncate">
-                            {w3Address.slice(0, 10)}…{w3Address.slice(-8)}
-                            {chainCfg && <span className="ml-1.5 font-sans" style={{ color: chainCfg.color }}>· {chainCfg.label}</span>}
-                          </p>
-                        )}
-                        {hasTronLink && !w3Connected && <p className="text-[10px] text-[#64748B]">TronLink · TRC-20</p>}
-                      </div>
-                    </div>
+                  <div className="space-y-3">
 
-                    {/* Unsupported chain warning */}
-                    {w3Connected && !chainCfg && !hasTronLink && (
-                      <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]" style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
-                        <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0 mt-0.5" />
-                        <p className="text-[#FACC15]">Switch to <strong>Ethereum, BNB Chain,</strong> or <strong>Polygon</strong> to deposit, or use TronLink for TRC-20.</p>
+                    {/* ── Wallet address row + dropdown ── */}
+                    {w3Connected && (
+                      <div className="relative">
+                        {w3DropdownOpen && (
+                          <div className="fixed inset-0 z-10" onClick={() => setW3DropdownOpen(false)} />
+                        )}
+                        <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(0,223,169,0.05)', border: '1px solid rgba(0,223,169,0.15)' }}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
+                            <button
+                              onClick={() => setW3DropdownOpen(v => !v)}
+                              className="flex items-center gap-1 text-[11px] font-mono text-[#CBD5E1] hover:text-[#00DFA9] transition-colors"
+                            >
+                              {w3Address?.slice(0, 8)}…{w3Address?.slice(-6)}
+                              <ChevronDown className={cn('w-3 h-3 text-[#64748B] transition-transform', w3DropdownOpen && 'rotate-180')} />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {chainCfg ? (
+                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold"
+                                style={{ background: `${chainCfg.color}18`, color: chainCfg.color, border: `1px solid ${chainCfg.color}30` }}>
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: chainCfg.color }} />
+                                {chainCfg.network}
+                              </span>
+                            ) : (
+                              <>
+                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-[#FACC15]"
+                                  style={{ background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.25)' }}>
+                                  ⚠ Wrong Network
+                                </span>
+                                <button
+                                  onClick={() => evmWallet.openNetworks()}
+                                  className="px-2 py-0.5 rounded-lg text-[9px] font-black text-[#38BDF8] transition-all hover:bg-[#38BDF8]/10"
+                                  style={{ border: '1px solid rgba(56,189,248,0.25)' }}
+                                >
+                                  Switch
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Dropdown menu */}
+                        {w3DropdownOpen && (
+                          <div className="absolute top-full mt-1 left-0 right-0 z-20 rounded-xl overflow-hidden py-1"
+                            style={{ background: '#0F1629', border: '1px solid rgba(167,139,250,0.25)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(w3Address ?? '');
+                                setW3CopiedAddr(true);
+                                setTimeout(() => setW3CopiedAddr(false), 2000);
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-[12px] text-[#CBD5E1] hover:bg-white/5 transition-colors text-left"
+                            >
+                              {w3CopiedAddr ? <Check className="w-3.5 h-3.5 text-[#00DFA9]" /> : <Copy className="w-3.5 h-3.5 text-[#64748B]" />}
+                              {w3CopiedAddr ? 'Address copied!' : 'Copy Address'}
+                            </button>
+                            {chainCfg && (
+                              <a
+                                href={`${chainCfg.explorerTx.replace('/tx/', '/address/')}${w3Address}`}
+                                target="_blank" rel="noopener noreferrer"
+                                onClick={() => setW3DropdownOpen(false)}
+                                className="flex items-center gap-3 px-4 py-2.5 text-[12px] text-[#CBD5E1] hover:bg-white/5 transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-[#64748B]" />
+                                View on Explorer
+                              </a>
+                            )}
+                            <button
+                              onClick={() => { void evmWallet.connect(); setW3DropdownOpen(false); }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-[12px] text-[#CBD5E1] hover:bg-white/5 transition-colors text-left"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 text-[#64748B]" />
+                              Switch Wallet / Reconnect
+                            </button>
+                            <div className="h-px mx-3 my-0.5" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                            <button
+                              onClick={() => { evmWallet.disconnect(); setW3DropdownOpen(false); }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-[12px] text-red-400 hover:bg-red-500/8 transition-colors text-left"
+                            >
+                              <LogOut className="w-3.5 h-3.5" />
+                              Disconnect Wallet
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* TronLink status row */}
+                    {hasTronLink && !w3Connected && (
+                      <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(0,223,169,0.05)', border: '1px solid rgba(0,223,169,0.15)' }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-[#00DFA9]" />
+                          <span className="text-[11px] font-bold text-[#00DFA9]">TronLink Connected</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold text-[#E84142]"
+                          style={{ background: 'rgba(232,65,66,0.10)', border: '1px solid rgba(232,65,66,0.25)' }}>
+                          TRC-20
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Wrong network — full banner + switch button */}
+                    {w3Connected && !chainCfg && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
+                        <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-bold text-[#FACC15]">Unsupported Network</p>
+                          <p className="text-[10px] text-[#64748B] mt-0.5">Switch to ETH · BSC · Polygon · Arbitrum · Optimism · Base</p>
+                        </div>
+                        <button
+                          onClick={() => evmWallet.openNetworks()}
+                          className="shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-black text-[#0B0F14]"
+                          style={{ background: 'linear-gradient(135deg, #FACC15 0%, #EAB308 100%)' }}
+                        >
+                          Switch
+                        </button>
                       </div>
                     )}
 
@@ -1142,37 +1255,80 @@ export function WalletPage() {
                     {walletPhase === 'error' && walletError && (
                       <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
                         <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                        <p className="text-red-400 flex-1">{walletError}</p>
+                        <p className="text-red-400 flex-1 whitespace-pre-wrap break-all">{walletError}</p>
+                      </div>
+                    )}
+
+                    {/* Deposit destination */}
+                    {w3Connected && chainCfg && platformDepositAddr && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.14)' }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide mb-0.5">Deposit Destination · {chainCfg.network}</p>
+                          <p className="text-[11px] font-mono text-[#CBD5E1] truncate">{platformDepositAddr.slice(0, 14)}…{platformDepositAddr.slice(-8)}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(platformDepositAddr);
+                            setW3DepAddrCopied(true);
+                            setTimeout(() => setW3DepAddrCopied(false), 2000);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold shrink-0 transition-all hover:bg-[#38BDF8]/10"
+                          style={{ color: '#38BDF8', border: '1px solid rgba(56,189,248,0.20)' }}
+                        >
+                          {w3DepAddrCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {w3DepAddrCopied ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* USDT + Gas balance row */}
+                    {(w3Connected || hasTronLink) && (
+                      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div>
+                          <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">USDT Balance</p>
+                          {walletBalance !== null ? (
+                            <p className="text-[14px] font-black text-[#A78BFA] leading-tight">
+                              {walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              <span className="text-[10px] font-bold ml-1 text-[#64748B]">USDT</span>
+                            </p>
+                          ) : (
+                            <span className="text-[10px] text-[#64748B] flex items-center gap-1 mt-0.5">
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" /> Loading…
+                            </span>
+                          )}
+                        </div>
+                        {w3Connected && chainCfg && gasBalance !== null && (
+                          <div className="text-right">
+                            <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Gas · {chainCfg.nativeToken}</p>
+                            <p className={cn('text-[14px] font-black leading-tight', gasBalance < 0.001 ? 'text-red-400' : 'text-[#CBD5E1]')}>
+                              {gasBalance.toFixed(4)}
+                              {gasBalance < 0.001 && <span className="text-[9px] font-bold ml-1 text-red-400">LOW</span>}
+                            </p>
+                          </div>
+                        )}
+                        {w3Connected && chainCfg && gasBalance === null && (
+                          <span className="text-[10px] text-[#64748B] flex items-center gap-1">
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                          </span>
+                        )}
+                        {walletBalance !== null && (
+                          <button
+                            type="button"
+                            onClick={() => setWalletDepAmount(Math.floor(walletBalance).toString())}
+                            disabled={walletProcessing || walletBalance < 10}
+                            className="px-2 py-1 rounded-lg text-[9px] font-black transition-all disabled:opacity-40"
+                            style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.30)' }}
+                          >
+                            MAX
+                          </button>
+                        )}
                       </div>
                     )}
 
                     {/* Amount input */}
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Amount (USDT)</label>
-                        {walletBalance !== null && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] text-[#64748B]">
-                              Available: <span className="text-[#A78BFA] font-bold">{walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT</span>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setWalletDepAmount(Math.floor(walletBalance).toString())}
-                              disabled={walletProcessing || walletBalance < 10}
-                              className="px-1.5 py-0.5 rounded text-[9px] font-black transition-all disabled:opacity-40"
-                              style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.30)' }}
-                            >
-                              MAX
-                            </button>
-                          </div>
-                        )}
-                        {walletBalance === null && (w3Connected || hasTronLink) && (
-                          <span className="text-[10px] text-[#64748B] flex items-center gap-1">
-                            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Fetching balance…
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative">
+                      <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Amount (USDT)</label>
+                      <div className="relative mt-1.5">
                         <input
                           type="number" min="10" step="1"
                           value={walletDepAmount}
@@ -1189,49 +1345,65 @@ export function WalletPage() {
 
                     {/* Deposit buttons */}
                     <div className="space-y-2">
-                      {chainCfg && (
-                        <button
-                          onClick={handleEvmDeposit}
-                          disabled={walletProcessing}
-                          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black text-[#0B0F14] transition-all hover:scale-[1.01] disabled:opacity-70 disabled:cursor-wait disabled:scale-100"
-                          style={{ background: walletProcessing ? 'rgba(0,223,169,0.5)' : 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: walletProcessing ? 'none' : '0 0 20px rgba(0,223,169,0.30)' }}
-                        >
-                          {walletPhase === 'sending' ? (
-                            <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Approve in wallet…</>
-                          ) : walletPhase === 'confirming' ? (
-                            <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Waiting for confirmation…</>
-                          ) : walletPhase === 'submitting' ? (
-                            <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Verifying on-chain…</>
-                          ) : (
-                            <>Deposit via {chainCfg.label}<ChevronRight className="w-4 h-4" /></>
-                          )}
-                        </button>
-                      )}
-                      {hasTronLink && (
-                        <button
-                          onClick={handleTronDeposit}
-                          disabled={walletProcessing}
-                          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black transition-all hover:scale-[1.01] disabled:opacity-70 disabled:cursor-wait disabled:scale-100"
-                          style={{ background: walletProcessing ? 'rgba(255,255,255,0.05)' : 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.30)', color: '#00DFA9' }}
-                        >
-                          {walletPhase === 'sending' ? (
-                            <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Approve in TronLink…</>
-                          ) : walletPhase === 'confirming' ? (
-                            <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Waiting for confirmation…</>
-                          ) : walletPhase === 'submitting' ? (
-                            <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Verifying on-chain…</>
-                          ) : (
-                            <>Deposit via TronLink TRC-20<ChevronRight className="w-4 h-4" /></>
-                          )}
-                        </button>
-                      )}
+                      {chainCfg && (() => {
+                        const amt = parseFloat(walletDepAmount || '0');
+                        const insufficientUsdt = walletBalance !== null && amt > walletBalance;
+                        const lowGas = gasBalance !== null && gasBalance < 0.001;
+                        const isDisabled = walletProcessing || insufficientUsdt || lowGas;
+                        return (
+                          <button
+                            onClick={handleEvmDeposit}
+                            disabled={isDisabled}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black text-[#0B0F14] transition-all hover:scale-[1.01] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                            style={{ background: isDisabled ? 'rgba(0,223,169,0.4)' : 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: isDisabled ? 'none' : '0 0 20px rgba(0,223,169,0.30)' }}
+                          >
+                            {walletPhase === 'sending' ? (
+                              <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Approve in wallet…</>
+                            ) : walletPhase === 'confirming' ? (
+                              <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Waiting for confirmation…</>
+                            ) : walletPhase === 'submitting' ? (
+                              <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Verifying on-chain…</>
+                            ) : insufficientUsdt ? (
+                              <>Insufficient USDT Balance</>
+                            ) : lowGas ? (
+                              <>Insufficient {chainCfg.nativeToken} for Gas</>
+                            ) : (
+                              <>Deposit via {chainCfg.label} <ChevronRight className="w-4 h-4" /></>
+                            )}
+                          </button>
+                        );
+                      })()}
+                      {hasTronLink && (() => {
+                        const amt = parseFloat(walletDepAmount || '0');
+                        const insufficientTron = tronBalance !== null && amt > tronBalance;
+                        return (
+                          <button
+                            onClick={handleTronDeposit}
+                            disabled={walletProcessing || insufficientTron}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black transition-all hover:scale-[1.01] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                            style={{ background: walletProcessing ? 'rgba(255,255,255,0.05)' : 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.30)', color: '#00DFA9' }}
+                          >
+                            {walletPhase === 'sending' ? (
+                              <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Approve in TronLink…</>
+                            ) : walletPhase === 'confirming' ? (
+                              <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Waiting for confirmation…</>
+                            ) : walletPhase === 'submitting' ? (
+                              <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Verifying on-chain…</>
+                            ) : insufficientTron ? (
+                              <>Insufficient TRC-20 Balance</>
+                            ) : (
+                              <>Deposit via TronLink TRC-20 <ChevronRight className="w-4 h-4" /></>
+                            )}
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
 
                 {/* Success */}
                 {walletPhase === 'success' && walletResult && (
-                  <div className="flex flex-col items-center py-8 gap-4 text-center">
+                  <div className="flex flex-col items-center py-6 gap-4 text-center">
                     <div className="relative">
                       <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.2)' }}>
                         <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
@@ -1250,6 +1422,36 @@ export function WalletPage() {
                           : <>Under review — usually credited within 5–30 min.</>}
                       </p>
                     </div>
+
+                    {/* Transaction hash + explorer link */}
+                    <div className="w-full flex items-center gap-2 p-3 rounded-xl text-left" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide mb-0.5">Transaction Hash</p>
+                        <p className="text-[10px] font-mono text-[#CBD5E1] truncate">
+                          {walletResult.txHash.slice(0, 22)}…{walletResult.txHash.slice(-8)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => navigator.clipboard.writeText(walletResult.txHash)}
+                          className="p-1.5 rounded-lg transition-all hover:bg-white/5"
+                          title="Copy hash"
+                        >
+                          <Copy className="w-3 h-3 text-[#64748B]" />
+                        </button>
+                        {walletResult.explorerUrl && (
+                          <a
+                            href={walletResult.explorerUrl}
+                            target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-[#38BDF8] hover:bg-[#38BDF8]/10 transition-all"
+                            style={{ border: '1px solid rgba(56,189,248,0.20)' }}
+                          >
+                            <ExternalLink className="w-3 h-3" /> View Tx
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="flex gap-2 w-full">
                       <button
                         onClick={resetWalletDeposit}
