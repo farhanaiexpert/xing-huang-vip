@@ -216,83 +216,114 @@ export async function fetchPrematchOdds(
   }
 }
 
-// ─── In-memory prematch odds cache (30-min TTL) ───────────────────────────────
-// Keyed by event id (same as BetsAPI FI).  Prevents re-fetching on every 30 s
-// live-cache refresh — only new/unseen events hit the prematch API.
+// ─── In-memory odds caches ────────────────────────────────────────────────────
+// inplayOddsCache  : 2-min TTL  — live odds that shift as the match progresses
+// prematchOddsCache: 30-min TTL — opening odds, used as fallback
 
 interface PrematchCacheEntry {
   odds:      { home: number; draw?: number; away: number } | null;
   expiresAt: number;
 }
 
+const inplayOddsCache   = new Map<string, PrematchCacheEntry>();
 const prematchOddsCache = new Map<string, PrematchCacheEntry>();
 
 /**
- * Enrich a batch of events with real Bet365 prematch 1X2 odds.
- * Events for which no real odds can be fetched are filtered out entirely —
- * no fake/fallback numbers are ever attached.
+ * Enrich a batch of live events with the best available real 1X2 odds.
  *
- * Concurrency: max 5 parallel fetches, 4 s timeout per request.
- * Cache policy:
- *   - Real odds found → cache for 30 min.
- *   - API responded with success=1 but no parseable 1X2 market → cache null
- *     for 30 min (definitive: that fixture has no odds).
- *   - Transport error, timeout, non-2xx, or success≠1 → do NOT cache
- *     (treated as transient; event will be retried on the next live refresh).
+ * Strategy (per event):
+ *   1. Check inplay cache (2-min TTL) — use if fresh.
+ *   2. Fetch /v1/bet365/inplay?FI=<id> for live match odds.
+ *   3. If inplay returns no parseable 1X2 market → fall back to prematch.
+ *   4. Events with no odds from either source are excluded entirely.
+ *
+ * Cache policies:
+ *   Inplay  : success=1 + odds found → cache 2 min.
+ *             success=1 + no 1X2     → cache null 2 min (definitive).
+ *             Non-2xx / timeout / success≠1 → do NOT cache (transient).
+ *   Prematch: success=1 (any outcome) → cache 30 min.
+ *             Non-2xx / timeout / success≠1 → do NOT cache (transient).
  */
-async function enrichWithPrematchOdds(events: BetsApiEventRaw[]): Promise<BetsApiEventRaw[]> {
-  const now       = Date.now();
-  const TTL_MS    = 30 * 60 * 1000;
-  const CONCUR    = 5;   // max concurrent prematch API calls
-  const PER_FETCH = 4_000; // per-request timeout (ms)
+async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEventRaw[]> {
+  const now             = Date.now();
+  const INPLAY_TTL_MS   = 2 * 60 * 1000;    // 2 min — reflects live match state
+  const PREMATCH_TTL_MS = 30 * 60 * 1000;   // 30 min — stable opening lines
+  const CONCUR          = 5;
+  const PER_FETCH       = 4_000;
 
-  // Split into cached vs needs-fetch
-  const withCache: BetsApiEventRaw[] = [];
+  const results:   BetsApiEventRaw[] = [];
   const needFetch: BetsApiEventRaw[] = [];
 
   for (const ev of events) {
-    const hit = prematchOddsCache.get(ev.id);
-    if (hit && hit.expiresAt > now) {
-      if (hit.odds !== null) {
-        withCache.push({ ...ev, prematchOdds: hit.odds });
+    const inplayHit = inplayOddsCache.get(ev.id);
+    if (inplayHit && inplayHit.expiresAt > now) {
+      if (inplayHit.odds !== null) {
+        // Fresh live odds — use directly
+        results.push({ ...ev, prematchOdds: inplayHit.odds });
+        continue;
       }
-      // hit.odds === null → definitively no real odds → exclude event
-    } else {
+      // Inplay definitively had no 1X2 → try prematch fallback from cache
+      const prematchHit = prematchOddsCache.get(ev.id);
+      if (prematchHit && prematchHit.expiresAt > now) {
+        if (prematchHit.odds !== null) results.push({ ...ev, prematchOdds: prematchHit.odds });
+        // null → no odds from either source → exclude
+        continue;
+      }
+      // Prematch cache stale → need fresh prematch fetch
       needFetch.push(ev);
+      continue;
     }
+    needFetch.push(ev);
   }
 
-  // Fetch uncached events in batches of CONCUR
   for (let i = 0; i < needFetch.length; i += CONCUR) {
-    const batch       = needFetch.slice(i, i + CONCUR);
+    const batch = needFetch.slice(i, i + CONCUR);
     const batchResult = await Promise.all(batch.map(async (ev) => {
       const sportMeta = BETSAPI_SPORT_MAP[Number(ev.sport_id)];
       const hasDraw   = sportMeta?.hasDraw ?? false;
+
+      // ── Step 1: try live inplay odds ──────────────────────────────────
+      try {
+        const url = `${BETSAPI_BASE}/v1/bet365/inplay?FI=${ev.id}&token=${BETSAPI_KEY}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(PER_FETCH) });
+        if (res.ok) {
+          const json = await res.json() as PrematchResponse;
+          if (json.success === 1) {
+            // Definitive API answer — cache regardless of whether 1X2 was found
+            const odds = parsePrematchOdds(json, hasDraw);
+            inplayOddsCache.set(ev.id, { odds, expiresAt: now + INPLAY_TTL_MS });
+            if (odds !== null) return { ...ev, prematchOdds: odds };
+            // success=1 but no 1X2 market → fall through to prematch
+          }
+          // success≠1 → transient; don't cache; fall through
+        }
+        // non-2xx → transient; fall through
+      } catch {
+        // timeout / network error → transient; fall through
+      }
+
+      // ── Step 2: fall back to prematch opening odds ─────────────────────
+      const prematchHit = prematchOddsCache.get(ev.id);
+      if (prematchHit && prematchHit.expiresAt > now) {
+        return prematchHit.odds !== null ? { ...ev, prematchOdds: prematchHit.odds } : null;
+      }
       try {
         const url = `${BETSAPI_BASE}/v1/bet365/prematch?FI=${ev.id}&token=${BETSAPI_KEY}`;
         const res = await fetch(url, { signal: AbortSignal.timeout(PER_FETCH) });
-        if (!res.ok) {
-          // Non-2xx: treat as transient — do NOT cache, retry next poll
-          return null;
-        }
+        if (!res.ok) return null;
         const json = await res.json() as PrematchResponse;
-        if (json.success !== 1) {
-          // API returned an error body: treat as transient — do NOT cache
-          return null;
-        }
-        // success===1: this is a definitive API answer; cache regardless of outcome
+        if (json.success !== 1) return null;
         const odds = parsePrematchOdds(json, hasDraw);
-        prematchOddsCache.set(ev.id, { odds, expiresAt: now + TTL_MS });
+        prematchOddsCache.set(ev.id, { odds, expiresAt: now + PREMATCH_TTL_MS });
         return odds !== null ? { ...ev, prematchOdds: odds } : null;
       } catch {
-        // Network error or AbortError (timeout): transient — do NOT cache
         return null;
       }
     }));
-    withCache.push(...(batchResult.filter(Boolean) as BetsApiEventRaw[]));
+    results.push(...(batchResult.filter(Boolean) as BetsApiEventRaw[]));
   }
 
-  return withCache;
+  return results;
 }
 
 /**
@@ -321,6 +352,6 @@ export async function fetchBetsApiInplay(): Promise<BetsApiEventRaw[]> {
   const results = await Promise.all(liveSportIds.map(fetchSport));
   const allEvents = results.flat();
 
-  // Enrich with real prematch odds; events without real odds are dropped
-  return enrichWithPrematchOdds(allEvents);
+  // Enrich with live inplay odds (prematch fallback); events without real odds are dropped
+  return enrichWithLiveOdds(allEvents);
 }
