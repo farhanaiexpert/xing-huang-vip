@@ -359,8 +359,8 @@ export function MatchDetail() {
         <BetSlip />
       </div>
 
-      {/* ── Mobile Bet Slip FAB ──────────────────────────────────────────── */}
-      <div className="xl:hidden fixed bottom-6 right-6 z-50">
+      {/* ── Mobile Bet Slip FAB — sits above the mobile nav bar (h-14 = 56px) ── */}
+      <div className="xl:hidden fixed bottom-20 right-5 z-50">
         <Drawer>
           <DrawerTrigger asChild>
             <button
