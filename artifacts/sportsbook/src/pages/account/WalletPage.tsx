@@ -1421,15 +1421,12 @@ export function WalletPage() {
           {/* ── Manual USDT flow ─────────────────────────────────────────── */}
           {depositMethod === 'manual' && (() => {
             const MANUAL_NETS = [
-              { val: 'TRC-20'   as const, short: 'TRC-20',   fullName: 'Tron (TRC-20)',       coinLabel: 'USDT', color: '#00DFA9', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on TRC-20 (Tron). Sending on any other network will result in permanent loss.' },
-              { val: 'ERC-20'   as const, short: 'ERC-20',   fullName: 'Ethereum (ERC-20)',    coinLabel: 'USDT', color: '#627EEA', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on Ethereum (ERC-20). Do not send on TRC-20/Tron or other networks.' },
-              { val: 'BSC'      as const, short: 'BEP-20',   fullName: 'BNB Smart Chain',      coinLabel: 'USDT', color: '#F0B90B', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on BEP-20 (BSC). Sending on TRC-20 or Ethereum will result in loss.' },
-              { val: 'POLYGON'  as const, short: 'Polygon',  fullName: 'Polygon (MATIC)',       coinLabel: 'USDT', color: '#8247E5', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on Polygon. Do not send on other EVM networks.' },
-              { val: 'ARBITRUM' as const, short: 'Arbitrum', fullName: 'Arbitrum One',          coinLabel: 'USDT', color: '#28A0F0', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT on Arbitrum One. Do not send on other EVM networks.' },
-              { val: 'SOLANA'   as const, short: 'Solana',   fullName: 'Solana (SPL)',          coinLabel: 'USDT', color: '#9945FF', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT SPL on Solana. Sending SOL or other tokens will result in permanent loss.' },
-              { val: 'TON'      as const, short: 'TON',      fullName: 'TON Network',           coinLabel: 'USDT', color: '#0098EA', badge: '⚡ Auto', autoVerify: true,  warning: 'Only send USDT Jetton on TON. Sending native TON will result in loss.' },
-              { val: 'BTC'      as const, short: 'Bitcoin',  fullName: 'Bitcoin Network',       coinLabel: 'BTC',  color: '#F7931A', badge: '🕐 Review', autoVerify: false, warning: 'Only send native BTC. Admin converts to USDT and credits within 30 min.' },
-              { val: 'XRP'      as const, short: 'XRP',      fullName: 'XRP Ledger',            coinLabel: 'XRP',  color: '#346AA9', badge: '🕐 Review', autoVerify: false, warning: 'Only send native XRP. Admin converts to USDT and credits within 30 min.' },
+              { val: 'TRC-20'   as const, short: 'TRC-20',   fullName: 'Tron (TRC-20)',    coinLabel: 'USDT', color: '#00DFA9', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT on TRC-20 (Tron). Sending on any other network will result in permanent loss.' },
+              { val: 'ERC-20'   as const, short: 'ERC-20',   fullName: 'Ethereum (ERC-20)',coinLabel: 'USDT', color: '#627EEA', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT on Ethereum (ERC-20). Do not send on TRC-20/Tron or other networks.' },
+              { val: 'BSC'      as const, short: 'BEP-20',   fullName: 'BNB Smart Chain',  coinLabel: 'USDT', color: '#F0B90B', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT on BEP-20 (BSC). Sending on TRC-20 or Ethereum will result in loss.' },
+              { val: 'SOLANA'   as const, short: 'Solana',   fullName: 'Solana (SPL)',     coinLabel: 'USDT', color: '#9945FF', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT SPL on Solana. Sending SOL or other tokens will result in permanent loss.' },
+              { val: 'TON'      as const, short: 'TON',      fullName: 'TON Network',      coinLabel: 'USDT', color: '#0098EA', badge: '⚡ Auto',    autoVerify: true,  warning: 'Only send USDT Jetton on TON. Sending native TON will result in loss.' },
+              { val: 'BTC'      as const, short: 'Bitcoin',  fullName: 'Bitcoin Network',  coinLabel: 'BTC',  color: '#F7931A', badge: '🕐 Review', autoVerify: false, warning: 'Only send native BTC. Admin converts to USDT and credits within 30 min.' },
             ];
             const net = MANUAL_NETS.find(n => n.val === manualNetwork) ?? MANUAL_NETS[0];
             const addr = depositInfo ? getManualAddress(manualNetwork, depositInfo) : '';
