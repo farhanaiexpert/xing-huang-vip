@@ -81,7 +81,8 @@ async function waitForConfirmations(txHash: string, minConfirmations: number): P
       if (confirmations >= minConfirmations) return;
     } catch { /* keep polling */ }
   }
-  throw new Error('Transaction confirmation timed out. Your funds are safe — please use Manual Deposit and paste the TxHash.');
+  // Surface the TxHash so the user can paste it into Manual Deposit
+  throw new Error(`Transaction confirmation timed out. Your funds are safe — use Manual Deposit and paste this hash: ${txHash}`);
 }
 
 export function useAutoDeposit(options?: UseAutoDepositOptions) {
@@ -150,6 +151,12 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
       setDepositError('Your wallet is on an unsupported network. Switch to Ethereum mainnet to deposit ERC-20 USDT.');
       return;
     }
+    // Guard: platform receiving address must be configured before any transfer
+    if (!ERC20_ADDRESS || !/^0x[0-9a-fA-F]{40}$/.test(ERC20_ADDRESS)) {
+      setDepositError('Web3 wallet deposit is temporarily unavailable. Please use NOWPayments or Manual Deposit instead.');
+      setDepositPhase('error');
+      return;
+    }
     const e = getEth();
     if (!e) { setDepositError('No EVM wallet detected. Please install MetaMask.'); return; }
 
@@ -189,12 +196,19 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
         if (info?.blockNumber) return;
       } catch { /* keep polling */ }
     }
-    throw new Error('Transaction confirmation timed out. Your funds are safe — please use Manual Deposit and paste the TxHash.');
+    // Surface the TxHash so the user can paste it into Manual Deposit
+    throw new Error(`Transaction confirmation timed out. Your funds are safe — use Manual Deposit and paste this hash: ${txHash}`);
   }
 
   async function handleTronDeposit() {
     const amount = parseFloat(depositAmount);
     if (isNaN(amount) || amount < 10) { setDepositError('Minimum deposit is 10 USDT'); return; }
+    // Guard: platform receiving address must be configured before any transfer
+    if (!TRC20_ADDRESS) {
+      setDepositError('Web3 wallet deposit is temporarily unavailable. Please use NOWPayments or Manual Deposit instead.');
+      setDepositPhase('error');
+      return;
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tronWeb = (window as any).tronWeb;
     if (!tronWeb?.defaultAddress?.base58) {
