@@ -9,7 +9,7 @@ import {
   Copy, Check, Wallet, Receipt, ArrowLeftRight,
   Users, Gift, Star, Trophy, Settings,
   Calendar, ShieldCheck, TrendingUp, Activity,
-  ArrowDownLeft, ArrowUpRight,
+  ArrowDownLeft, ArrowUpRight, Lock,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { userDisplayLabel, addressInitials } from '@/lib/utils';
@@ -21,14 +21,15 @@ function fmtDate(iso?: string) {
 
 export function OverviewPage() {
   const { user } = useAuth();
-  const { balance } = useWallet();
+  const { balance, bonusBalance } = useWallet();
   const { bets } = useBetHistory();
   const ref = useReferral();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  const wonBets   = bets.filter(b => b.status === 'won' || b.status === 'settled').length;
-  const openBets  = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
+  const wonBets      = bets.filter(b => b.status === 'won' || b.status === 'settled').length;
+  const openBets     = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
+  const lockedInBets = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').reduce((s, b) => s + b.stake, 0);
   const totalWagered = bets.reduce((s, b) => s + b.stake, 0);
   const winRate   = bets.length > 0 ? Math.round((wonBets / bets.length) * 100) : 0;
   const displayLabel = userDisplayLabel(user);
@@ -43,16 +44,6 @@ export function OverviewPage() {
   }
 
   const STATS = [
-    {
-      label: 'Balance',
-      value: `${balance.toFixed(2)}`,
-      sub: 'USDT',
-      icon: Wallet,
-      color: '#00DFA9',
-      bg: 'rgba(0,223,169,0.08)',
-      border: 'rgba(0,223,169,0.15)',
-      href: '/account/wallet',
-    },
     {
       label: 'Total Bets',
       value: bets.length,
@@ -168,8 +159,54 @@ export function OverviewPage() {
         </div>
       </div>
 
-      {/* ── 4 stat tiles ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* ── Balance Breakdown Card ── */}
+      <Link href="/account/wallet">
+        <div className="relative overflow-hidden rounded-2xl border border-[#00DFA9]/20 p-5 cursor-pointer hover:border-[#00DFA9]/35 transition-colors"
+          style={{ background: 'linear-gradient(135deg, #071A12 0%, #0A1A10 60%, #0B0F14 100%)' }}>
+          <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(0,223,169,0.10) 0%, transparent 70%)' }} />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/12 border border-[#00DFA9]/25 flex items-center justify-center">
+                  <Wallet className="h-3.5 w-3.5 text-[#00DFA9]" />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Wallet Balance</p>
+              </div>
+              <span className="text-[10px] font-semibold text-[#38BDF8]">View Wallet →</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="rounded-xl p-3 border" style={{ background: 'rgba(0,223,169,0.06)', borderColor: 'rgba(0,223,169,0.14)' }}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <ArrowDownLeft className="h-3 w-3 text-[#00DFA9]" />
+                  <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Available</p>
+                </div>
+                <p className="text-[18px] font-black text-[#00DFA9] leading-tight">${balance.toFixed(2)}</p>
+                <p className="text-[9px] text-[#64748B] mt-0.5">USDT</p>
+              </div>
+              <div className="rounded-xl p-3 border" style={{ background: 'rgba(56,189,248,0.06)', borderColor: 'rgba(56,189,248,0.14)' }}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Lock className="h-3 w-3 text-[#38BDF8]" />
+                  <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Active Bets</p>
+                </div>
+                <p className="text-[18px] font-black text-[#38BDF8] leading-tight">${lockedInBets.toFixed(2)}</p>
+                <p className="text-[9px] text-[#64748B] mt-0.5">locked</p>
+              </div>
+              <div className="rounded-xl p-3 border" style={{ background: 'rgba(167,139,250,0.06)', borderColor: 'rgba(167,139,250,0.14)' }}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Gift className="h-3 w-3 text-[#A78BFA]" />
+                  <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Bonus</p>
+                </div>
+                <p className="text-[18px] font-black text-[#A78BFA] leading-tight">${bonusBalance.toFixed(2)}</p>
+                <p className="text-[9px] text-[#64748B] mt-0.5">non-withdraw.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+
+      {/* ── Stat tiles ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {STATS.map(s => {
           const Icon = s.icon;
           return (

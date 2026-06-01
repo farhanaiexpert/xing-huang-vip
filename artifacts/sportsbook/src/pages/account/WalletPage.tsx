@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePublicClient } from 'wagmi';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBetHistory } from '@/hooks/useBetHistory';
 import { api } from '@/lib/apiClient';
 import { cn } from '@/lib/utils';
 import { useEvmWallet } from '@/hooks/useEvmWallet';
@@ -106,6 +107,7 @@ function StatusBadge({ status }: { status: string }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 export function WalletPage() {
   const { isAuthenticated, user } = useAuth();
+  const { bets } = useBetHistory();
   const [tab, setTab] = useState<'deposit' | 'withdraw' | 'history'>(() => {
     const hint = sessionStorage.getItem('cupbett_wallet_tab');
     if (hint) sessionStorage.removeItem('cupbett_wallet_tab');
@@ -520,52 +522,98 @@ export function WalletPage() {
     </div>
   );
 
-  const pendingDeposits   = txns.filter(t => t.type === 'deposit'    && t.status === 'pending').length;
+  const lockedInBets       = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').reduce((s, b) => s + b.stake, 0);
+  const pendingDepositsAmt = txns.filter(t => t.type === 'deposit' && (t.status === 'pending' || t.status === 'confirming')).reduce((s, t) => s + parseFloat(t.amount), 0);
+  const pendingDeposits    = txns.filter(t => t.type === 'deposit'    && t.status === 'pending').length;
   const pendingWithdrawals = txns.filter(t => t.type === 'withdrawal' && t.status === 'pending').length;
 
   return (
     <div className="space-y-5">
 
-      {/* ── Balance hero ─────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-[#00DFA9]/20 p-6"
+      {/* ── Balance Breakdown ────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-[#00DFA9]/20 p-5"
         style={{ background: 'linear-gradient(135deg, #071A12 0%, #0A1A10 50%, #0B0F14 100%)' }}>
         <div className="pointer-events-none absolute -top-12 -right-12 w-48 h-48 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(0,223,169,0.15) 0%, transparent 70%)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(0,223,169,0.12) 0%, transparent 70%)' }} />
         <div className="relative">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/12 border border-[#00DFA9]/25 flex items-center justify-center">
-              <Wallet className="h-3.5 w-3.5 text-[#00DFA9]" />
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/12 border border-[#00DFA9]/25 flex items-center justify-center">
+                <Wallet className="h-3.5 w-3.5 text-[#00DFA9]" />
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Wallet Balance</p>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Available Balance</p>
-          </div>
-          <div className="flex items-end gap-2 mt-2">
-            <span className="text-[42px] font-black text-[#F8FAFC] leading-none"
-              style={{ textShadow: '0 0 40px rgba(0,223,169,0.2)' }}>
-              ${fmt(balance)}
-            </span>
-            <span className="text-[16px] font-bold text-[#00DFA9] mb-1.5">USDT</span>
-          </div>
-          {bonusBalance > 0 && (
-            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#FACC15]/30"
-              style={{ background: 'rgba(250,204,21,0.08)' }}>
-              <span className="text-[#FACC15] text-[10px]">✦</span>
-              <span className="text-[11px] font-bold text-[#FACC15]">+${fmt(bonusBalance)} Bonus</span>
-              <span className="text-[10px] text-[#64748B]">· non-withdrawable</span>
+            <div className="text-right">
+              <p className="text-[24px] font-black text-[#F8FAFC] leading-none"
+                style={{ textShadow: '0 0 32px rgba(0,223,169,0.18)' }}>
+                ${fmt(balance + bonusBalance + lockedInBets + pendingDepositsAmt)}
+              </p>
+              <p className="text-[10px] font-semibold text-[#00DFA9]">USDT total</p>
             </div>
-          )}
+          </div>
 
-          {(pendingDeposits > 0 || pendingWithdrawals > 0) && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {pendingDeposits > 0 && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#FACC15] bg-[#FACC15]/10 border border-[#FACC15]/20 px-2.5 py-1 rounded-full">
-                  <Clock className="h-3 w-3" /> {pendingDeposits} deposit{pendingDeposits > 1 ? 's' : ''} pending review
-                </span>
-              )}
-              {pendingWithdrawals > 0 && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-2.5 py-1 rounded-full">
-                  <Clock className="h-3 w-3" /> {pendingWithdrawals} withdrawal{pendingWithdrawals > 1 ? 's' : ''} pending
-                </span>
-              )}
+          {/* 2×2 breakdown grid */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Available */}
+            <div className="flex items-center gap-3 rounded-xl p-3 border"
+              style={{ background: 'rgba(0,223,169,0.06)', borderColor: 'rgba(0,223,169,0.14)' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.22)' }}>
+                <ArrowDownLeft className="h-4 w-4 text-[#00DFA9]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Available</p>
+                <p className="text-[15px] font-black text-[#00DFA9] leading-tight">${fmt(balance)}</p>
+              </div>
+            </div>
+
+            {/* Locked in active bets */}
+            <div className="flex items-center gap-3 rounded-xl p-3 border"
+              style={{ background: 'rgba(56,189,248,0.06)', borderColor: 'rgba(56,189,248,0.14)' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.22)' }}>
+                <Lock className="h-4 w-4 text-[#38BDF8]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Active Bets</p>
+                <p className="text-[15px] font-black text-[#38BDF8] leading-tight">${fmt(lockedInBets)}</p>
+              </div>
+            </div>
+
+            {/* Pending deposits */}
+            <div className="flex items-center gap-3 rounded-xl p-3 border"
+              style={{ background: 'rgba(250,204,21,0.06)', borderColor: 'rgba(250,204,21,0.14)' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.22)' }}>
+                <Clock className="h-4 w-4 text-[#FACC15]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Pending Deps</p>
+                <p className="text-[15px] font-black text-[#FACC15] leading-tight">${fmt(pendingDepositsAmt)}</p>
+              </div>
+            </div>
+
+            {/* Bonus */}
+            <div className="flex items-center gap-3 rounded-xl p-3 border"
+              style={{ background: 'rgba(167,139,250,0.06)', borderColor: 'rgba(167,139,250,0.14)' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.22)' }}>
+                <CircleDollarSign className="h-4 w-4 text-[#A78BFA]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Bonus</p>
+                <p className="text-[15px] font-black text-[#A78BFA] leading-tight">${fmt(bonusBalance)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pending withdrawal notice */}
+          {pendingWithdrawals > 0 && (
+            <div className="mt-3 flex items-center gap-2 text-[10px] font-semibold text-[#38BDF8] border border-[#38BDF8]/15 rounded-xl px-3 py-2"
+              style={{ background: 'rgba(56,189,248,0.07)' }}>
+              <Clock className="h-3 w-3 shrink-0" />
+              {pendingWithdrawals} withdrawal{pendingWithdrawals > 1 ? 's' : ''} pending admin review
             </div>
           )}
         </div>
