@@ -78,14 +78,24 @@ function StatusBadge({ status }: { status: string }) {
       <CheckCircle2 className="h-3 w-3" /> Approved
     </span>
   );
+  if (status === 'confirming') return (
+    <span className="flex items-center gap-1 text-[10px] font-semibold text-[#38BDF8]">
+      <RefreshCw className="h-3 w-3" style={{ animation: 'spin 2s linear infinite' }} /> Confirming
+    </span>
+  );
   if (status === 'pending') return (
     <span className="flex items-center gap-1 text-[10px] font-semibold text-[#FACC15]">
       <Clock className="h-3 w-3" /> Pending
     </span>
   );
-  if (status === 'rejected') return (
+  if (status === 'rejected' || status === 'failed') return (
     <span className="flex items-center gap-1 text-[10px] font-semibold text-red-400">
-      <XCircle className="h-3 w-3" /> Rejected
+      <XCircle className="h-3 w-3" /> {status === 'rejected' ? 'Rejected' : 'Failed'}
+    </span>
+  );
+  if (status === 'expired') return (
+    <span className="flex items-center gap-1 text-[10px] font-semibold text-[#64748B]">
+      <Clock className="h-3 w-3" /> Expired
     </span>
   );
   return <span className="text-[10px] text-[#64748B] capitalize">{status}</span>;
