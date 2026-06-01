@@ -341,6 +341,20 @@ async function runMigrations() {
     logger.warn({ err }, "Migration v19 skipped");
   }
 
+  // v21: unique partial index on transactions.tx_hash — prevents double-credit from
+  // concurrent duplicate submissions (TOCTOU race between SELECT check and INSERT).
+  // Partial (WHERE tx_hash IS NOT NULL) so NOWPayments / Cryptomus rows (null tx_hash) are unaffected.
+  try {
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_tx_hash
+        ON transactions (tx_hash)
+        WHERE tx_hash IS NOT NULL
+    `);
+    logger.info("DB migration v21 applied (unique partial index on transactions.tx_hash)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v21 skipped");
+  }
+
   // v20: repair bets 14 and 16 — incorrectly marked 'won' by a previous buggy
   // settlement run; all their selections are 'void' so the correct outcome is
   // void (stake refunded).  Idempotent: guarded by checking current status.

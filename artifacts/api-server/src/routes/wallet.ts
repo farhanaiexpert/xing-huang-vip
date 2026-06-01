@@ -128,16 +128,6 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     return;
   }
 
-  // ── Prevent duplicate TxHash submissions ─────────────────────────────────────
-  const [existing] = await db.select({ id: transactionsTable.id })
-    .from(transactionsTable)
-    .where(eq(transactionsTable.txHash, txHash))
-    .limit(1);
-  if (existing) {
-    res.status(409).json({ error: "This transaction hash has already been submitted." });
-    return;
-  }
-
   // ── On-chain verification — route to correct verifier by network ──────────────
   logger.info({ txHash, amount, network, userId: req.user!.userId }, "Starting on-chain deposit verification");
 
@@ -158,20 +148,37 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
   // BTC/XRP amounts are in coin units — auto-credit not safe without price conversion
   const autoVerified = verification.verified && !FORCE_MANUAL_NETWORKS.has(network);
 
+  const newStatus = autoVerified ? "completed" : "pending";
+  const newVerified = autoVerified || (FORCE_MANUAL_NETWORKS.has(network) && verification.verified);
+  const newNote = (FORCE_MANUAL_NETWORKS.has(network) && verification.verified)
+    ? `${verification.note} — Awaiting admin USDT credit conversion.`
+    : verification.note;
+
+  // ── Atomic INSERT with ON CONFLICT — duplicate tx_hash protection ─────────────
+  // The DB has a unique partial index on tx_hash (WHERE tx_hash IS NOT NULL).
+  // ON CONFLICT DO NOTHING means concurrent duplicate submissions are silently
+  // dropped at the DB level — exactly one INSERT wins regardless of request timing.
+  const inserted = await db.insert(transactionsTable).values({
+    userId,
+    type: "deposit",
+    amount: amount.toString(),
+    status: newStatus,
+    txHash,
+    network,
+    verified: newVerified,
+    verificationNote: newNote,
+  }).onConflictDoNothing().returning();
+
+  if (inserted.length === 0) {
+    // Another request already recorded this tx hash — reject as duplicate
+    res.status(409).json({ error: "This transaction hash has already been submitted." });
+    return;
+  }
+
+  const [txn] = inserted;
+
   if (autoVerified) {
     // ── AUTO-APPROVE: verified on-chain → credit balance immediately ─────────
-    const [txn] = await db.insert(transactionsTable).values({
-      userId,
-      type: "deposit",
-      amount: amount.toString(),
-      status: "completed",
-      txHash,
-      network,
-      verified: true,
-      verificationNote: verification.note,
-    }).returning();
-
-    // Credit wallet balance
     await db.update(walletsTable)
       .set({ balanceUsdt: sql`balance_usdt + ${amount.toString()}` })
       .where(eq(walletsTable.userId, userId));
@@ -180,37 +187,14 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     await recordDepositUsage(userId, amount.toString());
 
     logger.info({ txHash, amount, userId }, "Deposit auto-approved and balance credited");
-
     res.status(201).json({ ...txn, autoVerified: true });
   } else if (FORCE_MANUAL_NETWORKS.has(network) && verification.verified) {
     // BTC/XRP verified on-chain but needs admin to convert & credit USDT equiv.
-    const [txn] = await db.insert(transactionsTable).values({
-      userId,
-      type: "deposit",
-      amount: amount.toString(),
-      status: "pending",
-      txHash,
-      network,
-      verified: true,
-      verificationNote: `${verification.note} — Awaiting admin USDT credit conversion.`,
-    }).returning();
     logger.info({ txHash, amount, network, userId }, "Native-coin deposit verified; pending admin credit conversion");
     res.status(201).json({ ...txn, autoVerified: false, reviewReason: "Admin will convert to USDT and credit within 30 min" });
   } else {
     // ── MANUAL REVIEW: could not verify → pending for admin ──────────────────
-    const [txn] = await db.insert(transactionsTable).values({
-      userId,
-      type: "deposit",
-      amount: amount.toString(),
-      status: "pending",
-      txHash,
-      network,
-      verified: false,
-      verificationNote: verification.note,
-    }).returning();
-
     logger.info({ txHash, amount, userId, reason: verification.note }, "Deposit pending manual review");
-
     res.status(201).json({ ...txn, autoVerified: false, reviewReason: verification.note });
   }
 });
