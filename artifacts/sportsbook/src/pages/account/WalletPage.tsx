@@ -133,11 +133,47 @@ export function WalletPage() {
     return 'nowpayments';
   });
   const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20' | 'BSC' | 'POLYGON' | 'ARBITRUM' | 'OPTIMISM' | 'BASE' | 'SOLANA' | 'TON' | 'XRP' | 'BTC'>('TRC-20');
-  const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
+  const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>(() => {
+    try {
+      const saved = sessionStorage.getItem('cupbett_npp_payment');
+      if (saved) {
+        const p = JSON.parse(saved) as NppPayment;
+        const secsLeft = p.expiresAt
+          ? Math.floor((new Date(p.expiresAt).getTime() - Date.now()) / 1000)
+          : 20 * 60;
+        if (secsLeft > 0) return 'paying';
+      }
+    } catch { /* ignore */ }
+    return 'idle';
+  });
   const [nppAmount, setNppAmount]     = useState('');
   const [nppCurrency, setNppCurrency] = useState('usdttrc20');
-  const [nppPayment, setNppPayment]   = useState<NppPayment | null>(null);
-  const [nppTimeLeft, setNppTimeLeft] = useState(0);
+  const [nppPayment, setNppPayment]   = useState<NppPayment | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('cupbett_npp_payment');
+      if (saved) {
+        const p = JSON.parse(saved) as NppPayment;
+        const secsLeft = p.expiresAt
+          ? Math.floor((new Date(p.expiresAt).getTime() - Date.now()) / 1000)
+          : 20 * 60;
+        if (secsLeft > 0) return p;
+      }
+    } catch { /* ignore */ }
+    return null;
+  });
+  const [nppTimeLeft, setNppTimeLeft] = useState<number>(() => {
+    try {
+      const saved = sessionStorage.getItem('cupbett_npp_payment');
+      if (saved) {
+        const p = JSON.parse(saved) as NppPayment;
+        const secsLeft = p.expiresAt
+          ? Math.floor((new Date(p.expiresAt).getTime() - Date.now()) / 1000)
+          : 20 * 60;
+        if (secsLeft > 0) return secsLeft;
+      }
+    } catch { /* ignore */ }
+    return 0;
+  });
   const [nppError, setNppError]       = useState('');
   const [nppAddrCopied, setNppAddrCopied] = useState(false);
 
@@ -304,10 +340,12 @@ export function WalletPage() {
       const result = await api.post<NppPayment & { status: string; expiresAt: string | null }>(
         '/wallet/deposit/nowpayments/create', { amount, currency: nppCurrency }
       );
-      setNppPayment(result);
-      setNppTimeLeft(result.expiresAt
+      const secsLeft = result.expiresAt
         ? Math.max(0, Math.floor((new Date(result.expiresAt).getTime() - Date.now()) / 1000))
-        : 20 * 60);
+        : 20 * 60;
+      try { sessionStorage.setItem('cupbett_npp_payment', JSON.stringify(result)); } catch { /* ignore */ }
+      setNppPayment(result);
+      setNppTimeLeft(secsLeft);
       setNppState('paying');
       loadData();
     } catch (err: unknown) {
@@ -324,6 +362,7 @@ export function WalletPage() {
   }
 
   function resetNpp() {
+    try { sessionStorage.removeItem('cupbett_npp_payment'); } catch { /* ignore */ }
     setNppState('idle'); setNppPayment(null);
     setNppAmount(''); setNppError(''); setNppTimeLeft(0);
   }
@@ -349,9 +388,11 @@ export function WalletPage() {
           `/wallet/deposit/nowpayments/${nppPayment.paymentId}/status`
         );
         if (r.credited || r.status === 'finished' || r.status === 'confirmed') {
+          try { sessionStorage.removeItem('cupbett_npp_payment'); } catch { /* ignore */ }
           setNppState('success'); loadData();
-        } else if (r.status === 'failed' || r.status === 'refunded') {
-          setNppState('failed');
+        } else if (r.status === 'failed' || r.status === 'refunded' || r.status === 'expired') {
+          try { sessionStorage.removeItem('cupbett_npp_payment'); } catch { /* ignore */ }
+          setNppState(r.status === 'expired' ? 'expired' : 'failed');
         }
       } catch { /* silent */ }
     }, 10_000);
@@ -731,7 +772,6 @@ export function WalletPage() {
                           <option value="usdtsol">USDT (Solana / SPL)</option>
                           <option value="usdtarbi">USDT (Arbitrum)</option>
                           <option value="usdtton">USDT (TON)</option>
-                          <option value="usdtbase">USDT (Base)</option>
                           <option value="xrp">XRP (Ripple)</option>
                           <option value="btc">Bitcoin (BTC)</option>
                           <option value="eth">Ethereum (ETH)</option>

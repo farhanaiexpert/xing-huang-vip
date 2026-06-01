@@ -226,7 +226,6 @@ const NPP_CURRENCY_TO_NETWORK: Record<string, string> = {
   usdtsol:     "Solana",
   usdtarbi:    "Arbitrum",
   usdtton:     "TON",
-  usdtbase:    "Base",
   btc:         "BTC",
   eth:         "ETH",
   bnbbsc:      "BEP-20",
@@ -236,7 +235,7 @@ const NPP_CURRENCY_TO_NETWORK: Record<string, string> = {
 
 const ALLOWED_NPP_CURRENCIES = [
   "usdttrc20", "usdterc20", "usdtbsc", "usdtpolygon", "usdtsol", "usdtarbi",
-  "btc", "eth", "bnbbsc", "ltc", "usdtton", "xrp", "usdtbase",
+  "btc", "eth", "bnbbsc", "ltc", "usdtton", "xrp",
 ] as const;
 
 const NppCreateBody = z.object({
