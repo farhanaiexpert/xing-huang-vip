@@ -67,6 +67,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
   return (
     <div
       onClick={handleRowClick}
+      data-testid={`match-row-${match.id}`}
       className="group flex items-center justify-between px-3.5 py-3 gap-3 bg-[#121821] hover:bg-[#18212B] transition-colors duration-100 cursor-pointer"
     >
       {/* Date / time */}
