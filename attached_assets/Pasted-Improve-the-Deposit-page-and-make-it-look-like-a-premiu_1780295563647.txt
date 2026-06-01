@@ -1,0 +1,151 @@
+Improve the Deposit page and make it look like a premium crypto sportsbook/casino deposit experience.
+
+Current deposit methods:
+
+* NOWPayments
+* USDT Manual (TRC20/ERC20)
+* Binance Pay (Coming Soon)
+* Web3 Wallet
+* Cryptomus
+
+Requirements:
+
+1. Visual Improvements
+
+* Make the page feel more premium and trustworthy.
+* Improve spacing, alignment, typography, and card hierarchy.
+* Add subtle hover animations and active-state effects.
+* Make selected deposit method much more obvious.
+* Add professional crypto/payment icons.
+* Improve mobile responsiveness.
+
+2. Deposit Method Cards
+
+* Show clear badges:
+
+  * Recommended
+  * Instant
+  * Lowest Fees
+  * Most Popular
+  * Coming Soon
+* Display estimated confirmation time.
+* Display supported networks.
+* Display fee information.
+
+Examples:
+
+NOWPayments
+
+* Recommended
+* 300+ cryptocurrencies
+* Auto credit
+* Average confirmation: 5-15 min
+
+Web3 Wallet
+
+* Instant verification
+* Connect MetaMask, Trust Wallet, OKX Wallet, Coinbase Wallet
+* Polygon, BSC, Ethereum, Base, Arbitrum, Optimism
+
+USDT Manual
+
+* TRC20
+* ERC20
+* Manual verification
+* Higher processing time
+
+3. Deposit Form Improvements
+
+* Real-time validation.
+* Prevent deposits below minimum amount.
+* Display minimum deposit dynamically.
+* Show estimated received amount.
+* Show network fee warning when relevant.
+* Add "Max" and "Quick Amount" buttons.
+
+Quick amounts:
+$10
+$25
+$50
+$100
+$250
+$500
+$1000
+
+4. Generate Payment Experience
+   After clicking "Generate Payment Address":
+
+Show:
+
+* Deposit address
+* QR code
+* Exact amount
+* Selected network
+* Copy address button
+* Countdown timer (20 minutes)
+* Payment status tracker
+
+Status flow:
+Waiting for Payment
+→ Payment Detected
+→ Confirming
+→ Confirmed
+→ Balance Credited
+
+5. Trust Elements
+   Add information cards:
+
+🔒 Secure Payments
+All deposits verified automatically.
+
+⚡ Fast Processing
+Most deposits confirmed within minutes.
+
+💰 Auto Credit
+Balance updated automatically after blockchain confirmation.
+
+🌍 Multiple Networks
+Supports TRC20, ERC20, BEP20, Polygon and more.
+
+6. Web3 Wallet Deposit Section
+   When Web3 Wallet is selected:
+
+* Show Connect Wallet button.
+* Support MetaMask, Trust Wallet, Coinbase Wallet, OKX Wallet and WalletConnect.
+* Show connected wallet address.
+* Show network selector.
+* Show wallet balance.
+* Allow direct USDT deposits from connected wallet.
+
+7. Deposit History
+   Improve history section:
+
+Columns:
+
+* Date
+* Method
+* Currency
+* Network
+* Amount
+* Status
+* Transaction ID
+
+Statuses:
+
+* Pending
+* Confirming
+* Confirmed
+* Failed
+* Expired
+
+8. UX Improvements
+
+* Skeleton loaders while generating payment.
+* Better success animations.
+* Better error handling.
+* Copy-to-clipboard feedback.
+* Real-time payment status updates via polling/websocket.
+* Clear instructions for first-time crypto users.
+
+Goal:
+Create a modern, premium, trustworthy sportsbook deposit experience comparable to Stake, Rollbit, BC.Game, or Duelbits while maintaining excellent mobile responsiveness and user clarity.
