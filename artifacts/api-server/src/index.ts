@@ -398,6 +398,23 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v20 skipped");
   }
+
+  // v22: promo-claim idempotency — DB-level guards so concurrent/duplicate claim
+  // attempts can never double-credit a user's bonus balance.
+  try {
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_promotion_claims_user_promo
+        ON promotion_claims (promotion_id, user_id)
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_promo_bonus_ref
+        ON transactions (user_id, reference)
+        WHERE type = 'bonus' AND reference LIKE 'promo_%'
+    `);
+    logger.info("DB migration v22 applied (promo claim unique indexes)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v22 skipped");
+  }
 }
 
 runMigrations().then(() => {

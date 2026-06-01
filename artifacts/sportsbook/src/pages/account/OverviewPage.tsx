@@ -192,13 +192,14 @@ export function OverviewPage() {
                 <p className="text-[18px] font-black text-[#38BDF8] leading-tight">${lockedInBets.toFixed(2)}</p>
                 <p className="text-[9px] text-[#64748B] mt-0.5">locked</p>
               </div>
-              <div className="rounded-xl p-3 border" style={{ background: 'rgba(167,139,250,0.06)', borderColor: 'rgba(167,139,250,0.14)' }}>
+              <div className="rounded-xl p-3 border" style={{ background: 'rgba(250,204,21,0.06)', borderColor: 'rgba(250,204,21,0.14)' }}
+                title="Bonus funds are for betting only — cannot be withdrawn">
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <Gift className="h-3 w-3 text-[#A78BFA]" />
+                  <Gift className="h-3 w-3 text-[#FACC15]" />
                   <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Bonus</p>
                 </div>
-                <p className="text-[18px] font-black text-[#A78BFA] leading-tight">${bonusBalance.toFixed(2)}</p>
-                <p className="text-[9px] text-[#64748B] mt-0.5">non-withdraw.</p>
+                <p className="text-[18px] font-black text-[#FACC15] leading-tight">${bonusBalance.toFixed(2)}</p>
+                <p className="text-[9px] text-[#FACC15]/50 mt-0.5">Bet only</p>
               </div>
             </div>
           </div>
