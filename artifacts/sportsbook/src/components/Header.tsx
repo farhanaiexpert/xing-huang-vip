@@ -537,13 +537,29 @@ function LiveNavItem() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/live/events')
-      .then(r => r.ok ? r.json() : null)
-      .then((d: { count?: number } | null) => {
-        if (!cancelled && d && typeof d.count === 'number') setCount(d.count);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
+
+    async function refresh() {
+      try {
+        const [oddsRes, betsRes] = await Promise.allSettled([
+          fetch('/api/live/events'),
+          fetch('/api/betsapi/live'),
+        ]);
+        if (cancelled) return;
+
+        const oddsCount = oddsRes.status === 'fulfilled' && oddsRes.value.ok
+          ? ((await oddsRes.value.json()) as { count?: number }).count ?? 0
+          : 0;
+        const betsCount = betsRes.status === 'fulfilled' && betsRes.value.ok
+          ? ((await betsRes.value.json()) as { count?: number }).count ?? 0
+          : 0;
+
+        if (!cancelled) setCount(oddsCount + betsCount);
+      } catch { /* ignore */ }
+    }
+
+    void refresh();
+    const id = setInterval(() => { void refresh(); }, 60_000);
+    return () => { cancelled = true; clearInterval(id); };
   }, []);
 
   const base = "relative flex items-center gap-1.5 px-3.5 h-16 text-[13px] font-medium transition-all duration-150 select-none";
