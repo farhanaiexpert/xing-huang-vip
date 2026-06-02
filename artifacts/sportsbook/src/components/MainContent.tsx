@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { LeagueSection } from "./LeagueSection";
-import { FeaturedCards } from "./FeaturedCards";
 import { PopularBets } from "./PopularBets";
 import { SkeletonLeague } from "./SkeletonLeague";
 import { UpcomingMatchesCarousel } from "./UpcomingMatchesCarousel";
@@ -13,9 +12,6 @@ import { SoccerHighlights } from "./SoccerHighlights";
 import { NBAHighlights } from "./NBAHighlights";
 import { AllSportsHighlights } from "./AllSportsHighlights";
 import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
-import { FlashOdds } from "./FlashOdds";
-import { JackpotPool } from "./JackpotPool";
-import { LiveBetFeed } from "./LiveBetFeed";
 import { SportHighlights } from "./SportHighlights";
 import { LiveScoresTicker } from "./LiveScoresTicker";
 import { LiveEventsBanner } from "./LiveEventsBanner";
@@ -55,27 +51,37 @@ interface MainContentProps {
 
 type DateFilter = "all" | "today" | "tomorrow" | "upcoming";
 
+// Sport-carousel definitions — counts are computed from live API data below
 const CAROUSEL_SPORTS = [
-  { id: "soccer", name: "Soccer", icon: "⚽", count: 1247 },
-  { id: "tennis", name: "Tennis", icon: "🎾", count: 486 },
-  { id: "basketball", name: "Basketball", icon: "🏀", count: 318 },
-  { id: "cricket", name: "Cricket", icon: "🏏", count: 124 },
-  { id: "esports", name: "Esports", icon: "🎮", count: 203 },
-  { id: "horse-racing", name: "Horse Racing", icon: "🏇", count: 847 },
-  { id: "formula-1", name: "Formula 1", icon: "🏎️", count: 38 },
-  { id: "boxing", name: "Boxing", icon: "🥊", count: 24 },
-  { id: "golf", name: "Golf", icon: "⛳", count: 96 },
-  { id: "darts", name: "Darts", icon: "🎯", count: 48 },
-  { id: "ice-hockey", name: "Ice Hockey", icon: "🏒", count: 178 },
-  { id: "mma", name: "MMA", icon: "🥋", count: 35 },
-  {
-    id: "nba",
-    name: "NBA",
-    icon: "https://www.bet365.com/home/images/Home/imgs/V9FlagIcons/USA.svg",
-    count: 156,
-  },
-  { id: "american-football", name: "NFL", icon: "🏈", count: 28 },
+  { id: "soccer",            name: "Soccer",       icon: "⚽"  },
+  { id: "tennis",            name: "Tennis",       icon: "🎾"  },
+  { id: "basketball",        name: "Basketball",   icon: "🏀"  },
+  { id: "cricket",           name: "Cricket",      icon: "🏏"  },
+  { id: "ice-hockey",        name: "Ice Hockey",   icon: "🏒"  },
+  { id: "mma",               name: "MMA",          icon: "🥋"  },
+  { id: "american-football", name: "NFL",          icon: "🏈"  },
+  { id: "baseball",          name: "Baseball",     icon: "⚾"  },
+  { id: "rugby",             name: "Rugby",        icon: "🏉"  },
+  { id: "volleyball",        name: "Volleyball",   icon: "🏐"  },
+  { id: "darts",             name: "Darts",        icon: "🎯"  },
+  { id: "boxing",            name: "Boxing",       icon: "🥊"  },
 ];
+
+// Map carousel sport IDs → sportKey/sportId prefixes used in allLeagues
+const SPORT_KEY_MAP: Record<string, string[]> = {
+  "soccer":            ["soccer_", "sp_soccer", "sp_ucl"],
+  "tennis":            ["tennis_", "sp_tennis"],
+  "basketball":        ["basketball_", "sp_basketball", "sp_nba"],
+  "cricket":           ["cricket_"],
+  "ice-hockey":        ["icehockey_"],
+  "mma":               ["mma_", "ufc_"],
+  "american-football": ["americanfootball_"],
+  "baseball":          ["baseball_"],
+  "rugby":             ["rugbyleague_", "rugbyunion_", "betsapi_rugby"],
+  "volleyball":        ["volleyball_", "betsapi_volleyball"],
+  "darts":             ["darts_", "betsapi_darts"],
+  "boxing":            ["boxing_"],
+};
 
 const DATE_FILTERS: { id: DateFilter; label: string }[] = [
   { id: "all", label: "All" },
@@ -266,6 +272,21 @@ export function MainContent({
     [allLeagues],
   );
 
+  // Real match counts per sport — drives the carousel badges
+  const sportMatchCounts = useMemo<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    for (const league of allLeagues) {
+      const sk = (league.sportKey ?? league.sportId ?? '').toLowerCase();
+      for (const [sportId, prefixes] of Object.entries(SPORT_KEY_MAP)) {
+        if (prefixes.some(p => sk.startsWith(p.toLowerCase()))) {
+          counts[sportId] = (counts[sportId] ?? 0) + league.matches.length;
+          break;
+        }
+      }
+    }
+    return counts;
+  }, [allLeagues]);
+
   // Filtered leagues
   const filteredLeagues = useMemo<League[]>(() => {
     let leagues = allLeagues;
@@ -404,6 +425,7 @@ export function MainContent({
               <div className="flex gap-1 w-max pb-1">
                 {CAROUSEL_SPORTS.map((sport) => {
                   const isActive = selectedSportId === sport.id;
+                  const realCount = sportMatchCounts[sport.id] ?? 0;
                   return (
                     <button
                       key={sport.id}
@@ -420,18 +442,7 @@ export function MainContent({
                           : "hover:bg-[#121821]/80",
                       )}
                     >
-                      {sport.icon.startsWith("http") ? (
-                        <img
-                          src={sport.icon}
-                          alt={sport.name}
-                          className="w-5 h-5 object-contain"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span className="text-xl leading-none">
-                          {sport.icon}
-                        </span>
-                      )}
+                      <span className="text-xl leading-none">{sport.icon}</span>
                       <span
                         className={cn(
                           "text-[11px] font-medium leading-none transition-colors",
@@ -445,12 +456,14 @@ export function MainContent({
                       <span
                         className={cn(
                           "text-[9px] font-semibold leading-none tabular-nums transition-colors",
-                          isActive
-                            ? "text-[#00DFA9]/60"
-                            : "text-[#94A3B8]/35 group-hover:text-[#94A3B8]/60",
+                          realCount > 0
+                            ? isActive
+                              ? "text-[#00DFA9]/60"
+                              : "text-[#94A3B8]/35 group-hover:text-[#94A3B8]/60"
+                            : "text-[#94A3B8]/20",
                         )}
                       >
-                        {sport.count}
+                        {realCount > 0 ? realCount : "—"}
                       </span>
                     </button>
                   );
@@ -670,14 +683,8 @@ export function MainContent({
                   />
                 </div>
               )}
-              {showFeatured && <div className="mb-4"><JackpotPool /></div>}
-              {showFeatured && <div className="mb-4"><LiveBetFeed /></div>}
               {showFeatured && <LiveEventsBanner />}
               {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
-              {showFeatured && (
-                <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
-              )}
-              {showFeatured && <FeaturedCards />}
               {showFeatured && <PopularBets />}
               {showFeatured && (
                 <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
@@ -688,6 +695,11 @@ export function MainContent({
               {showFeatured && <MatchOfTheDay />}
               {showFeatured && (
                 <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
+              )}
+              {/* Soccer highlights — always visible on default homepage so users can
+                  immediately see soccer matches and click through to match detail */}
+              {showFeatured && (
+                <SoccerHighlights onViewAll={scrollToLeagueList} />
               )}
               {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights onViewAll={scrollToLeagueList} />
@@ -822,8 +834,6 @@ export function MainContent({
                 </div>
               )}
 
-              {/* ── Post-match activity panels (below the match list) ── */}
-              {showFeatured && <div className="mt-5"><FlashOdds /></div>}
             </>
           )}
         </div>
