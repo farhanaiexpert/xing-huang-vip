@@ -28,7 +28,7 @@ export const betSelectionsTable = pgTable("bet_selections", {
   status: text("status").notNull().default("open"),
   isLive: boolean("is_live").notNull().default(false),
   scoreAtPlacement: text("score_at_placement"),
-  commenceTime: timestamp("commence_time", { withTimezone: true }),
+  commenceTime: timestamp("commence_time", { withTimezone: true }).notNull().defaultNow(),
   homeTeam: text("home_team").notNull().default(""),
   awayTeam: text("away_team").notNull().default(""),
   sportKey: text("sport_key").notNull().default(""),

@@ -147,16 +147,21 @@ export async function fetchCompletedScoresApiFootball(
   const leagueIds = SPORT_LEAGUE_MAP[sportKey];
   if (!leagueIds) return []; // sport not covered by API-Football
 
-  // Collect all dates to check
+  // Collect dates to check.
+  // When ALL events have a known commenceDate we only search those exact dates
+  // (avoids matching a fixture from the wrong day, which reduces mis-association
+  // risk between similarly-named teams).  When some events lack commenceDate we
+  // fall back to the standard ±2-day window for backward compatibility.
   const now = new Date();
-  const datesToCheck = new Set<string>([
+  const knownDates = openEvents.map(ev => ev.commenceDate?.slice(0, 10)).filter(Boolean) as string[];
+  const allKnown   = knownDates.length === openEvents.length;
+
+  const datesToCheck = new Set<string>(allKnown ? knownDates : [
     dateStr(now),
-    dateStr(new Date(now.getTime() - 86_400_000)),  // yesterday
-    dateStr(new Date(now.getTime() - 2 * 86_400_000)), // 2 days ago
+    dateStr(new Date(now.getTime() - 86_400_000)),       // yesterday
+    dateStr(new Date(now.getTime() - 2 * 86_400_000)),   // 2 days ago
+    ...knownDates,
   ]);
-  for (const ev of openEvents) {
-    if (ev.commenceDate) datesToCheck.add(ev.commenceDate.slice(0, 10));
-  }
 
   // Fetch (cached) fixtures for each date
   const allFixtures: ApiFootballFixture[] = [];

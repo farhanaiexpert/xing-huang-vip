@@ -155,11 +155,35 @@ const UNKNOWN_SPORT_FALLBACK: string[] = [
   'cricket_ipl', 'cricket_international_t20',
 ];
 
-function expandSportKey(sport: string): string[] {
+export function expandSportKey(sport: string): string[] {
   const expansion = SPORT_KEY_EXPANSION[sport];
   if (expansion) return expansion;
   if (sport && sport.includes('_') && !sport.startsWith('sp_')) return [sport];
   return UNKNOWN_SPORT_FALLBACK;
+}
+
+/**
+ * Returns true when the event hasn't kicked off yet and should be skipped
+ * by the settlement cron (no result can exist before the match starts).
+ * Null commenceTime = legacy row without stored match time → never skip.
+ */
+export function shouldSkipFutureEvent(commenceTime: Date | null, now: Date): boolean {
+  if (!commenceTime) return false;
+  return commenceTime > now;
+}
+
+/**
+ * Returns true when enough time has passed since kick-off that we consider
+ * a "no result found" state to be stuck and escalate to manual_review.
+ * Null commenceTime = legacy row → never escalate automatically.
+ */
+export function shouldEscalateToManualReview(
+  commenceTime: Date | null,
+  now: Date,
+  reviewHours: number = AUTO_SETTLEMENT_REVIEW_HOURS,
+): boolean {
+  if (!commenceTime) return false;
+  return (now.getTime() - commenceTime.getTime()) >= reviewHours * 60 * 60 * 1000;
 }
 
 // ─── Team name fuzzy matching (used within mapSelectionOutcome score mapping) ──

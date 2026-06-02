@@ -429,6 +429,22 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v23 skipped");
   }
+
+  try {
+    // Backfill existing NULL commence_time rows with created_at as a proxy
+    await db.execute(sql`
+      UPDATE bet_selections SET commence_time = created_at WHERE commence_time IS NULL
+    `);
+    // Now apply NOT NULL + DEFAULT NOW() constraint
+    await db.execute(sql`
+      ALTER TABLE bet_selections
+        ALTER COLUMN commence_time SET DEFAULT NOW(),
+        ALTER COLUMN commence_time SET NOT NULL
+    `);
+    logger.info("DB migration v24 applied (bet_selections.commence_time NOT NULL DEFAULT NOW(), backfilled from created_at)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v24 skipped");
+  }
 }
 
 runMigrations().then(() => {

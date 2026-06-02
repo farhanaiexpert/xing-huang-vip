@@ -11,6 +11,9 @@ import {
   mapBttsOutcome,
   mapTotalsOutcome,
   mapSpreadsOutcome,
+  expandSportKey,
+  shouldSkipFutureEvent,
+  shouldEscalateToManualReview,
 } from "./settlementWorker.js";
 import type { CompletedEvent } from "./apiFootball.js";
 
@@ -207,5 +210,112 @@ describe("mapSpreadsOutcome — using stored point", () => {
   it("away team covers with stored positive spread", () => {
     // Stored point +1.5 for away team; away 1, home 2 → margin = 1 + 1.5 - 2 = 0.5 > 0
     expect(mapSpreadsOutcome("Chelsea +1.5", "Arsenal", "Chelsea", 2, 1, 1.5)).toBe("won");
+  });
+});
+
+// ─── expandSportKey ───────────────────────────────────────────────────────────
+
+describe("expandSportKey", () => {
+  it("exact Odds API key passes through as-is", () => {
+    const result = expandSportKey("soccer_epl");
+    expect(result).toEqual(["soccer_epl"]);
+  });
+  it("generic 'soccer' expands to a list including EPL and La Liga", () => {
+    const result = expandSportKey("soccer");
+    expect(result).toContain("soccer_epl");
+    expect(result).toContain("soccer_spain_la_liga");
+    expect(result).toContain("soccer_uefa_champs_league");
+  });
+  it("sp_soccer internal key expands similarly to generic soccer", () => {
+    const result = expandSportKey("sp_soccer");
+    expect(result).toContain("soccer_epl");
+    expect(result).toContain("soccer_italy_serie_a");
+  });
+  it("betsapi_1 (soccer ID) expands to soccer leagues", () => {
+    const result = expandSportKey("betsapi_1");
+    expect(result).toContain("soccer_epl");
+  });
+  it("betsapi_16 (basketball) expands to NBA", () => {
+    const result = expandSportKey("betsapi_16");
+    expect(result).toContain("basketball_nba");
+  });
+  it("sp_ucl expands only to Champions League", () => {
+    expect(expandSportKey("sp_ucl")).toEqual(["soccer_uefa_champs_league"]);
+  });
+  it("unknown non-underscore sport falls back to UNKNOWN_SPORT_FALLBACK (includes soccer_epl)", () => {
+    const result = expandSportKey("unknownsport");
+    expect(result).toContain("soccer_epl");
+    expect(result.length).toBeGreaterThan(5);
+  });
+  it("unknown sp_ prefixed key falls back to UNKNOWN_SPORT_FALLBACK", () => {
+    const result = expandSportKey("sp_unknown");
+    expect(result).toContain("soccer_epl");
+  });
+  it("betsapi_91 maps to empty array (sport not covered)", () => {
+    expect(expandSportKey("betsapi_91")).toEqual([]);
+  });
+});
+
+// ─── shouldSkipFutureEvent ────────────────────────────────────────────────────
+
+describe("shouldSkipFutureEvent", () => {
+  const now = new Date("2025-06-10T12:00:00Z");
+
+  it("returns false for a past match (match already started)", () => {
+    const commence = new Date("2025-06-10T10:00:00Z"); // 2h before now
+    expect(shouldSkipFutureEvent(commence, now)).toBe(false);
+  });
+  it("returns true for a future match (hasn't kicked off)", () => {
+    const commence = new Date("2025-06-10T14:00:00Z"); // 2h in the future
+    expect(shouldSkipFutureEvent(commence, now)).toBe(true);
+  });
+  it("returns false when commence equals now exactly (boundary — treat as started)", () => {
+    expect(shouldSkipFutureEvent(now, now)).toBe(false);
+  });
+  it("returns false for null commenceTime (legacy row — never skip)", () => {
+    expect(shouldSkipFutureEvent(null, now)).toBe(false);
+  });
+  it("returns false for match 1 second in the past", () => {
+    const commence = new Date(now.getTime() - 1000);
+    expect(shouldSkipFutureEvent(commence, now)).toBe(false);
+  });
+  it("returns true for match 1 second in the future", () => {
+    const commence = new Date(now.getTime() + 1000);
+    expect(shouldSkipFutureEvent(commence, now)).toBe(true);
+  });
+});
+
+// ─── shouldEscalateToManualReview ─────────────────────────────────────────────
+
+describe("shouldEscalateToManualReview", () => {
+  const now = new Date("2025-06-12T12:00:00Z");
+
+  it("returns false when only 10h have passed (below default 48h threshold)", () => {
+    const commence = new Date(now.getTime() - 10 * 60 * 60 * 1000);
+    expect(shouldEscalateToManualReview(commence, now)).toBe(false);
+  });
+  it("returns false when exactly 47h 59m 59s have passed", () => {
+    const commence = new Date(now.getTime() - (48 * 3600 - 1) * 1000);
+    expect(shouldEscalateToManualReview(commence, now)).toBe(false);
+  });
+  it("returns true when exactly 48h have passed (default threshold)", () => {
+    const commence = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    expect(shouldEscalateToManualReview(commence, now)).toBe(true);
+  });
+  it("returns true when 72h have passed", () => {
+    const commence = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+    expect(shouldEscalateToManualReview(commence, now)).toBe(true);
+  });
+  it("returns false for null commenceTime (legacy row — never auto-escalate)", () => {
+    expect(shouldEscalateToManualReview(null, now)).toBe(false);
+  });
+  it("respects custom reviewHours override", () => {
+    const commence = new Date(now.getTime() - 6 * 60 * 60 * 1000); // 6h ago
+    expect(shouldEscalateToManualReview(commence, now, 4)).toBe(true);   // 6h > 4h → escalate
+    expect(shouldEscalateToManualReview(commence, now, 12)).toBe(false); // 6h < 12h → not yet
+  });
+  it("future commence_time results in false (match hasn't happened yet)", () => {
+    const commence = new Date(now.getTime() + 10 * 60 * 60 * 1000); // 10h in the future
+    expect(shouldEscalateToManualReview(commence, now)).toBe(false);
   });
 });

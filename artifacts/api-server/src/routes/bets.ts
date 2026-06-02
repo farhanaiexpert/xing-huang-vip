@@ -12,17 +12,17 @@ import { nextResetAt } from "../lib/depositGuard.js";
 const router = Router();
 
 const SelectionSchema = z.object({
-  eventId:          z.string(),
+  eventId:          z.string().min(1),
   eventName:        z.string(),
-  sport:            z.string().default(""),     // legacy field, kept for compat
-  sportKey:         z.string().optional(),      // preferred: full Odds API key or internal ID
-  homeTeam:         z.string().default(""),
-  awayTeam:         z.string().default(""),
-  commenceTime:     z.string().optional(),      // ISO 8601 match start time
-  marketType:       z.string(),
-  selection:        z.string(),
+  sport:            z.string().default(""),            // legacy field, kept for compat
+  sportKey:         z.string().min(1, "sportKey is required for settlement"),
+  homeTeam:         z.string().min(1, "homeTeam is required for settlement"),
+  awayTeam:         z.string().min(1, "awayTeam is required for settlement"),
+  commenceTime:     z.string().min(1, "commenceTime is required for settlement"), // ISO 8601
+  marketType:       z.string().min(1),
+  selection:        z.string().min(1),
   odds:             z.number().positive(),
-  point:            z.number().optional(),      // handicap/totals line
+  point:            z.number().optional(),             // handicap/totals line
   isLive:           z.boolean().default(false),
   scoreAtPlacement: z.string().optional(),
 });
@@ -163,7 +163,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
       sportKey:         s.sportKey ?? s.sport ?? "",
       homeTeam:         s.homeTeam ?? "",
       awayTeam:         s.awayTeam ?? "",
-      commenceTime:     s.commenceTime ? new Date(s.commenceTime) : null,
+      commenceTime:     new Date(s.commenceTime),
       marketType:       s.marketType,
       selection:        s.selection,
       odds:             s.odds.toFixed(4),
