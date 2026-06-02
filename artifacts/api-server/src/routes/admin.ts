@@ -671,8 +671,24 @@ router.get("/admin/referrals", async (req, res): Promise<void> => {
     .orderBy(desc(referralsTable.createdAt))
     .limit(500);
 
+  // Fetch referred user info separately to avoid table alias issues
+  const referredIds = [...new Set(referrals.map(r => r.referredId))];
+  const referredUsers = referredIds.length > 0
+    ? await db.select({ id: usersTable.id, username: usersTable.username, email: usersTable.email, walletAddress: usersTable.walletAddress })
+        .from(usersTable)
+        .where(inArray(usersTable.id, referredIds))
+    : [];
+  const referredMap = new Map(referredUsers.map(u => [u.id, u]));
+
+  const referralsWithReferred = referrals.map(r => {
+    const ru = referredMap.get(r.referredId);
+    const referredUsername = ru?.username ?? ru?.email ?? (ru?.walletAddress ? ru.walletAddress.slice(0, 8) + "…" : null);
+    return { ...r, referredUsername };
+  });
+
   const [commTotal] = await db.select({ total: sum(commissionsTable.amount) }).from(commissionsTable);
   const [commPaid] = await db.select({ total: sum(commissionsTable.amount) }).from(commissionsTable).where(eq(commissionsTable.status, "paid"));
+  const [commPending] = await db.select({ total: sum(commissionsTable.amount) }).from(commissionsTable).where(eq(commissionsTable.status, "pending"));
 
   const commByReferrerRows = await db.execute(sql`
     SELECT r.referrer_id AS "referrerId", COALESCE(SUM(c.amount), 0)::text AS total
@@ -685,9 +701,8 @@ router.get("/admin/referrals", async (req, res): Promise<void> => {
       .map(r => [Number(r.referrerId), r.total])
   );
 
-  // Count referrals per referrer and compute top 10 by commission
   const referrerMap = new Map<number, { referrerId: number; referrerUsername: string | null; count: number }>();
-  for (const r of referrals as Array<{ referrerId: number; referrerUsername: string | null }>) {
+  for (const r of referralsWithReferred) {
     const existing = referrerMap.get(r.referrerId);
     if (existing) {
       existing.count++;
@@ -706,13 +721,50 @@ router.get("/admin/referrals", async (req, res): Promise<void> => {
     .slice(0, 10);
 
   res.json({
-    referrals,
+    referrals: referralsWithReferred,
     stats: {
       totalReferrals: referrals.length,
       totalCommissions: commTotal.total ?? "0",
       totalPaid: commPaid.total ?? "0",
+      totalPending: commPending.total ?? "0",
     },
     topReferrersByCommission,
+  });
+});
+
+// ── POST /admin/referrals/:referrerId/mark-paid ───────────────────────────────
+router.post("/admin/referrals/:referrerId/mark-paid", async (req, res): Promise<void> => {
+  const referrerId = parseInt(req.params.referrerId, 10);
+  if (isNaN(referrerId)) {
+    res.status(400).json({ error: "Invalid referrerId" });
+    return;
+  }
+
+  await db.transaction(async tx => {
+    // Get all pending commissions for this referrer
+    const pending = await tx
+      .select({ id: commissionsTable.id, amount: commissionsTable.amount })
+      .from(commissionsTable)
+      .where(and(eq(commissionsTable.userId, referrerId), eq(commissionsTable.status, "pending")));
+
+    if (pending.length === 0) {
+      res.json({ updated: 0, total: "0" });
+      return;
+    }
+
+    const totalAmt = pending.reduce((s, c) => s + parseFloat(c.amount), 0);
+    const ids = pending.map(c => c.id);
+
+    await tx.update(commissionsTable)
+      .set({ status: "paid" })
+      .where(and(eq(commissionsTable.userId, referrerId), inArray(commissionsTable.id, ids)));
+
+    await tx.execute(sql`
+      UPDATE wallets SET balance_usdt = balance_usdt + ${totalAmt.toFixed(8)}::numeric
+      WHERE user_id = ${referrerId}
+    `);
+
+    res.json({ updated: pending.length, total: totalAmt.toFixed(8) });
   });
 });
 

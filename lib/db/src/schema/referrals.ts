@@ -17,6 +17,7 @@ export const commissionsTable = pgTable("commissions", {
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
   status: text("status").notNull().default("pending"),
+  tier: integer("tier").notNull().default(1),
   sourceTransactionId: integer("source_transaction_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

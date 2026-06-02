@@ -90,11 +90,12 @@ export function ReferralsPage() {
   }
   function startEdit() { setCustomDraft(ref.myCode); setCodeError(''); setEditingCode(true); }
   function cancelEdit() { setEditingCode(false); setCustomDraft(''); setCodeError(''); }
-  function saveCode() {
+  async function saveCode() {
     const clean = customDraft.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (clean.length < 4)  { setCodeError('Minimum 4 characters required'); return; }
     if (clean.length > 16) { setCodeError('Maximum 16 characters allowed'); return; }
-    if (!ref.updateCode(clean)) { setCodeError('Letters and numbers only'); return; }
+    const result = await ref.updateCode(clean);
+    if (!result.ok) { setCodeError(result.error ?? 'Failed to update code'); return; }
     setEditingCode(false); setCustomDraft(''); setCodeError('');
     toast({ title: 'Code updated!', description: `New code: ${clean}` });
   }
@@ -241,7 +242,7 @@ export function ReferralsPage() {
                 <input
                   value={customDraft}
                   onChange={e => handleDraftChange(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') saveCode(); if (e.key === 'Escape') cancelEdit(); }}
+                  onKeyDown={e => { if (e.key === 'Enter') void saveCode(); if (e.key === 'Escape') cancelEdit(); }}
                   placeholder="YOURCODE"
                   autoFocus
                   className="flex-1 bg-[#080C10] px-3 py-3 text-[14px] font-black text-[#00DFA9] font-mono tracking-widest outline-none placeholder:text-[#1E2A38] min-w-0"
@@ -249,7 +250,7 @@ export function ReferralsPage() {
               </div>
               {codeError && <p className="text-[10px] text-[#EF4444] flex items-center gap-1"><Info className="w-3 h-3" />{codeError}</p>}
               <div className="flex gap-2">
-                <button onClick={saveCode} disabled={customDraft.length < 4}
+                <button onClick={() => void saveCode()} disabled={customDraft.length < 4}
                   className="flex-1 py-2.5 rounded-xl text-[12px] font-bold text-[#0B0F14] cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
                   style={{ background: 'linear-gradient(135deg, #38BDF8, #0EA5E9)' }}>
                   Save Code
@@ -301,7 +302,7 @@ export function ReferralsPage() {
             </div>
           </div>
           <button
-            onClick={() => { ref.claimPending(); toast({ title: 'Commissions claimed!' }); }}
+            onClick={async () => { await ref.claimPending(); toast({ title: 'Commissions claimed!' }); }}
             className="px-4 py-2 rounded-xl text-[12px] font-bold text-[#0B0F14] cursor-pointer transition-all hover:scale-[1.02]"
             style={{ background: 'linear-gradient(135deg, #FACC15, #F59E0B)' }}>
             Claim All

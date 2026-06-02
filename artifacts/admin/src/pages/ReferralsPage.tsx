@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, AdminReferral, AdminReferralsResponse, TopReferrer } from "@/lib/api";
 import { fmt, fmtDate } from "@/lib/utils";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -44,6 +44,8 @@ const ChartTooltip = ({ active, payload, label }: { active?: boolean; payload?: 
 export default function ReferralsPage() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [view, setView] = useState<"tree" | "chart" | "list">("tree");
+  const [markingPaid, setMarkingPaid] = useState<Set<number>>(new Set());
+  const qc = useQueryClient();
 
   const { data, isLoading } = useQuery<AdminReferralsResponse>({
     queryKey: ["admin-referrals"],
@@ -63,6 +65,16 @@ export default function ReferralsPage() {
     });
   }
 
+  async function handleMarkPaid(referrerId: number) {
+    setMarkingPaid(prev => new Set(prev).add(referrerId));
+    try {
+      await api.post(`/admin/referrals/${referrerId}/mark-paid`, {});
+      await qc.invalidateQueries({ queryKey: ["admin-referrals"] });
+    } finally {
+      setMarkingPaid(prev => { const n = new Set(prev); n.delete(referrerId); return n; });
+    }
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -73,7 +85,7 @@ export default function ReferralsPage() {
       </div>
 
       {stats && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div className="bg-[#0D1117] border border-white/8 rounded-xl p-4">
             <div className="text-xs text-[#64748B] mb-1.5 uppercase tracking-wide">Total Referrals</div>
             <div className="text-2xl font-bold text-white">{stats.totalReferrals.toLocaleString()}</div>
@@ -82,12 +94,17 @@ export default function ReferralsPage() {
           <div className="bg-[#0D1117] border border-white/8 rounded-xl p-4">
             <div className="text-xs text-[#64748B] mb-1.5 uppercase tracking-wide">Total Commissions</div>
             <div className="text-2xl font-bold text-[#FACC15]">${fmt(stats.totalCommissions)}</div>
-            <div className="text-xs text-[#475569] mt-1">USDT earned</div>
+            <div className="text-xs text-[#475569] mt-1">USDT earned all time</div>
           </div>
           <div className="bg-[#0D1117] border border-white/8 rounded-xl p-4">
             <div className="text-xs text-[#64748B] mb-1.5 uppercase tracking-wide">Commissions Paid</div>
             <div className="text-2xl font-bold text-[#00DFA9]">${fmt(stats.totalPaid)}</div>
             <div className="text-xs text-[#475569] mt-1">USDT paid out</div>
+          </div>
+          <div className="bg-[#0D1117] border border-[#FACC15]/20 rounded-xl p-4">
+            <div className="text-xs text-[#FACC15]/70 mb-1.5 uppercase tracking-wide">Pending Commissions</div>
+            <div className="text-2xl font-bold text-[#FACC15]">${fmt(stats.totalPending ?? "0")}</div>
+            <div className="text-xs text-[#475569] mt-1">USDT awaiting claim</div>
           </div>
         </div>
       )}
@@ -137,19 +154,20 @@ export default function ReferralsPage() {
             <div className="text-center py-16 text-[#334155] bg-[#0D1117] border border-white/8 rounded-xl">No referrals yet</div>
           ) : groups.map(g => {
             const isOpen = expanded.has(g.referrerId);
+            const isPaying = markingPaid.has(g.referrerId);
             return (
               <div key={g.referrerId} className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">
-                <button
-                  onClick={() => toggleExpand(g.referrerId)}
-                  className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/2 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    {isOpen ? <ChevronDown className="w-4 h-4 text-[#475569]" /> : <ChevronRight className="w-4 h-4 text-[#475569]" />}
-                    <div className="text-left">
+                <div className="flex items-center justify-between px-4 py-3.5 hover:bg-white/2 transition-colors">
+                  <button
+                    onClick={() => toggleExpand(g.referrerId)}
+                    className="flex items-center gap-3 flex-1 text-left"
+                  >
+                    {isOpen ? <ChevronDown className="w-4 h-4 text-[#475569] shrink-0" /> : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0" />}
+                    <div>
                       <div className="text-sm font-medium text-white">{g.referrerUsername ?? `uid:${g.referrerId}`}</div>
                       <div className="text-xs text-[#475569]">uid:{g.referrerId}</div>
                     </div>
-                  </div>
+                  </button>
                   <div className="flex items-center gap-3 text-xs">
                     <span className="px-2.5 py-1 rounded-full bg-[#38BDF8]/10 text-[#38BDF8] border border-[#38BDF8]/20 font-semibold">
                       {g.referrals.length} referred
@@ -157,15 +175,23 @@ export default function ReferralsPage() {
                     {Object.entries(g.tierBreakdown).map(([tier, count]) => (
                       <span key={tier} className="text-[#475569]">T{tier}:{count}</span>
                     ))}
+                    <button
+                      onClick={() => void handleMarkPaid(g.referrerId)}
+                      disabled={isPaying}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FACC15]/10 text-[#FACC15] border border-[#FACC15]/25 hover:bg-[#FACC15]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isPaying ? "Paying…" : "Mark Paid"}
+                    </button>
                   </div>
-                </button>
+                </div>
                 {isOpen && (
                   <div className="border-t border-white/8 divide-y divide-white/5">
                     {g.referrals.map(r => (
                       <div key={r.id} className="flex items-center justify-between px-6 py-2.5 text-xs">
                         <div className="flex items-center gap-2.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#00DFA9]" />
-                          <span className="text-[#64748B]">uid:{r.referredId}</span>
+                          <span className="text-white font-medium">{r.referredUsername ?? `uid:${r.referredId}`}</span>
+                          <span className="text-[#475569] font-mono">uid:{r.referredId}</span>
                         </div>
                         <div className="flex items-center gap-3 text-[#64748B]">
                           <span className="px-2 py-0.5 rounded-full border border-[#38BDF8]/20 bg-[#38BDF8]/8 text-[#38BDF8]">Tier {r.tier}</span>
@@ -201,7 +227,10 @@ export default function ReferralsPage() {
                 ) : referrals.map(r => (
                   <tr key={r.id} className="border-b border-white/5 hover:bg-white/2 transition-colors">
                     <td className="px-4 py-3.5 text-white font-medium">{r.referrerUsername ?? `uid:${r.referrerId}`}</td>
-                    <td className="px-4 py-3.5 text-[#64748B] font-mono text-xs">uid:{r.referredId}</td>
+                    <td className="px-4 py-3.5 text-white font-medium">
+                      {r.referredUsername ?? `uid:${r.referredId}`}
+                      <span className="ml-1.5 text-[#475569] text-xs font-mono">uid:{r.referredId}</span>
+                    </td>
                     <td className="px-4 py-3.5">
                       <span className="px-2 py-0.5 rounded-full text-xs border bg-[#38BDF8]/8 text-[#38BDF8] border-[#38BDF8]/20">
                         Tier {r.tier}

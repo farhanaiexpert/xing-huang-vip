@@ -43,6 +43,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [confirm,  setConfirm]  = useState('');
+  const [refCode,  setRefCode]  = useState('');
   const [showPw,   setShowPw]   = useState(false);
   const [formErr,  setFormErr]  = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -55,11 +56,28 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
   const phantomActive  = useRef(false);
   const tonWalletActive = useRef(false);
 
+  // Auto-fill referral code from ?ref= URL param or sessionStorage
+  useEffect(() => {
+    if (open) {
+      const params = new URLSearchParams(window.location.search);
+      const urlRef = params.get('ref');
+      if (urlRef) {
+        const clean = urlRef.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+        setRefCode(clean);
+        sessionStorage.setItem('cb_ref', clean);
+      } else {
+        const stored = sessionStorage.getItem('cb_ref');
+        if (stored) setRefCode(stored);
+      }
+    }
+  }, [open]);
+
   // Reset on open/close
   useEffect(() => {
     if (!open) {
       setTab(defaultTab);
       setEmail(''); setPassword(''); setConfirm(''); setFormErr('');
+      setRefCode('');
       setShowPw(false); setSubmitting(false); setDone(false);
       setWalletStep('idle'); setWalletError('');
       tronActive.current = false; phantomActive.current = false; tonWalletActive.current = false;
@@ -81,7 +99,10 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
     setSubmitting(true);
     try {
       const endpoint = tab === 'register' ? '/auth/register' : '/auth/login';
-      const data = await api.post<AuthResponse>(endpoint, { email: email.trim().toLowerCase(), password });
+      const body = tab === 'register'
+        ? { email: email.trim().toLowerCase(), password, ...(refCode ? { referralCode: refCode } : {}) }
+        : { email: email.trim().toLowerCase(), password };
+      const data = await api.post<AuthResponse>(endpoint, body);
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setDone(true);
@@ -426,21 +447,37 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
 
                 {/* Confirm password (register only) */}
                 {tab === 'register' && (
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/35 pointer-events-none" />
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      value={confirm}
-                      onChange={e => { setConfirm(e.target.value); setFormErr(''); }}
-                      placeholder="Confirm password"
-                      autoComplete="new-password"
-                      required
-                      className="w-full h-11 pl-10 pr-4 rounded-xl text-[13px] text-[#F8FAFC] placeholder:text-[#94A3B8]/35 outline-none transition-all duration-150"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
-                      onFocus={e => { e.currentTarget.style.border = '1px solid rgba(0,223,169,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,223,169,0.08)'; }}
-                      onBlur={e  => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow = 'none'; }}
-                    />
-                  </div>
+                  <>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/35 pointer-events-none" />
+                      <input
+                        type={showPw ? 'text' : 'password'}
+                        value={confirm}
+                        onChange={e => { setConfirm(e.target.value); setFormErr(''); }}
+                        placeholder="Confirm password"
+                        autoComplete="new-password"
+                        required
+                        className="w-full h-11 pl-10 pr-4 rounded-xl text-[13px] text-[#F8FAFC] placeholder:text-[#94A3B8]/35 outline-none transition-all duration-150"
+                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
+                        onFocus={e => { e.currentTarget.style.border = '1px solid rgba(0,223,169,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,223,169,0.08)'; }}
+                        onBlur={e  => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow = 'none'; }}
+                      />
+                    </div>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/35 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={refCode}
+                        onChange={e => setRefCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16))}
+                        placeholder="Referral code (optional)"
+                        autoComplete="off"
+                        className="w-full h-11 pl-10 pr-4 rounded-xl text-[13px] text-[#00DFA9] font-mono tracking-widest placeholder:text-[#94A3B8]/35 placeholder:tracking-normal placeholder:font-sans outline-none transition-all duration-150"
+                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
+                        onFocus={e => { e.currentTarget.style.border = '1px solid rgba(0,223,169,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,223,169,0.08)'; }}
+                        onBlur={e  => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow = 'none'; }}
+                      />
+                    </div>
+                  </>
                 )}
 
                 {/* Error */}

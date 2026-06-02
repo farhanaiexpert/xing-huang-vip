@@ -47,18 +47,27 @@ export interface ReferralState extends ReferralStore {
   paidEarned:      number;
   registerReferrer: (refCode: string) => void;
   addCommission:   (entry: Omit<CommissionEntry, 'id'>) => void;
-  claimPending:    () => void;
-  updateCode:      (newCode: string) => boolean;
+  claimPending:    () => Promise<void>;
+  updateCode:      (newCode: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 interface ApiCommission {
   id: number;
   amount: string;
   status: string;
+  tier: number;
+  createdAt: string;
+  referredUsername: string | null;
+}
+interface ApiNetworkUser {
+  userId: number;
+  username: string;
   createdAt: string;
 }
 interface ApiNetwork {
-  tier1: Array<{ userId: number; username: string; createdAt: string }>;
+  tier1: ApiNetworkUser[];
+  tier2?: ApiNetworkUser[];
+  tier3?: ApiNetworkUser[];
   totalReferrals: number;
 }
 interface ApiCommissionsResponse {
@@ -67,8 +76,7 @@ interface ApiCommissionsResponse {
 }
 
 function buildLink(code: string): string {
-  const base = window.location.origin + window.location.pathname;
-  return `${base}?ref=${code}`;
+  return `${window.location.origin}/?ref=${code}`;
 }
 
 const DEFAULT_STATE: ReferralStore = {
@@ -83,78 +91,90 @@ export function useReferral(): ReferralState {
   const [store, setStore]       = useState<ReferralStore>(DEFAULT_STATE);
   const [isLoaded, setLoaded]   = useState(false);
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setStore(DEFAULT_STATE);
       setLoaded(false);
       return;
     }
 
-    async function loadData() {
-      try {
-        const [networkData, commData] = await Promise.all([
-          api.get<ApiNetwork>('/referral/network'),
-          api.get<ApiCommissionsResponse>('/referral/commissions'),
-        ]);
+    try {
+      const [networkData, commData] = await Promise.all([
+        api.get<ApiNetwork>('/referral/network'),
+        api.get<ApiCommissionsResponse>('/referral/commissions'),
+      ]);
 
-        const referrals: ReferralUser[] = networkData.tier1.map(r => ({
-          id: String(r.userId),
-          address: shortAddress(r.username) ?? r.username,
-          level: 1 as const,
-          joinedAt: r.createdAt,
-          referredByCode: user!.referralCode ?? '',
-        }));
+      const mapUser = (r: ApiNetworkUser, level: 1 | 2 | 3): ReferralUser => ({
+        id: String(r.userId),
+        address: shortAddress(r.username) ?? r.username,
+        level,
+        joinedAt: r.createdAt,
+        referredByCode: user!.referralCode ?? '',
+      });
 
-        const commissions: CommissionEntry[] = commData.commissions.map(c => ({
+      const referrals: ReferralUser[] = [
+        ...(networkData.tier1 ?? []).map(r => mapUser(r, 1)),
+        ...(networkData.tier2 ?? []).map(r => mapUser(r, 2)),
+        ...(networkData.tier3 ?? []).map(r => mapUser(r, 3)),
+      ];
+
+      const commissions: CommissionEntry[] = commData.commissions.map(c => {
+        const tier = ([1, 2, 3].includes(c.tier) ? c.tier : 1) as 1 | 2 | 3;
+        return {
           id: String(c.id),
           date: c.createdAt,
-          referredAddress: '',
-          level: 1 as const,
+          referredAddress: c.referredUsername ?? '',
+          level: tier,
           txAmount: 0,
-          commissionPct: COMMISSION_RATES[1],
+          commissionPct: COMMISSION_RATES[tier],
           earned: parseFloat(c.amount),
           status: c.status as 'pending' | 'paid',
-        }));
+        };
+      });
 
-        setStore({
-          myCode: user!.referralCode ?? 'IHFFXMRP',
-          referredByCode: null,
-          referrals,
-          commissions,
-        });
-      } catch {
-        setStore({
-          myCode: user!.referralCode ?? 'IHFFXMRP',
-          referredByCode: null,
-          referrals: [],
-          commissions: [],
-        });
-      }
-      setLoaded(true);
+      setStore({
+        myCode: user!.referralCode ?? 'IHFFXMRP',
+        referredByCode: null,
+        referrals,
+        commissions,
+      });
+    } catch {
+      setStore({
+        myCode: user!.referralCode ?? 'IHFFXMRP',
+        referredByCode: null,
+        referrals: [],
+        commissions: [],
+      });
     }
-
-    loadData();
+    setLoaded(true);
   }, [isAuthenticated, user]);
 
-  const registerReferrer = useCallback((_refCode: string) => {
-    // Handled at registration time via API
-  }, []);
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
-  const addCommission = useCallback((_entry: Omit<CommissionEntry, 'id'>) => {
-    // Handled server-side
-  }, []);
+  const registerReferrer = useCallback((_refCode: string) => {}, []);
+  const addCommission = useCallback((_entry: Omit<CommissionEntry, 'id'>) => {}, []);
 
-  const claimPending = useCallback(() => {
-    // Handled server-side
-  }, []);
+  const claimPending = useCallback(async () => {
+    await api.post('/referral/commissions/claim', {});
+    await loadData();
+  }, [loadData]);
 
-  const updateCode = useCallback((_newCode: string): boolean => {
-    return false; // Not yet supported via API
-  }, []);
+  const updateCode = useCallback(async (newCode: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      await api.patch('/referral/code', { code: newCode });
+      await loadData();
+      return { ok: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update code';
+      return { ok: false, error: msg };
+    }
+  }, [loadData]);
 
-  const level1      = store.referrals.filter(r => r.level === 1);
-  const level2      = store.referrals.filter(r => r.level === 2);
-  const level3      = store.referrals.filter(r => r.level === 3);
+  const level1        = store.referrals.filter(r => r.level === 1);
+  const level2        = store.referrals.filter(r => r.level === 2);
+  const level3        = store.referrals.filter(r => r.level === 3);
   const totalEarned   = store.commissions.reduce((a, c) => a + c.earned, 0);
   const pendingEarned = store.commissions.filter(c => c.status === 'pending').reduce((a, c) => a + c.earned, 0);
   const paidEarned    = store.commissions.filter(c => c.status === 'paid').reduce((a, c) => a + c.earned, 0);

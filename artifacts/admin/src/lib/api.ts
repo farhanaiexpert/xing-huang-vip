@@ -131,6 +131,7 @@ export interface AdminReferral {
   referrerId: number;
   referrerUsername: string | null;
   referredId: number;
+  referredUsername: string | null;
   tier: number;
   createdAt: string;
 }
@@ -148,6 +149,7 @@ export interface AdminReferralsResponse {
     totalReferrals: number;
     totalCommissions: string;
     totalPaid: string;
+    totalPending: string;
   };
   topReferrersByCommission: TopReferrer[];
 }

@@ -34,6 +34,8 @@ import {
   marketLiabilityTable,
   userLimitsTable,
   loyaltyPointsTable,
+  referralsTable,
+  commissionsTable,
 } from "@workspace/db";
 import { logger } from "./logger.js";
 import { nextResetAt } from "./depositGuard.js";
@@ -581,6 +583,30 @@ async function settleBetsForEvent(
         points: loyaltyPts.toFixed(2),
         reason: "bet_settled",
       }).onConflictDoNothing();
+
+      // Generate referral commissions for winning bets only
+      if (newStatus === "won") {
+        const commRates: Record<number, number> = { 1: 0.05, 2: 0.03, 3: 0.01 };
+        let chainUserId = bet.userId;
+        for (let tier = 1; tier <= 3; tier++) {
+          const [ref] = await tx
+            .select({ id: referralsTable.id, referrerId: referralsTable.referrerId })
+            .from(referralsTable)
+            .where(eq(referralsTable.referredId, chainUserId))
+            .limit(1);
+          if (!ref) break;
+          const commAmount = stakeAmt * commRates[tier];
+          await tx.insert(commissionsTable).values({
+            referralId: ref.id,
+            userId: ref.referrerId,
+            amount: commAmount.toFixed(8),
+            status: "pending",
+            tier,
+            sourceTransactionId: betId,
+          }).onConflictDoNothing();
+          chainUserId = ref.referrerId;
+        }
+      }
     }
   });
 
