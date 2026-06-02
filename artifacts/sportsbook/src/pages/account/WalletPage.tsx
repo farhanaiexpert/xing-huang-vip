@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useReferral } from '@/hooks/useReferral';
 import { usePublicClient, useBalance } from 'wagmi';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +12,7 @@ import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
   Clock, XCircle, RefreshCw, Loader2, CircleDollarSign, Shield,
   AlertCircle, ExternalLink, Info, QrCode, Zap, CreditCard, Lock,
-  ChevronRight, ChevronDown, LogOut, RotateCcw,
+  ChevronRight, ChevronDown, LogOut, RotateCcw, Users, Gift,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -108,6 +109,7 @@ function StatusBadge({ status }: { status: string }) {
 export function WalletPage() {
   const { isAuthenticated, user } = useAuth();
   const { bets } = useBetHistory();
+  const referral = useReferral();
   const [tab, setTab] = useState<'deposit' | 'withdraw' | 'history'>(() => {
     const hint = sessionStorage.getItem('cupbett_wallet_tab');
     if (hint) sessionStorage.removeItem('cupbett_wallet_tab');
@@ -2326,91 +2328,159 @@ export function WalletPage() {
 
       {/* ── HISTORY TAB ───────────────────────────────────────────────────── */}
       {tab === 'history' && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[13px] font-bold text-[#F8FAFC]">Transaction History</p>
-            <button onClick={loadData}
-              className="flex items-center gap-1.5 text-[11px] text-[#64748B] hover:text-[#00DFA9] transition-colors">
-              <RefreshCw className="h-3 w-3" /> Refresh
-            </button>
-          </div>
+        <div className="space-y-5">
 
-          {txns.length === 0 ? (
-            <div className="flex flex-col items-center py-14 gap-3">
-              <div className="w-12 h-12 rounded-full bg-[#0E1520] border border-white/[0.07] flex items-center justify-center">
-                <CircleDollarSign className="h-5 w-5 text-[#94A3B8]/30" />
+          {/* ── Referral Earnings ────────────────────────────────────────── */}
+          {referral.isLoaded && referral.commissions.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5 text-[#FACC15]" />
+                  <p className="text-[13px] font-bold text-[#F8FAFC]">Referral Earnings</p>
+                  {referral.pendingEarned > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FACC15]/15 text-[#FACC15] border border-[#FACC15]/25">
+                      ${fmt(referral.pendingEarned)} claimable
+                    </span>
+                  )}
+                </div>
+                {referral.pendingEarned > 0 && (
+                  <button
+                    onClick={async () => { await referral.claimPending(); loadData(); }}
+                    className="flex items-center gap-1.5 text-[11px] font-bold text-[#00DFA9] border border-[#00DFA9]/25 rounded-lg px-3 py-1.5 hover:bg-[#00DFA9]/10 transition-all">
+                    <Gift className="h-3 w-3" /> Claim All
+                  </button>
+                )}
               </div>
-              <p className="text-[13px] text-[#94A3B8]/50">No transactions yet</p>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-white/[0.07] overflow-hidden bg-[#0E1520]">
-              {txns.map((tx, i) => (
-                <div key={tx.id} className={cn('p-4', i > 0 && 'border-t border-white/[0.04]')}>
-                  <div className="flex items-start gap-3">
-                    <div className={cn(
-                      'w-8 h-8 rounded-xl flex items-center justify-center shrink-0',
-                      tx.type === 'deposit' ? 'bg-[#00DFA9]/10' : 'bg-red-500/10'
-                    )}>
-                      {tx.type === 'deposit'
-                        ? <ArrowDownLeft className="h-4 w-4 text-[#00DFA9]" />
-                        : <ArrowUpRight className="h-4 w-4 text-red-400" />
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-[13px] font-semibold text-[#F8FAFC] capitalize">
-                          {tx.type === 'deposit' ? 'Deposit' : tx.type === 'withdrawal' ? 'Withdrawal' : tx.type}
-                        </p>
-                        <span className={cn(
-                          'text-[10px] font-semibold px-1.5 py-0.5 rounded-md',
-                          tx.network === 'TRC-20' ? 'bg-[#38BDF8]/10 text-[#38BDF8]' : 'bg-white/5 text-[#64748B]'
-                        )}>{tx.network ?? 'TRC-20'}</span>
+
+              <div className="rounded-2xl border border-[#FACC15]/15 overflow-hidden bg-[#0E1520]">
+                {referral.commissions.map((c, i) => (
+                  <div key={c.id} className={cn('p-4', i > 0 && 'border-t border-white/[0.04]')}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-[#FACC15]/10 border border-[#FACC15]/15">
+                        <Users className="h-4 w-4 text-[#FACC15]" />
                       </div>
-                      <p className="text-[10px] text-[#64748B] mt-0.5">{fmtDate(tx.createdAt)}</p>
-                      {tx.txHash && (
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <a
-                            href={`https://tronscan.org/#/transaction/${tx.txHash}`}
-                            target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[10px] text-[#38BDF8] hover:underline font-mono">
-                            {tx.txHash.length > 20 ? `${tx.txHash.slice(0, 10)}...${tx.txHash.slice(-8)}` : tx.txHash}
-                            <ExternalLink className="h-2.5 w-2.5" />
-                          </a>
-                          {tx.type === 'deposit' && (
-                            tx.verified === true ? (
-                              <span title={tx.verificationNote ?? 'Auto-verified on the Tron blockchain'}
-                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/20">
-                                <CheckCircle2 className="h-2.5 w-2.5" /> Verified on-chain
-                              </span>
-                            ) : tx.verified === false ? (
-                              <span title={tx.verificationNote ?? 'Under manual review by our team'}
-                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                <Clock className="h-2.5 w-2.5" /> Under review
-                              </span>
-                            ) : null
-                          )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-[13px] font-semibold text-[#F8FAFC]">Referral Commission</p>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#FACC15]/10 text-[#FACC15]">
+                            Tier {c.level}
+                          </span>
                         </div>
-                      )}
-                      {tx.walletAddress && tx.type === 'withdrawal' && (
-                        <p className="mt-1 text-[10px] text-[#64748B] font-mono">
-                          To: {tx.walletAddress.slice(0, 8)}...{tx.walletAddress.slice(-6)}
-                        </p>
-                      )}
-                      {tx.notes && tx.status === 'rejected' && (
-                        <p className="mt-1 text-[10px] text-red-400">Reason: {tx.notes}</p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className={cn('text-[14px] font-bold', isCredit(tx.type) ? 'text-[#00DFA9]' : 'text-red-400')}>
-                        {isCredit(tx.type) ? '+' : '−'}${fmt(tx.amount)}
-                      </p>
-                      <StatusBadge status={tx.status} />
+                        <p className="text-[10px] text-[#64748B] mt-0.5">{fmtDate(c.date)}</p>
+                        {c.referredAddress && (
+                          <p className="text-[10px] text-[#64748B] mt-0.5">From: {c.referredAddress}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[14px] font-bold text-[#FACC15]">+${fmt(c.earned)}</p>
+                        <span className={cn(
+                          'text-[10px] font-semibold',
+                          c.status === 'paid' ? 'text-[#00DFA9]' : 'text-[#FACC15]'
+                        )}>
+                          {c.status === 'paid' ? '✓ Paid' : '⏳ Pending'}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+
+              {referral.paidEarned > 0 && (
+                <div className="flex items-center justify-between text-[11px] text-[#64748B] px-1">
+                  <span>Total earned from referrals</span>
+                  <span className="font-bold text-[#FACC15]">${fmt(referral.totalEarned)} USDT</span>
                 </div>
-              ))}
+              )}
             </div>
           )}
+
+          {/* ── Wallet Transactions ───────────────────────────────────────── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[13px] font-bold text-[#F8FAFC]">Transaction History</p>
+              <button onClick={loadData}
+                className="flex items-center gap-1.5 text-[11px] text-[#64748B] hover:text-[#00DFA9] transition-colors">
+                <RefreshCw className="h-3 w-3" /> Refresh
+              </button>
+            </div>
+
+            {txns.length === 0 ? (
+              <div className="flex flex-col items-center py-14 gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#0E1520] border border-white/[0.07] flex items-center justify-center">
+                  <CircleDollarSign className="h-5 w-5 text-[#94A3B8]/30" />
+                </div>
+                <p className="text-[13px] text-[#94A3B8]/50">No transactions yet</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/[0.07] overflow-hidden bg-[#0E1520]">
+                {txns.map((tx, i) => (
+                  <div key={tx.id} className={cn('p-4', i > 0 && 'border-t border-white/[0.04]')}>
+                    <div className="flex items-start gap-3">
+                      <div className={cn(
+                        'w-8 h-8 rounded-xl flex items-center justify-center shrink-0',
+                        tx.type === 'deposit' ? 'bg-[#00DFA9]/10' : 'bg-red-500/10'
+                      )}>
+                        {tx.type === 'deposit'
+                          ? <ArrowDownLeft className="h-4 w-4 text-[#00DFA9]" />
+                          : <ArrowUpRight className="h-4 w-4 text-red-400" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[13px] font-semibold text-[#F8FAFC] capitalize">
+                            {tx.type === 'deposit' ? 'Deposit' : tx.type === 'withdrawal' ? 'Withdrawal' : tx.type}
+                          </p>
+                          <span className={cn(
+                            'text-[10px] font-semibold px-1.5 py-0.5 rounded-md',
+                            tx.network === 'TRC-20' ? 'bg-[#38BDF8]/10 text-[#38BDF8]' : 'bg-white/5 text-[#64748B]'
+                          )}>{tx.network ?? 'TRC-20'}</span>
+                        </div>
+                        <p className="text-[10px] text-[#64748B] mt-0.5">{fmtDate(tx.createdAt)}</p>
+                        {tx.txHash && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <a
+                              href={`https://tronscan.org/#/transaction/${tx.txHash}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[10px] text-[#38BDF8] hover:underline font-mono">
+                              {tx.txHash.length > 20 ? `${tx.txHash.slice(0, 10)}...${tx.txHash.slice(-8)}` : tx.txHash}
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
+                            {tx.type === 'deposit' && (
+                              tx.verified === true ? (
+                                <span title={tx.verificationNote ?? 'Auto-verified on the Tron blockchain'}
+                                  className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/20">
+                                  <CheckCircle2 className="h-2.5 w-2.5" /> Verified on-chain
+                                </span>
+                              ) : tx.verified === false ? (
+                                <span title={tx.verificationNote ?? 'Under manual review by our team'}
+                                  className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                  <Clock className="h-2.5 w-2.5" /> Under review
+                                </span>
+                              ) : null
+                            )}
+                          </div>
+                        )}
+                        {tx.walletAddress && tx.type === 'withdrawal' && (
+                          <p className="mt-1 text-[10px] text-[#64748B] font-mono">
+                            To: {tx.walletAddress.slice(0, 8)}...{tx.walletAddress.slice(-6)}
+                          </p>
+                        )}
+                        {tx.notes && tx.status === 'rejected' && (
+                          <p className="mt-1 text-[10px] text-red-400">Reason: {tx.notes}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={cn('text-[14px] font-bold', isCredit(tx.type) ? 'text-[#00DFA9]' : 'text-red-400')}>
+                          {isCredit(tx.type) ? '+' : '−'}${fmt(tx.amount)}
+                        </p>
+                        <StatusBadge status={tx.status} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
