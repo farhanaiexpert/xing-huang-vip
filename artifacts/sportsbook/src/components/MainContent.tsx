@@ -627,8 +627,7 @@ export function MainContent({
                   <img
                     src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/cupBett-hero-banner-WC.webp"
                     alt="CupBett — Sports Betting"
-                    className="w-full h-auto block object-cover"
-                    style={{ maxHeight: 320, objectPosition: 'center' }}
+                    className="w-full h-auto block"
                     draggable={false}
                   />
                 </div>
