@@ -12,7 +12,7 @@ import { useOddsData } from '../hooks/useOddsData';
 import { useLiveMatchScore } from '../hooks/useLiveMatchScore';
 import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
 import { findMatchInLeagues } from '../lib/matchUtils';
-import { Receipt, TrendingUp, BarChart2, Users, RefreshCw, Loader2 } from 'lucide-react';
+import { Receipt, TrendingUp, BarChart2, Users, RefreshCw, Flame, CheckCircle2, Shield } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle, DrawerDescription } from '../components/ui/drawer';
 import { cn } from '../lib/utils';
 import type { MatchEntity, LeagueEntity } from '../data/types';
@@ -93,78 +93,112 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
   const pm = match.primaryMarket;
   if (pm.selections.length === 0) return null;
 
-  const home = pm.selections[0];
-  const draw = pm.selections.find(s => s.shortName === 'X');
-  const away = pm.selections[pm.selections.length - 1];
-
-  const pct = popularityPct(match.id);
+  const home    = pm.selections[0];
+  const draw    = pm.selections.find(s => s.shortName === 'X');
+  const away    = pm.selections[pm.selections.length - 1];
+  const pct     = popularityPct(match.id);
   const bettors = bettersBadge(match.id);
 
+  // Implied probabilities (normalised)
+  const ih    = 1 / home.odds;
+  const id    = draw ? 1 / draw.odds : 0;
+  const ia    = 1 / away.odds;
+  const total = ih + id + ia;
+  const homeProb = Math.round((ih / total) * 100);
+  const drawProb = draw ? Math.round((id / total) * 100) : null;
+  const awayProb = Math.round((ia / total) * 100);
+
+  const matchName = `${match.homeTeamName} vs ${match.awayTeamName}`;
+
   return (
-    <div className="mx-3 sm:mx-4 mt-3 mb-1 rounded-xl bg-[#121821] border border-[#253241] overflow-hidden">
-      {/* Header row */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-[#253241]/60 bg-[#0F1620] gap-2">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <TrendingUp className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
-          <span className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider truncate">
-            {pm.name}
-          </span>
-          <span className="text-[10px] text-[#94A3B8]/40 bg-[#253241]/60 px-1.5 py-0.5 rounded shrink-0">
-            Top market
-          </span>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/50">
-            <Users className="h-3 w-3" />
-            <span>{bettors}</span>
+    <div className="mx-3 sm:mx-4 xl:mx-5 mt-3 mb-0 rounded-2xl overflow-hidden border border-[#1E2D3D] shadow-[0_4px_24px_rgba(0,0,0,0.35)]"
+      style={{ background: 'linear-gradient(180deg, #111827 0%, #0d1520 100%)' }}>
+
+      {/* Top accent */}
+      <div className="h-[2px]" style={{ background: 'linear-gradient(90deg, #00DFA9, #38BDF8 50%, transparent)' }} />
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 sm:px-5 py-3 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center shrink-0">
+            <TrendingUp className="h-3.5 w-3.5 text-[#00DFA9]" />
           </div>
-          <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/50">
-            <BarChart2 className="h-3 w-3" />
-            {pct}%
+          <div className="min-w-0">
+            <span className="text-[12px] font-bold text-[#F8FAFC] truncate">{pm.name}</span>
+            <span className="ml-2 text-[9px] font-bold uppercase tracking-widest text-[#00DFA9] bg-[#00DFA9]/10 border border-[#00DFA9]/20 px-1.5 py-0.5 rounded-full">
+              Top Market
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-[#94A3B8]/50">
+            <Users className="h-3 w-3 text-[#94A3B8]/40" />
+            <span className="font-semibold text-[#94A3B8]/70">{bettors}</span>
+            <span>bettors</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] text-[#94A3B8]/50">
+            <Flame className="h-3 w-3 text-[#FACC15]/60" />
+            <span className="font-bold text-[#FACC15]/80">{pct}%</span>
+            <span className="hidden sm:inline">popularity</span>
           </div>
         </div>
       </div>
 
-      {/* Popularity bar */}
-      <div className="h-[2px] bg-[#0A0E13]">
+      {/* Activity bar */}
+      <div className="mx-4 sm:mx-5 mb-3 h-1.5 bg-[#0A0E13] rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-[#00DFA9]/60 to-[#38BDF8]/40 transition-all duration-1000"
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-all duration-1000"
+          style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #00DFA9 0%, #38BDF8 100%)' }}
         />
       </div>
 
-      {/* Odds row */}
-      <div className={cn('grid px-3 sm:px-4 py-3 gap-2 sm:gap-3', draw ? 'grid-cols-3' : 'grid-cols-2')}>
-        {[home, draw, away].filter(Boolean).map(sel => sel && (
-          <QuickOddsCell
-            key={sel.id}
-            matchId={match.id}
-            marketId={pm.id}
-            matchName={`${match.homeTeamName} vs ${match.awayTeamName}`}
-            leagueName=""
-            marketName={pm.name}
-            sel={sel}
-            sportKey={sportKey}
-            homeTeam={match.homeTeamName}
-            awayTeam={match.awayTeamName}
-            commenceTime={commenceTime}
-          />
-        ))}
+      {/* Odds buttons */}
+      <div className={cn('grid px-4 sm:px-5 pb-4 gap-2.5 sm:gap-3', draw ? 'grid-cols-3' : 'grid-cols-2')}>
+        {([home, draw, away] as typeof home[]).filter(Boolean).map((sel, idx) => {
+          const prob = idx === 0 ? homeProb : idx === 1 && draw ? drawProb : awayProb;
+          return (
+            <QuickOddsCell
+              key={sel.id}
+              matchId={match.id}
+              marketId={pm.id}
+              matchName={matchName}
+              leagueName=""
+              marketName={pm.name}
+              sel={sel}
+              impliedProb={prob ?? undefined}
+              sportKey={sportKey}
+              homeTeam={match.homeTeamName}
+              awayTeam={match.awayTeamName}
+              commenceTime={commenceTime}
+            />
+          );
+        })}
+      </div>
+
+      {/* Disclaimer */}
+      <div className="flex items-center justify-center gap-1.5 pb-3">
+        <Shield className="h-3 w-3 text-[#94A3B8]/20" />
+        <p className="text-[9px] text-[#94A3B8]/25 font-medium">
+          Odds subject to change · Pre-match only · 18+ · Gamble responsibly
+        </p>
       </div>
     </div>
   );
 }
 
 function QuickOddsCell({
-  matchId, marketId, matchName, leagueName, marketName, sel, sportKey, homeTeam, awayTeam, commenceTime,
+  matchId, marketId, matchName, leagueName, marketName, sel, impliedProb,
+  sportKey, homeTeam, awayTeam, commenceTime,
 }: {
   matchId: string; marketId: string; matchName: string; leagueName: string;
   marketName: string; sel: { id: string; shortName: string; name: string; odds: number };
+  impliedProb?: number;
   sportKey?: string; homeTeam?: string; awayTeam?: string; commenceTime?: string;
 }) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const selectionId = `${marketId}-${sel.shortName}`;
   const isSelected  = hasSelection(selectionId);
+  const label       = sel.shortName.length > 2 ? sel.name : sel.shortName;
 
   return (
     <button
@@ -173,23 +207,48 @@ function QuickOddsCell({
         else addSelection({ id: selectionId, marketId, matchId, matchName, leagueName, marketName, selectionType: sel.shortName, selectionName: sel.name, odds: sel.odds, sportKey: sportKey ?? '', homeTeam, awayTeam, commenceTime });
       }}
       className={cn(
-        'flex flex-col items-center justify-center gap-1.5 sm:gap-2 min-h-[64px] sm:min-h-[56px] py-3 px-2 rounded-xl border transition-all duration-200 w-full',
+        'relative flex flex-col items-center justify-center gap-1 py-4 px-2 rounded-2xl border-2 transition-all duration-200 w-full overflow-hidden',
         isSelected
-          ? 'bg-[#00DFA9]/10 border-[#00DFA9]/40 shadow-[0_0_16px_rgba(0,223,169,0.15)]'
-          : 'bg-[#0B1220] border-[#2A3A52] hover:bg-[#18212B] hover:border-[#38BDF8]/30 hover:shadow-[0_0_12px_rgba(56,189,248,0.08)]'
+          ? 'border-[#00DFA9]/50 shadow-[0_0_20px_rgba(0,223,169,0.2),inset_0_0_20px_rgba(0,223,169,0.04)]'
+          : 'border-[#1E2D3D] hover:border-[#38BDF8]/30 hover:shadow-[0_0_16px_rgba(56,189,248,0.08)]'
       )}
+      style={{
+        background: isSelected
+          ? 'linear-gradient(160deg, rgba(0,223,169,0.08) 0%, rgba(0,15,25,0.9) 100%)'
+          : 'linear-gradient(160deg, #0F1825 0%, #0B1018 100%)',
+      }}
     >
-      <span className={cn('text-[11px] font-semibold leading-none', isSelected ? 'text-[#00DFA9]' : 'text-[#94A3B8]/70')}>
-        {sel.shortName.length > 2 ? sel.name : sel.shortName}
-      </span>
+      {/* Selected check */}
+      {isSelected && (
+        <div className="absolute top-2 right-2">
+          <CheckCircle2 className="h-3.5 w-3.5 text-[#00DFA9]" />
+        </div>
+      )}
+
+      {/* Label */}
       <span className={cn(
-        'text-[22px] sm:text-[20px] font-black tabular-nums leading-none',
+        'text-[10px] font-bold uppercase tracking-wider leading-none',
+        isSelected ? 'text-[#00DFA9]/90' : 'text-[#94A3B8]/60'
+      )}>
+        {label}
+      </span>
+
+      {/* Odds */}
+      <span className={cn(
+        'text-[28px] sm:text-[26px] font-black tabular-nums leading-none',
         isSelected ? 'text-[#00DFA9]' : 'text-[#FACC15]'
       )}>
         {sel.odds.toFixed(2)}
       </span>
-      {isSelected && (
-        <span className="text-[9px] font-bold uppercase tracking-widest text-[#00DFA9]/70 leading-none">✓</span>
+
+      {/* Implied probability */}
+      {impliedProb !== undefined && (
+        <span className={cn(
+          'text-[10px] font-semibold leading-none',
+          isSelected ? 'text-[#00DFA9]/60' : 'text-[#94A3B8]/40'
+        )}>
+          {impliedProb}% chance
+        </span>
       )}
     </button>
   );
@@ -436,41 +495,43 @@ function MatchDetailBody({
             />
 
             {/* Market groups */}
-            <div className="px-3 sm:px-4 xl:px-5 py-3 pb-16 space-y-2.5 w-full">
+            <div className="px-3 sm:px-4 xl:px-5 pt-3 pb-16 space-y-2.5 w-full">
               {/* Live banner */}
               {match.isLive && (
-                <div className="flex items-center gap-3 bg-[#EF4444]/5 border border-[#EF4444]/20 rounded-xl px-4 py-3">
-                  <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse shrink-0" />
+                <div className="flex items-center gap-3 rounded-2xl px-4 py-3.5 border-2 border-[#EF4444]/25"
+                  style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(15,22,32,0.9) 100%)' }}>
+                  <div className="relative shrink-0">
+                    <span className="absolute inset-0 rounded-full bg-[#EF4444] opacity-30 animate-ping" />
+                    <span className="relative w-3 h-3 rounded-full bg-[#EF4444] block" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#EF4444]">Match is Live</p>
-                    <p className="text-xs text-[#94A3B8]">
+                    <p className="text-[13px] font-bold text-[#EF4444]">Match in Progress</p>
+                    <p className="text-[11px] text-[#94A3B8]/70 mt-0.5">
                       Odds may be suspended during key moments
                       {liveData.clockMin !== null
-                        ? ` · ${liveData.clockMin}'`
+                        ? ` · ${liveData.clockMin}' played`
                         : match.liveMinute
                           ? ` · ${match.liveMinute}' played`
                           : ''}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2.5 shrink-0">
                     {displayScore && (
-                      <span
-                        className="text-xs font-mono font-bold tabular-nums transition-colors duration-300"
-                        style={{ color: (liveData.homeFlash || liveData.awayFlash) ? '#00DFA9' : '#EF4444' }}
-                      >
-                        {displayScore.home} – {displayScore.away}
-                      </span>
+                      <div className="px-3 py-1.5 rounded-xl border border-[#EF4444]/20 bg-[#EF4444]/5">
+                        <span
+                          className="text-[13px] font-black tabular-nums transition-colors duration-300"
+                          style={{ color: (liveData.homeFlash || liveData.awayFlash) ? '#00DFA9' : '#EF4444' }}
+                        >
+                          {displayScore.home} – {displayScore.away}
+                        </span>
+                      </div>
                     )}
                     <span
                       className="text-[10px] flex items-center gap-1"
                       style={{ color: liveData.isPolling ? '#00DFA9' : '#475569' }}
                     >
                       <RefreshCw className={cn('h-3 w-3', liveData.isPolling && 'animate-spin')} />
-                      {liveData.isPolling
-                        ? ''
-                        : liveData.lastUpdated
-                          ? `${liveData.nextRefreshIn}s`
-                          : ''}
+                      {liveData.isPolling ? '' : liveData.lastUpdated ? `${liveData.nextRefreshIn}s` : ''}
                     </span>
                   </div>
                 </div>
