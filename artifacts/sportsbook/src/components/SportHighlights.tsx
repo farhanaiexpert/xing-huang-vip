@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ChevronRight, Flame, Clock, Bell, TrendingUp, Zap, Star } from 'lucide-react';
+import { ChevronRight, Flame, Clock, Bell, TrendingUp, Star } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { useOddsData } from '../hooks/useOddsData';
@@ -98,7 +98,7 @@ function FeaturedCard({ entry }: { entry: FeaturedEntry }) {
   const { match, league, bucket } = entry;
   const shared = {
     matchId:      match.id,
-    marketId:     `feat_${match.id}`,
+    marketId:     `1x2_${match.id}`,
     matchName:    `${match.team1} v ${match.team2}`,
     leagueName:   league.name,
     marketName:   bucket.marketName,
@@ -297,15 +297,16 @@ function TrendingRail({ pills }: { pills: TrendingPill[] }) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 interface SportPanelData {
-  bucket: SportBucketConfig;
-  pairs:  { match: Match; league: League }[];
-  total:  number;
+  bucket:    SportBucketConfig;
+  pairs:     { match: Match; league: League }[];
+  total:     number;
+  liveCount: number;
 }
 
 function PanelMatchRow({ match, league, bucket }: { match: Match; league: League; bucket: SportBucketConfig }) {
   const shared = {
     matchId:      match.id,
-    marketId:     `panel_${bucket.key}_${match.id}`,
+    marketId:     `1x2_${match.id}`,
     matchName:    `${match.team1} v ${match.team2}`,
     leagueName:   league.name,
     marketName:   bucket.marketName,
@@ -359,7 +360,7 @@ function PanelMatchRow({ match, league, bucket }: { match: Match; league: League
 }
 
 function SportPanel({ data }: { data: SportPanelData }) {
-  const { bucket, pairs, total } = data;
+  const { bucket, pairs, total, liveCount } = data;
   const more = total - pairs.length;
 
   return (
@@ -379,6 +380,15 @@ function SportPanel({ data }: { data: SportPanelData }) {
         <div className="flex items-center gap-2">
           <span className="text-[17px] leading-none">{bucket.emoji}</span>
           <span className="text-[12.5px] font-black text-[#F8FAFC] uppercase tracking-wide">{bucket.label}</span>
+          {liveCount > 0 && (
+            <span
+              className="text-[8px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"
+              style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.22)' }}
+            >
+              <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
+              {liveCount} LIVE
+            </span>
+          )}
           <span
             className="text-[8px] font-bold px-1.5 py-0.5 rounded-full"
             style={{ background: `${bucket.color}18`, color: bucket.color, border: `1px solid ${bucket.color}22` }}
@@ -519,8 +529,8 @@ function ComingSoonSection({ entries }: { entries: ComingSoonEntry[] }) {
       <div className="flex items-center justify-between mb-1 px-0.5">
         <div>
           <div className="flex items-center gap-2">
-            <Zap className="h-3.5 w-3.5 text-[#FACC15]" />
-            <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">Coming Soon</span>
+            <Clock className="h-3.5 w-3.5 text-[#FACC15]" />
+            <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">⏰ Coming Soon</span>
           </div>
           <p className="text-[9.5px] text-[#94A3B8]/40 mt-0.5">Don't miss these upcoming matches</p>
         </div>
@@ -596,9 +606,10 @@ export function SportHighlights() {
       .sort((a, b) => b.pairs.length - a.pairs.length)
       .slice(0, 6)
       .map(b => ({
-        bucket: b.config,
-        pairs:  b.pairs.slice(0, 3),
-        total:  b.pairs.length,
+        bucket:    b.config,
+        pairs:     b.pairs.slice(0, 3),
+        total:     b.pairs.length,
+        liveCount: b.pairs.filter(p => p.match.isLive).length,
       }));
 
     // 4. Coming soon — future matches with commenceIso, soonest first, cap 4
