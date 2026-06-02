@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { db, usersTable, referralsTable, commissionsTable, walletsTable } from "@workspace/db";
+import { db, usersTable, referralsTable, commissionsTable, walletsTable, transactionsTable } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 
 const router = Router();
@@ -114,6 +114,16 @@ router.post("/referral/commissions/claim", authenticate, async (req, res): Promi
       SET balance_usdt = balance_usdt + ${totalAmt.toFixed(8)}::numeric
       WHERE user_id = ${userId}
     `);
+
+    // Ledger entry — every balance change must have a matching transaction record.
+    await tx.insert(transactionsTable).values({
+      userId,
+      type: "referral_commission",
+      amount: totalAmt.toFixed(8),
+      status: "completed",
+      reference: `commissions:${rows.map((r) => r.id).join(",")}`,
+      notes: `Referral commission${rows.length !== 1 ? "s" : ""} claimed (${rows.length} payment${rows.length !== 1 ? "s" : ""})`,
+    });
 
     claimed = rows.length;
     total = totalAmt.toFixed(8);

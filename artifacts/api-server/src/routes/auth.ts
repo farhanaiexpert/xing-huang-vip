@@ -935,8 +935,20 @@ router.post("/auth/refresh", async (req, res): Promise<void> => {
     return;
   }
 
+  // Rotate refresh token: delete the used session and issue a fresh one.
+  // This limits the damage window of a stolen refresh token to a single use.
+  const newRefreshToken = signRefreshToken({ userId: payload.userId, role: payload.role });
+  await db.transaction(async (tx) => {
+    await tx.delete(sessionsTable).where(eq(sessionsTable.refreshToken, refreshToken));
+    await tx.insert(sessionsTable).values({
+      userId: session.userId,
+      refreshToken: newRefreshToken,
+      expiresAt: refreshTokenExpiresAt(),
+    });
+  });
+
   const accessToken = signAccessToken({ userId: payload.userId, role: payload.role });
-  res.json({ accessToken });
+  res.json({ accessToken, refreshToken: newRefreshToken });
 });
 
 // ── POST /auth/logout ─────────────────────────────────────────────────────────

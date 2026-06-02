@@ -19,7 +19,11 @@ import { betsapiRouter } from "./betsapi.js";
 
 const router = Router();
 
-router.use(setupRouter);
+// Bootstrap endpoint is only available outside production.
+// In production, remove the route entirely so it cannot be reached.
+if (process.env.NODE_ENV !== "production") {
+  router.use(setupRouter);
+}
 router.use(authRouter);
 router.use(usersRouter);
 router.use(walletRouter);

@@ -1,0 +1,99 @@
+Please perform a FINAL production readiness audit of the entire sportsbook platform.
+
+The previous money-flow issues have been fixed. Now I want you to act like a senior security engineer, backend engineer, and QA engineer.
+
+Audit the following areas:
+
+1. End-to-End User Journey
+
+* Registration
+* Login
+* Deposit
+* Bet placement
+* Settlement
+* Withdrawal
+* Logout
+* Account history
+
+Verify the complete journey works without data loss or inconsistencies.
+
+2. Balance Integrity Audit
+
+* Confirm balances can never become negative.
+* Confirm every balance change has a matching transaction record.
+* Confirm deposits, bets, wins, refunds, bonuses, and withdrawals are all traceable.
+* Look for any direct wallet updates that bypass the ledger.
+
+3. Settlement Audit
+
+* Verify a bet can never settle twice.
+* Verify settlement worker is idempotent.
+* Verify concurrent settlement workers cannot create duplicate payouts.
+* Verify accumulator logic for all edge cases.
+
+4. Security Audit
+
+* Authentication
+* Authorization
+* Admin endpoints
+* Input validation
+* Rate limiting
+* SQL injection protection
+* XSS protection
+* CSRF considerations
+* Sensitive data exposure
+
+5. Deposit & Withdrawal Audit
+
+* Verify duplicate deposits are impossible.
+* Verify duplicate withdrawals are impossible.
+* Verify pending withdrawals reserve funds correctly.
+* Verify withdrawal approval/rejection flow is safe.
+
+6. Database Audit
+
+* Missing indexes
+* Missing foreign keys
+* Missing unique constraints
+* Missing transaction boundaries
+* Performance bottlenecks
+
+7. Production Reliability
+
+* Server restart recovery
+* Failed job recovery
+* Crash recovery
+* Logging
+* Monitoring
+* Error handling
+
+8. Stress Testing
+
+* Simulate concurrent deposits
+* Simulate concurrent bets
+* Simulate concurrent settlements
+* Simulate concurrent withdrawals
+* Identify any race conditions
+
+9. Code Quality
+
+* Dead code
+* Unused imports
+* Duplicate logic
+* Memory leaks
+* Performance issues
+
+Important:
+Do not assume anything.
+Actually inspect the codebase and provide evidence for findings.
+
+Final report should contain:
+
+* Critical issues
+* High issues
+* Medium issues
+* Low issues
+* Production readiness score out of 10
+* Launch recommendation (YES / NO)
+* What must be fixed before real-money launch
+* What can wait until after launch

@@ -801,6 +801,16 @@ router.post("/admin/referrals/:referrerId/mark-paid", async (req, res): Promise<
       WHERE user_id = ${referrerId}
     `);
 
+    // Ledger entry — every balance change must have a matching transaction record.
+    await tx.insert(transactionsTable).values({
+      userId: referrerId,
+      type: "referral_commission",
+      amount: totalAmt.toFixed(8),
+      status: "completed",
+      reference: `commissions:${rows.map((r) => r.id).join(",")}`,
+      notes: `Referral commission${rows.length !== 1 ? "s" : ""} paid by admin (${rows.length} payment${rows.length !== 1 ? "s" : ""})`,
+    });
+
     res.json({ updated: rows.length, total: totalAmt.toFixed(8) });
   });
 });

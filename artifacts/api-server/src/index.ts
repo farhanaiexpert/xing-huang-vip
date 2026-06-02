@@ -7,6 +7,17 @@ import { runSettlementWorker } from "./lib/settlementWorker.js";
 import { fetchAndCacheOdds, getDbCacheRemainingMs, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
 import { fetchBetsApiUpcoming, fetchPrematchOdds, BETSAPI_SPORT_IDS, BETSAPI_SPORT_MAP, BETSAPI_KEY } from "./lib/betsapi.js";
 
+// ── Global process error handlers ─────────────────────────────────────────────
+// Must be registered before any async work so nothing slips through unnoticed.
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason }, "Unhandled promise rejection — shutting down");
+  process.exit(1);
+});
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception — shutting down");
+  process.exit(1);
+});
+
 const PORT = parseInt(process.env.PORT ?? "5000", 10);
 
 async function runMigrations() {
@@ -488,6 +499,28 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v27 skipped");
   }
+
+  // v28: performance indexes on high-traffic columns.
+  // Every authenticated request hits sessions(user_id); every bet page hits
+  // bets(user_id) and transactions(user_id); settlement cron hits bets(status)
+  // and bet_selections(event_id). Without these, queries do full table scans.
+  try {
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_bets_user_id          ON bets          (user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_bets_status            ON bets          (status)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_bets_created_at        ON bets          (created_at)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_transactions_user_id   ON transactions  (user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_transactions_status    ON transactions  (status)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions (created_at)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_bet_selections_bet_id  ON bet_selections (bet_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_bet_selections_event_id ON bet_selections (event_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_sessions_user_id       ON sessions      (user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_commissions_user_id    ON commissions   (user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_commissions_status     ON commissions   (status)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_settlement_log_event_id ON settlement_log (event_id)`);
+    logger.info("DB migration v28 applied (performance indexes on user_id, status, created_at, event_id)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v28 skipped");
+  }
 }
 
 runMigrations().then(() => {
@@ -658,7 +691,25 @@ runMigrations().then(() => {
     runBetsApiBatch().catch((err) => logger.error({ err }, "Startup BetsAPI warm: unhandled error"));
   }, 2 * 60 * 1000);
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     logger.info({ port: PORT }, "CupBett API server started");
   });
+
+  // ── Graceful shutdown on SIGTERM / SIGINT ──────────────────────────────────
+  // Stops accepting new connections, waits up to 10 s for in-flight requests
+  // to finish, then exits cleanly. Prevents mid-transaction kills on deploys.
+  const shutdown = (signal: string) => {
+    logger.info({ signal }, "Shutdown signal received — draining connections");
+    server.close(() => {
+      logger.info("HTTP server closed — process exiting");
+      process.exit(0);
+    });
+    // Force-exit if connections don't drain within 10 seconds
+    setTimeout(() => {
+      logger.warn("Forced exit after 10 s shutdown timeout");
+      process.exit(1);
+    }, 10_000).unref();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT",  () => shutdown("SIGINT"));
 });
