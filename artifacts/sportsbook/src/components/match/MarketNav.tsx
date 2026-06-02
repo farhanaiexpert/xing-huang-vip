@@ -12,7 +12,6 @@ interface MarketNavProps {
 export function MarketNav({ groups, activeId, onSelect }: MarketNavProps) {
   const activeRef = useRef<HTMLButtonElement | null>(null);
 
-  // Scroll active tab into view when it changes
   useEffect(() => {
     activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [activeId]);
@@ -22,19 +21,19 @@ export function MarketNav({ groups, activeId, onSelect }: MarketNavProps) {
   return (
     <div className="sticky top-0 z-10 bg-[#0B0F14]/98 backdrop-blur-sm border-b border-[#253241]/60">
       <ScrollArea className="w-full">
-        <div className="flex items-center gap-1 px-4 py-2 w-max">
+        <div className="flex items-center gap-1 px-3 sm:px-4 py-2 w-max">
 
           {/* All Markets synthetic tab */}
           <button
             onClick={() => { if (groups[0]) onSelect(groups[0].id); }}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 select-none border',
+              'flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 select-none border min-h-[36px] sm:min-h-0',
               !activeId || activeId === groups[0]?.id
                 ? 'bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/30 shadow-[0_0_12px_rgba(0,223,169,0.1)]'
                 : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#121821] border-transparent'
             )}
           >
-            🎯 All Markets
+            🎯 All
             <span className={cn(
               'text-[9px] font-bold px-1 py-0.5 rounded tabular-nums',
               !activeId || activeId === groups[0]?.id
@@ -57,7 +56,7 @@ export function MarketNav({ groups, activeId, onSelect }: MarketNavProps) {
                 ref={isActive ? activeRef : undefined}
                 onClick={() => onSelect(group.id)}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 select-none border',
+                  'flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 select-none border min-h-[36px] sm:min-h-0',
                   isActive
                     ? 'bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/30 shadow-[0_0_12px_rgba(0,223,169,0.1)]'
                     : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#121821] border-transparent'

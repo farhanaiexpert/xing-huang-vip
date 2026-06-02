@@ -13,20 +13,15 @@ interface MarketGroupProps {
   defaultOpen?: boolean;
   isFeatured?: boolean;
   groupIndex?: number;
-  /** Full Odds API sport key, e.g. "soccer_epl" — passed to OddsButton for settlement */
   sportKey?: string;
-  /** Home team name — passed to OddsButton for settlement */
   homeTeam?: string;
-  /** Away team name — passed to OddsButton for settlement */
   awayTeam?: string;
-  /** ISO 8601 match start — passed to OddsButton for settlement timing */
   commenceTime?: string;
 }
 
-/** Stable "updated X min ago" label seeded by group id */
 function updatedLabel(groupId: string): string {
   const n = groupId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const min = 1 + (n % 14); // 1–14 min
+  const min = 1 + (n % 14);
   return min === 1 ? 'Just updated' : `${min}m ago`;
 }
 
@@ -49,12 +44,12 @@ export function MarketGroup({
           : 'border-[#253241]'
       )}
     >
-      {/* ── Header ── */}
+      {/* ── Header ────────────────────────────────────────────────── */}
       <button
         onClick={() => setIsOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-[#0F1620] hover:bg-[#18212B] transition-colors duration-150 group"
+        className="w-full flex items-center justify-between px-4 py-3 min-h-[48px] bg-[#0F1620] hover:bg-[#18212B] transition-colors duration-150 group"
       >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-base leading-none shrink-0">{group.icon}</span>
 
           <span className="text-[13px] font-semibold text-[#F8FAFC] truncate">{group.name}</span>
@@ -64,23 +59,22 @@ export function MarketGroup({
             {totalSelections}
           </span>
 
-          {/* Badges */}
+          {/* Badges — shown on all screen sizes (icon only on very small screens) */}
           {isFeatured && (
-            <span className="hidden sm:flex items-center gap-1 text-[9px] font-bold text-[#FACC15] bg-[#FACC15]/10 border border-[#FACC15]/20 px-1.5 py-0.5 rounded shrink-0">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-[#FACC15] bg-[#FACC15]/10 border border-[#FACC15]/20 px-1.5 py-0.5 rounded shrink-0">
               <Star className="h-2.5 w-2.5 fill-[#FACC15]" />
-              Featured
+              <span className="hidden sm:inline">Featured</span>
             </span>
           )}
           {isTrending && !isFeatured && (
-            <span className="hidden sm:flex items-center gap-1 text-[9px] font-bold text-[#38BDF8] bg-[#38BDF8]/8 border border-[#38BDF8]/20 px-1.5 py-0.5 rounded shrink-0">
+            <span className="flex items-center gap-1 text-[9px] font-bold text-[#38BDF8] bg-[#38BDF8]/8 border border-[#38BDF8]/20 px-1.5 py-0.5 rounded shrink-0">
               <TrendingUp className="h-2.5 w-2.5" />
-              Popular
+              <span className="hidden sm:inline">Popular</span>
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Updated label */}
+        <div className="flex items-center gap-2 shrink-0">
           <span className="hidden md:flex items-center gap-1 text-[9px] text-[#94A3B8]/30 font-medium">
             <Clock className="h-2.5 w-2.5" />
             {label}
@@ -92,7 +86,7 @@ export function MarketGroup({
         </div>
       </button>
 
-      {/* ── Content ── */}
+      {/* ── Content ───────────────────────────────────────────────── */}
       {isOpen && (
         <div className="divide-y divide-[#253241]/50">
           {group.markets.map(market => (
@@ -139,17 +133,18 @@ function MarketSection({ market, matchId, matchName, leagueName, sportKey, homeT
   return <GridLayout market={market} matchId={matchId} matchName={matchName} leagueName={leagueName} sportKey={sportKey} homeTeam={homeTeam} awayTeam={awayTeam} commenceTime={commenceTime} />;
 }
 
-// ── Wide layout: up to 3 selections ──────────────────────────────────────────
+// ── Wide layout: 2–3 selections ───────────────────────────────────────────────
 
 function WideLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
+  const count = market.selections.length;
   return (
-    <div className="px-4 py-3.5">
+    <div className="px-3 sm:px-4 py-3.5">
       {market.name !== '' && (
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
           {market.name}
         </p>
       )}
-      <div className={cn('grid gap-2', market.selections.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+      <div className={cn('grid gap-2', count === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1.5">
             <span className="text-[10px] text-[#94A3B8]/60 font-medium leading-none truncate max-w-full px-1 text-center">
@@ -173,7 +168,7 @@ function WideLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam
 
 function GridLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
   return (
-    <div className="px-4 py-3.5">
+    <div className="px-3 sm:px-4 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
         {market.name}
       </p>
@@ -201,11 +196,11 @@ function GridLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam
 
 function CorrectScoreLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
   return (
-    <div className="px-4 py-3.5">
+    <div className="px-3 sm:px-4 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
         {market.name}
       </p>
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2">
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1">
             <span className="text-[10px] text-[#94A3B8]/50 leading-none">{sel.shortName}</span>
@@ -231,7 +226,7 @@ function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey, ho
   const hasMore   = market.selections.length > 6;
 
   return (
-    <div className="px-4 py-3.5">
+    <div className="px-3 sm:px-4 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
         {market.name}
       </p>
@@ -239,7 +234,7 @@ function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey, ho
         {displayed.map(sel => (
           <div
             key={sel.id}
-            className="flex items-center justify-between gap-3 bg-[#0B0F14] border border-[#253241]/60 rounded-lg px-3 py-2.5 hover:border-[#2E3D50] hover:bg-[#0F1620] transition-all duration-100"
+            className="flex items-center justify-between gap-3 bg-[#0B0F14] border border-[#253241]/60 rounded-lg px-3 py-2.5 hover:border-[#2E3D50] hover:bg-[#0F1620] transition-all duration-100 min-h-[44px]"
           >
             <span className="text-[13px] text-[#F8FAFC] font-medium truncate">{sel.name}</span>
             <OddsButton
@@ -255,7 +250,7 @@ function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey, ho
       {hasMore && !showAll && (
         <button
           onClick={() => setShowAll(true)}
-          className="mt-3 w-full py-2 rounded-lg text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 bg-[#38BDF8]/5 hover:bg-[#38BDF8]/10 border border-[#38BDF8]/15 transition-all duration-150"
+          className="mt-3 w-full py-2.5 rounded-lg text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 bg-[#38BDF8]/5 hover:bg-[#38BDF8]/10 border border-[#38BDF8]/15 transition-all duration-150"
         >
           Show {market.selections.length - 6} more →
         </button>

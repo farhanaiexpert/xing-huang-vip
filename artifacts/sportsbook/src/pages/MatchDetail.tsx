@@ -99,7 +99,7 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
   const bettors = bettersBadge(match.id);
 
   return (
-    <div className="mx-4 mt-3 mb-1 rounded-xl bg-[#121821] border border-[#253241] overflow-hidden">
+    <div className="mx-3 sm:mx-4 mt-3 mb-1 rounded-xl bg-[#121821] border border-[#253241] overflow-hidden">
       {/* Header row */}
       <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-[#253241]/60 bg-[#0F1620] gap-2">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -107,14 +107,14 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
           <span className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider truncate">
             {pm.name}
           </span>
-          <span className="hidden sm:inline text-[10px] text-[#94A3B8]/40 bg-[#253241]/60 px-1.5 py-0.5 rounded shrink-0">
-            Most popular
+          <span className="text-[10px] text-[#94A3B8]/40 bg-[#253241]/60 px-1.5 py-0.5 rounded shrink-0">
+            Top market
           </span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/50">
             <Users className="h-3 w-3" />
-            <span className="hidden xs:inline">{bettors} </span>bettors
+            <span>{bettors}</span>
           </div>
           <div className="flex items-center gap-1 text-[10px] text-[#94A3B8]/50">
             <BarChart2 className="h-3 w-3" />
@@ -132,7 +132,7 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
       </div>
 
       {/* Odds row */}
-      <div className={cn('grid px-4 py-3 gap-3', draw ? 'grid-cols-3' : 'grid-cols-2')}>
+      <div className={cn('grid px-3 sm:px-4 py-3 gap-2 sm:gap-3', draw ? 'grid-cols-3' : 'grid-cols-2')}>
         {[home, draw, away].filter(Boolean).map(sel => sel && (
           <QuickOddsCell
             key={sel.id}
@@ -171,23 +171,23 @@ function QuickOddsCell({
         else addSelection({ id: selectionId, marketId, matchId, matchName, leagueName, marketName, selectionType: sel.shortName, selectionName: sel.name, odds: sel.odds, sportKey: sportKey ?? '', homeTeam, awayTeam, commenceTime });
       }}
       className={cn(
-        'flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all duration-200',
+        'flex flex-col items-center justify-center gap-1.5 sm:gap-2 min-h-[64px] sm:min-h-[56px] py-3 px-2 rounded-xl border transition-all duration-200 w-full',
         isSelected
           ? 'bg-[#00DFA9]/10 border-[#00DFA9]/40 shadow-[0_0_16px_rgba(0,223,169,0.15)]'
           : 'bg-[#0B1220] border-[#2A3A52] hover:bg-[#18212B] hover:border-[#38BDF8]/30 hover:shadow-[0_0_12px_rgba(56,189,248,0.08)]'
       )}
     >
-      <span className={cn('text-[11px] font-semibold', isSelected ? 'text-[#00DFA9]' : 'text-[#94A3B8]/70')}>
+      <span className={cn('text-[11px] font-semibold leading-none', isSelected ? 'text-[#00DFA9]' : 'text-[#94A3B8]/70')}>
         {sel.shortName.length > 2 ? sel.name : sel.shortName}
       </span>
       <span className={cn(
-        'text-[20px] font-black tabular-nums leading-none',
+        'text-[22px] sm:text-[20px] font-black tabular-nums leading-none',
         isSelected ? 'text-[#00DFA9]' : 'text-[#FACC15]'
       )}>
         {sel.odds.toFixed(2)}
       </span>
       {isSelected && (
-        <span className="text-[9px] font-bold uppercase tracking-widest text-[#00DFA9]/70">Selected</span>
+        <span className="text-[9px] font-bold uppercase tracking-widest text-[#00DFA9]/70 leading-none">✓</span>
       )}
     </button>
   );
@@ -366,7 +366,7 @@ export function MatchDetail() {
       </div>
 
       {/* ── Mobile Bet Slip FAB — sits above the mobile nav bar (h-14 = 56px) ── */}
-      <div className="xl:hidden fixed bottom-20 right-5 z-50">
+      <div className="xl:hidden fixed right-4 z-50" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
         <Drawer>
           <DrawerTrigger asChild>
             <button
