@@ -773,10 +773,12 @@ async function processSettlement(): Promise<void> {
     GROUP BY event_id, event_name, sport
   `);
 
-  if (openResult.rows.length === 0) {
-    logger.debug("Settlement worker: no open bets");
-    return;
-  }
+  const openBetEventCount = openResult.rows.length;
+  logger.info(
+    { count: openBetEventCount },
+    `[settlementWorker] open bets found: ${openBetEventCount}`,
+  );
+  if (openBetEventCount === 0) return;
 
   const allOpenEvents: OpenEventMeta[] = (openResult.rows as {
     event_id: string; event_name: string; sport: string;
@@ -927,6 +929,10 @@ export async function runSettlementWorker(): Promise<void> {
     return;
   }
   isRunning = true;
+  logger.info(
+    { timestamp: new Date().toISOString() },
+    "[settlementWorker] started",
+  );
   try {
     await processSettlement();
   } catch (err) {

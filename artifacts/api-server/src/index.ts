@@ -463,7 +463,7 @@ runMigrations().then(() => {
       logger.error({ err }, "Settlement cron: unhandled error"),
     );
   });
-  logger.info("Auto-settlement cron started (every 1 minute — dual source: Odds API + API-Football)");
+  logger.info("Auto-settlement cron started (every 1 minute — Odds API, ID-first matching)");
 
   // ── Odds refresh cron: every 5 min check, batch fires every 55-70 min ────
   // Key optimisations vs the old 25-35 min cycle:
