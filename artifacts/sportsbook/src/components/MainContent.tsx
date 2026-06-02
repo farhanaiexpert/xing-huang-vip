@@ -632,6 +632,8 @@ export function MainContent({
                   />
                 </div>
               )}
+              {showFeatured && <div className="mb-4"><JackpotPool /></div>}
+              {showFeatured && <div className="mb-4"><LiveBetFeed /></div>}
               {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
               {showFeatured && (
                 <>
@@ -647,7 +649,7 @@ export function MainContent({
               )}
               {showFeatured && hasRealData && <TopMatchesBanner leagues={realLeagues} />}
               {showFeatured && <EuropaLeagueFinal />}
-              {showFeatured && <SportHighlights />}
+              {showFeatured && <SportHighlights onSelectSport={onSelectSport} />}
               {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights />
               )}
@@ -712,8 +714,6 @@ export function MainContent({
 
               {/* ── Post-match activity panels (below the match list) ── */}
               {showFeatured && <div className="mt-5"><FlashOdds /></div>}
-              {showFeatured && <div className="mt-4"><JackpotPool /></div>}
-              {showFeatured && <div className="mt-4"><LiveBetFeed /></div>}
             </>
           )}
         </div>

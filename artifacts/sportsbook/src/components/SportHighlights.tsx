@@ -36,6 +36,18 @@ function getBucket(league: League): SportBucketConfig | null {
   return SPORT_BUCKETS.find(b => b.prefixes.some(p => sk.startsWith(p))) ?? null;
 }
 
+/** Derives the sport ID used by MainContent's filter from a bucket config */
+function bucketToSportId(bucket: SportBucketConfig): string {
+  const p = bucket.prefixes[0];
+  if (p.endsWith('_')) return p.slice(0, -1); // "soccer_" → "soccer"
+  if (p.startsWith('betsapi_')) return p.replace('betsapi_', ''); // "betsapi_rugby" → "rugby"
+  return p;
+}
+
+function scrollToTop() {
+  document.getElementById('main-content-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
 function TeamBadge({ name, size = 20, bg = '#253241', color = '#F8FAFC' }: {
@@ -359,9 +371,13 @@ function PanelMatchRow({ match, league, bucket }: { match: Match; league: League
   );
 }
 
-function SportPanel({ data }: { data: SportPanelData }) {
+function SportPanel({ data, onSelectSport }: { data: SportPanelData; onSelectSport?: (id: string) => void }) {
   const { bucket, pairs, total, liveCount } = data;
   const more = total - pairs.length;
+  const handleDrillDown = () => {
+    onSelectSport?.(bucketToSportId(bucket));
+    scrollToTop();
+  };
 
   return (
     <div
@@ -396,8 +412,11 @@ function SportPanel({ data }: { data: SportPanelData }) {
             {total}
           </span>
         </div>
-        <button className="flex items-center gap-0.5 text-[10px] font-semibold text-[#38BDF8]/60 hover:text-[#38BDF8] transition-colors">
-          All <ChevronRight className="h-3 w-3" />
+        <button
+          onClick={handleDrillDown}
+          className="flex items-center gap-0.5 text-[10px] font-semibold text-[#38BDF8]/60 hover:text-[#38BDF8] transition-colors"
+        >
+          View All <ChevronRight className="h-3 w-3" />
         </button>
       </div>
 
@@ -411,19 +430,20 @@ function SportPanel({ data }: { data: SportPanelData }) {
       {/* More footer */}
       {more > 0 && (
         <button
+          onClick={handleDrillDown}
           className="w-full py-2 text-center text-[9.5px] font-semibold transition-all border-t"
           style={{ borderColor: 'rgba(37,50,65,0.35)', color: `${bucket.color}70`, background: `${bucket.color}05` }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = bucket.color; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = `${bucket.color}70`; }}
         >
-          +{more} more matches →
+          Show all {total} {bucket.label} matches →
         </button>
       )}
     </div>
   );
 }
 
-function SportPanelGrid({ panels }: { panels: SportPanelData[] }) {
+function SportPanelGrid({ panels, onSelectSport }: { panels: SportPanelData[]; onSelectSport?: (id: string) => void }) {
   if (panels.length === 0) return null;
   return (
     <div className="mb-5">
@@ -433,7 +453,7 @@ function SportPanelGrid({ panels }: { panels: SportPanelData[] }) {
         <span className="text-[10px] text-[#94A3B8]/40">{panels.length} sports · live odds</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {panels.map(p => <SportPanel key={p.bucket.key} data={p} />)}
+        {panels.map(p => <SportPanel key={p.bucket.key} data={p} onSelectSport={onSelectSport} />)}
       </div>
     </div>
   );
@@ -552,7 +572,7 @@ function ComingSoonSection({ entries }: { entries: ComingSoonEntry[] }) {
 // Main export
 // ══════════════════════════════════════════════════════════════════════════════
 
-export function SportHighlights() {
+export function SportHighlights({ onSelectSport }: { onSelectSport?: (id: string) => void } = {}) {
   const { allLeagues } = useOddsData();
 
   const { featured, trending, panels, comingSoon } = useMemo(() => {
@@ -634,10 +654,10 @@ export function SportHighlights() {
 
   return (
     <div className="mb-2">
-      <FeaturedStrip    entries={featured}   />
-      <TrendingRail     pills={trending}     />
-      <SportPanelGrid   panels={panels}      />
-      <ComingSoonSection entries={comingSoon} />
+      <FeaturedStrip     entries={featured}                       />
+      <TrendingRail      pills={trending}                         />
+      <SportPanelGrid    panels={panels} onSelectSport={onSelectSport} />
+      <ComingSoonSection entries={comingSoon}                     />
     </div>
   );
 }
