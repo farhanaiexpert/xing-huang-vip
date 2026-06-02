@@ -196,7 +196,8 @@ export function WalletPage() {
   // Withdrawal form
   const [wdAmount, setWdAmount]       = useState('');
   const [wdAddress, setWdAddress]     = useState('');
-  const [wdNetwork, setWdNetwork]     = useState<'TRC-20' | 'ERC-20'>('TRC-20');
+  const [wdNetwork, setWdNetwork]     = useState<'TRC-20' | 'ERC-20' | 'BTC'>('TRC-20');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   const [wdSubmitting, setWdSubmitting] = useState(false);
   const [wdProcessing, setWdProcessing] = useState(false);
   const [wdError, setWdError]         = useState('');
@@ -386,7 +387,7 @@ export function WalletPage() {
     if (!wdAmount || isNaN(amount) || amount <= 0) { setWdError('Enter a valid amount'); return; }
     if (amount < 100) { setWdError('Minimum withdrawal is 100 USDT'); return; }
     if (amount > balance) { setWdError('Amount exceeds your available balance'); return; }
-    if (!wdAddress.trim()) { setWdError(`Enter your USDT ${wdNetwork} wallet address`); return; }
+    if (!wdAddress.trim()) { setWdError(`Enter your ${wdNetwork === 'BTC' ? 'BTC' : `USDT ${wdNetwork}`} wallet address`); return; }
     setWdSubmitting(true);
     try {
       await api.post('/wallet/withdraw', { amount, walletAddress: wdAddress.trim(), network: wdNetwork });
@@ -663,6 +664,39 @@ export function WalletPage() {
           <div className="space-y-2.5">
             <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider px-0.5">Choose Deposit Method</p>
 
+            {/* Web3 Wallet */}
+            {(() => {
+              const active = depositMethod === 'wallet';
+              return (
+                <button onClick={() => setDepositMethod('wallet')}
+                  className="w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 text-left group"
+                  style={active
+                    ? { background: 'linear-gradient(135deg, rgba(167,139,250,0.12) 0%, rgba(167,139,250,0.05) 100%)', border: '2px solid rgba(167,139,250,0.50)', boxShadow: '0 0 28px rgba(167,139,250,0.10)' }
+                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                    style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.30)' }}>
+                    <Wallet className="w-5 h-5 text-[#A78BFA]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="text-[14px] font-bold text-[#F8FAFC]">Web3 Wallet</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.22)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.40)' }}>⚡ Instant</span>
+                    </div>
+                    <p className="text-[11px] text-[#64748B] leading-tight">MetaMask · Trust Wallet · OKX · Coinbase · Auto-verified on-chain</p>
+                    <p className="text-[10px] font-bold mt-1.5" style={{ color: '#A78BFA' }}>Min deposit: <span className="text-[#F8FAFC]">$10 USDT</span></p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {['Ethereum','BSC','Polygon','Arbitrum','Base','Optimism','TRC-20','Solana'].map(n => (
+                        <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {active
+                    ? <div className="shrink-0 w-6 h-6 rounded-full bg-[#A78BFA] flex items-center justify-center shadow-[0_0_12px_rgba(167,139,250,0.5)]"><Check className="w-3.5 h-3.5 text-[#0B0F14]" /></div>
+                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
+                </button>
+              );
+            })()}
+
             {/* NOWPayments */}
             {(() => {
               const active = depositMethod === 'nowpayments';
@@ -692,55 +726,6 @@ export function WalletPage() {
                   </div>
                   {active
                     ? <div className="shrink-0 w-6 h-6 rounded-full bg-[#38BDF8] flex items-center justify-center shadow-[0_0_12px_rgba(56,189,248,0.5)]"><Check className="w-3.5 h-3.5 text-[#0B0F14]" /></div>
-                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
-                </button>
-              );
-            })()}
-
-            {/* Cryptomus */}
-            {cmAvailable === false ? (
-              <div className="w-full rounded-2xl p-4 flex items-center gap-4 cursor-not-allowed"
-                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', opacity: 0.45 }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.10)', border: '1px solid rgba(0,223,169,0.20)' }}>
-                  <CircleDollarSign className="w-5 h-5 text-[#00DFA9]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[14px] font-bold text-[#94A3B8]">Cryptomus</span>
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-[#64748B]" style={{ background: 'rgba(100,116,139,0.20)', border: '1px solid rgba(100,116,139,0.25)' }}>Unavailable</span>
-                  </div>
-                  <p className="text-[11px] text-[#475569]">Currently unavailable in your region</p>
-                </div>
-                <Lock className="w-4 h-4 text-[#475569] shrink-0" />
-              </div>
-            ) : (() => {
-              const active = depositMethod === 'cryptomus';
-              return (
-                <button onClick={() => { setDepositMethod('cryptomus'); resetCm(); }}
-                  className="w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 text-left group"
-                  style={active
-                    ? { background: 'linear-gradient(135deg, rgba(0,223,169,0.12) 0%, rgba(0,223,169,0.05) 100%)', border: '2px solid rgba(0,223,169,0.50)', boxShadow: '0 0 28px rgba(0,223,169,0.10)' }
-                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                    style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
-                    <CircleDollarSign className="w-5 h-5 text-[#00DFA9]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="text-[14px] font-bold text-[#F8FAFC]">Cryptomus</span>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.20)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.40)' }}>Lowest Fees</span>
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
-                    </div>
-                    <p className="text-[11px] text-[#64748B] leading-tight">USDT only · ~15–30 min confirmation · Zero platform fee</p>
-                    <p className="text-[10px] font-bold mt-1.5" style={{ color: '#00DFA9' }}>Min deposit: <span className="text-[#F8FAFC]">$10 USDT</span></p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {['TRC-20','ERC-20'].map(n => (
-                        <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
-                      ))}
-                    </div>
-                  </div>
-                  {active
-                    ? <div className="shrink-0 w-6 h-6 rounded-full bg-[#00DFA9] flex items-center justify-center shadow-[0_0_12px_rgba(0,223,169,0.5)]"><Check className="w-3.5 h-3.5 text-[#0B0F14]" /></div>
                     : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
                 </button>
               );
@@ -779,51 +764,18 @@ export function WalletPage() {
               );
             })()}
 
-            {/* Web3 Wallet */}
-            {(() => {
-              const active = depositMethod === 'wallet';
-              return (
-                <button onClick={() => setDepositMethod('wallet')}
-                  className="w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 text-left group"
-                  style={active
-                    ? { background: 'linear-gradient(135deg, rgba(167,139,250,0.12) 0%, rgba(167,139,250,0.05) 100%)', border: '2px solid rgba(167,139,250,0.50)', boxShadow: '0 0 28px rgba(167,139,250,0.10)' }
-                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                    style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.30)' }}>
-                    <Wallet className="w-5 h-5 text-[#A78BFA]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="text-[14px] font-bold text-[#F8FAFC]">Web3 Wallet</span>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.22)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.40)' }}>⚡ Instant</span>
-                    </div>
-                    <p className="text-[11px] text-[#64748B] leading-tight">MetaMask · Trust Wallet · OKX · Coinbase · Auto-verified on-chain</p>
-                    <p className="text-[10px] font-bold mt-1.5" style={{ color: '#A78BFA' }}>Min deposit: <span className="text-[#F8FAFC]">$10 USDT</span></p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {['Ethereum','BSC','Polygon','Arbitrum','Base','Optimism','TRC-20','Solana'].map(n => (
-                        <span key={n} className="text-[9px] font-bold px-1.5 py-0.5 rounded-md text-[#94A3B8]" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>{n}</span>
-                      ))}
-                    </div>
-                  </div>
-                  {active
-                    ? <div className="shrink-0 w-6 h-6 rounded-full bg-[#A78BFA] flex items-center justify-center shadow-[0_0_12px_rgba(167,139,250,0.5)]"><Check className="w-3.5 h-3.5 text-[#0B0F14]" /></div>
-                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
-                </button>
-              );
-            })()}
-
-            {/* Binance Pay — Coming Soon */}
+            {/* Cryptomus — Coming Soon */}
             <div className="w-full rounded-2xl p-4 flex items-center gap-4 cursor-not-allowed"
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(250,204,21,0.20)', opacity: 0.50 }}>
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.20)' }}>
-                <CreditCard className="w-5 h-5 text-[#FACC15]" />
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(0,223,169,0.18)', opacity: 0.50 }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.18)' }}>
+                <CircleDollarSign className="w-5 h-5 text-[#00DFA9]" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[14px] font-bold text-[#94A3B8]">Binance Pay</span>
+                  <span className="text-[14px] font-bold text-[#94A3B8]">Cryptomus</span>
                   <span className="text-[9px] font-black px-2 py-0.5 rounded-full text-[#64748B]" style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(100,116,139,0.28)' }}>Coming Soon</span>
                 </div>
-                <p className="text-[11px] text-[#475569] leading-tight">Zero fees · Instant · BNB · BUSD · USDT</p>
+                <p className="text-[11px] text-[#475569] leading-tight">USDT · TRC-20 · ERC-20 · Zero platform fee</p>
               </div>
               <Lock className="w-4 h-4 text-[#475569] shrink-0" />
             </div>
@@ -2170,16 +2122,17 @@ export function WalletPage() {
                       <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">1</span>
                       <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">Select Network</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-3 gap-2">
                       {([
-                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron Network', color: '#00DFA9', desc: 'Lower fees, faster' },
-                        { id: 'ERC-20', label: 'ERC-20', chain: 'Ethereum Network', color: '#627EEA', desc: 'Wider compatibility' },
+                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron Network', color: '#00DFA9', desc: 'Low fees' },
+                        { id: 'ERC-20', label: 'ERC-20', chain: 'Ethereum', color: '#627EEA', desc: 'Wide support' },
+                        { id: 'BTC',    label: 'BTC',    chain: 'Bitcoin',   color: '#F7931A', desc: 'Bitcoin' },
                       ] as const).map(net => (
                         <button
                           key={net.id}
                           type="button"
                           onClick={() => { setWdNetwork(net.id); setWdAddress(''); }}
-                          className={`relative p-3.5 rounded-xl border-2 text-left transition-all ${
+                          className={`relative p-3 rounded-xl border-2 text-left transition-all ${
                             wdNetwork === net.id
                               ? 'border-[#38BDF8] bg-[#38BDF8]/10'
                               : 'border-white/[0.08] bg-[#0B0F14] hover:border-white/[0.15]'
@@ -2191,14 +2144,20 @@ export function WalletPage() {
                             </span>
                           )}
                           <div className="w-6 h-6 rounded-lg mb-2 flex items-center justify-center" style={{ backgroundColor: net.color + '22', border: `1px solid ${net.color}44` }}>
-                            <span className="text-[8px] font-black" style={{ color: net.color }}>{net.id.split('-')[0]}</span>
+                            <span className="text-[8px] font-black" style={{ color: net.color }}>{net.id === 'BTC' ? '₿' : net.id.split('-')[0]}</span>
                           </div>
-                          <p className="text-[12px] font-bold text-[#F8FAFC]">{net.label}</p>
-                          <p className="text-[10px] text-[#64748B]">{net.chain}</p>
+                          <p className="text-[11px] font-bold text-[#F8FAFC]">{net.label}</p>
+                          <p className="text-[9px] text-[#64748B]">{net.chain}</p>
                           <p className="text-[9px] mt-1 font-medium" style={{ color: net.color }}>{net.desc}</p>
                         </button>
                       ))}
                     </div>
+                    {wdNetwork === 'BTC' && (
+                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(247,147,26,0.06)', border: '1px solid rgba(247,147,26,0.18)' }}>
+                        <AlertCircle className="h-3.5 w-3.5 text-[#F7931A] shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-[#F7931A]/80 leading-relaxed">BTC withdrawals are processed as Bitcoin. Admin will convert your USDT balance and send BTC to your address.</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Step 2 — Amount */}
@@ -2260,7 +2219,7 @@ export function WalletPage() {
                         type="text"
                         value={wdAddress}
                         onChange={e => setWdAddress(e.target.value)}
-                        placeholder={wdNetwork === 'TRC-20' ? 'e.g. TQn5m... Tron USDT address' : 'e.g. 0x742d... Ethereum USDT address'}
+                        placeholder={wdNetwork === 'TRC-20' ? 'e.g. TQn5m… Tron USDT address' : wdNetwork === 'BTC' ? 'e.g. bc1q… or 1… or 3… Bitcoin address' : 'e.g. 0x742d… Ethereum USDT address'}
                         className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/50 transition-colors"
                       />
                     </div>
@@ -2396,90 +2355,139 @@ export function WalletPage() {
 
           {/* ── Wallet Transactions ───────────────────────────────────────── */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            {/* Header + filter + refresh */}
+            <div className="flex items-center justify-between gap-2">
               <p className="text-[13px] font-bold text-[#F8FAFC]">Transaction History</p>
               <button onClick={loadData}
-                className="flex items-center gap-1.5 text-[11px] text-[#64748B] hover:text-[#00DFA9] transition-colors">
+                className="flex items-center gap-1.5 text-[11px] text-[#64748B] hover:text-[#00DFA9] transition-colors shrink-0">
                 <RefreshCw className="h-3 w-3" /> Refresh
               </button>
             </div>
 
-            {txns.length === 0 ? (
-              <div className="flex flex-col items-center py-14 gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#0E1520] border border-white/[0.07] flex items-center justify-center">
-                  <CircleDollarSign className="h-5 w-5 text-[#94A3B8]/30" />
+            {/* Filter pills */}
+            <div className="flex gap-1.5">
+              {(['all', 'deposit', 'withdrawal'] as const).map(f => (
+                <button key={f} onClick={() => setHistoryFilter(f)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all capitalize',
+                    historyFilter === f
+                      ? 'bg-[#00DFA9] text-[#0B0F14]'
+                      : 'bg-white/[0.05] text-[#64748B] border border-white/[0.07] hover:text-[#94A3B8]'
+                  )}>
+                  {f === 'all' ? 'All' : f === 'deposit' ? '↓ Deposits' : '↑ Withdrawals'}
+                </button>
+              ))}
+              {txns.length > 0 && (
+                <span className="ml-auto text-[10px] text-[#475569] self-center">
+                  {txns.filter(t => historyFilter === 'all' || t.type === historyFilter).length} txn{txns.filter(t => historyFilter === 'all' || t.type === historyFilter).length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+
+            {(() => {
+              const filtered = txns.filter(t => historyFilter === 'all' || t.type === historyFilter);
+              if (filtered.length === 0) return (
+                <div className="flex flex-col items-center py-14 gap-3">
+                  <div className="w-12 h-12 rounded-full bg-[#0E1520] border border-white/[0.07] flex items-center justify-center">
+                    <CircleDollarSign className="h-5 w-5 text-[#94A3B8]/30" />
+                  </div>
+                  <p className="text-[13px] text-[#94A3B8]/50">
+                    {txns.length === 0 ? 'No transactions yet' : 'No transactions in this category'}
+                  </p>
                 </div>
-                <p className="text-[13px] text-[#94A3B8]/50">No transactions yet</p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-white/[0.07] overflow-hidden bg-[#0E1520]">
-                {txns.map((tx, i) => (
-                  <div key={tx.id} className={cn('p-4', i > 0 && 'border-t border-white/[0.04]')}>
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        'w-8 h-8 rounded-xl flex items-center justify-center shrink-0',
-                        tx.type === 'deposit' ? 'bg-[#00DFA9]/10' : 'bg-red-500/10'
-                      )}>
-                        {tx.type === 'deposit'
-                          ? <ArrowDownLeft className="h-4 w-4 text-[#00DFA9]" />
-                          : <ArrowUpRight className="h-4 w-4 text-red-400" />
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-[13px] font-semibold text-[#F8FAFC] capitalize">
-                            {tx.type === 'deposit' ? 'Deposit' : tx.type === 'withdrawal' ? 'Withdrawal' : tx.type}
-                          </p>
-                          <span className={cn(
-                            'text-[10px] font-semibold px-1.5 py-0.5 rounded-md',
-                            tx.network === 'TRC-20' ? 'bg-[#38BDF8]/10 text-[#38BDF8]' : 'bg-white/5 text-[#64748B]'
-                          )}>{tx.network ?? 'TRC-20'}</span>
-                        </div>
-                        <p className="text-[10px] text-[#64748B] mt-0.5">{fmtDate(tx.createdAt)}</p>
-                        {tx.txHash && (
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <a
-                              href={`https://tronscan.org/#/transaction/${tx.txHash}`}
-                              target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[10px] text-[#38BDF8] hover:underline font-mono">
-                              {tx.txHash.length > 20 ? `${tx.txHash.slice(0, 10)}...${tx.txHash.slice(-8)}` : tx.txHash}
-                              <ExternalLink className="h-2.5 w-2.5" />
-                            </a>
-                            {tx.type === 'deposit' && (
-                              tx.verified === true ? (
-                                <span title={tx.verificationNote ?? 'Auto-verified on the Tron blockchain'}
-                                  className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/20">
-                                  <CheckCircle2 className="h-2.5 w-2.5" /> Verified on-chain
+              );
+              return (
+                <div className="rounded-2xl border border-white/[0.07] overflow-hidden bg-[#0E1520]">
+                  {filtered.map((tx, i) => {
+                    const isDeposit = tx.type === 'deposit';
+                    const credit = isCredit(tx.type);
+                    const networkColor = tx.network === 'TRC-20' ? '#00DFA9'
+                      : tx.network === 'ERC-20' ? '#627EEA'
+                      : tx.network === 'BTC' ? '#F7931A'
+                      : tx.network === 'BEP-20' ? '#F0B90B'
+                      : tx.network === 'Polygon' ? '#8247E5'
+                      : tx.network === 'Solana' ? '#9945FF'
+                      : '#64748B';
+                    return (
+                      <div key={tx.id} className={cn('px-4 py-3.5', i > 0 && 'border-t border-white/[0.04]')}>
+                        <div className="flex items-start gap-3">
+
+                          {/* Icon */}
+                          <div className={cn(
+                            'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5',
+                            isDeposit ? 'bg-[#00DFA9]/10 border border-[#00DFA9]/15' : 'bg-red-500/10 border border-red-500/15'
+                          )}>
+                            {isDeposit
+                              ? <ArrowDownLeft className="h-4 w-4 text-[#00DFA9]" />
+                              : <ArrowUpRight className="h-4 w-4 text-red-400" />}
+                          </div>
+
+                          {/* Main content */}
+                          <div className="flex-1 min-w-0">
+
+                            {/* Row 1: type + network + status */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-[13px] font-bold text-[#F8FAFC]">
+                                {isDeposit ? 'Deposit' : tx.type === 'withdrawal' ? 'Withdrawal' : tx.type}
+                              </p>
+                              {tx.network && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+                                  style={{ background: networkColor + '18', color: networkColor, border: `1px solid ${networkColor}30` }}>
+                                  {tx.network}
                                 </span>
-                              ) : tx.verified === false ? (
-                                <span title={tx.verificationNote ?? 'Under manual review by our team'}
-                                  className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                  <Clock className="h-2.5 w-2.5" /> Under review
-                                </span>
-                              ) : null
+                              )}
+                              <span className="ml-auto"><StatusBadge status={tx.status} /></span>
+                            </div>
+
+                            {/* Row 2: date */}
+                            <p className="text-[10px] text-[#475569] mt-0.5">{fmtDate(tx.createdAt)}</p>
+
+                            {/* Row 3: amount prominent */}
+                            <p className={cn('text-[16px] font-black mt-1.5 leading-none', credit ? 'text-[#00DFA9]' : 'text-red-400')}>
+                              {credit ? '+' : '−'}{fmt(tx.amount)}
+                              <span className="text-[10px] font-bold ml-1 text-[#64748B]">USDT</span>
+                            </p>
+
+                            {/* Row 4: txhash / address / rejection reason */}
+                            {tx.txHash && (
+                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                <a href={`https://tronscan.org/#/transaction/${tx.txHash}`}
+                                  target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[9px] text-[#38BDF8] hover:underline font-mono bg-[#38BDF8]/08 px-2 py-0.5 rounded-md border border-[#38BDF8]/15">
+                                  {tx.txHash.slice(0, 8)}…{tx.txHash.slice(-6)}
+                                  <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+                                </a>
+                                {isDeposit && tx.verified === true && (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/20">
+                                    <CheckCircle2 className="h-2.5 w-2.5" /> On-chain verified
+                                  </span>
+                                )}
+                                {isDeposit && tx.verified === false && (
+                                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    <Clock className="h-2.5 w-2.5" /> Under review
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {tx.walletAddress && tx.type === 'withdrawal' && (
+                              <p className="mt-1.5 text-[9px] text-[#475569] font-mono flex items-center gap-1">
+                                <ArrowUpRight className="h-2.5 w-2.5 shrink-0" />
+                                To: {tx.walletAddress.slice(0, 10)}…{tx.walletAddress.slice(-6)}
+                              </p>
+                            )}
+                            {tx.notes && tx.status === 'rejected' && (
+                              <p className="mt-1.5 text-[10px] text-red-400 flex items-center gap-1">
+                                <AlertCircle className="h-2.5 w-2.5 shrink-0" /> {tx.notes}
+                              </p>
                             )}
                           </div>
-                        )}
-                        {tx.walletAddress && tx.type === 'withdrawal' && (
-                          <p className="mt-1 text-[10px] text-[#64748B] font-mono">
-                            To: {tx.walletAddress.slice(0, 8)}...{tx.walletAddress.slice(-6)}
-                          </p>
-                        )}
-                        {tx.notes && tx.status === 'rejected' && (
-                          <p className="mt-1 text-[10px] text-red-400">Reason: {tx.notes}</p>
-                        )}
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className={cn('text-[14px] font-bold', isCredit(tx.type) ? 'text-[#00DFA9]' : 'text-red-400')}>
-                          {isCredit(tx.type) ? '+' : '−'}${fmt(tx.amount)}
-                        </p>
-                        <StatusBadge status={tx.status} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
