@@ -72,7 +72,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       className="group flex items-center justify-between px-3.5 py-3 gap-3 bg-[#121821] hover:bg-[#18212B] transition-colors duration-100 cursor-pointer"
     >
       {/* Date / time */}
-      <div className="shrink-0 w-[52px] flex flex-col items-center gap-0.5">
+      <div className="shrink-0 w-[40px] sm:w-[52px] flex flex-col items-center gap-0.5">
         {match.isLive ? (
           <>
             <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#EF4444] leading-none">
@@ -159,7 +159,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       </div>
 
       {/* Hot badge / market count */}
-      <div className="shrink-0 flex flex-col items-center gap-1">
+      <div className="hidden sm:flex shrink-0 flex-col items-center gap-1">
         {isHot && (
           <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 shadow-[0_0_8px_rgba(249,115,22,0.15)]">
             <span className="text-[10px] leading-none">🔥</span>
@@ -177,19 +177,24 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       </div>
 
       {/* Odds buttons */}
-      <div className="flex items-center gap-1.5 shrink-0" style={{ width: isSoccer ? '192px' : '126px' }}>
+      <div className={cn(
+        "flex items-center shrink-0",
+        isSoccer
+          ? "gap-0.5 sm:gap-1.5 w-[142px] sm:w-[192px]"
+          : "gap-0.5 sm:gap-1.5 w-[96px] sm:w-[126px]"
+      )}>
         {isSoccer ? (
           <>
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
             <OddsButton {...sharedOddsProps} selectionType="X" selectionName="Draw"                         odds={match.odds.draw ?? 0} />
             <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
-            <div className="w-[18px]" />
+            <div className="w-[10px] sm:w-[18px] shrink-0" />
           </>
         ) : (
           <>
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
             <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
-            <div className="w-[12px]" />
+            <div className="w-[8px] sm:w-[12px] shrink-0" />
           </>
         )}
       </div>

@@ -137,7 +137,7 @@ export function LiveBetFeed() {
           </span>
           <Activity className="h-3.5 w-3.5 text-[#00DFA9]" />
           <span className="text-[11px] font-black uppercase tracking-widest text-[#00DFA9]">Live Bet Feed</span>
-          <span className="text-[10px] text-[#94A3B8]/40">Platform-wide activity</span>
+          <span className="hidden sm:inline text-[10px] text-[#94A3B8]/40">Platform-wide activity</span>
 
           {/* Preview of latest bet while closed */}
           {!open && latestBet && (

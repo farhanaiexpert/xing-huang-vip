@@ -55,19 +55,22 @@ export function LeagueSection({ league }: { league: League }) {
       {isOpen && (
         <div className="flex items-center px-3 py-1 bg-[#080C11] border-b border-[#1E2A38]/60">
           <div className="flex-1" />
-          <div className="flex items-center shrink-0 gap-0" style={{ width: isFootball ? '156px' : '104px' }}>
+          <div className={cn(
+            "flex items-center shrink-0 gap-0",
+            isFootball ? "w-[142px] sm:w-[156px]" : "w-[96px] sm:w-[104px]"
+          )}>
             {isFootball ? (
               <>
-                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">1</div>
-                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">X</div>
-                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">2</div>
-                <div className="w-[18px]" />
+                <div className="w-[44px] sm:w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">1</div>
+                <div className="w-[44px] sm:w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">X</div>
+                <div className="w-[44px] sm:w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">2</div>
+                <div className="w-[10px] sm:w-[18px]" />
               </>
             ) : (
               <>
-                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">1</div>
-                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">2</div>
-                <div className="w-[12px]" />
+                <div className="w-[44px] sm:w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">1</div>
+                <div className="w-[44px] sm:w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">2</div>
+                <div className="w-[8px] sm:w-[12px]" />
               </>
             )}
           </div>

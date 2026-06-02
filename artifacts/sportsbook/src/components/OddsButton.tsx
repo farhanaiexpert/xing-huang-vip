@@ -135,7 +135,7 @@ export function OddsButton({
       onClick={handleClick}
       data-testid={`odds-btn-${matchId}-${selectionType}`}
       className={cn(
-        'relative w-[52px] h-11 sm:h-9 flex flex-col items-center justify-center rounded-lg select-none overflow-hidden',
+        'relative w-[44px] sm:w-[52px] h-11 sm:h-9 flex flex-col items-center justify-center rounded-lg select-none overflow-hidden',
         'transition-all duration-200',
         isSelected
           ? [

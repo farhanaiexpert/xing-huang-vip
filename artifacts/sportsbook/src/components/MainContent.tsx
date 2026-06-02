@@ -677,18 +677,8 @@ export function MainContent({
               {showFeatured && (
                 <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
               )}
-              {showFeatured && (
-                <>
-                  <div className="hidden sm:block"><FeaturedCards /></div>
-                  <div className="hidden sm:block"><PopularBets /></div>
-                  <Link
-                    to="/promotions"
-                    className="sm:hidden flex items-center gap-1 mb-4 pl-1 text-[12px] font-semibold text-[#38BDF8] hover:opacity-75 transition-opacity"
-                  >
-                    View all promotions <ChevronRight className="h-3.5 w-3.5" />
-                  </Link>
-                </>
-              )}
+              {showFeatured && <FeaturedCards />}
+              {showFeatured && <PopularBets />}
               {showFeatured && (
                 <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
               )}

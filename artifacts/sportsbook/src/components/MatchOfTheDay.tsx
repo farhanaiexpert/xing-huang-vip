@@ -102,9 +102,9 @@ function MotdCard({
         style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }}
       />
 
-      <div className="px-5 pt-4 pb-5">
+      <div className="px-3 sm:px-5 pt-4 pb-4 sm:pb-5">
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4 sm:mb-5">
           <div className="flex items-center gap-1.5">
             <Trophy className="h-3.5 w-3.5 shrink-0" style={{ color }} />
             <span className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color }}>
@@ -123,7 +123,7 @@ function MotdCard({
         <div className="flex items-center justify-between gap-3 mb-6">
           {/* Home */}
           <div className="flex-1 flex flex-col items-center gap-2.5 text-center min-w-0">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-base font-black shadow-lg shrink-0"
+            <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-sm sm:text-base font-black shadow-lg shrink-0"
               style={{
                 background: `linear-gradient(135deg, ${color}1A, ${color}0A)`,
                 border: `1.5px solid ${color}2A`,
@@ -145,7 +145,7 @@ function MotdCard({
 
           {/* Away */}
           <div className="flex-1 flex flex-col items-center gap-2.5 text-center min-w-0">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-base font-black shadow-lg shrink-0"
+            <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-sm sm:text-base font-black shadow-lg shrink-0"
               style={{
                 background: 'linear-gradient(135deg, #1E2A38, #141F2C)',
                 border: '1.5px solid #253241',
@@ -238,16 +238,16 @@ function LiveCard({ m }: { m: NormalizedLiveMatch }) {
   const hasScore = m.homeScore !== '-' && m.awayScore !== '-';
   const scoreLine = hasScore ? (
     <div className="flex items-center gap-1.5">
-      <span className="text-[34px] font-black text-[#F8FAFC] tabular-nums leading-none">{m.homeScore}</span>
-      <span className="text-[18px] font-black text-[#2A3A52] leading-none">–</span>
-      <span className="text-[34px] font-black text-[#F8FAFC] tabular-nums leading-none">{m.awayScore}</span>
+      <span className="text-[26px] sm:text-[34px] font-black text-[#F8FAFC] tabular-nums leading-none">{m.homeScore}</span>
+      <span className="text-[16px] sm:text-[18px] font-black text-[#2A3A52] leading-none">–</span>
+      <span className="text-[26px] sm:text-[34px] font-black text-[#F8FAFC] tabular-nums leading-none">{m.awayScore}</span>
     </div>
   ) : (
     <span className="text-[22px] font-black leading-none" style={{ color: `${color}50` }}>VS</span>
   );
 
   const oddsRow = (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
       {m.outcomes.map((o) => (
         <div key={o.key} className="flex flex-col items-center gap-1.5">
           <span className="text-[9px] font-semibold text-[#94A3B8]/40 uppercase tracking-wider">

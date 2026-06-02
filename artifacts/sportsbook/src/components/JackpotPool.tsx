@@ -117,7 +117,7 @@ export function JackpotPool() {
           {/* Row 2: big number */}
           <div className="flex items-baseline gap-2">
             <span
-              className={cn('text-[32px] font-black tabular-nums leading-none transition-all duration-300',
+              className={cn('text-[24px] min-[360px]:text-[28px] sm:text-[32px] font-black tabular-nums leading-none transition-all duration-300',
                 flash ? 'text-[#FDE68A]' : 'text-[#FACC15]')}
               style={{ textShadow: flash ? '0 0 28px rgba(250,204,21,0.9)' : '0 0 12px rgba(250,204,21,0.22)' }}>
               {fmtPot(pot)}
