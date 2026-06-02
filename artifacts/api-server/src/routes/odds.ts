@@ -75,6 +75,10 @@ export const ALL_ODDS_SPORT_KEYS: string[] = [
   'soccer_england_league1', 'soccer_england_league2',
   'soccer_china_superleague', 'soccer_india_superleague',
   'soccer_conmebol_copa_america', 'soccer_uefa_nations_league',
+  // Soccer — FIFA World Cup 2026 + currently active leagues (June 2026)
+  'soccer_fifa_world_cup', 'soccer_fifa_world_cup_winner',
+  'soccer_brazil_serie_b', 'soccer_chile_campeonato',
+  'soccer_conmebol_copa_sudamericana',
 ];
 
 // Live sports (in-play events polling) — all newly wired sports included
@@ -133,6 +137,8 @@ const LIVE_SPORTS = [
   'soccer_england_league1', 'soccer_england_league2',
   'soccer_china_superleague', 'soccer_india_superleague',
   'soccer_conmebol_copa_america', 'soccer_uefa_nations_league',
+  'soccer_fifa_world_cup', 'soccer_brazil_serie_b',
+  'soccer_chile_campeonato', 'soccer_conmebol_copa_sudamericana',
 ];
 
 // ─── Returns the merged set of live sport keys (seed + DB-enabled) ────────────
