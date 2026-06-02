@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { playOddsAdd, playOddsRemove } from '@/lib/oddsSound';
 import { useLiveOdds } from '@/hooks/useLiveOdds';
+import { useBetSlipSidebar } from '@/contexts/BetSlipSidebarContext';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -717,6 +718,7 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
 // ─── LivePage ─────────────────────────────────────────────────────────────────
 
 export function LivePage() {
+  const { collapsed } = useBetSlipSidebar();
   const { matches: realMatches, loading: liveLoading, isRealData, lastUpdated, refreshing, nextRefreshIn } = useLiveOdds();
 
   const displayMatches = useMemo<LiveMatch[]>(
@@ -944,7 +946,7 @@ export function LivePage() {
         </div>
 
         {/* Desktop BetSlip spacer */}
-        <div className="w-[260px] shrink-0 hidden xl:block" />
+        <div className={cn('shrink-0 hidden xl:block transition-[width] duration-300', collapsed ? 'w-14' : 'w-[260px]')} />
         <BetSlip isScrolled={slipScrolled} />
       </div>
 

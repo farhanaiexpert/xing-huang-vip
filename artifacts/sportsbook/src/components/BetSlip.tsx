@@ -8,7 +8,8 @@ import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
 import { cn } from '../lib/utils';
-import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Selection } from '../types';
@@ -39,6 +40,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
   const prevSelectionIdsRef = useRef<string[]>([]);
   const isScrolled = !forceExpanded && !!isScrolledProp;
   const [compactExpanded, setCompactExpanded] = useState(false);
+  const { collapsed, toggle: toggleCollapsed } = useBetSlipSidebar();
 
   const hasSelections = selections.length > 0;
 
@@ -212,6 +214,50 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
   const canPlace         = canPlaceAcca || canPlaceSingle;
   const readyToStake     = hasSelections;
 
+  // ── Collapsed strip (user explicitly hid the sidebar) ─────────────
+  if (collapsed && !forceExpanded) {
+    return (
+      <aside className="w-14 shrink-0 flex flex-col items-center py-3 gap-3 h-[calc(100vh-3.5rem)] fixed right-0 top-14 hidden xl:flex border-l border-t border-[#253241] bg-[#0D1117] z-40">
+        {/* Expand button */}
+        <button
+          onClick={toggleCollapsed}
+          title="Expand Bet Slip"
+          className="p-2 rounded-lg text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#18212B] transition-all duration-150"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+
+        {/* Icon + count badge */}
+        <div className="relative">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#00DFA9]/10 border border-[#00DFA9]/20">
+            <img
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/soccer.png"
+              alt=""
+              className="w-5 h-5 object-contain"
+            />
+          </div>
+          {hasSelections && (
+            <span className="absolute -top-1.5 -right-1.5 text-[9px] font-bold bg-[#00DFA9] text-[#0B0F14] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center leading-none tabular-nums">
+              {selections.length}
+            </span>
+          )}
+        </div>
+
+        {/* Vertical label */}
+        <div className="flex-1 flex items-center justify-center">
+          <span
+            className="text-[9px] font-bold tracking-[0.18em] uppercase text-[#94A3B8]/30 select-none"
+            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+          >
+            Bet Slip
+          </span>
+        </div>
+
+        {confirmation && <BetConfirmationModal confirmation={confirmation} onClose={handleConfirmationClose} />}
+      </aside>
+    );
+  }
+
   // ── Compact floating card (shown when scrolled) ─────────────────
   if (isScrolled && !forceExpanded) {
     return (
@@ -345,15 +391,26 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               </span>
             )}
           </div>
-          {hasSelections && (
-            <button
-              onClick={clearSlip}
-              data-testid="button-clear-betslip"
-              className="shrink-0 p-1.5 rounded-md text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all duration-150"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
+          <div className="flex items-center gap-0.5">
+            {hasSelections && (
+              <button
+                onClick={clearSlip}
+                data-testid="button-clear-betslip"
+                className="shrink-0 p-1.5 rounded-md text-[#94A3B8] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all duration-150"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {!forceExpanded && (
+              <button
+                onClick={toggleCollapsed}
+                title="Collapse Bet Slip"
+                className="shrink-0 p-1.5 rounded-md text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#18212B] transition-all duration-150"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Row 2: balance + top-up (only when connected) */}

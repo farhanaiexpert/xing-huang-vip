@@ -3,6 +3,8 @@ import { Header } from '@/components/Header';
 import { SportsSidebar } from '@/components/SportsSidebar';
 import { MainContent } from '@/components/MainContent';
 import { BetSlip } from '@/components/BetSlip';
+import { useBetSlipSidebar } from '@/contexts/BetSlipSidebarContext';
+import { cn } from '@/lib/utils';
 
 export function Home() {
   const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
@@ -35,6 +37,8 @@ export function Home() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const { collapsed } = useBetSlipSidebar();
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white overflow-hidden">
       <Header />
@@ -51,7 +55,7 @@ export function Home() {
         />
 
         {/* Spacer to reserve room for the fixed BetSlip panel */}
-        <div className="w-[260px] shrink-0 hidden xl:block" />
+        <div className={cn('shrink-0 hidden xl:block transition-[width] duration-300', collapsed ? 'w-14' : 'w-[260px]')} />
 
         <BetSlip isScrolled={slipScrolled} />
       </div>

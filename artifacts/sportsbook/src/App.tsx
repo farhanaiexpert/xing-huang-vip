@@ -24,6 +24,7 @@ import { OddsFormatProvider } from "@/hooks/useOddsFormat";
 import { OddsDataProvider } from "@/hooks/useOddsData";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
+import { BetSlipSidebarProvider } from "@/contexts/BetSlipSidebarContext";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -84,6 +85,7 @@ function App() {
                     <FavoritesProvider>
                       <WalletProvider>
                         <BetHistoryProvider>
+                          <BetSlipSidebarProvider>
                           <BetSlipProvider>
                             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                               <Router />
@@ -105,6 +107,7 @@ function App() {
                               }}
                             />
                           </BetSlipProvider>
+                          </BetSlipSidebarProvider>
                         </BetHistoryProvider>
                       </WalletProvider>
                     </FavoritesProvider>
