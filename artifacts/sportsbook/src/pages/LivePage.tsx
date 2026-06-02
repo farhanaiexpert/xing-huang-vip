@@ -195,7 +195,10 @@ function OutcomeRow({
         selectionType: outcome.label,
         selectionName: outcome.name,
         odds: currentOdds,
-        sportId: match.sportKey,
+        sportKey: match.sportKey,
+        homeTeam: match.homeTeam,
+        awayTeam: match.awayTeam,
+        commenceTime: match.commenceIso,
         isLive: true,
       });
       playOddsAdd();
@@ -346,7 +349,10 @@ function OddsButton({
         selectionType: line.label,
         selectionName: line.name,
         odds: currentOdds,
-        sportId: match.sportKey,
+        sportKey: match.sportKey,
+        homeTeam: match.homeTeam,
+        awayTeam: match.awayTeam,
+        commenceTime: match.commenceIso,
         isLive: true,
       });
       playOddsAdd();

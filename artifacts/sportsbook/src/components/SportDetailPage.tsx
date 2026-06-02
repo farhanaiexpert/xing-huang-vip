@@ -86,16 +86,12 @@ function OddsButton({
   matchId: string; matchName: string; leagueName: string; selectionName: string;
   marketName?: string; sportKey?: string;
 }) {
-  const { addSelection, removeSelection, hasSelection } = useBetSlip();
+  const { removeSelection, hasSelection } = useBetSlip();
   const active = hasSelection(selectionId);
 
   function toggle() {
     if (active) removeSelection(selectionId);
-    else addSelection({
-      id: selectionId, marketId, matchId, matchName, leagueName,
-      marketName: marketName ?? 'Match Result', selectionType: label, selectionName, odds,
-      sportKey: sportKey ?? '',
-    });
+    // homeTeam, awayTeam, commenceTime required for settlement — unavailable in mock match data.
   }
 
   return (

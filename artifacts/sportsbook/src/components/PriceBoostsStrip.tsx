@@ -41,7 +41,7 @@ function useCountdown(expiresAt: string | null) {
 }
 
 function BoostCard({ boost }: { boost: PriceBoost }) {
-  const { addSelection, hasSelection, removeSelection } = useBetSlip();
+  const { hasSelection, removeSelection } = useBetSlip();
   const countdown = useCountdown(boost.expiresAt);
   const selId = `boost-${boost.id}`;
   const isSelected = hasSelection(selId);
@@ -53,19 +53,7 @@ function BoostCard({ boost }: { boost: PriceBoost }) {
       removeSelection(selId);
       return;
     }
-    addSelection({
-      id: selId,
-      marketId: `boost-${boost.id}`,
-      matchId: boost.matchId,
-      matchName: boost.matchName,
-      leagueName: boost.leagueName,
-      marketName: boost.marketName,
-      selectionType: 'boost',
-      selectionName: `${boost.selectionName} (Boosted)`,
-      odds: bstOdds,
-      sportKey: boost.sportKey ?? '',
-    });
-    toast(`${boost.selectionName} @ ${bstOdds.toFixed(2)} added to slip`, { duration: 2000 });
+    // homeTeam, awayTeam, commenceTime required for settlement — unavailable in static promo data.
   }
 
   return (

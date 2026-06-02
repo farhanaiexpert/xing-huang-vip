@@ -52,7 +52,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
   const [dayPart, timePart] = match.date.split(', ');
 
   const { marketId, marketName } = getMarketMeta(match.sportId, match.id);
-  const sharedOddsProps = { matchId: match.id, marketId, matchName, leagueName, marketName, isLive: match.isLive, sportKey: match.sportKey, sportId: match.sportId, kickoffTime: match.isLive ? undefined : match.kickoffTime, commenceTime: match.commenceIso, homeTeam: match.team1 || 'Home', awayTeam: match.team2 || 'Field' };
+  const sharedOddsProps = { matchId: match.id, marketId, matchName, leagueName, marketName, isLive: match.isLive, sportKey: match.sportKey, sportId: match.sportId, kickoffTime: match.isLive ? undefined : match.kickoffTime, commenceTime: match.commenceIso, homeTeam: match.team1 ?? '', awayTeam: match.team2 ?? '' };
 
   function handleRowClick(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('button[data-testid^="odds-btn"]')) return;

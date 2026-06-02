@@ -104,7 +104,7 @@ function fmtCooldownLabel(secs: number) {
 }
 
 export function FlashOdds() {
-  const { addSelection, hasSelection, removeSelection } = useBetSlip();
+  const { hasSelection, removeSelection } = useBetSlip();
   const { format } = useOddsFormat();
 
   const [timers, setTimers] = useState<Record<string, number>>(
@@ -173,19 +173,8 @@ export function FlashOdds() {
 
   function handleClick(flash: FlashOdd) {
     if (expired[flash.id]) return;
-    const sel = {
-      id: flash.id,
-      marketId: `flash-${flash.id}`,
-      matchId: `flash-match-${flash.id}`,
-      matchName: flash.match,
-      leagueName: flash.league,
-      marketName: flash.market,
-      selectionType: flash.selectionType,
-      selectionName: flash.selectionName,
-      odds: flash.boostedOdds,
-    };
     if (hasSelection(flash.id)) removeSelection(flash.id);
-    else addSelection(sel);
+    // homeTeam, awayTeam, commenceTime required for settlement — unavailable in static promo data.
   }
 
   return (

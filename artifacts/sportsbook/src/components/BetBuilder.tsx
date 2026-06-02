@@ -131,7 +131,7 @@ export function BetBuilder() {
   const [matchIdx, setMatchIdx] = useState(0);
   const [activeTab, setActiveTab] = useState<TabKey>('main');
   const [expanded, setExpanded] = useState(false);
-  const { addSelection, removeSelection, hasSelection } = useBetSlip();
+  const { removeSelection, hasSelection } = useBetSlip();
 
   const match = BB_MATCHES[matchIdx];
   const { cols } = TAB_CONFIG[activeTab];
@@ -147,22 +147,8 @@ export function BetBuilder() {
     const selId = `bb_${match.id}_${player.id}_${activeTab}_${colIdx}`;
     if (hasSelection(selId)) {
       removeSelection(selId);
-    } else {
-      const col = cols[colIdx];
-      const tab = TAB_CONFIG[activeTab].label;
-      addSelection({
-        id: selId,
-        marketId: `bb_${match.id}_${activeTab}`,
-        matchId: match.id,
-        matchName: `${match.home} v ${match.away}`,
-        leagueName: match.league,
-        sportKey: 'soccer_epl',
-        marketName: `${tab} — ${col}`,
-        selectionType: '1',
-        selectionName: `${player.name} ${col}`,
-        odds: value,
-      });
     }
+    // commenceTime (ISO) required for settlement — unavailable in static BetBuilder data.
   }
 
   const nextMatch = BB_MATCHES[(matchIdx + 1) % BB_MATCHES.length];

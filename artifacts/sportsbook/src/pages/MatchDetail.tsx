@@ -87,7 +87,7 @@ function bettersBadge(matchId: string): string {
 
 // ─── Odds overview quick-panel ────────────────────────────────────────────────
 
-function OddsOverview({ match, sportKey }: { match: MatchEntity; sportKey?: string }) {
+function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; sportKey?: string; commenceTime?: string }) {
   const pm = match.primaryMarket;
   if (pm.selections.length === 0) return null;
 
@@ -143,6 +143,9 @@ function OddsOverview({ match, sportKey }: { match: MatchEntity; sportKey?: stri
             marketName={pm.name}
             sel={sel}
             sportKey={sportKey}
+            homeTeam={match.homeTeamName}
+            awayTeam={match.awayTeamName}
+            commenceTime={commenceTime}
           />
         ))}
       </div>
@@ -151,11 +154,11 @@ function OddsOverview({ match, sportKey }: { match: MatchEntity; sportKey?: stri
 }
 
 function QuickOddsCell({
-  matchId, marketId, matchName, leagueName, marketName, sel, sportKey,
+  matchId, marketId, matchName, leagueName, marketName, sel, sportKey, homeTeam, awayTeam, commenceTime,
 }: {
   matchId: string; marketId: string; matchName: string; leagueName: string;
   marketName: string; sel: { id: string; shortName: string; name: string; odds: number };
-  sportKey?: string;
+  sportKey?: string; homeTeam?: string; awayTeam?: string; commenceTime?: string;
 }) {
   const { addSelection, removeSelection, hasSelection } = useBetSlip();
   const selectionId = `${marketId}-${sel.shortName}`;
@@ -165,7 +168,7 @@ function QuickOddsCell({
     <button
       onClick={() => {
         if (isSelected) removeSelection(selectionId);
-        else addSelection({ id: selectionId, marketId, matchId, matchName, leagueName, marketName, selectionType: sel.shortName, selectionName: sel.name, odds: sel.odds, sportKey: sportKey ?? '' });
+        else addSelection({ id: selectionId, marketId, matchId, matchName, leagueName, marketName, selectionType: sel.shortName, selectionName: sel.name, odds: sel.odds, sportKey: sportKey ?? '', homeTeam, awayTeam, commenceTime });
       }}
       className={cn(
         'flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all duration-200',
@@ -297,7 +300,7 @@ export function MatchDetail() {
             <MatchHeader match={match} league={league} />
 
             {/* Quick odds overview — primary market prominent at top */}
-            <OddsOverview match={match} sportKey={sportKey} />
+            <OddsOverview match={match} sportKey={sportKey} commenceTime={match.startTime} />
 
             {/* Sticky market navigation */}
             <MarketNav

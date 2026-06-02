@@ -75,7 +75,7 @@ const RACES: Race[] = [
 // COMPONENT
 // ────────────────────────────────────────────────────────────────
 export function UpcomingRaces() {
-  const { addSelection, hasSelection, removeSelection } = useBetSlip();
+  const { hasSelection, removeSelection } = useBetSlip();
   const [expanded, setExpanded] = useState(false);
 
   const visible = expanded ? RACES : RACES.slice(0, 3);
@@ -84,20 +84,9 @@ export function UpcomingRaces() {
     const selId = `race_${race.id}_${runner.horse}`;
     if (hasSelection(selId)) {
       removeSelection(selId);
-    } else {
-      addSelection({
-        id:            selId,
-        marketId:      `race_${race.id}`,
-        matchId:       `race_${race.id}`,
-        matchName:     `${race.name} ${race.venue}`,
-        leagueName:    'Horse Racing',
-        marketName:    'Win',
-        selectionType: 'W',
-        selectionName: runner.horse,
-        odds:          runner.odds,
-        sportKey:      'horse_racing',
-      });
     }
+    // commenceTime (ISO) is required for settlement but unavailable in static race data;
+    // bet placement is disabled until this component receives real API data.
   }
 
   return (

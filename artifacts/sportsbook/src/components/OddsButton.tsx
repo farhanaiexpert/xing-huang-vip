@@ -31,12 +31,14 @@ interface OddsButtonProps {
   homeTeam?: string;
   /** Away team name — sent to API for settlement */
   awayTeam?: string;
+  /** Handicap / totals line value, e.g. 2.5 for Over 2.5 — stored for settlement */
+  point?: number;
 }
 
 export function OddsButton({
   matchId, marketId, matchName, leagueName, marketName,
   selectionType, selectionName, odds, isLive = false, className,
-  sportKey, sportId, kickoffTime, commenceTime, homeTeam, awayTeam,
+  sportKey, sportId, kickoffTime, commenceTime, homeTeam, awayTeam, point,
 }: OddsButtonProps) {
   const { addSelection, removeSelection, hasSelection, updateSelectionOdds } = useBetSlip();
   const { tick, suspendedMarketIds } = useOddsSimulation();
@@ -107,6 +109,7 @@ export function OddsButton({
         commenceTime: commenceTime,
         homeTeam,
         awayTeam,
+        point,
       });
       setIsPulsing(true);
       setTimeout(() => setIsPulsing(false), 280);
