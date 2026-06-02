@@ -1,4 +1,3 @@
-import { Link } from 'wouter';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { FEATURED_CARDS } from '../data/mockData';
 import { Zap, Clock, Target } from 'lucide-react';
@@ -45,15 +44,15 @@ export function FeaturedCards() {
       {/* Section header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#94A3B8]/60">Featured</h2>
           <div className="h-px w-8 bg-[#253241]" />
         </div>
-        <Link
-          to="/promotions"
+        <button
           className="text-[11px] font-medium text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors"
           data-testid="button-view-all-featured"
         >
-          View All Promotions →
-        </Link>
+          View All →
+        </button>
       </div>
 
       <ScrollArea className="w-full">

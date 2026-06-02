@@ -245,10 +245,6 @@ export function MainContent({
     searchRef.current?.focus();
   }, []);
 
-  const scrollToMatchSection = useCallback(() => {
-    document.getElementById('match-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
   // Count live matches
   const liveCount = useMemo(
     () => allLeagues.flatMap((l) => l.matches).filter((m) => m.isLive).length,
@@ -636,12 +632,8 @@ export function MainContent({
                   />
                 </div>
               )}
-              {showFeatured && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                  <JackpotPool />
-                  <LiveBetFeed />
-                </div>
-              )}
+              {showFeatured && <div className="mb-4"><JackpotPool /></div>}
+              {showFeatured && <div className="mb-4"><LiveBetFeed /></div>}
               {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
               {showFeatured && (
                 <>
@@ -659,15 +651,15 @@ export function MainContent({
               {showFeatured && <EuropaLeagueFinal />}
               {showFeatured && <SportHighlights onSelectSport={onSelectSport} />}
               {!search.trim() && selectedSportId === "soccer" && (
-                <SoccerHighlights onViewAll={scrollToMatchSection} />
+                <SoccerHighlights />
               )}
               {!search.trim() && selectedSportId === "ucl-final" && (
                 <EuropaLeagueFinal />
               )}
               {!search.trim() && selectedSportId === "tennis" && (
-                <TennisHighlights onViewAll={scrollToMatchSection} />
+                <TennisHighlights />
               )}
-              {!search.trim() && selectedSportId === "nba" && <NBAHighlights onViewAll={scrollToMatchSection} />}
+              {!search.trim() && selectedSportId === "nba" && <NBAHighlights />}
 
               {/* Live heading */}
               {dateFilter === "today" && liveCount > 0 && (
@@ -699,7 +691,7 @@ export function MainContent({
                 </div>
               )}
 
-              <div id="match-section" className="space-y-2.5">
+              <div className="space-y-2.5">
                 {filteredLeagues.length > 0 ? (
                   filteredLeagues.map((league) => (
                     <div key={league.id}>

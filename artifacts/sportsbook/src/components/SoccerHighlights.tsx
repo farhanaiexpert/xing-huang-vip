@@ -123,7 +123,7 @@ const FILTER_CONFIG: { id: FilterTab; icon: React.ReactNode; color: string; glow
 ];
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export function SoccerHighlights({ onViewAll }: { onViewAll?: () => void } = {}) {
+export function SoccerHighlights() {
   const { allLeagues } = useOddsData();
   const [filter, setFilter]   = useState<FilterTab>('EARLY PAYOUT');
   const [showAll, setShowAll] = useState(false);
@@ -165,8 +165,8 @@ export function SoccerHighlights({ onViewAll }: { onViewAll?: () => void } = {})
             <p className="text-[10px] text-[#94A3B8]/40 font-medium mt-0.5 hidden sm:block">{leagueHint}</p>
           </div>
         </div>
-        <button onClick={onViewAll} className="flex items-center gap-1 text-[11px] font-semibold text-[#38BDF8]/70 hover:text-[#38BDF8] transition-colors">
-          View All Matches <ChevronRight className="w-3.5 h-3.5" />
+        <button className="flex items-center gap-1 text-[11px] font-semibold text-[#38BDF8]/70 hover:text-[#38BDF8] transition-colors">
+          View All <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 

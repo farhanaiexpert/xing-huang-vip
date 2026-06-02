@@ -100,7 +100,7 @@ function MatchRow({ match, league }: { match: Match; league: League }) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export function NBAHighlights({ onViewAll }: { onViewAll?: () => void } = {}) {
+export function NBAHighlights() {
   const { allLeagues } = useOddsData();
 
   const { pairs, leagueLabel } = useMemo(() => {
@@ -127,8 +127,8 @@ export function NBAHighlights({ onViewAll }: { onViewAll?: () => void } = {}) {
         <span className="text-[13px] font-bold text-[#F8FAFC]">Basketball</span>
         <span className="text-[10px] text-[#94A3B8]/40 hidden sm:block">{leagueLabel}</span>
         <div className="flex-1 h-px bg-gradient-to-r from-[#253241] to-transparent" />
-        <button onClick={onViewAll} className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors shrink-0">
-          View All Matches <ChevronRight className="w-3.5 h-3.5" />
+        <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors shrink-0">
+          View All <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
