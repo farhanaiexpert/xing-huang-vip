@@ -312,7 +312,7 @@ function TrendingCard({ p }: { p: TrendingPill }) {
               style={{ background: `${bucket.color}18`, color: bucket.color }}>
               {match.team1.charAt(0).toUpperCase()}
             </div>
-            <span className="text-[11px] font-bold text-[#E2E8F0] leading-none truncate">{match.team1}</span>
+            <span className="text-[13px] font-bold text-[#E2E8F0] leading-none truncate">{match.team1}</span>
           </div>
           {/* Separator */}
           <div className="flex items-center gap-2">
@@ -326,7 +326,7 @@ function TrendingCard({ p }: { p: TrendingPill }) {
             <div className="w-5 h-5 shrink-0 rounded flex items-center justify-center text-[9px] font-black bg-[#1A2232] text-[#475569]">
               {match.team2.charAt(0).toUpperCase()}
             </div>
-            <span className="text-[11px] font-semibold text-[#64748B] leading-none truncate">{match.team2}</span>
+            <span className="text-[12px] font-semibold text-[#64748B] leading-none truncate">{match.team2}</span>
           </div>
         </div>
 
