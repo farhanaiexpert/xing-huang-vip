@@ -93,13 +93,13 @@ export function OverviewPage() {
       {/* ── Hero card ── */}
       <div className="relative overflow-hidden rounded-2xl border border-white/[0.07]"
         style={{ background: 'linear-gradient(135deg, #0C1A28 0%, #091510 60%, #0B0F14 100%)' }}>
-        <div className="pointer-events-none absolute -top-16 -left-16 w-64 h-64 rounded-full"
+        <div className="pointer-events-none absolute -top-16 -left-16 w-32 h-32 sm:w-64 sm:h-64 rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(0,223,169,0.10) 0%, transparent 70%)' }} />
-        <div className="pointer-events-none absolute -bottom-8 right-8 w-48 h-48 rounded-full"
+        <div className="pointer-events-none absolute -bottom-8 right-8 w-28 h-28 sm:w-48 sm:h-48 rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.08) 0%, transparent 70%)' }} />
 
-        <div className="relative p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+        <div className="relative p-4 sm:p-5">
+          <div className="flex flex-row flex-wrap items-center gap-3 sm:gap-5">
             {/* Avatar */}
             <div className="relative">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border-2 border-[#00DFA9]/40 flex items-center justify-center shadow-[0_0_24px_rgba(0,223,169,0.2)]">
@@ -111,8 +111,8 @@ export function OverviewPage() {
             </div>
 
             {/* Info */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-[22px] font-black text-[#F8FAFC] leading-tight">{displayLabel}</h1>
+            <div className="flex-1 min-w-0" style={{ minWidth: 0 }}>
+              <h1 className="text-[18px] sm:text-[22px] font-black text-[#F8FAFC] leading-tight">{displayLabel}</h1>
               {user?.walletAddress && (
                 <p className="text-[11px] font-mono text-[#00DFA9]/50 mt-0.5 truncate">
                   {user.walletAddress}
@@ -142,7 +142,7 @@ export function OverviewPage() {
 
             {/* Referral code */}
             {user?.referralCode && (
-              <div className="shrink-0">
+              <div className="w-full sm:w-auto sm:shrink-0">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#64748B] mb-1.5">Your Referral Code</p>
                 <button
                   onClick={handleCopyRef}
@@ -175,31 +175,31 @@ export function OverviewPage() {
               </div>
               <span className="text-[10px] font-semibold text-[#38BDF8]">View Wallet →</span>
             </div>
-            <div className="grid grid-cols-3 gap-2.5">
-              <div className="rounded-xl p-3 border" style={{ background: 'rgba(0,223,169,0.06)', borderColor: 'rgba(0,223,169,0.14)' }}>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <ArrowDownLeft className="h-3 w-3 text-[#00DFA9]" />
-                  <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Available</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(0,223,169,0.06)', borderColor: 'rgba(0,223,169,0.14)' }}>
+                <div className="flex items-center gap-1 mb-1.5">
+                  <ArrowDownLeft className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#00DFA9] shrink-0" />
+                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide truncate">Available</p>
                 </div>
-                <p className="text-[18px] font-black text-[#00DFA9] leading-tight">${balance.toFixed(2)}</p>
-                <p className="text-[9px] text-[#64748B] mt-0.5">USDT</p>
+                <p className="text-[14px] sm:text-[18px] font-black text-[#00DFA9] leading-tight truncate">${balance.toFixed(2)}</p>
+                <p className="text-[8px] sm:text-[9px] text-[#64748B] mt-0.5">USDT</p>
               </div>
-              <div className="rounded-xl p-3 border" style={{ background: 'rgba(56,189,248,0.06)', borderColor: 'rgba(56,189,248,0.14)' }}>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Lock className="h-3 w-3 text-[#38BDF8]" />
-                  <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Active Bets</p>
+              <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(56,189,248,0.06)', borderColor: 'rgba(56,189,248,0.14)' }}>
+                <div className="flex items-center gap-1 mb-1.5">
+                  <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#38BDF8] shrink-0" />
+                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide truncate">Active</p>
                 </div>
-                <p className="text-[18px] font-black text-[#38BDF8] leading-tight">${lockedInBets.toFixed(2)}</p>
-                <p className="text-[9px] text-[#64748B] mt-0.5">locked</p>
+                <p className="text-[14px] sm:text-[18px] font-black text-[#38BDF8] leading-tight truncate">${lockedInBets.toFixed(2)}</p>
+                <p className="text-[8px] sm:text-[9px] text-[#64748B] mt-0.5">locked</p>
               </div>
-              <div className="rounded-xl p-3 border" style={{ background: 'rgba(250,204,21,0.06)', borderColor: 'rgba(250,204,21,0.14)' }}
+              <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(250,204,21,0.06)', borderColor: 'rgba(250,204,21,0.14)' }}
                 title="Bonus funds are for betting only — cannot be withdrawn">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Gift className="h-3 w-3 text-[#FACC15]" />
-                  <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Bonus</p>
+                <div className="flex items-center gap-1 mb-1.5">
+                  <Gift className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#FACC15] shrink-0" />
+                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide truncate">Bonus</p>
                 </div>
-                <p className="text-[18px] font-black text-[#FACC15] leading-tight">${bonusBalance.toFixed(2)}</p>
-                <p className="text-[9px] text-[#FACC15]/50 mt-0.5">Bet only</p>
+                <p className="text-[14px] sm:text-[18px] font-black text-[#FACC15] leading-tight truncate">${bonusBalance.toFixed(2)}</p>
+                <p className="text-[8px] sm:text-[9px] text-[#FACC15]/50 mt-0.5">Bet only</p>
               </div>
             </div>
           </div>
@@ -248,7 +248,7 @@ export function OverviewPage() {
                 style={{ background: `${color}18`, border: `1px solid ${color}30`, boxShadow: `0 0 14px ${glow}` }}>
                 <Icon className="h-5 w-5" style={{ color }} />
               </div>
-              <span className="text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">{label}</span>
+              <span className="text-[9px] sm:text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">{label}</span>
             </div>
           </Link>
         ))}

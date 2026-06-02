@@ -71,7 +71,7 @@ export function OnboardingGuide() {
       onClick={dismiss}
     >
       <div
-        className="relative w-full max-w-2xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-2xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[92dvh]"
         style={{
           background: 'linear-gradient(160deg, #0C1422 0%, #0D1117 60%, #091610 100%)',
           border: '1px solid rgba(255,255,255,0.07)',

@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from 'react';
 import { Link, useParams } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBetHistory } from '@/hooks/useBetHistory';
@@ -69,11 +70,44 @@ export function AccountLayout() {
   const displayLabel = user ? userDisplayLabel(user) : 'Guest';
   const initials     = user ? addressInitials(displayLabel) : 'G';
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftFade, setShowLeftFade]   = useState(false);
+  const [showRightFade, setShowRightFade] = useState(true);
+
+  // Auto-scroll active chip into view whenever section changes
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const activeEl = container.querySelector<HTMLElement>('[data-active="true"]');
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+    // Small delay to let scroll settle before recalculating fades
+    const t = setTimeout(() => {
+      setShowLeftFade(container.scrollLeft > 8);
+      setShowRightFade(container.scrollLeft < container.scrollWidth - container.clientWidth - 8);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [section]);
+
+  // Initial fade state on mount
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    setShowRightFade(container.scrollWidth > container.clientWidth + 8);
+  }, []);
+
+  function handleChipScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    setShowLeftFade(el.scrollLeft > 8);
+    setShowRightFade(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+  }
+
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-20 xl:pb-0">
       <Header />
 
-      {/* ── Mobile sticky section tab bar (9 account sections) ── */}
+      {/* ── Mobile sticky section tab bar (12 account sections) ── */}
       <div className="xl:hidden sticky top-0 z-30 bg-[#0B0F14]/95 backdrop-blur-sm border-b border-white/[0.06] px-3 py-2 space-y-2">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0">
@@ -81,24 +115,49 @@ export function AccountLayout() {
           </div>
           <p className="text-[12px] font-bold text-[#F8FAFC] truncate">{displayLabel}</p>
         </div>
-        <div className="flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {NAV.map(item => {
-            const Icon = item.icon;
-            const isActive = section === item.id;
-            return (
-              <Link key={item.id} href={`/account/${item.id}`}>
-                <div className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap border transition-all duration-150 cursor-pointer',
-                  isActive
-                    ? 'bg-[#00DFA9]/12 text-[#00DFA9] border-[#00DFA9]/30'
-                    : 'bg-[#0E1520] text-[#94A3B8]/55 border-white/[0.06]',
-                )}>
-                  <Icon className="h-3 w-3 shrink-0" />
-                  {item.label}
-                </div>
-              </Link>
-            );
-          })}
+        {/* Chip scroll row with left/right fade affordance */}
+        <div className="relative">
+          {/* Left fade */}
+          {showLeftFade && (
+            <div
+              className="pointer-events-none absolute left-0 top-0 bottom-0 w-7 z-10"
+              style={{ background: 'linear-gradient(to right, #0B0F14, transparent)' }}
+            />
+          )}
+          {/* Right fade */}
+          {showRightFade && (
+            <div
+              className="pointer-events-none absolute right-0 top-0 bottom-0 w-7 z-10"
+              style={{ background: 'linear-gradient(to left, #0B0F14, transparent)' }}
+            />
+          )}
+          <div
+            ref={scrollRef}
+            className="flex gap-1.5 overflow-x-auto"
+            style={{ scrollbarWidth: 'none' }}
+            onScroll={handleChipScroll}
+          >
+            {NAV.map(item => {
+              const Icon = item.icon;
+              const isActive = section === item.id;
+              return (
+                <Link key={item.id} href={`/account/${item.id}`}>
+                  <div
+                    data-active={isActive ? 'true' : undefined}
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap border transition-all duration-150 cursor-pointer',
+                      isActive
+                        ? 'bg-[#00DFA9]/12 text-[#00DFA9] border-[#00DFA9]/30'
+                        : 'bg-[#0E1520] text-[#94A3B8]/55 border-white/[0.06]',
+                    )}
+                  >
+                    <Icon className="h-3 w-3 shrink-0" />
+                    {item.label}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
 
