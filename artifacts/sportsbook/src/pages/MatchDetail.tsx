@@ -10,6 +10,7 @@ import { generateDetailMarkets } from '../data/marketDetails';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useOddsData } from '../hooks/useOddsData';
 import { useLiveMatchScore } from '../hooks/useLiveMatchScore';
+import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
 import { findMatchInLeagues } from '../lib/matchUtils';
 import { Receipt, TrendingUp, BarChart2, Users, RefreshCw, Loader2 } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle, DrawerDescription } from '../components/ui/drawer';
@@ -389,6 +390,7 @@ function MatchDetailBody({
   fabPulse: boolean;
 }) {
   const isSoccer = match.sportId === 'sp_soccer';
+  const { collapsed: betSlipCollapsed } = useBetSlipSidebar();
 
   // Real-time live score polling — only fires when the match is live
   const liveData = useLiveMatchScore({
@@ -402,13 +404,18 @@ function MatchDetailBody({
   // Use the polled score if available (falls back to static snapshot)
   const displayScore = liveData.score ?? match.score;
 
+  // Right padding reserves space for the fixed-positioned BetSlip panel on desktop.
+  // Expanded panel: w-[244px] + right-3(12px) margin = 256px → use 264px.
+  // Collapsed icon strip: w-14 (56px) + right-0 = 56px → use 64px (pr-16).
+  const contentPr = betSlipCollapsed ? 'xl:pr-16' : 'xl:pr-[264px]';
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white overflow-hidden">
       <Header />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* ── Main column ─────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* ── Main column (padding-right clears the fixed BetSlip) ─── */}
+        <div className={cn('flex-1 flex flex-col min-w-0 overflow-hidden transition-[padding] duration-300', contentPr)}>
           <ScrollArea className="flex-1 h-[calc(100vh-3.5rem)] pb-14 xl:pb-0">
 
             {/* Match hero — with live score data wired in */}
@@ -429,7 +436,7 @@ function MatchDetailBody({
             />
 
             {/* Market groups */}
-            <div className="px-3 sm:px-4 xl:px-6 py-3 pb-16 space-y-2.5 max-w-[1100px] xl:mx-auto w-full">
+            <div className="px-3 sm:px-4 xl:px-5 py-3 pb-16 space-y-2.5 w-full">
               {/* Live banner */}
               {match.isLive && (
                 <div className="flex items-center gap-3 bg-[#EF4444]/5 border border-[#EF4444]/20 rounded-xl px-4 py-3">
