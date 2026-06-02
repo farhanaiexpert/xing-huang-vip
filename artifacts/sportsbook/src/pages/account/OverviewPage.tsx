@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/hooks/useWallet';
@@ -26,6 +26,17 @@ export function OverviewPage() {
   const ref = useReferral();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+
+  // Switch balance grid to 2 cols on very narrow screens (< 360px viewport)
+  const [tinyScreen, setTinyScreen] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 359px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 359px)');
+    const handler = (e: MediaQueryListEvent) => setTinyScreen(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const wonBets      = bets.filter(b => b.status === 'won' || b.status === 'settled').length;
   const openBets     = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
@@ -176,20 +187,7 @@ export function OverviewPage() {
               <span className="text-[10px] font-semibold text-[#38BDF8]">View Wallet →</span>
             </div>
             {/* ≥360px: 3 cols; <360px: 2 cols (Bonus wraps to second row) */}
-            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
-              ref={(el) => {
-                if (!el) return;
-                const update = () => {
-                  el.style.gridTemplateColumns = el.offsetWidth < 320
-                    ? 'repeat(2, minmax(0, 1fr))'
-                    : 'repeat(3, minmax(0, 1fr))';
-                };
-                update();
-                const ro = new ResizeObserver(update);
-                ro.observe(el);
-                return () => ro.disconnect();
-              }}
-            >
+            <div className={tinyScreen ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-3 gap-2'}>
               <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(0,223,169,0.06)', borderColor: 'rgba(0,223,169,0.14)' }}>
                 <div className="flex items-center gap-1 mb-1.5">
                   <ArrowDownLeft className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#00DFA9] shrink-0" />
