@@ -243,9 +243,9 @@ interface TrendingPill {
 
 function TrendingCard({ p }: { p: TrendingPill }) {
   const { match, league, bucket, rank } = p;
-  const isHot = rank < 2;
+  const isHot   = rank < 2;
   const hasDraw = match.odds.draw != null;
-  const shared = {
+  const shared  = {
     matchId:      match.id,
     marketId:     `1x2_${match.id}`,
     matchName:    `${match.team1} v ${match.team2}`,
@@ -259,92 +259,99 @@ function TrendingCard({ p }: { p: TrendingPill }) {
 
   return (
     <div
-      className="relative flex flex-col rounded-xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5"
+      className="relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5"
       style={{
-        background:  '#0D1320',
-        borderColor: 'rgba(37,50,65,0.6)',
+        background:  'linear-gradient(160deg, #0E1824 0%, #0B1220 100%)',
+        borderColor: 'rgba(30,45,61,0.8)',
+        boxShadow:   '0 2px 8px rgba(0,0,0,0.25)',
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
-        el.style.boxShadow   = `0 4px 20px ${bucket.color}14`;
-        el.style.borderColor = `${bucket.color}45`;
+        el.style.boxShadow   = `0 6px 24px ${bucket.color}12, 0 2px 8px rgba(0,0,0,0.3)`;
+        el.style.borderColor = `${bucket.color}40`;
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
-        el.style.boxShadow   = '';
-        el.style.borderColor = 'rgba(37,50,65,0.6)';
+        el.style.boxShadow   = '0 2px 8px rgba(0,0,0,0.25)';
+        el.style.borderColor = 'rgba(30,45,61,0.8)';
       }}
     >
-      {/* Sport-coloured top bar */}
+      {/* Sport-coloured top accent */}
       <div className="h-[3px] w-full shrink-0"
-        style={{ background: `linear-gradient(90deg, ${bucket.color} 0%, ${bucket.color}40 60%, transparent 100%)` }} />
+        style={{ background: `linear-gradient(90deg, ${bucket.color} 0%, ${bucket.color}50 55%, transparent 100%)` }} />
 
-      <div className="flex flex-col flex-1 p-3 gap-3">
+      <div className="flex flex-col flex-1 p-3 gap-0">
 
-        {/* ── Row 1: sport label + time/live ── */}
-        <div className="flex items-center justify-between gap-1">
+        {/* ── Row 1: sport + HOT + time ── */}
+        <div className="flex items-center justify-between gap-1 mb-2.5">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[11px] leading-none">{bucket.emoji}</span>
-            <span className="text-[9px] font-semibold truncate" style={{ color: bucket.color }}>
+            <span className="text-sm leading-none">{bucket.emoji}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wide truncate"
+              style={{ color: bucket.color }}>
               {bucket.label}
             </span>
             {isHot && (
-              <span className="flex items-center gap-0.5 text-[7.5px] font-black uppercase text-[#EF4444] shrink-0 leading-none">
-                <Flame className="h-[9px] w-[9px]" /> HOT
+              <span className="flex items-center gap-0.5 text-[7px] font-black uppercase shrink-0 px-1 py-0.5 rounded-full"
+                style={{ color: '#EF4444', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.22)' }}>
+                <Flame className="h-[8px] w-[8px]" /> HOT
               </span>
             )}
           </div>
           {match.isLive ? (
-            <span className="flex items-center gap-1 text-[7.5px] font-black text-[#EF4444] shrink-0">
+            <span className="flex items-center gap-1 text-[8px] font-black text-[#EF4444] shrink-0 px-1.5 py-0.5 rounded-full"
+              style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)' }}>
               <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse shrink-0" />
               LIVE{match.liveMinute != null ? ` ${match.liveMinute}'` : ''}
             </span>
           ) : (
-            <span className="text-[8px] text-[#475569] shrink-0 tabular-nums">{getTimeLabel(match)}</span>
+            <span className="text-[9px] font-semibold text-[#475569] shrink-0 tabular-nums bg-[#131C28] px-1.5 py-0.5 rounded-full border border-[#1E2D3D]">
+              {getTimeLabel(match)}
+            </span>
           )}
         </div>
 
-        {/* ── Row 2: teams ── */}
-        <div className="flex flex-col gap-2">
+        {/* ── Row 2: teams stacked ── */}
+        <div className="flex flex-col gap-0 mb-3">
           {/* Home */}
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 shrink-0 rounded flex items-center justify-center text-[9px] font-black"
-              style={{ background: `${bucket.color}18`, color: bucket.color }}>
+          <div className="flex items-center gap-2 py-1.5 border-l-2 pl-2 rounded-r"
+            style={{ borderColor: bucket.color }}>
+            <div className="w-5 h-5 shrink-0 rounded-lg flex items-center justify-center text-[8px] font-black"
+              style={{ background: `${bucket.color}18`, color: bucket.color, border: `1px solid ${bucket.color}25` }}>
               {match.team1.charAt(0).toUpperCase()}
             </div>
-            <span className="text-[13px] font-bold text-[#E2E8F0] leading-none truncate">{match.team1}</span>
+            <span className="text-[12px] font-bold text-[#F0F4F8] leading-none truncate">{match.team1}</span>
           </div>
-          {/* Separator */}
-          <div className="flex items-center gap-2">
+
+          {/* VS separator */}
+          <div className="flex items-center gap-2 py-1 pl-2">
             <div className="w-5 shrink-0 flex justify-center">
-              <div className="w-px h-3 bg-[#1E2A38]" />
+              <div className="w-px h-2.5 bg-[#1E2D3D]" />
             </div>
-            <span className="text-[8.5px] font-semibold text-[#334155] uppercase tracking-widest">vs</span>
+            <span className="text-[7.5px] font-black text-[#2A3A52] uppercase tracking-widest">vs</span>
           </div>
+
           {/* Away */}
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 shrink-0 rounded flex items-center justify-center text-[9px] font-black bg-[#1A2232] text-[#475569]">
+          <div className="flex items-center gap-2 py-1.5 border-l-2 pl-2 rounded-r border-[#1E2D3D]">
+            <div className="w-5 h-5 shrink-0 rounded-lg flex items-center justify-center text-[8px] font-black bg-[#131C28] text-[#475569] border border-[#1E2D3D]">
               {match.team2.charAt(0).toUpperCase()}
             </div>
-            <span className="text-[12px] font-semibold text-[#64748B] leading-none truncate">{match.team2}</span>
+            <span className="text-[11px] font-semibold text-[#64748B] leading-none truncate">{match.team2}</span>
           </div>
         </div>
 
         {/* ── Row 3: odds ── */}
         <div className="mt-auto" onClick={e => e.stopPropagation()}>
-          {/* Column labels */}
           <div className={`grid mb-1.5 ${hasDraw ? 'grid-cols-3' : 'grid-cols-2'} gap-1`}>
-            <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-[#334155]">
-              {hasDraw ? '1' : 'Home'}
+            <span className="text-center text-[8px] font-bold uppercase tracking-wider text-[#334155]">
+              {hasDraw ? '1' : 'HOME'}
             </span>
             {hasDraw && (
-              <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-[#334155]">X</span>
+              <span className="text-center text-[8px] font-bold uppercase tracking-wider text-[#334155]">X</span>
             )}
-            <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-[#334155]">
-              {hasDraw ? '2' : 'Away'}
+            <span className="text-center text-[8px] font-bold uppercase tracking-wider text-[#334155]">
+              {hasDraw ? '2' : 'AWAY'}
             </span>
           </div>
-          {/* Buttons — w-full overrides OddsButton's hardcoded w-[52px] */}
           <div className={`grid ${hasDraw ? 'grid-cols-3' : 'grid-cols-2'} gap-1`}>
             <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} className="w-full" />
             {hasDraw && (
@@ -363,15 +370,28 @@ function TrendingRail({ pills }: { pills: TrendingPill[] }) {
   if (pills.length === 0) return null;
   return (
     <div className="mb-5">
-      <div className="flex items-center gap-2 mb-3 px-0.5">
-        <div className="w-5 h-5 rounded-md flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg,rgba(239,68,68,0.25),rgba(239,68,68,0.05))', border: '1px solid rgba(239,68,68,0.28)' }}>
-          <Flame className="h-2.5 w-2.5 text-[#EF4444]" />
+      {/* Section header */}
+      <div className="flex items-center gap-2.5 mb-3 px-0.5">
+        <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, rgba(239,68,68,0.22), rgba(239,68,68,0.06))',
+            border:     '1px solid rgba(239,68,68,0.28)',
+          }}>
+          <Flame className="h-3 w-3 text-[#EF4444]" />
         </div>
-        <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">Trending Now</span>
-        <span className="text-[10px] text-[#94A3B8]/40">Most popular bets</span>
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">Trending Now</span>
+          <span className="text-[10px] text-[#94A3B8]/40 hidden sm:inline">Most popular bets</span>
+        </div>
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          <span className="text-[9px] font-bold text-[#EF4444]/70 bg-[#EF4444]/8 border border-[#EF4444]/15 px-2 py-0.5 rounded-full">
+            {pills.length} events
+          </span>
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-2.5">
+
+      {/* Card grid */}
+      <div className="grid grid-cols-2 gap-2">
         {pills.map(p => <TrendingCard key={p.match.id} p={p} />)}
       </div>
     </div>
