@@ -168,12 +168,17 @@ function WideLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam
 // ── Grid layout: 4+ selections ────────────────────────────────────────────────
 
 function GridLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
+  const count = market.selections.length;
+  // For Over/Under pairs (even count), use 2-col on mobile → 4-col on sm → up to 6-col on xl for dense lines
+  const gridCols = count <= 6
+    ? 'grid-cols-2 sm:grid-cols-4 xl:grid-cols-6'
+    : 'grid-cols-2 sm:grid-cols-4 xl:grid-cols-5';
   return (
-    <div className="px-3 sm:px-4 py-3.5">
+    <div className="px-3 sm:px-4 xl:px-5 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
         {market.name}
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className={`grid ${gridCols} gap-2`}>
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1.5">
             <span className="text-[10px] text-[#94A3B8]/60 font-medium leading-none text-center">
@@ -197,12 +202,12 @@ function GridLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam
 
 function CorrectScoreLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
   return (
-    <div className="px-3 sm:px-4 py-3.5">
+    <div className="px-3 sm:px-4 xl:px-5 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
         {market.name}
       </p>
-      {/* 2-col on xs, 3-col on sm, 4-col on md+ for dense score grids */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-2">
+      {/* 2-col on xs, 3-col on sm, 4-col on md, 5-col on lg, 6-col on xl+ */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-2">
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1">
             <span className="text-[10px] text-[#94A3B8]/50 leading-none">{sel.shortName}</span>
@@ -224,15 +229,15 @@ function CorrectScoreLayout({ market, matchId, matchName, leagueName, sportKey, 
 
 function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
   const [showAll, setShowAll] = useState(false);
-  const displayed = showAll ? market.selections : market.selections.slice(0, 6);
-  const hasMore   = market.selections.length > 6;
+  const displayed = showAll ? market.selections : market.selections.slice(0, 8);
+  const hasMore   = market.selections.length > 8;
 
   return (
-    <div className="px-3 sm:px-4 py-3.5">
+    <div className="px-3 sm:px-4 xl:px-5 py-3.5">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
         {market.name}
       </p>
-      <div className="space-y-1.5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
         {displayed.map(sel => (
           <div
             key={sel.id}
@@ -254,7 +259,7 @@ function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey, ho
           onClick={() => setShowAll(true)}
           className="mt-3 w-full py-2.5 rounded-lg text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 bg-[#38BDF8]/5 hover:bg-[#38BDF8]/10 border border-[#38BDF8]/15 transition-all duration-150"
         >
-          Show {market.selections.length - 6} more →
+          Show {market.selections.length - 8} more →
         </button>
       )}
     </div>

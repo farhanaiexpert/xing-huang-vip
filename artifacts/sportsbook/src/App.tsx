@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
@@ -32,6 +32,12 @@ import { PromoPopup } from "@/components/PromoPopup";
 import { ProfileSetupModal } from "@/components/ProfileSetupModal";
 import { useTransactionNotifications } from "@/hooks/useTransactionNotifications";
 import { Link } from "wouter";
+
+function HomeOnlyOverlay() {
+  const [location] = useLocation();
+  if (location !== '/') return null;
+  return <OnboardingGuide />;
+}
 
 function TransactionNotifier() {
   useTransactionNotifications();
@@ -90,9 +96,9 @@ function App() {
                             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                               <Router />
                               <PromoPopup />
+                              <HomeOnlyOverlay />
                             </WouterRouter>
                             <MobileBottomNav />
-                            <OnboardingGuide />
                             <TransactionNotifier />
                             <ProfileSetupModal />
                             <Toaster />

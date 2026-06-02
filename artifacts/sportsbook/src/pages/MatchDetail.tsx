@@ -11,7 +11,7 @@ import { useBetSlip } from '../hooks/useBetSlip';
 import { useOddsData } from '../hooks/useOddsData';
 import { useLiveMatchScore } from '../hooks/useLiveMatchScore';
 import { findMatchInLeagues } from '../lib/matchUtils';
-import { Receipt, TrendingUp, BarChart2, Users, RefreshCw } from 'lucide-react';
+import { Receipt, TrendingUp, BarChart2, Users, RefreshCw, Loader2 } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle, DrawerDescription } from '../components/ui/drawer';
 import { cn } from '../lib/utils';
 import type { MatchEntity, LeagueEntity } from '../data/types';
@@ -219,6 +219,68 @@ function MatchNotFound({ onBack }: { onBack: () => void }) {
   );
 }
 
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
+
+function MatchDetailSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#0B0F14] flex flex-col pb-14 xl:pb-0">
+      <Header />
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Hero skeleton */}
+          <div className="bg-gradient-to-b from-[#0F1825] to-[#0B0F14] border-b border-[#253241] px-4 pt-3 pb-4">
+            <div className="h-3 w-48 bg-[#1A2433] rounded mb-4 animate-pulse" />
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-[#1A2433] animate-pulse" />
+                <div className="h-3 w-24 bg-[#1A2433] rounded animate-pulse" />
+              </div>
+              <div className="w-12 h-12 rounded-full bg-[#1A2433] animate-pulse" />
+              <div className="flex-1 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-[#1A2433] animate-pulse" />
+                <div className="h-3 w-24 bg-[#1A2433] rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+          {/* Quick odds skeleton */}
+          <div className="mx-3 sm:mx-4 mt-3 mb-1 rounded-xl bg-[#121821] border border-[#253241] p-4">
+            <div className="grid grid-cols-3 gap-3">
+              {[0,1,2].map(i => (
+                <div key={i} className="h-16 rounded-xl bg-[#1A2433] animate-pulse" />
+              ))}
+            </div>
+          </div>
+          {/* Nav skeleton */}
+          <div className="h-10 border-b border-[#253241]/60 flex items-center gap-2 px-4">
+            {[80,60,72,64,80].map((w, i) => (
+              <div key={i} className={`h-6 rounded-lg bg-[#1A2433] animate-pulse`} style={{ width: w }} />
+            ))}
+          </div>
+          {/* Market groups skeleton */}
+          <div className="px-4 py-3 space-y-2.5">
+            {[0,1,2,3].map(i => (
+              <div key={i} className="rounded-xl border border-[#253241] bg-[#121821] overflow-hidden">
+                <div className="h-12 bg-[#0F1620] px-4 flex items-center gap-2">
+                  <div className="w-5 h-5 rounded bg-[#1A2433] animate-pulse" />
+                  <div className="h-3 w-32 bg-[#1A2433] rounded animate-pulse" />
+                </div>
+                {i < 2 && (
+                  <div className="p-4 grid grid-cols-3 gap-2">
+                    {[0,1,2].map(j => (
+                      <div key={j} className="h-14 rounded-xl bg-[#1A2433] animate-pulse" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        <BetSlip />
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function MatchDetail() {
@@ -227,7 +289,7 @@ export function MatchDetail() {
   const matchId        = params?.id;
 
   // Access real API matches through the global context
-  const { allLeagues } = useOddsData();
+  const { allLeagues, loading } = useOddsData();
 
   // Resolve match + league from real API data only
   const resolved = useMemo(() => {
@@ -278,6 +340,11 @@ export function MatchDetail() {
     }
     prevCount.current = selections.length;
   }, [selections.length]);
+
+  // Show skeleton while API data is still loading
+  if (!resolved && loading) {
+    return <MatchDetailSkeleton />;
+  }
 
   if (!resolved) {
     return <MatchNotFound onBack={() => setLocation('/')} />;
@@ -362,7 +429,7 @@ function MatchDetailBody({
             />
 
             {/* Market groups */}
-            <div className="px-4 py-3 space-y-2.5 pb-16">
+            <div className="px-3 sm:px-4 xl:px-6 py-3 pb-16 space-y-2.5 max-w-[1100px] xl:mx-auto w-full">
               {/* Live banner */}
               {match.isLive && (
                 <div className="flex items-center gap-3 bg-[#EF4444]/5 border border-[#EF4444]/20 rounded-xl px-4 py-3">
