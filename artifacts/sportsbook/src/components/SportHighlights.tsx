@@ -222,19 +222,6 @@ function FeaturedStrip({ entries }: { entries: FeaturedEntry[] }) {
   if (entries.length === 0) return null;
   return (
     <div className="mb-5">
-      <div className="flex items-center justify-between mb-3 px-0.5">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-md flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg,rgba(250,204,21,0.25),rgba(250,204,21,0.05))', border: '1px solid rgba(250,204,21,0.28)' }}>
-            <Star className="h-2.5 w-2.5 text-[#FACC15]" />
-          </div>
-          <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">Featured</span>
-          <span className="text-[10px] text-[#94A3B8]/40">Top picks right now</span>
-        </div>
-        <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8]/70 hover:text-[#38BDF8] transition-colors">
-          View All <ChevronRight className="h-3 w-3" />
-        </button>
-      </div>
       <ScrollArea className="w-full">
         <div className="flex gap-3 w-max pb-2">
           {entries.map(e => <FeaturedCard key={e.match.id} entry={e} />)}
@@ -254,51 +241,107 @@ interface TrendingPill {
   bestOdds: number; rank: number;
 }
 
+function TrendingCard({ p }: { p: TrendingPill }) {
+  const { match, league, bucket, rank } = p;
+  const isHot = rank < 2;
+  const shared = {
+    matchId:      match.id,
+    marketId:     `1x2_${match.id}`,
+    matchName:    `${match.team1} v ${match.team2}`,
+    leagueName:   league.name,
+    marketName:   bucket.marketName,
+    sportKey:     match.sportKey ?? match.sportId ?? '',
+    homeTeam:     match.team1,
+    awayTeam:     match.team2,
+    commenceTime: match.commenceIso,
+  };
+
+  return (
+    <div
+      className="relative rounded-xl overflow-hidden border cursor-pointer transition-all duration-200 hover:-translate-y-0.5 group"
+      style={{
+        background: `linear-gradient(135deg, ${bucket.color}08 0%, rgba(11,15,20,0.95) 60%)`,
+        borderColor: isHot ? `${bucket.color}40` : 'rgba(37,50,65,0.5)',
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${bucket.color}18`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${bucket.color}60`;
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.boxShadow = '';
+        (e.currentTarget as HTMLElement).style.borderColor = isHot ? `${bucket.color}40` : 'rgba(37,50,65,0.5)';
+      }}
+    >
+      {/* Top accent stripe */}
+      <div className="h-[2px] w-full" style={{
+        background: `linear-gradient(90deg, ${bucket.color} 0%, ${bucket.color}30 70%, transparent 100%)`
+      }} />
+
+      <div className="p-3">
+        {/* Header row: sport badge + rank + live */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="text-[13px] w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+              style={{ background: `${bucket.color}15`, border: `1px solid ${bucket.color}25` }}
+            >
+              {bucket.emoji}
+            </span>
+            {isHot && (
+              <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide text-[#EF4444]">
+                <Flame className="h-2.5 w-2.5" /> HOT
+              </span>
+            )}
+            {!isHot && (
+              <span className="text-[9px] font-bold tabular-nums px-1 py-0.5 rounded"
+                style={{ color: `${bucket.color}80`, background: `${bucket.color}12` }}>
+                #{rank + 1}
+              </span>
+            )}
+          </div>
+          {match.isLive ? (
+            <span className="flex items-center gap-0.5 text-[8px] font-black text-[#EF4444]">
+              <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" /> LIVE
+              {match.liveMinute != null && <span className="text-[#EF4444]/60 ml-0.5">{match.liveMinute}'</span>}
+            </span>
+          ) : (
+            <span className="text-[9px] text-[#475569]">{league.name.slice(0, 14)}</span>
+          )}
+        </div>
+
+        {/* Teams */}
+        <div className="mb-2.5">
+          <p className="text-[12px] font-bold text-[#E2E8F0] leading-snug truncate">{match.team1}</p>
+          <p className="text-[11px] font-medium text-[#64748B] leading-snug truncate mt-0.5">{match.team2}</p>
+        </div>
+
+        {/* Odds row */}
+        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
+          {match.odds.draw != null && (
+            <OddsButton {...shared} selectionType="X" selectionName="Draw" odds={match.odds.draw} />
+          )}
+          <OddsButton {...shared} selectionType="2" selectionName={match.team2} odds={match.odds.away} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TrendingRail({ pills }: { pills: TrendingPill[] }) {
   if (pills.length === 0) return null;
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2 mb-3 px-0.5">
-        <Flame className="h-3.5 w-3.5 text-[#EF4444]" />
+        <div className="w-5 h-5 rounded-md flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg,rgba(239,68,68,0.25),rgba(239,68,68,0.05))', border: '1px solid rgba(239,68,68,0.28)' }}>
+          <Flame className="h-2.5 w-2.5 text-[#EF4444]" />
+        </div>
         <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">Trending Now</span>
         <span className="text-[10px] text-[#94A3B8]/40">Most popular bets</span>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {pills.map(p => {
-          const isHot = p.rank < 2;
-          return (
-            <div
-              key={p.match.id}
-              className="shrink-0 flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-all duration-200 hover:scale-[1.02]"
-              style={{
-                background:  isHot ? `${p.bucket.color}0d` : 'rgba(11,16,24,0.9)',
-                borderColor: isHot ? `${p.bucket.color}35` : 'rgba(37,50,65,0.55)',
-              }}
-            >
-              {isHot && <Flame className="h-3 w-3 shrink-0 text-[#EF4444]" />}
-              <span className="text-[15px] leading-none shrink-0">{p.bucket.emoji}</span>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[11px] font-semibold text-[#F8FAFC] leading-none truncate max-w-[110px]">
-                  {p.match.team1} v {p.match.team2}
-                </span>
-                <span className="text-[9px] text-[#94A3B8]/45 leading-none mt-0.5 truncate max-w-[110px]">
-                  {p.league.name}
-                </span>
-              </div>
-              <div className="flex flex-col items-end ml-1 shrink-0">
-                <span className="text-[15px] font-black tabular-nums leading-none"
-                  style={{ color: isHot ? '#FACC15' : '#94A3B8' }}>
-                  {p.bestOdds.toFixed(2)}
-                </span>
-                {p.match.isLive && (
-                  <span className="flex items-center gap-0.5 text-[8px] font-black text-[#EF4444] mt-0.5">
-                    <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" /> LIVE
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-2 gap-2.5">
+        {pills.map(p => <TrendingCard key={p.match.id} p={p} />)}
       </div>
     </div>
   );

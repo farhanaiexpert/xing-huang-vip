@@ -12,85 +12,80 @@ export function LeagueSection({ league }: { league: League }) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <div className="rounded-xl overflow-hidden border border-[#253241] bg-[#121821]">
+    <div className="rounded-lg overflow-hidden border border-[#1E2A38] bg-[#0D1218]">
 
-      {/* League header — clickable to collapse/expand */}
+      {/* League header */}
       <button
         onClick={() => setIsOpen(o => !o)}
-        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[#0F1620] border-b border-[#253241] hover:bg-[#151E2B] transition-colors group"
+        className="w-full flex items-center gap-2 px-3 py-2 bg-[#0B0F16] hover:bg-[#111720] transition-colors group"
         aria-expanded={isOpen}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          {/* Collapse chevron */}
-          <ChevronDown
-            className={cn(
-              'h-3.5 w-3.5 shrink-0 text-[#94A3B8]/50 group-hover:text-[#94A3B8] transition-all duration-200',
-              !isOpen && '-rotate-90'
-            )}
-          />
-
-          {league.countryCode && (
-            <span className="text-sm leading-none shrink-0" aria-hidden="true">
-              {getFlagEmoji(league.countryCode)}
-            </span>
+        {/* Chevron */}
+        <ChevronDown
+          className={cn(
+            'h-3 w-3 shrink-0 text-[#475569] group-hover:text-[#64748B] transition-all duration-200',
+            !isOpen && '-rotate-90'
           )}
-          <h3 className="font-semibold text-[#F8FAFC] text-[13px] truncate">{league.name}</h3>
+        />
 
-          {liveCount > 0 && (
-            <span className="shrink-0 flex items-center gap-1 text-[9px] font-bold uppercase text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/20 px-1.5 py-0.5 rounded">
-              <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
-              {liveCount} Live
-            </span>
-          )}
+        {/* Flag */}
+        {league.countryCode && (
+          <span className="text-[13px] leading-none shrink-0">{getFlagEmoji(league.countryCode)}</span>
+        )}
 
-          <span className="shrink-0 text-[10px] text-[#94A3B8]/50 bg-[#253241]/50 px-1.5 py-0.5 rounded font-medium tabular-nums">
-            {league.matches.length}
+        {/* Name */}
+        <span className="font-semibold text-[#CBD5E1] text-[12px] truncate flex-1 text-left">{league.name}</span>
+
+        {/* Live badge */}
+        {liveCount > 0 && (
+          <span className="shrink-0 flex items-center gap-1 text-[8px] font-bold uppercase text-[#EF4444] bg-[#EF4444]/10 px-1.5 py-0.5 rounded">
+            <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
+            {liveCount}
           </span>
-        </div>
+        )}
 
-        <div className="flex items-center gap-0.5 text-[11px] font-medium text-[#38BDF8]/60 group-hover:text-[#38BDF8] transition-colors shrink-0 ml-3">
-          More <ChevronRight className="h-3 w-3" />
-        </div>
+        {/* Match count */}
+        <span className="shrink-0 text-[10px] text-[#475569] tabular-nums">{league.matches.length}</span>
+
+        {/* More arrow */}
+        <ChevronRight className="h-3 w-3 text-[#334155] group-hover:text-[#475569] transition-colors shrink-0" />
       </button>
 
-      {/* Collapsible body */}
+      {/* Odds column labels — compact single row */}
       {isOpen && (
-        <>
-          {/* Column headers */}
-          <div className="flex items-center px-3.5 py-1.5 bg-[#0A0E13] border-b border-[#253241]/60">
-            <div className="flex-1">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#94A3B8]/35">Match</span>
-            </div>
-            <div className="flex items-center shrink-0" style={{ width: isFootball ? '174px' : '116px' }}>
-              {isFootball ? (
-                <>
-                  <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">1</div>
-                  <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">X</div>
-                  <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">2</div>
-                  <div className="w-[18px]" />
-                </>
-              ) : (
-                <>
-                  <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">1</div>
-                  <div className="w-[52px] text-center text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/35">2</div>
-                  <div className="w-[12px]" />
-                </>
-              )}
-            </div>
+        <div className="flex items-center px-3 py-1 bg-[#080C11] border-b border-[#1E2A38]/60">
+          <div className="flex-1" />
+          <div className="flex items-center shrink-0 gap-0" style={{ width: isFootball ? '156px' : '104px' }}>
+            {isFootball ? (
+              <>
+                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">1</div>
+                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">X</div>
+                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">2</div>
+                <div className="w-[18px]" />
+              </>
+            ) : (
+              <>
+                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">1</div>
+                <div className="w-[46px] text-center text-[9px] font-semibold uppercase tracking-wider text-[#334155]">2</div>
+                <div className="w-[12px]" />
+              </>
+            )}
           </div>
+        </div>
+      )}
 
-          {/* Match rows */}
-          <div className="flex flex-col divide-y divide-[#253241]/50">
-            {league.matches.map((match, idx) => (
-              <MatchRow
-                key={match.id}
-                match={match}
-                leagueName={league.name}
-                isLast={idx === league.matches.length - 1}
-              />
-            ))}
-          </div>
-        </>
+      {/* Match rows */}
+      {isOpen && (
+        <div className="flex flex-col divide-y divide-[#1E2A38]/60">
+          {league.matches.map((match, idx) => (
+            <MatchRow
+              key={match.id}
+              match={match}
+              leagueName={league.name}
+              isLast={idx === league.matches.length - 1}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
