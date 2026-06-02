@@ -134,9 +134,9 @@ export function WalletPage() {
     const hint = sessionStorage.getItem('cupbett_deposit_method');
     sessionStorage.removeItem('cupbett_deposit_method');
     if (hint === 'manual') return 'manual';
-    if (hint === 'wallet') return 'wallet';
+    if (hint === 'nowpayments') return 'nowpayments';
     if (hint === 'cryptomus') return 'cryptomus';
-    return 'nowpayments';
+    return 'wallet';
   });
   const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20' | 'BSC' | 'POLYGON' | 'ARBITRUM' | 'OPTIMISM' | 'BASE' | 'SOLANA' | 'TON' | 'XRP' | 'BTC'>('TRC-20');
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>(() => {
@@ -681,6 +681,7 @@ export function WalletPage() {
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="text-[14px] font-bold text-[#F8FAFC]">Web3 Wallet</span>
                       <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.22)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.40)' }}>⚡ Instant</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.20)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.40)' }}>★ Recommended</span>
                     </div>
                     <p className="text-[11px] text-[#64748B] leading-tight">MetaMask · Trust Wallet · OKX · Coinbase · Auto-verified on-chain</p>
                     <p className="text-[10px] font-bold mt-1.5" style={{ color: '#A78BFA' }}>Min deposit: <span className="text-[#F8FAFC]">$10 USDT</span></p>
@@ -713,7 +714,6 @@ export function WalletPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="text-[14px] font-bold text-[#F8FAFC]">NOWPayments</span>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(56,189,248,0.20)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.40)' }}>★ Recommended</span>
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
                     </div>
                     <p className="text-[11px] text-[#64748B] leading-tight">300+ cryptocurrencies · ~5–15 min confirmation · No TxHash needed</p>
