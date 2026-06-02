@@ -40,6 +40,8 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  ChevronDown,
+  LayoutList,
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { useOddsData } from "../hooks/useOddsData";
@@ -205,6 +207,7 @@ export function MainContent({
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [showAllLeagues, setShowAllLeagues] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const scrollToLeagueList = useCallback(() => {
@@ -319,6 +322,22 @@ export function MainContent({
       selectedSportId === "early-payout" ||
       selectedSportId === "acca-boost") &&
     dateFilter === "all";
+
+  // On the homepage collapse to top-5 (by match count); expand on demand
+  const LEAGUE_PREVIEW = 5;
+  const displayedLeagues = useMemo(() => {
+    if (!showFeatured || showAllLeagues || filteredLeagues.length <= LEAGUE_PREVIEW) {
+      return filteredLeagues;
+    }
+    return [...filteredLeagues]
+      .sort((a, b) => b.matches.length - a.matches.length)
+      .slice(0, LEAGUE_PREVIEW);
+  }, [filteredLeagues, showFeatured, showAllLeagues]);
+
+  // Reset collapse when the user navigates away from the homepage
+  useEffect(() => {
+    setShowAllLeagues(false);
+  }, [selectedSportId]);
 
   const hasActiveFilter =
     !!search.trim() ||
@@ -719,7 +738,7 @@ export function MainContent({
 
               <div id="league-list" className="space-y-2.5">
                 {filteredLeagues.length > 0 ? (
-                  filteredLeagues.map((league) => (
+                  displayedLeagues.map((league) => (
                     <div key={league.id}>
                       <LeagueSection league={league} />
                     </div>
@@ -737,6 +756,45 @@ export function MainContent({
                   />
                 )}
               </div>
+
+              {/* ── View all leagues button ── */}
+              {showFeatured && !showAllLeagues && filteredLeagues.length > LEAGUE_PREVIEW && (
+                <button
+                  onClick={() => setShowAllLeagues(true)}
+                  className="w-full mt-2 group relative overflow-hidden rounded-xl border border-[#1E2A38] hover:border-[#38BDF8]/30 bg-[#0A0F16] hover:bg-[#0D1520] transition-all duration-200 active:scale-[0.99]"
+                >
+                  {/* Hidden league name chips */}
+                  <div className="px-4 pt-3 pb-2 flex flex-wrap gap-1.5 justify-center">
+                    {filteredLeagues.slice(LEAGUE_PREVIEW, LEAGUE_PREVIEW + 8).map((l) => (
+                      <span
+                        key={l.id}
+                        className="text-[9px] font-medium text-[#94A3B8]/30 bg-[#1A2535]/60 border border-[#253241]/40 px-2 py-0.5 rounded-full whitespace-nowrap"
+                      >
+                        {l.name}
+                      </span>
+                    ))}
+                    {filteredLeagues.length > LEAGUE_PREVIEW + 8 && (
+                      <span className="text-[9px] font-medium text-[#94A3B8]/20 px-2 py-0.5">
+                        +{filteredLeagues.length - LEAGUE_PREVIEW - 8} more
+                      </span>
+                    )}
+                  </div>
+
+                  {/* CTA row */}
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-[#1A2535]/60">
+                    <div className="flex items-center gap-2">
+                      <LayoutList className="h-3.5 w-3.5 text-[#38BDF8]/60" />
+                      <span className="text-[12px] font-bold text-[#CBD5E1]">
+                        View all leagues
+                      </span>
+                      <span className="text-[10px] font-black text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-2 py-0.5 rounded-full leading-none">
+                        {filteredLeagues.length - LEAGUE_PREVIEW} more
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-[#38BDF8]/70 group-hover:translate-y-0.5 group-hover:text-[#38BDF8] transition-all duration-200" />
+                  </div>
+                </button>
+              )}
 
               {/* ── Post-match activity panels (below the match list) ── */}
               {showFeatured && <div className="mt-5"><FlashOdds /></div>}
