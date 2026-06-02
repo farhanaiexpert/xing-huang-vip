@@ -158,8 +158,13 @@ interface SportSection {
   label:   string;
 }
 
-function SportBlock({ section }: { section: SportSection }) {
+function SportBlock({ section, onSelectSport }: { section: SportSection; onSelectSport?: (id: string) => void }) {
   const { config, leagues, label } = section;
+  const handleViewAll = () => {
+    const sportId = config.prefix.endsWith('_') ? config.prefix.slice(0, -1) : config.prefix;
+    onSelectSport?.(sportId);
+    document.getElementById('main-content-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const hex = config.color;
 
   return (
@@ -179,7 +184,7 @@ function SportBlock({ section }: { section: SportSection }) {
           <p className="text-[10px] text-[#94A3B8]/40 font-medium mt-0.5 hidden sm:block truncate max-w-[240px]">{label}</p>
         </div>
         <div className="flex-1 h-px bg-gradient-to-r from-[#253241] to-transparent" />
-        <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors shrink-0">
+        <button onClick={handleViewAll} className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors shrink-0">
           View All <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -217,7 +222,7 @@ function SportBlock({ section }: { section: SportSection }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export function AllSportsHighlights() {
+export function AllSportsHighlights({ onSelectSport }: { onSelectSport?: (id: string) => void } = {}) {
   const { allLeagues } = useOddsData();
 
   const sections = useMemo<SportSection[]>(() => {
@@ -254,7 +259,7 @@ export function AllSportsHighlights() {
   return (
     <>
       {sections.map(section => (
-        <SportBlock key={section.config.prefix} section={section} />
+        <SportBlock key={section.config.prefix} section={section} onSelectSport={onSelectSport} />
       ))}
     </>
   );

@@ -616,7 +616,7 @@ function CountdownCard({ entry }: { entry: ComingSoonEntry }) {
   );
 }
 
-function ComingSoonSection({ entries }: { entries: ComingSoonEntry[] }) {
+function ComingSoonSection({ entries, onViewAll }: { entries: ComingSoonEntry[]; onViewAll?: () => void }) {
   if (entries.length === 0) return null;
   return (
     <div className="mb-5">
@@ -628,7 +628,7 @@ function ComingSoonSection({ entries }: { entries: ComingSoonEntry[] }) {
           </div>
           <p className="text-[9.5px] text-[#94A3B8]/40 mt-0.5">Don't miss these upcoming matches</p>
         </div>
-        <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8]/70 hover:text-[#38BDF8] transition-colors">
+        <button onClick={onViewAll} className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8]/70 hover:text-[#38BDF8] transition-colors">
           View All <ChevronRight className="h-3 w-3" />
         </button>
       </div>
@@ -646,7 +646,7 @@ function ComingSoonSection({ entries }: { entries: ComingSoonEntry[] }) {
 // Main export
 // ══════════════════════════════════════════════════════════════════════════════
 
-export function SportHighlights({ onSelectSport }: { onSelectSport?: (id: string) => void } = {}) {
+export function SportHighlights({ onSelectSport, onComingSoonViewAll }: { onSelectSport?: (id: string) => void; onComingSoonViewAll?: () => void } = {}) {
   const { allLeagues } = useOddsData();
 
   const { featured, trending, panels, comingSoon } = useMemo(() => {
@@ -731,7 +731,7 @@ export function SportHighlights({ onSelectSport }: { onSelectSport?: (id: string
       <FeaturedStrip     entries={featured}                       />
       <TrendingRail      pills={trending}                         />
       <SportPanelGrid    panels={panels} onSelectSport={onSelectSport} />
-      <ComingSoonSection entries={comingSoon}                     />
+      <ComingSoonSection entries={comingSoon} onViewAll={onComingSoonViewAll} />
     </div>
   );
 }

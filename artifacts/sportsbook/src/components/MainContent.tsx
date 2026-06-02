@@ -204,6 +204,15 @@ export function MainContent({
   const [depositOpen, setDepositOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  const scrollToLeagueList = useCallback(() => {
+    const container = document.getElementById('main-content-scroll');
+    const list      = document.getElementById('league-list');
+    if (container && list) {
+      const top = list.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+      container.scrollTo({ top, behavior: 'smooth' });
+    }
+  }, []);
+
   // Real + mock leagues from global context (also powers MatchDetail page)
   const {
     allLeagues,
@@ -649,17 +658,17 @@ export function MainContent({
               )}
               {showFeatured && hasRealData && <TopMatchesBanner leagues={realLeagues} />}
               {showFeatured && <EuropaLeagueFinal />}
-              {showFeatured && <SportHighlights onSelectSport={onSelectSport} />}
+              {showFeatured && <SportHighlights onSelectSport={onSelectSport} onComingSoonViewAll={() => { setDateFilter("all"); scrollToLeagueList(); }} />}
               {!search.trim() && selectedSportId === "soccer" && (
-                <SoccerHighlights />
+                <SoccerHighlights onViewAll={scrollToLeagueList} />
               )}
               {!search.trim() && selectedSportId === "ucl-final" && (
                 <EuropaLeagueFinal />
               )}
               {!search.trim() && selectedSportId === "tennis" && (
-                <TennisHighlights />
+                <TennisHighlights onViewAll={scrollToLeagueList} />
               )}
-              {!search.trim() && selectedSportId === "nba" && <NBAHighlights />}
+              {!search.trim() && selectedSportId === "nba" && <NBAHighlights onViewAll={scrollToLeagueList} />}
 
               {/* Live heading */}
               {dateFilter === "today" && liveCount > 0 && (
@@ -691,7 +700,7 @@ export function MainContent({
                 </div>
               )}
 
-              <div className="space-y-2.5">
+              <div id="league-list" className="space-y-2.5">
                 {filteredLeagues.length > 0 ? (
                   filteredLeagues.map((league) => (
                     <div key={league.id}>
