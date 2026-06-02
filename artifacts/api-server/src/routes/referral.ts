@@ -123,49 +123,32 @@ router.post("/referral/commissions/claim", authenticate, async (req, res): Promi
 });
 
 // ── GET /referral/network ──────────────────────────────────────────────────────
+// With the multi-tier row model every referred user has explicit rows in
+// referrals for each tier (referrer_id=A, tier=1/2/3).  Query each tier
+// directly — no chain-traversal needed, no risk of inflated counts.
 router.get("/referral/network", authenticate, async (req, res): Promise<void> => {
   const userId = req.user!.userId;
 
-  const tier1 = await db.select({
+  const cols = {
     referralId: referralsTable.id,
     userId: usersTable.id,
     username: usersTable.username,
     email: usersTable.email,
     walletAddress: usersTable.walletAddress,
     createdAt: referralsTable.createdAt,
-  }).from(referralsTable)
-    .innerJoin(usersTable, eq(referralsTable.referredId, usersTable.id))
-    .where(eq(referralsTable.referrerId, userId));
+  };
 
-  const tier1Ids = tier1.map(r => r.userId);
-  let tier2: typeof tier1 = [];
-  if (tier1Ids.length > 0) {
-    tier2 = await db.select({
-      referralId: referralsTable.id,
-      userId: usersTable.id,
-      username: usersTable.username,
-      email: usersTable.email,
-      walletAddress: usersTable.walletAddress,
-      createdAt: referralsTable.createdAt,
-    }).from(referralsTable)
+  const [tier1, tier2, tier3] = await Promise.all([
+    db.select(cols).from(referralsTable)
       .innerJoin(usersTable, eq(referralsTable.referredId, usersTable.id))
-      .where(inArray(referralsTable.referrerId, tier1Ids));
-  }
-
-  const tier2Ids = tier2.map(r => r.userId);
-  let tier3: typeof tier1 = [];
-  if (tier2Ids.length > 0) {
-    tier3 = await db.select({
-      referralId: referralsTable.id,
-      userId: usersTable.id,
-      username: usersTable.username,
-      email: usersTable.email,
-      walletAddress: usersTable.walletAddress,
-      createdAt: referralsTable.createdAt,
-    }).from(referralsTable)
+      .where(and(eq(referralsTable.referrerId, userId), eq(referralsTable.tier, 1))),
+    db.select(cols).from(referralsTable)
       .innerJoin(usersTable, eq(referralsTable.referredId, usersTable.id))
-      .where(inArray(referralsTable.referrerId, tier2Ids));
-  }
+      .where(and(eq(referralsTable.referrerId, userId), eq(referralsTable.tier, 2))),
+    db.select(cols).from(referralsTable)
+      .innerJoin(usersTable, eq(referralsTable.referredId, usersTable.id))
+      .where(and(eq(referralsTable.referrerId, userId), eq(referralsTable.tier, 3))),
+  ]);
 
   const fmt = (r: typeof tier1[0]) => ({
     referralId: r.referralId,
