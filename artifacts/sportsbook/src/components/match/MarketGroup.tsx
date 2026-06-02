@@ -144,7 +144,8 @@ function WideLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam
           {market.name}
         </p>
       )}
-      <div className={cn('grid gap-2', count === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+      {/* 2 selections → 2-col always; 3 selections → 2-col on mobile, 3-col on sm+ */}
+      <div className={cn('grid gap-2', count === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1.5">
             <span className="text-[10px] text-[#94A3B8]/60 font-medium leading-none truncate max-w-full px-1 text-center">
@@ -200,7 +201,8 @@ function CorrectScoreLayout({ market, matchId, matchName, leagueName, sportKey, 
       <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 mb-3">
         {market.name}
       </p>
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2">
+      {/* 2-col on xs, 3-col on sm, 4-col on md+ for dense score grids */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-2">
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1">
             <span className="text-[10px] text-[#94A3B8]/50 leading-none">{sel.shortName}</span>

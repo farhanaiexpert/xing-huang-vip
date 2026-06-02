@@ -366,7 +366,7 @@ export function MatchDetail() {
       </div>
 
       {/* ── Mobile Bet Slip FAB — sits above the mobile nav bar (h-14 = 56px) ── */}
-      <div className="xl:hidden fixed right-4 z-50" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="xl:hidden fixed right-4 z-50" style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
         <Drawer>
           <DrawerTrigger asChild>
             <button
