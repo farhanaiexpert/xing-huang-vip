@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Lock } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { toast } from 'sonner';
-import { useOddsSimulation, getMovement, getOddsDelta } from '../hooks/useOddsSimulation';
+import { useOddsSimulation } from '../hooks/useOddsSimulation';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { formatOdds } from '../lib/oddsFormat';
 import { playOddsAdd, playOddsRemove } from '../lib/oddsSound';
@@ -41,41 +41,31 @@ export function OddsButton({
   sportKey, sportId, kickoffTime, commenceTime, homeTeam, awayTeam, point,
 }: OddsButtonProps) {
   const { addSelection, removeSelection, hasSelection, updateSelectionOdds } = useBetSlip();
-  const { tick, suspendedMarketIds } = useOddsSimulation();
+  const { suspendedMarketIds } = useOddsSimulation();
   const [isPulsing,  setIsPulsing]  = useState(false);
   const [flashDir,   setFlashDir]   = useState<'up' | 'down' | null>(null);
   const prevOddsRef = useRef<number | null>(null);
   const { format } = useOddsFormat();
 
-  const selectionId  = `${marketId}-${selectionType}`;
-  const isSelected   = hasSelection(selectionId);
-  const isSuspended  = suspendedMarketIds.has(marketId);
+  const selectionId = `${marketId}-${selectionType}`;
+  const isSelected  = hasSelection(selectionId);
+  const isSuspended = suspendedMarketIds.has(marketId);
 
-  // Live odds simulation
-  const movement    = isLive ? getMovement(selectionId, tick) : 'stable';
-  const delta       = isLive ? getOddsDelta(selectionId, tick) : 0;
-  const displayOdds = Math.max(1.01, odds + delta);
-
-  // Flash the number whenever displayOdds actually changes;
-  // also notify useBetSlip so it can detect drift for in-slip selections.
+  // Flash the number whenever the real odds prop changes (e.g. after a cache refresh).
+  // Also notify useBetSlip so it can detect drift for in-slip selections.
   useEffect(() => {
-    if (!isLive) return undefined;
     const prev = prevOddsRef.current;
-    if (prev !== null && prev !== displayOdds) {
-      const dir = displayOdds > prev ? 'up' : 'down';
+    if (prev !== null && prev !== odds) {
+      const dir = odds > prev ? 'up' : 'down';
       setFlashDir(dir);
       const t = setTimeout(() => setFlashDir(null), 700);
-      if (isSelected) updateSelectionOdds(selectionId, displayOdds);
+      if (isSelected) updateSelectionOdds(selectionId, odds);
+      prevOddsRef.current = odds;
       return () => clearTimeout(t);
     }
-    prevOddsRef.current = displayOdds;
+    prevOddsRef.current = odds;
     return undefined;
-  }, [displayOdds, isLive, isSelected, selectionId, updateSelectionOdds]);
-
-  // Sync ref after flash resolves
-  useEffect(() => {
-    prevOddsRef.current = displayOdds;
-  }, [displayOdds]);
+  }, [odds, isSelected, selectionId, updateSelectionOdds]);
 
   if (!odds) return <div className={cn('h-11 sm:h-9 w-[52px] rounded-lg', className)} />;
 
@@ -102,33 +92,30 @@ export function OddsButton({
       addSelection({
         id: selectionId, marketId, matchId,
         matchName, leagueName, marketName,
-        selectionType, selectionName, odds: displayOdds,
+        selectionType, selectionName, odds,
         sportKey,
         sportId,
         kickoffTime: isLive ? undefined : kickoffTime,
-        commenceTime: commenceTime,
+        commenceTime,
         homeTeam,
         awayTeam,
         point,
       });
       setIsPulsing(true);
       setTimeout(() => setIsPulsing(false), 280);
-      toast(`${selectionName} @ ${displayOdds.toFixed(2)} added to slip`, { duration: 2000 });
+      toast(`${selectionName} @ ${odds.toFixed(2)} added to slip`, { duration: 2000 });
     }
   };
 
-  // Movement colour tokens (for border / shadow on stable state)
-  const movBorder = movement === 'up'   ? 'border-[#22C55E]/50'
-                  : movement === 'down' ? 'border-[#EF4444]/50'
-                  : '';
-  const movShadow = movement === 'up'   ? 'shadow-[0_0_8px_rgba(34,197,94,0.3)]'
-                  : movement === 'down' ? 'shadow-[0_0_8px_rgba(239,68,68,0.25)]'
-                  : '';
-
-  // Flash animation style applied to the odds number span
+  // Flash animation applied to the odds number on real price changes
   const flashStyle: React.CSSProperties = flashDir
     ? { animation: `${flashDir === 'up' ? 'oddsFlashUp' : 'oddsFlashDown'} 0.65s ease-out forwards` }
     : {};
+
+  // Border/shadow tint while flash is active
+  const flashBorder = flashDir === 'up'   ? 'border-[#22C55E]/50 shadow-[0_0_8px_rgba(34,197,94,0.3)]'
+                    : flashDir === 'down' ? 'border-[#EF4444]/50 shadow-[0_0_8px_rgba(239,68,68,0.25)]'
+                    : '';
 
   return (
     <button
@@ -146,7 +133,7 @@ export function OddsButton({
           : [
               'bg-[#0B1220] text-[#FACC15]',
               'border',
-              movement !== 'stable' ? `${movBorder} ${movShadow}` : 'border-[#2A3A52]',
+              flashBorder || 'border-[#2A3A52]',
               'hover:bg-[#18212B] hover:border-[#38BDF8]/40',
               'hover:shadow-[0_0_10px_rgba(56,189,248,0.12)]',
               'hover:scale-[1.04]',
@@ -155,15 +142,15 @@ export function OddsButton({
         className
       )}
     >
-      {/* Movement flash bar at top of button */}
-      {!isSelected && movement !== 'stable' && (
+      {/* Flash bar at top of button while price is moving */}
+      {!isSelected && flashDir && (
         <div className={cn(
           'absolute top-0 left-0 right-0 h-[2px] rounded-t',
-          movement === 'up' ? 'bg-[#22C55E]' : 'bg-[#EF4444]'
+          flashDir === 'up' ? 'bg-[#22C55E]' : 'bg-[#EF4444]'
         )} />
       )}
 
-      {/* Odds value — animated flash on change */}
+      {/* Odds value — animated flash on real price change */}
       <span
         style={isSelected ? undefined : flashStyle}
         className={cn(
@@ -172,16 +159,16 @@ export function OddsButton({
           isSelected && 'text-[#0B0F14]',
         )}
       >
-        {formatOdds(displayOdds, format)}
+        {formatOdds(odds, format)}
       </span>
 
-      {/* Tiny movement arrow below number (only when NOT flashing) */}
-      {!isSelected && movement !== 'stable' && !flashDir && (
+      {/* Tiny direction arrow — shown while flashing, not when selected */}
+      {!isSelected && flashDir && (
         <span className={cn(
           'text-[7px] font-bold leading-none mt-0.5',
-          movement === 'up' ? 'text-[#22C55E]' : 'text-[#EF4444]'
+          flashDir === 'up' ? 'text-[#22C55E]' : 'text-[#EF4444]'
         )}>
-          {movement === 'up' ? '▲' : '▼'}
+          {flashDir === 'up' ? '▲' : '▼'}
         </span>
       )}
     </button>

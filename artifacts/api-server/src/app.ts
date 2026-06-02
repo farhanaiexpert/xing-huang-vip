@@ -24,10 +24,16 @@ app.use(cors());
 app.use(express.json());
 
 const BASE = process.env.BASE_PATH ?? "/api";
-app.use(BASE, apiRouter);
 
-app.get("/api/health", (_req, res) => {
+// Public health-check — must be registered BEFORE apiRouter because the
+// admin catch-all (router.use(authenticate, requireAdmin)) would 401 it otherwise.
+app.get(`${BASE}/health`, (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+app.get(`${BASE}/healthz`, (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.use(BASE, apiRouter);
 
 export default app;
