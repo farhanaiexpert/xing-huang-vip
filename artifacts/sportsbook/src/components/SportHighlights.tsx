@@ -143,17 +143,15 @@ function FeaturedCard({ entry }: { entry: FeaturedEntry }) {
       }} />
 
       <div className="p-4">
-        {/* Row 1: FEATURED badge + time/LIVE */}
+        {/* Row 1: league name + time/LIVE */}
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5">
-            <Star className="h-2.5 w-2.5" style={{ color: bucket.color }} />
-            <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full"
-              style={{ background: `${bucket.color}15`, color: bucket.color, border: `1px solid ${bucket.color}28` }}>
-              FEATURED
-            </span>
+          <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
+            <span className="text-[13px] leading-none shrink-0">{bucket.emoji}</span>
+            <p className="text-[9px] uppercase tracking-widest truncate font-semibold" style={{ color: `${bucket.color}70` }}>
+              {league.name}
+            </p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[15px] leading-none">{bucket.emoji}</span>
+          <div className="flex items-center gap-1.5 shrink-0">
             {match.isLive ? (
               <span className="flex items-center gap-0.5 text-[9px] font-black text-[#EF4444]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" /> LIVE
@@ -164,11 +162,6 @@ function FeaturedCard({ entry }: { entry: FeaturedEntry }) {
             )}
           </div>
         </div>
-
-        {/* League */}
-        <p className="text-[9px] uppercase tracking-widest mb-2.5 truncate" style={{ color: `${bucket.color}60` }}>
-          {league.name}
-        </p>
 
         {/* Teams */}
         <div className="flex flex-col gap-2 mb-3.5">
@@ -231,9 +224,6 @@ function FeaturedStrip({ entries }: { entries: FeaturedEntry[] }) {
           <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">Featured</span>
           <span className="text-[10px] text-[#94A3B8]/40">Top picks right now</span>
         </div>
-        <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8]/70 hover:text-[#38BDF8] transition-colors">
-          View All <ChevronRight className="h-3 w-3" />
-        </button>
       </div>
       <ScrollArea className="w-full">
         <div className="flex gap-3 w-max pb-2">
@@ -452,7 +442,7 @@ function SportPanelGrid({ panels, onSelectSport }: { panels: SportPanelData[]; o
         <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">All Sports</span>
         <span className="text-[10px] text-[#94A3B8]/40">{panels.length} sports · live odds</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
         {panels.map(p => <SportPanel key={p.bucket.key} data={p} onSelectSport={onSelectSport} />)}
       </div>
     </div>
@@ -554,9 +544,6 @@ function ComingSoonSection({ entries }: { entries: ComingSoonEntry[] }) {
           </div>
           <p className="text-[9.5px] text-[#94A3B8]/40 mt-0.5">Don't miss these upcoming matches</p>
         </div>
-        <button className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8]/70 hover:text-[#38BDF8] transition-colors">
-          View All <ChevronRight className="h-3 w-3" />
-        </button>
       </div>
       <ScrollArea className="w-full">
         <div className="flex gap-3 w-max pb-2 pt-3">

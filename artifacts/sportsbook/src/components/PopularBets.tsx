@@ -180,9 +180,9 @@ export function PopularBets() {
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#94A3B8]/60">Popular Bets</h2>
           <div className="h-px w-8 bg-[#253241]" />
         </div>
-        <button className="text-[11px] font-medium text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors">
+        <a href="/promotions" className="text-[11px] font-medium text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors">
           View All →
-        </button>
+        </a>
       </div>
 
       <ScrollArea className="w-full">

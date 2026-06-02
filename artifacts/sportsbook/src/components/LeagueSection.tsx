@@ -9,7 +9,7 @@ export function LeagueSection({ league }: { league: League }) {
 
   const isFootball = league.sportId === 'sp_soccer' || league.sportId === 'soccer';
   const liveCount  = league.matches.filter(m => m.isLive).length;
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(liveCount > 0);
 
   return (
     <div className="rounded-xl overflow-hidden border border-[#253241] bg-[#121821]">
