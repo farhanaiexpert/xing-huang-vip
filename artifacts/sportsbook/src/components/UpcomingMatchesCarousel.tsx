@@ -112,7 +112,10 @@ function MatchCard({ match, league }: MatchCardProps) {
         selectionType: type,
         selectionName: name,
         odds,
-        sportKey: match.sportKey ?? match.sportId ?? '',
+        sportKey:     match.sportKey ?? match.sportId ?? '',
+        homeTeam:     match.team1,
+        awayTeam:     match.team2 ?? '',
+        commenceTime: match.commenceIso,
       });
     }
   }

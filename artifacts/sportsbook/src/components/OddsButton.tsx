@@ -23,12 +23,20 @@ interface OddsButtonProps {
   sportKey?: string;
   /** Internal sport category (legacy, prefer sportKey) */
   sportId?: string;
+  /** Formatted kickoff label, e.g. "Today, 20:00" — display only */
   kickoffTime?: string;
+  /** ISO 8601 match start — sent to API for settlement timing */
+  commenceTime?: string;
+  /** Home team name — sent to API for settlement */
+  homeTeam?: string;
+  /** Away team name — sent to API for settlement */
+  awayTeam?: string;
 }
 
 export function OddsButton({
   matchId, marketId, matchName, leagueName, marketName,
-  selectionType, selectionName, odds, isLive = false, className, sportKey, sportId, kickoffTime,
+  selectionType, selectionName, odds, isLive = false, className,
+  sportKey, sportId, kickoffTime, commenceTime, homeTeam, awayTeam,
 }: OddsButtonProps) {
   const { addSelection, removeSelection, hasSelection, updateSelectionOdds } = useBetSlip();
   const { tick, suspendedMarketIds } = useOddsSimulation();
@@ -96,6 +104,9 @@ export function OddsButton({
         sportKey,
         sportId,
         kickoffTime: isLive ? undefined : kickoffTime,
+        commenceTime: isLive ? undefined : commenceTime,
+        homeTeam,
+        awayTeam,
       });
       setIsPulsing(true);
       setTimeout(() => setIsPulsing(false), 280);

@@ -595,7 +595,11 @@ async function settleBetsForEvent(
  * API-Football returned a completed result.
  * The bet's selections stay 'open' so an admin can settle them manually.
  */
-async function markBetsAsManualReview(eventId: string, eventName: string): Promise<number> {
+async function markBetsAsManualReview(
+  eventId: string,
+  eventName: string,
+  commenceTime?: Date | null,
+): Promise<number> {
   const affected = await db.execute(sql`
     SELECT DISTINCT bet_id FROM bet_selections
     WHERE event_id = ${eventId} AND status = 'open'
@@ -611,6 +615,19 @@ async function markBetsAsManualReview(eventId: string, eventName: string): Promi
     count++;
   }
   if (count > 0) {
+    await db.insert(settlementLogTable).values({
+      eventId,
+      eventName,
+      sport:       "",
+      result:      "manual_review",
+      commenceTime: commenceTime ?? null,
+      betsSettled:  count,
+      betsWon:      0,
+      betsLost:     0,
+      betsVoided:   0,
+      totalPayout:  "0",
+      source:       "manual_review",
+    });
     logger.warn(
       { eventId, eventName, betsMarked: count, reviewAfterHours: AUTO_SETTLEMENT_REVIEW_HOURS },
       "Settlement worker: marked manual_review — no result after commence_time cutoff",
@@ -861,13 +878,40 @@ async function processSettlement(): Promise<void> {
 
     if (unsettledIds.size === 0) continue;
 
-    // ── Step 2: API-Football fallback removed ─────────────────────────────────
-    // API-Football uses team-name matching to identify fixtures in its own
-    // database (it has no Odds API event IDs), which can mis-associate similar
-    // fixtures between the same teams played on different days.
-    // Settlement is gated to Odds-API-sourced results only so event identity
-    // is always exact-ID-based.  Soccer matches without an Odds API result
-    // remain open until the 48h manual_review escalation fires in Step 3.
+    // ── Step 2: API-Football fallback (soccer only) ───────────────────────────
+    // Secondary source: API-Football uses team-name + commence-date matching.
+    // We only run this for soccer sports and only when events have stored
+    // homeTeam/awayTeam from the bet_selections table.
+    if (unsettledIds.size > 0) {
+      const soccerKey = apiKeys.find(k => k.startsWith("soccer_")) ?? sport;
+      const openForFootball = startedEvents
+        .filter(e => unsettledIds.has(e.eventId) && (e.homeTeam || e.awayTeam))
+        .map(e => ({
+          id:          e.eventId,
+          homeTeam:    e.homeTeam,
+          awayTeam:    e.awayTeam,
+          commenceDate: e.commenceTime ? e.commenceTime.toISOString().slice(0, 10) : undefined,
+        }));
+
+      if (openForFootball.length > 0) {
+        try {
+          const afResults = await fetchCompletedScoresApiFootball(soccerKey, openForFootball);
+          for (const event of afResults) {
+            if (!unsettledIds.has(event.id)) continue;
+            try {
+              const meta = startedEvents.find(e => e.eventId === event.id);
+              const n = await processEvent(event, sport, "api_football", meta?.commenceTime);
+              grandTotal += n;
+              unsettledIds.delete(event.id);
+            } catch (err) {
+              logger.error({ err, eventId: event.id }, "Settlement worker: API-Football event error");
+            }
+          }
+        } catch (err) {
+          logger.warn({ err, sport }, "Settlement worker: API-Football fetch error");
+        }
+      }
+    }
 
     // ── Step 3: Manual review — events ≥ 48h past commence_time with no result ─
     const toReview = startedEvents.filter(e => {
@@ -878,7 +922,7 @@ async function processSettlement(): Promise<void> {
 
     for (const ev of toReview) {
       try {
-        const n = await markBetsAsManualReview(ev.eventId, ev.eventName);
+        const n = await markBetsAsManualReview(ev.eventId, ev.eventName, ev.commenceTime);
         if (n > 0) grandTotal += n;
       } catch (err) {
         logger.error({ err, eventId: ev.eventId }, "Settlement worker: manual_review escalation error");

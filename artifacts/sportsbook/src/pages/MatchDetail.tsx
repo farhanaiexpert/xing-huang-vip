@@ -342,6 +342,9 @@ export function MatchDetail() {
                     isFeatured={idx === 0}
                     groupIndex={idx}
                     sportKey={sportKey}
+                    homeTeam={match.homeTeamName}
+                    awayTeam={match.awayTeamName}
+                    commenceTime={match.startTime}
                   />
                 </div>
               ))}
