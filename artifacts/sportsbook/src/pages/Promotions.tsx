@@ -200,14 +200,19 @@ function PromoCard({
   onBet,
   onInfo,
   onRefer,
+  alreadyClaimed,
 }: {
   promo: typeof PROMOS[0];
   onClaim: () => void;
   onBet: () => void;
   onInfo: () => void;
   onRefer: () => void;
+  alreadyClaimed: boolean;
 }) {
+  const isClaimed = promo.ctaAction === 'claim' && alreadyClaimed;
+
   function handleCta() {
+    if (isClaimed) return;
     if (promo.ctaAction === 'claim') onClaim();
     else if (promo.ctaAction === 'bet')   onBet();
     else if (promo.ctaAction === 'info')  onInfo();
@@ -264,14 +269,21 @@ function PromoCard({
           ) : <div />}
           <button
             onClick={handleCta}
-            className="flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all duration-150 hover:opacity-80 active:scale-95"
+            disabled={isClaimed}
+            className={cn(
+              'flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all duration-150',
+              isClaimed ? 'cursor-default opacity-70' : 'hover:opacity-80 active:scale-95 cursor-pointer',
+            )}
             style={{
-              background: `${promo.accent}18`,
-              color: promo.accent,
-              border: `1px solid ${promo.accent}35`,
+              background: isClaimed ? 'rgba(0,223,169,0.10)' : `${promo.accent}18`,
+              color: isClaimed ? '#00DFA9' : promo.accent,
+              border: isClaimed ? '1px solid rgba(0,223,169,0.25)' : `1px solid ${promo.accent}35`,
             }}
           >
-            {promo.cta} <ChevronRight className="h-3 w-3" />
+            {isClaimed
+              ? <><CheckCircle2 className="h-3 w-3" /> Claimed</>
+              : <>{promo.cta} <ChevronRight className="h-3 w-3" /></>
+            }
           </button>
         </div>
       </div>
@@ -521,6 +533,7 @@ export function Promotions() {
                 onBet={handleBet}
                 onInfo={handleInfo}
                 onRefer={handleRefer}
+                alreadyClaimed={alreadyClaimed}
               />
             ))}
           </div>
