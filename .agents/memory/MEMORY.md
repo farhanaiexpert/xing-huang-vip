@@ -1,4 +1,4 @@
-- [Settlement dual-source](settlement-dual-source.md) — Odds API primary + API-Football fallback + 12h auto-void; cron runs every 1 min with isRunning mutex.
+- [Settlement dual-source](settlement-dual-source.md) — Odds API primary + API-Football fallback + 48h manual_review (not auto-void); timing from commence_time not placement; cron every 1 min with isRunning mutex.
 - [TON crypto Vite shim](ton-crypto-vite-shim.md) — @ton/core needs @ton/crypto peer dep (sha256_sync); create a browser shim + alias in vite.config.ts.
 - [TON deposit verifier fail-closed](ton-verifier-fail-closed.md) — isUsdtJetton and destinationMatches must return false (not true) when TONapi metadata is absent.
 - [Settlement market_type mismatch](settlement-market-type.md) — frontend stores display names ("Match Result") but worker checked API keys ("h2h"); always normalise before branching.

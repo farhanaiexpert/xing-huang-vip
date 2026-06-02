@@ -415,6 +415,20 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v22 skipped");
   }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE bet_selections
+        ADD COLUMN IF NOT EXISTS commence_time  TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS home_team      TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS away_team      TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS sport_key      TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS point          NUMERIC(10, 4)
+    `);
+    logger.info("DB migration v23 applied (bet_selections: commence_time, home_team, away_team, sport_key, point)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v23 skipped");
+  }
 }
 
 runMigrations().then(() => {

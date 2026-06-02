@@ -28,6 +28,11 @@ export const betSelectionsTable = pgTable("bet_selections", {
   status: text("status").notNull().default("open"),
   isLive: boolean("is_live").notNull().default(false),
   scoreAtPlacement: text("score_at_placement"),
+  commenceTime: timestamp("commence_time", { withTimezone: true }),
+  homeTeam: text("home_team").notNull().default(""),
+  awayTeam: text("away_team").notNull().default(""),
+  sportKey: text("sport_key").notNull().default(""),
+  point: numeric("point", { precision: 10, scale: 4 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

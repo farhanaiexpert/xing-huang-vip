@@ -1,12 +1,24 @@
 /**
- * Auto-Settlement Worker  (v2)
+ * Auto-Settlement Worker  (v3)
  *
  * Dual-source settlement:
  *  1. The Odds API  /v4/sports/{sport}/scores  — primary, all sports
  *  2. API-Football  /fixtures?date=…&status=FT — fallback, soccer only
  *
- * Auto-void: open selections on events whose earliest bet is > AUTO_VOID_HOURS
- * old and neither source returned a result → stake is refunded in full.
+ * Settlement timing: driven by match commence_time stored at bet placement,
+ * NOT by the bet's created_at timestamp.
+ *
+ * Decision tree per event (evaluated each cron tick):
+ *  1. commence_time in future (or null for legacy rows) → skip, keep open
+ *  2. commence_time in past → attempt settlement from both sources
+ *  3. Result found (Odds API exact ID, api_live_ prefix, or API-Football) → settle
+ *  4. No result found AND < 48h after commence_time → keep open, retry next tick
+ *  5. No result found AND ≥ 48h after commence_time → mark bet as manual_review
+ *
+ * Event identity: always matched by eventId (exact).
+ *  - api_live_XXXX synthetic IDs: strip prefix, look up real Odds API UUID.
+ *  - Fuzzy team-name event matching has been REMOVED — team names are only used
+ *    for score-side mapping after a match has been identified by ID.
  *
  * Idempotent: only processes bet_selections with status = 'open'.
  */
@@ -34,15 +46,15 @@ import {
 const ODDS_API_KEY  = process.env.ODDS_API_KEY;
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
 
-/** Bets older than this with no API result are voided and stake refunded */
-const AUTO_VOID_HOURS = 12;
+/**
+ * Bets with no result from any source this many hours after commence_time
+ * are escalated to manual_review (instead of auto-voided).
+ */
+const AUTO_SETTLEMENT_REVIEW_HOURS = 48;
 
 /**
  * Maps generic / internal sport identifiers to the specific Odds API sport keys
- * needed for the /scores endpoint.  Covers three formats:
- *   1. Generic prefix from sport_key.split('_')[0]  — e.g. "basketball"
- *   2. Internal sp_ IDs                            — e.g. "sp_basketball"
- *   3. Exact Odds API keys (pass-through if already correct)
+ * needed for the /scores endpoint.
  */
 const SPORT_KEY_EXPANSION: Record<string, string[]> = {
   // ── Generic names (sport_key prefix) ──────────────────────────────────────
@@ -93,11 +105,9 @@ const SPORT_KEY_EXPANSION: Record<string, string[]> = {
   sp_mma:               ['mma_mixed_martial_arts'],
   sp_boxing:            ['boxing_boxing'],
   sp_aussie_rules:      ['aussierules_afl'],
-  sp_horse_racing:      [], // Not available in Odds API scores endpoint
+  sp_horse_racing:      [],
 
-  // ── BetsAPI sport_id prefixed keys (e.g. "betsapi_1") ────────────────────
-  // Mapped to the equivalent Odds API sport key lists for score lookups.
-  // Fuzzy team-name matching handles the ID mismatch after scores are fetched.
+  // ── BetsAPI sport_id prefixed keys ────────────────────────────────────────
   betsapi_1:   ['soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
                 'soccer_germany_bundesliga', 'soccer_usa_mls', 'soccer_turkey_super_league',
                 'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato', 'soccer_mexico_ligamx',
@@ -116,21 +126,17 @@ const SPORT_KEY_EXPANSION: Record<string, string[]> = {
   betsapi_16:  ['basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl'],
   betsapi_17:  ['tennis_atp_french_open', 'tennis_wta_french_open', 'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
                 'tennis_atp_us_open', 'tennis_wta_us_open', 'tennis_atp_australian_open', 'tennis_wta_australian_open'],
-  betsapi_18:  [], // Golf — not in Odds API scores endpoint
-  betsapi_19:  [], // Handball — not in Odds API scores endpoint
+  betsapi_18:  [],
+  betsapi_19:  [],
   betsapi_36:  ['aussierules_afl'],
   betsapi_78:  ['rugbyleague_nrl', 'rugbyleague_super_league'],
-  betsapi_91:  [], // Volleyball — not in Odds API scores endpoint
-  betsapi_92:  [], // Table tennis — not in Odds API scores endpoint
-  betsapi_94:  [], // Snooker — not in Odds API scores endpoint
-  betsapi_95:  [], // Darts — not in Odds API scores endpoint
+  betsapi_91:  [],
+  betsapi_92:  [],
+  betsapi_94:  [],
+  betsapi_95:  [],
   betsapi_161: ['mma_mixed_martial_arts'],
 };
 
-/**
- * Common sport keys to try when the stored sport is empty or unknown.
- * Ordered by global betting volume so the most-likely matches are checked first.
- */
 const UNKNOWN_SPORT_FALLBACK: string[] = [
   'soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
   'soccer_germany_bundesliga', 'soccer_usa_mls', 'soccer_ukraine_premier_league',
@@ -149,17 +155,15 @@ const UNKNOWN_SPORT_FALLBACK: string[] = [
   'cricket_ipl', 'cricket_international_t20',
 ];
 
-/** Returns the Odds API sport keys to query for a stored sport identifier */
 function expandSportKey(sport: string): string[] {
   const expansion = SPORT_KEY_EXPANSION[sport];
   if (expansion) return expansion;
-  // Already a valid Odds API key (contains _ and not an sp_ internal ID)
   if (sport && sport.includes('_') && !sport.startsWith('sp_')) return [sport];
-  // Empty or completely unknown sport — try all common keys for fuzzy matching
   return UNKNOWN_SPORT_FALLBACK;
 }
 
-/** Normalize a team name for fuzzy comparison */
+// ─── Team name fuzzy matching (used within mapSelectionOutcome score mapping) ──
+
 function normalizeTeam(name: string): string {
   return name
     .toLowerCase()
@@ -168,20 +172,8 @@ function normalizeTeam(name: string): string {
     .trim();
 }
 
-/** Returns true if two team names refer to the same team */
-function teamsMatch(betTeam: string, apiTeam: string): boolean {
-  const a = normalizeTeam(betTeam);
-  const b = normalizeTeam(apiTeam);
-  if (a === b) return true;
-  if (a.includes(b) || b.includes(a)) return true;
-  const aWords = a.split(' ').filter(w => w.length > 2);
-  const bWords = b.split(' ').filter(w => w.length > 2);
-  if (aWords.length === 0 || bWords.length === 0) return false;
-  const shared = aWords.filter(w => bWords.includes(w));
-  return shared.length > 0 && shared.length >= Math.ceil(Math.min(aWords.length, bWords.length) * 0.6);
-}
+// ─── Mutex ────────────────────────────────────────────────────────────────────
 
-/** Mutex — skip tick if previous run is still in progress */
 let isRunning = false;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -195,12 +187,12 @@ interface EventOutcome {
 }
 
 interface OpenEventMeta {
-  eventId:     string;
-  eventName:   string;
-  sport:       string;
-  homeTeam:    string;
-  awayTeam:    string;
-  earliestBet: Date;
+  eventId:      string;
+  eventName:    string;
+  sport:        string;
+  homeTeam:     string;   // from bet_selections.home_team (stored at placement)
+  awayTeam:     string;   // from bet_selections.away_team (stored at placement)
+  commenceTime: Date | null; // from bet_selections.commence_time (stored at placement)
 }
 
 // ─── Odds API score fetching ──────────────────────────────────────────────────
@@ -226,7 +218,7 @@ async function fetchCompletedScoresOddsApi(sportKey: string): Promise<CompletedE
 
 // ─── Result determination ─────────────────────────────────────────────────────
 
-function determineMatchOutcome(event: CompletedEvent): MatchOutcome {
+export function determineMatchOutcome(event: CompletedEvent): MatchOutcome {
   if (!event.scores || event.scores.length < 2) return "void";
   const homeEntry = event.scores.find(s => s.name === event.home_team);
   const awayEntry = event.scores.find(s => s.name === event.away_team);
@@ -252,10 +244,9 @@ function getNumericScores(event: CompletedEvent): { home: number; away: number }
 
 /**
  * Normalize the raw market_type string stored in bet_selections
- * (which comes from the frontend's display name) to a canonical key
- * the settlement worker can branch on.
+ * (display name from the frontend) to a canonical settlement key.
  */
-function normalizeMarketType(mt: string): string {
+export function normalizeMarketType(mt: string): string {
   const lower = mt.toLowerCase().trim();
   if (["h2h", "match result", "1x2", "match winner", "moneyline", "winner"].includes(lower))
     return "h2h";
@@ -268,25 +259,40 @@ function normalizeMarketType(mt: string): string {
   return lower;
 }
 
-function mapSelectionOutcome(
-  selection: string,
-  outcome:   MatchOutcome,
-  homeTeam:  string,
-  awayTeam:  string,
+/**
+ * Determine whether a bet selection won, lost, or should be voided.
+ *
+ * @param storedHome - team name as stored at bet placement (optional, improves matching)
+ * @param storedAway - team name as stored at bet placement (optional, improves matching)
+ */
+export function mapSelectionOutcome(
+  selection:  string,
+  outcome:    MatchOutcome,
+  homeTeam:   string,
+  awayTeam:   string,
+  storedHome?: string,
+  storedAway?: string,
 ): "won" | "lost" | "void" {
   if (outcome === "void") return "void";
   const sel  = selection.toLowerCase().trim();
   const home = homeTeam.toLowerCase().trim();
   const away = awayTeam.toLowerCase().trim();
+  const sh   = storedHome ? normalizeTeam(storedHome) : "";
+  const sa   = storedAway ? normalizeTeam(storedAway) : "";
+
+  const isHomeAlias = (s: string) =>
+    s === home || (sh && s === sh) || s === "1" || s === "home";
+  const isAwayAlias = (s: string) =>
+    s === away || (sa && s === sa) || s === "2" || s === "away";
 
   if (outcome === "home") {
-    if (sel === home || sel === "1" || sel === "home") return "won";
-    if (sel === away || sel === "2" || sel === "away") return "lost";
+    if (isHomeAlias(sel)) return "won";
+    if (isAwayAlias(sel)) return "lost";
     if (sel === "draw" || sel === "x") return "lost";
   }
   if (outcome === "away") {
-    if (sel === away || sel === "2" || sel === "away") return "won";
-    if (sel === home || sel === "1" || sel === "home") return "lost";
+    if (isAwayAlias(sel)) return "won";
+    if (isHomeAlias(sel)) return "lost";
     if (sel === "draw" || sel === "x") return "lost";
   }
   if (outcome === "draw") {
@@ -294,9 +300,9 @@ function mapSelectionOutcome(
     return "lost";
   }
 
-  // Fuzzy fallback — partial team name word match
-  const homeWords = home.split(" ").filter(w => w.length > 2);
-  const awayWords = away.split(" ").filter(w => w.length > 2);
+  // Fuzzy fallback — partial team name word match (API name + stored name)
+  const homeWords = [...home.split(" "), ...sh.split(" ")].filter(w => w.length > 2);
+  const awayWords = [...away.split(" "), ...sa.split(" ")].filter(w => w.length > 2);
   const selMatchesHome = homeWords.some(w => sel.includes(w));
   const selMatchesAway = awayWords.some(w => sel.includes(w));
 
@@ -312,7 +318,7 @@ function mapSelectionOutcome(
   return "void";
 }
 
-function mapBttsOutcome(
+export function mapBttsOutcome(
   selection: string,
   homeScore: number,
   awayScore: number,
@@ -324,50 +330,80 @@ function mapBttsOutcome(
   return "void";
 }
 
-function mapTotalsOutcome(
-  selection: string,
-  homeScore: number,
-  awayScore: number,
+/**
+ * Settle a totals (over/under) market.
+ * Uses `storedPoint` when available (from bet_selections.point),
+ * otherwise parses the line from the selection label string.
+ */
+export function mapTotalsOutcome(
+  selection:   string,
+  homeScore:   number,
+  awayScore:   number,
+  storedPoint?: number | null,
 ): "won" | "lost" | "void" {
-  const lower = selection.toLowerCase().trim();
   const total = homeScore + awayScore;
-  const overMatch  = lower.match(/^over\s+(\d+(?:\.\d+)?)$/);
-  const underMatch = lower.match(/^under\s+(\d+(?:\.\d+)?)$/);
-  if (overMatch) {
-    const line = parseFloat(overMatch[1]);
-    if (isNaN(line)) return "void";
+  const lower = selection.toLowerCase().trim();
+
+  const line = (() => {
+    if (storedPoint != null && !isNaN(storedPoint)) return storedPoint;
+    const m = lower.match(/(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : null;
+  })();
+
+  if (line == null || isNaN(line)) return "void";
+
+  const isOver  = lower.includes("over");
+  const isUnder = lower.includes("under");
+
+  if (!isOver && !isUnder) return "void";
+
+  if (isOver) {
     if (total > line) return "won";
     if (total < line) return "lost";
     return "void"; // push
   }
-  if (underMatch) {
-    const line = parseFloat(underMatch[1]);
-    if (isNaN(line)) return "void";
-    if (total < line) return "won";
-    if (total > line) return "lost";
-    return "void"; // push
-  }
-  return "void";
+  // isUnder
+  if (total < line) return "won";
+  if (total > line) return "lost";
+  return "void"; // push
 }
 
-function mapSpreadsOutcome(
-  selection: string,
-  homeTeam:  string,
-  awayTeam:  string,
-  homeScore: number,
-  awayScore: number,
+/**
+ * Settle a spreads / handicap market.
+ * Uses `storedPoint` when available, otherwise parses spread from selection label.
+ */
+export function mapSpreadsOutcome(
+  selection:   string,
+  homeTeam:    string,
+  awayTeam:    string,
+  homeScore:   number,
+  awayScore:   number,
+  storedPoint?: number | null,
 ): "won" | "lost" | "void" {
   const lower = selection.toLowerCase().trim();
   const home  = homeTeam.toLowerCase().trim();
   const away  = awayTeam.toLowerCase().trim();
-  const spreadMatch = lower.match(/^(.+?)\s*([+-]\d+(?:\.\d+)?)$/);
-  if (!spreadMatch) return "void";
-  const teamPart = spreadMatch[1].trim();
-  const spread   = parseFloat(spreadMatch[2]);
-  if (isNaN(spread)) return "void";
+
+  let teamPart: string;
+  let spread: number;
+
+  if (storedPoint != null && !isNaN(storedPoint)) {
+    // Extract team part only; sign is encoded in storedPoint
+    const withSign = lower.match(/^(.+?)\s*[+-]\d+(?:\.\d+)?$/);
+    teamPart = withSign ? withSign[1].trim() : lower;
+    spread   = storedPoint;
+  } else {
+    const spreadMatch = lower.match(/^(.+?)\s*([+-]\d+(?:\.\d+)?)$/);
+    if (!spreadMatch) return "void";
+    teamPart = spreadMatch[1].trim();
+    spread   = parseFloat(spreadMatch[2]);
+    if (isNaN(spread)) return "void";
+  }
+
   const isHome = teamPart === home || home.split(" ").some(w => teamPart.includes(w) && w.length > 2);
   const isAway = teamPart === away || away.split(" ").some(w => teamPart.includes(w) && w.length > 2);
   if (!isHome && !isAway) return "void";
+
   const margin = isHome ? homeScore + spread - awayScore : awayScore + spread - homeScore;
   if (margin > 0) return "won";
   if (margin < 0) return "lost";
@@ -479,7 +515,7 @@ async function settleBetsForEvent(
           amount: payout.toFixed(8),
           status: "completed",
           notes:  newStatus === "void"
-            ? `Bet #${betId} auto-voided — stake refunded`
+            ? `Bet #${betId} voided — stake refunded`
             : `Bet #${betId} won — payout ${payout.toFixed(2)} USDT`,
         });
         await tx.execute(sql`
@@ -490,26 +526,50 @@ async function settleBetsForEvent(
       }
 
       // Award loyalty points (1 pt/USDT for singles; 2× for accas)
-      const stakeAmt  = parseFloat(String(bet.stake));
+      const stakeAmt   = parseFloat(String(bet.stake));
       const loyaltyPts = stakeAmt * (bet.type === "accumulator" ? 2 : 1);
       await tx.insert(loyaltyPointsTable).values({
         userId: bet.userId,
         betId,
         points: loyaltyPts.toFixed(2),
         reason: "bet_settled",
-      });
+      }).onConflictDoNothing();
     }
   });
 
   return { settled: totalSettled, won: totalWon, lost: totalLost, voided: totalVoided, payout: totalPayout };
 }
 
-// ─── Parse home / away from "Home Team vs Away Team" event name ───────────────
+// ─── Mark bets as manual_review ───────────────────────────────────────────────
 
-function parseTeams(eventName: string): { homeTeam: string; awayTeam: string } {
-  const parts = eventName.split(/\s+(?:vs\.?|@|-)\s+/i);
-  if (parts.length >= 2) return { homeTeam: parts[0].trim(), awayTeam: parts[1].trim() };
-  return { homeTeam: eventName, awayTeam: eventName }; // fallback: won't match in API-Football
+/**
+ * Escalates all open bets for an event to 'manual_review' status.
+ * Used when 48h have elapsed since commence_time and neither Odds API nor
+ * API-Football returned a completed result.
+ * The bet's selections stay 'open' so an admin can settle them manually.
+ */
+async function markBetsAsManualReview(eventId: string, eventName: string): Promise<number> {
+  const affected = await db.execute(sql`
+    SELECT DISTINCT bet_id FROM bet_selections
+    WHERE event_id = ${eventId} AND status = 'open'
+  `);
+  let count = 0;
+  for (const row of affected.rows as { bet_id: number }[]) {
+    const betId = row.bet_id;
+    const [bet] = await db.select().from(betsTable).where(eq(betsTable.id, betId)).limit(1);
+    if (!bet || bet.status !== "open") continue;
+    await db.update(betsTable)
+      .set({ status: "manual_review" })
+      .where(eq(betsTable.id, betId));
+    count++;
+  }
+  if (count > 0) {
+    logger.warn(
+      { eventId, eventName, betsMarked: count, reviewAfterHours: AUTO_SETTLEMENT_REVIEW_HOURS },
+      "Settlement worker: marked manual_review — no result after commence_time cutoff",
+    );
+  }
+  return count;
 }
 
 // ─── Settle a single event from any source ───────────────────────────────────
@@ -517,12 +577,12 @@ function parseTeams(eventName: string): { homeTeam: string; awayTeam: string } {
 async function processEvent(
   event:  CompletedEvent,
   sport:  string,
-  source: "odds-api" | "api-football" | "auto-void",
+  source: "odds-api" | "api-football",
 ): Promise<number> {
-  const matchOutcome = source === "auto-void" ? "void" : determineMatchOutcome(event);
+  const matchOutcome = determineMatchOutcome(event);
 
   const openSelectionsResult = await db.execute(sql`
-    SELECT DISTINCT market_type, selection
+    SELECT DISTINCT market_type, selection, point, home_team, away_team
     FROM bet_selections
     WHERE event_id = ${event.id} AND status = 'open'
   `);
@@ -531,21 +591,37 @@ async function processEvent(
   const numericScores = getNumericScores(event);
   const outcomes: EventOutcome[] = [];
 
-  for (const row of openSelectionsResult.rows as { market_type: string; selection: string }[]) {
+  for (const row of openSelectionsResult.rows as {
+    market_type: string;
+    selection:   string;
+    point:       string | null;
+    home_team:   string;
+    away_team:   string;
+  }[]) {
     let result: "won" | "lost" | "void";
-    const mt = normalizeMarketType(row.market_type);
-    if (source === "auto-void") {
-      result = "void";
-    } else if (mt === "h2h") {
-      result = mapSelectionOutcome(row.selection, matchOutcome, event.home_team, event.away_team);
+    const mt          = normalizeMarketType(row.market_type);
+    const storedPoint = row.point != null ? parseFloat(row.point) : null;
+    const storedHome  = row.home_team || undefined;
+    const storedAway  = row.away_team || undefined;
+
+    if (mt === "h2h") {
+      result = mapSelectionOutcome(
+        row.selection, matchOutcome,
+        event.home_team, event.away_team,
+        storedHome, storedAway,
+      );
     } else if (mt === "totals") {
-      if (!numericScores) continue; // skip — retry next tick when clean scores arrive
-      result = mapTotalsOutcome(row.selection, numericScores.home, numericScores.away);
+      if (!numericScores) continue;
+      result = mapTotalsOutcome(row.selection, numericScores.home, numericScores.away, storedPoint);
     } else if (mt === "spreads") {
-      if (!numericScores) continue; // skip — retry next tick when clean scores arrive
-      result = mapSpreadsOutcome(row.selection, event.home_team, event.away_team, numericScores.home, numericScores.away);
+      if (!numericScores) continue;
+      result = mapSpreadsOutcome(
+        row.selection, event.home_team, event.away_team,
+        numericScores.home, numericScores.away,
+        storedPoint,
+      );
     } else if (mt === "btts") {
-      if (!numericScores) continue; // skip — retry next tick when clean scores arrive
+      if (!numericScores) continue;
       result = mapBttsOutcome(row.selection, numericScores.home, numericScores.away);
     } else {
       result = "void";
@@ -598,14 +674,20 @@ async function processSettlement(): Promise<void> {
     return;
   }
 
-  // Load all open events with metadata (team names + age)
-  // Note: we include empty-sport events so they can be caught by auto-void
+  const now = new Date();
+  const reviewCutoffMs = AUTO_SETTLEMENT_REVIEW_HOURS * 60 * 60 * 1000;
+
+  // Load all open events with stored team names and commence_time.
+  // Legacy rows (no commence_time) are still included — they skip the
+  // future-match guard and proceed straight to settlement attempts.
   const openResult = await db.execute(sql`
     SELECT
       event_id,
       event_name,
       sport,
-      MIN(created_at) AS earliest_bet
+      MAX(home_team)     AS home_team,
+      MAX(away_team)     AS away_team,
+      MIN(commence_time) AS commence_time
     FROM bet_selections
     WHERE status = 'open' AND event_id != ''
     GROUP BY event_id, event_name, sport
@@ -616,22 +698,19 @@ async function processSettlement(): Promise<void> {
     return;
   }
 
-  // Build metadata map
   const allOpenEvents: OpenEventMeta[] = (openResult.rows as {
-    event_id: string; event_name: string; sport: string; earliest_bet: string;
-  }[]).map(r => {
-    const { homeTeam, awayTeam } = parseTeams(r.event_name);
-    return {
-      eventId:     r.event_id,
-      eventName:   r.event_name,
-      sport:       r.sport,
-      homeTeam,
-      awayTeam,
-      earliestBet: new Date(r.earliest_bet),
-    };
-  });
+    event_id: string; event_name: string; sport: string;
+    home_team: string; away_team: string; commence_time: string | null;
+  }[]).map(r => ({
+    eventId:      r.event_id,
+    eventName:    r.event_name,
+    sport:        r.sport,
+    homeTeam:     r.home_team ?? "",
+    awayTeam:     r.away_team ?? "",
+    commenceTime: r.commence_time ? new Date(r.commence_time) : null,
+  }));
 
-  // Group by sport
+  // Group by sport key
   const bySport = new Map<string, OpenEventMeta[]>();
   for (const ev of allOpenEvents) {
     const list = bySport.get(ev.sport) ?? [];
@@ -639,24 +718,36 @@ async function processSettlement(): Promise<void> {
     bySport.set(ev.sport, list);
   }
 
-  logger.info({ sports: [...bySport.keys()], totalEvents: allOpenEvents.length }, "Settlement worker: run started");
+  logger.info(
+    { sports: [...bySport.keys()], totalEvents: allOpenEvents.length },
+    "Settlement worker: run started",
+  );
 
-  const cutoff = new Date(Date.now() - AUTO_VOID_HOURS * 60 * 60 * 1000);
   let grandTotal = 0;
 
   for (const [sport, events] of bySport) {
-    const unsettledIds = new Set(events.map(e => e.eventId));
+    // ── Step 0: Skip events that haven't started yet ──────────────────────────
+    const startedEvents  = events.filter(ev => !ev.commenceTime || ev.commenceTime <= now);
+    const futureCount    = events.length - startedEvents.length;
+    if (futureCount > 0) {
+      logger.debug(
+        { count: futureCount, sport },
+        "Settlement worker: skipping future events (commence_time in future)",
+      );
+    }
+    if (startedEvents.length === 0) continue;
 
-    // Build a map: realOddsApiId → syntheticEventId, for events whose IDs
-    // were prefixed with "api_live_" at bet-placement time.
+    const unsettledIds = new Set(startedEvents.map(e => e.eventId));
+
+    // Build api_live_ prefix map: realOddsApiId → syntheticId
     const liveIdMap = new Map<string, string>();
-    for (const ev of events) {
+    for (const ev of startedEvents) {
       if (ev.eventId.startsWith("api_live_")) {
         liveIdMap.set(ev.eventId.slice("api_live_".length), ev.eventId);
       }
     }
 
-    // ── Step 1: The Odds API (with sport key expansion) ─────────────────────
+    // ── Step 1: The Odds API (with sport key expansion) ───────────────────────
     const apiKeys = expandSportKey(sport);
     const allCompleted: CompletedEvent[] = [];
 
@@ -687,7 +778,7 @@ async function processSettlement(): Promise<void> {
       }
     }
 
-    // Match api_live_XXXX events — strip prefix, look up real Odds API UUID
+    // Resolve api_live_XXXX events — strip prefix, look up real Odds API UUID
     for (const [realId, syntheticId] of liveIdMap) {
       if (!unsettledIds.has(syntheticId)) continue;
       const apiEvent = completedMap.get(realId);
@@ -705,39 +796,18 @@ async function processSettlement(): Promise<void> {
 
     if (unsettledIds.size === 0) continue;
 
-    // Fuzzy team-name matching for remaining events whose IDs don't match
-    const remainingForFuzzy = events.filter(e => unsettledIds.has(e.eventId));
-    for (const ev of remainingForFuzzy) {
-      if (!completedMap.size) break;
-      const match = [...completedMap.values()].find(c =>
-        teamsMatch(ev.homeTeam, c.home_team) && teamsMatch(ev.awayTeam, c.away_team)
-      );
-      if (!match) continue;
-      const patchedEvent: CompletedEvent = { ...match, id: ev.eventId };
-      try {
-        const n = await processEvent(patchedEvent, sport, "odds-api");
-        if (n > 0) {
-          grandTotal += n;
-          unsettledIds.delete(ev.eventId);
-          logger.info(
-            { eventId: ev.eventId, matchedTeams: `${match.home_team} vs ${match.away_team}` },
-            "Settlement worker: fuzzy team-name match",
-          );
-        }
-      } catch (err) {
-        logger.error({ err, eventId: ev.eventId }, "Settlement worker: fuzzy match error");
-      }
-    }
-
-    if (unsettledIds.size === 0) continue;
-
-    // ── Step 2: API-Football fallback (soccer only) ─────────────────────────
+    // ── Step 2: API-Football fallback (soccer only) ───────────────────────────
     if (isApiFootballSport(sport)) {
-      const remaining = events.filter(e => unsettledIds.has(e.eventId));
+      const remaining = startedEvents.filter(e => unsettledIds.has(e.eventId));
       try {
         const apfbCompleted = await fetchCompletedScoresApiFootball(
           sport,
-          remaining.map(e => ({ id: e.eventId, homeTeam: e.homeTeam, awayTeam: e.awayTeam })),
+          remaining.map(e => ({
+            id:            e.eventId,
+            homeTeam:      e.homeTeam,
+            awayTeam:      e.awayTeam,
+            commenceDate:  e.commenceTime ? e.commenceTime.toISOString() : undefined,
+          })),
         );
 
         for (const event of apfbCompleted) {
@@ -756,30 +826,31 @@ async function processSettlement(): Promise<void> {
 
     if (unsettledIds.size === 0) continue;
 
-    // ── Step 3: Auto-void — old bets with no result from any source ─────────
-    const toVoid = events.filter(e => unsettledIds.has(e.eventId) && e.earliestBet < cutoff);
+    // ── Step 3: Manual review — events ≥ 48h past commence_time with no result ─
+    const toReview = startedEvents.filter(e => {
+      if (!unsettledIds.has(e.eventId)) return false;
+      if (!e.commenceTime) return false; // legacy row without commence_time — never auto-escalate
+      return (now.getTime() - e.commenceTime.getTime()) >= reviewCutoffMs;
+    });
 
-    for (const ev of toVoid) {
+    for (const ev of toReview) {
       try {
-        const dummyEvent: CompletedEvent = {
-          id:        ev.eventId,
-          sport_key: sport || "unknown",
-          home_team: ev.homeTeam,
-          away_team: ev.awayTeam,
-          completed: true,
-          scores:    null,
-        };
-        const n = await processEvent(dummyEvent, sport, "auto-void");
-        if (n > 0) {
-          grandTotal += n;
-          logger.warn(
-            { eventId: ev.eventId, eventName: ev.eventName, ageHours: AUTO_VOID_HOURS },
-            "Settlement worker: auto-voided — no result from any source",
-          );
-        }
+        const n = await markBetsAsManualReview(ev.eventId, ev.eventName);
+        if (n > 0) grandTotal += n;
       } catch (err) {
-        logger.error({ err, eventId: ev.eventId }, "Settlement worker: auto-void error");
+        logger.error({ err, eventId: ev.eventId }, "Settlement worker: manual_review escalation error");
       }
+    }
+
+    // Log events still unresolved (within 48h window — normal, will retry)
+    const stillOpen = [...unsettledIds].filter(id =>
+      !toReview.some(e => e.eventId === id),
+    );
+    if (stillOpen.length > 0) {
+      logger.debug(
+        { count: stillOpen.length, sport, eventIds: stillOpen.slice(0, 5) },
+        "Settlement worker: events awaiting result (within review window)",
+      );
     }
   }
 

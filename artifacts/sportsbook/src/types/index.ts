@@ -23,6 +23,14 @@ export type Selection = {
   scoreAtPlacement?: string;
   /** Formatted kickoff time, e.g. "Today, 20:00" or "Sat, 15:30" */
   kickoffTime?: string;
+  /** ISO 8601 match start time — used for settlement timing */
+  commenceTime?: string;
+  /** Home team name — used for settlement */
+  homeTeam?: string;
+  /** Away team name — used for settlement */
+  awayTeam?: string;
+  /** Handicap / totals line, e.g. 2.5 — used for settlement */
+  point?: number;
 };
 
 export type Match = {

@@ -12,13 +12,18 @@ import { nextResetAt } from "../lib/depositGuard.js";
 const router = Router();
 
 const SelectionSchema = z.object({
-  eventId: z.string(),
-  eventName: z.string(),
-  sport: z.string().default(""),
-  marketType: z.string(),
-  selection: z.string(),
-  odds: z.number().positive(),
-  isLive: z.boolean().default(false),
+  eventId:          z.string(),
+  eventName:        z.string(),
+  sport:            z.string().default(""),     // legacy field, kept for compat
+  sportKey:         z.string().optional(),      // preferred: full Odds API key or internal ID
+  homeTeam:         z.string().default(""),
+  awayTeam:         z.string().default(""),
+  commenceTime:     z.string().optional(),      // ISO 8601 match start time
+  marketType:       z.string(),
+  selection:        z.string(),
+  odds:             z.number().positive(),
+  point:            z.number().optional(),      // handicap/totals line
+  isLive:           z.boolean().default(false),
   scoreAtPlacement: z.string().optional(),
 });
 
@@ -95,7 +100,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
   }
 
   // ── Suspension check for live bets ─────────────────────────────────────────
-  const liveSports = [...new Set(selections.filter(s => s.isLive).map(s => s.sport).filter(Boolean))];
+  const liveSports = [...new Set(selections.filter(s => s.isLive).map(s => s.sportKey ?? s.sport).filter(Boolean))];
   if (liveSports.length > 0) {
     const controls = await db
       .select()
@@ -151,15 +156,20 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
 
   await db.insert(betSelectionsTable).values(
     selections.map(s => ({
-      betId: bet.id,
-      eventId: s.eventId,
-      eventName: s.eventName,
-      sport: s.sport ?? "",
-      marketType: s.marketType,
-      selection: s.selection,
-      odds: s.odds.toFixed(4),
-      status: "open",
-      isLive: s.isLive ?? false,
+      betId:            bet.id,
+      eventId:          s.eventId,
+      eventName:        s.eventName,
+      sport:            s.sportKey ?? s.sport ?? "",
+      sportKey:         s.sportKey ?? s.sport ?? "",
+      homeTeam:         s.homeTeam ?? "",
+      awayTeam:         s.awayTeam ?? "",
+      commenceTime:     s.commenceTime ? new Date(s.commenceTime) : null,
+      marketType:       s.marketType,
+      selection:        s.selection,
+      odds:             s.odds.toFixed(4),
+      point:            s.point != null ? s.point.toFixed(4) : null,
+      status:           "open",
+      isLive:           s.isLive ?? false,
       scoreAtPlacement: s.scoreAtPlacement ?? null,
     }))
   );
@@ -194,7 +204,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
 
     await db.execute(sql`
       INSERT INTO market_liability (event_id, event_name, sport, market_type, selection, total_stake, potential_payout, bet_count)
-      VALUES (${s.eventId}, ${s.eventName}, ${s.sport ?? ""}, ${s.marketType}, ${s.selection}, ${stake.toString()}, ${selectionPayout.toString()}, 1)
+      VALUES (${s.eventId}, ${s.eventName}, ${s.sportKey ?? s.sport ?? ""}, ${s.marketType}, ${s.selection}, ${stake.toString()}, ${selectionPayout.toString()}, 1)
       ON CONFLICT (event_id, market_type, selection)
       DO UPDATE SET
         total_stake      = market_liability.total_stake + EXCLUDED.total_stake,
