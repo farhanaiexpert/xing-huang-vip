@@ -17,6 +17,9 @@ import { FlashOdds } from "./FlashOdds";
 import { JackpotPool } from "./JackpotPool";
 import { LiveBetFeed } from "./LiveBetFeed";
 import { SportHighlights } from "./SportHighlights";
+import { LiveScoresTicker } from "./LiveScoresTicker";
+import { LiveEventsBanner } from "./LiveEventsBanner";
+import { MatchOfTheDay } from "./MatchOfTheDay";
 import { SportDetailPage, SPORT_DETAIL_IDS } from "./SportDetailPage";
 import { ConnectWalletModal } from "./ConnectWalletModal";
 import { cn } from "../lib/utils";
@@ -588,6 +591,9 @@ export function MainContent({
           </div>
         )}
 
+        {/* ── Live scores ticker (full-width, above hero) ─────────────── */}
+        {!isLoading && <LiveScoresTicker />}
+
         {/* ── Content ─────────────────────────────────────────────────── */}
         <div className="px-4 pt-4 pb-2">
           {isLoading ? (
@@ -643,7 +649,11 @@ export function MainContent({
               )}
               {showFeatured && <div className="mb-4"><JackpotPool /></div>}
               {showFeatured && <div className="mb-4"><LiveBetFeed /></div>}
+              {showFeatured && <LiveEventsBanner />}
               {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
+              {showFeatured && (
+                <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
+              )}
               {showFeatured && (
                 <>
                   <div className="hidden sm:block"><FeaturedCards /></div>
@@ -656,9 +666,16 @@ export function MainContent({
                   </Link>
                 </>
               )}
+              {showFeatured && (
+                <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
+              )}
               {showFeatured && hasRealData && <TopMatchesBanner leagues={realLeagues} />}
               {showFeatured && <EuropaLeagueFinal />}
               {showFeatured && <SportHighlights onSelectSport={onSelectSport} onComingSoonViewAll={() => { setDateFilter("all"); scrollToLeagueList(); }} />}
+              {showFeatured && <MatchOfTheDay />}
+              {showFeatured && (
+                <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
+              )}
               {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights onViewAll={scrollToLeagueList} />
               )}

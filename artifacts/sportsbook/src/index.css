@@ -319,3 +319,9 @@ wcm-modal::part(backdrop) {
   scrollbar-width: thin;
   scrollbar-color: #00DFA9 #0B0F14;
 }
+
+/* ── LiveScoresTicker infinite scroll ───────────────────────────────────────── */
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
