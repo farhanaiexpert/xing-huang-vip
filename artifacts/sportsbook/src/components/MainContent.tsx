@@ -207,7 +207,7 @@ export function MainContent({
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [depositOpen, setDepositOpen] = useState(false);
-  const [showAllLeagues, setShowAllLeagues] = useState(false);
+  const [leagueVisibleCount, setLeagueVisibleCount] = useState(5);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const scrollToLeagueList = useCallback(() => {
@@ -323,20 +323,24 @@ export function MainContent({
       selectedSportId === "acca-boost") &&
     dateFilter === "all";
 
-  // On the homepage collapse to top-5 (by match count); expand on demand
-  const LEAGUE_PREVIEW = 5;
-  const displayedLeagues = useMemo(() => {
-    if (!showFeatured || showAllLeagues || filteredLeagues.length <= LEAGUE_PREVIEW) {
-      return filteredLeagues;
-    }
-    return [...filteredLeagues]
-      .sort((a, b) => b.matches.length - a.matches.length)
-      .slice(0, LEAGUE_PREVIEW);
-  }, [filteredLeagues, showFeatured, showAllLeagues]);
+  // On the homepage show leagueVisibleCount at a time (+10 per click)
+  const LEAGUE_PAGE = 10;
+  const sortedLeagues = useMemo(
+    () => showFeatured
+      ? [...filteredLeagues].sort((a, b) => b.matches.length - a.matches.length)
+      : filteredLeagues,
+    [filteredLeagues, showFeatured],
+  );
+  const displayedLeagues = useMemo(
+    () => showFeatured ? sortedLeagues.slice(0, leagueVisibleCount) : filteredLeagues,
+    [sortedLeagues, filteredLeagues, showFeatured, leagueVisibleCount],
+  );
+  const hiddenCount = showFeatured ? Math.max(0, filteredLeagues.length - leagueVisibleCount) : 0;
+  const nextBatch   = Math.min(hiddenCount, LEAGUE_PAGE);
 
-  // Reset collapse when the user navigates away from the homepage
+  // Reset pagination when sport changes
   useEffect(() => {
-    setShowAllLeagues(false);
+    setLeagueVisibleCount(5);
   }, [selectedSportId]);
 
   const hasActiveFilter =
@@ -757,43 +761,75 @@ export function MainContent({
                 )}
               </div>
 
-              {/* ── View all leagues button ── */}
-              {showFeatured && !showAllLeagues && filteredLeagues.length > LEAGUE_PREVIEW && (
-                <button
-                  onClick={() => setShowAllLeagues(true)}
-                  className="w-full mt-2 group relative overflow-hidden rounded-xl border border-[#1E2A38] hover:border-[#38BDF8]/30 bg-[#0A0F16] hover:bg-[#0D1520] transition-all duration-200 active:scale-[0.99]"
+              {/* ── Load more leagues ── */}
+              {showFeatured && hiddenCount > 0 && (
+                <div className="mt-3 rounded-2xl overflow-hidden border border-[#1A2535]"
+                  style={{ background: 'linear-gradient(180deg, #0A0E15 0%, #080C12 100%)' }}
                 >
-                  {/* Hidden league name chips */}
-                  <div className="px-4 pt-3 pb-2 flex flex-wrap gap-1.5 justify-center">
-                    {filteredLeagues.slice(LEAGUE_PREVIEW, LEAGUE_PREVIEW + 8).map((l) => (
+                  {/* Preview chips — next batch of hidden leagues */}
+                  <div className="px-4 pt-3 pb-2.5 flex flex-wrap gap-1.5">
+                    {sortedLeagues.slice(leagueVisibleCount, leagueVisibleCount + 6).map((l) => (
                       <span
                         key={l.id}
-                        className="text-[9px] font-medium text-[#94A3B8]/30 bg-[#1A2535]/60 border border-[#253241]/40 px-2 py-0.5 rounded-full whitespace-nowrap"
+                        className="inline-flex items-center gap-1 text-[9px] font-medium text-[#64748B] bg-[#111827] border border-[#1E2A38] px-2.5 py-1 rounded-full whitespace-nowrap"
                       >
+                        <LayoutList className="h-2.5 w-2.5 shrink-0 opacity-50" />
                         {l.name}
                       </span>
                     ))}
-                    {filteredLeagues.length > LEAGUE_PREVIEW + 8 && (
-                      <span className="text-[9px] font-medium text-[#94A3B8]/20 px-2 py-0.5">
-                        +{filteredLeagues.length - LEAGUE_PREVIEW - 8} more
+                    {hiddenCount > 6 && (
+                      <span className="inline-flex items-center text-[9px] font-medium text-[#374151] px-2 py-1">
+                        +{hiddenCount - 6} more leagues
                       </span>
                     )}
                   </div>
 
-                  {/* CTA row */}
-                  <div className="flex items-center justify-between px-4 py-3 border-t border-[#1A2535]/60">
-                    <div className="flex items-center gap-2">
-                      <LayoutList className="h-3.5 w-3.5 text-[#38BDF8]/60" />
-                      <span className="text-[12px] font-bold text-[#CBD5E1]">
-                        View all leagues
-                      </span>
-                      <span className="text-[10px] font-black text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-2 py-0.5 rounded-full leading-none">
-                        {filteredLeagues.length - LEAGUE_PREVIEW} more
-                      </span>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-[#38BDF8]/70 group-hover:translate-y-0.5 group-hover:text-[#38BDF8] transition-all duration-200" />
+                  {/* Divider with progress indicator */}
+                  <div className="mx-4 flex items-center gap-2.5 mb-3">
+                    <div className="flex-1 h-px bg-[#1A2535]" />
+                    <span className="text-[9px] font-semibold text-[#374151] tabular-nums">
+                      {leagueVisibleCount} / {filteredLeagues.length} shown
+                    </span>
+                    <div className="flex-1 h-px bg-[#1A2535]" />
                   </div>
-                </button>
+
+                  {/* CTA button */}
+                  <div className="px-4 pb-4">
+                    <button
+                      onClick={() => setLeagueVisibleCount((n) => n + LEAGUE_PAGE)}
+                      className="w-full group flex items-center justify-center gap-2.5 py-2.5 rounded-xl font-semibold text-[13px] transition-all duration-200 active:scale-[0.98]"
+                      style={{
+                        background: 'linear-gradient(90deg, rgba(56,189,248,0.08) 0%, rgba(56,189,248,0.05) 100%)',
+                        border: '1px solid rgba(56,189,248,0.18)',
+                        color: '#7DD3FC',
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.background =
+                          'linear-gradient(90deg, rgba(56,189,248,0.14) 0%, rgba(56,189,248,0.09) 100%)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(56,189,248,0.32)';
+                        (e.currentTarget as HTMLButtonElement).style.color = '#BAE6FD';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.background =
+                          'linear-gradient(90deg, rgba(56,189,248,0.08) 0%, rgba(56,189,248,0.05) 100%)';
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(56,189,248,0.18)';
+                        (e.currentTarget as HTMLButtonElement).style.color = '#7DD3FC';
+                      }}
+                    >
+                      <ChevronDown className="h-4 w-4 group-hover:translate-y-0.5 transition-transform duration-200" />
+                      Show {nextBatch} more league{nextBatch !== 1 ? 's' : ''}
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: 'rgba(56,189,248,0.12)',
+                          border: '1px solid rgba(56,189,248,0.2)',
+                        }}
+                      >
+                        {hiddenCount} left
+                      </span>
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* ── Post-match activity panels (below the match list) ── */}
