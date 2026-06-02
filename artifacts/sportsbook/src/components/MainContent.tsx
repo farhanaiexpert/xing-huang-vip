@@ -625,7 +625,7 @@ export function MainContent({
               {showFeatured && (
                 <div className="mb-5 rounded-2xl overflow-hidden shadow-2xl">
                   <img
-                    src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/cupBett-hero-banner.webp"
+                    src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/cupBett-hero-banner-WC.webp"
                     alt="CupBett — Sports Betting"
                     className="w-full h-auto block object-cover"
                     style={{ maxHeight: 320, objectPosition: 'center' }}
