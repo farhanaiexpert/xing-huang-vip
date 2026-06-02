@@ -9,14 +9,21 @@ import {
   Copy, Check, Wallet, Receipt, ArrowLeftRight,
   Users, Gift, Star, Trophy, Settings,
   Calendar, ShieldCheck, TrendingUp, Activity,
-  ArrowDownLeft, ArrowUpRight, Lock,
+  ArrowDownLeft, ArrowUpRight, Lock, ChevronRight,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { userDisplayLabel, addressInitials } from '@/lib/utils';
+import { userDisplayLabel, addressInitials, shortAddress } from '@/lib/utils';
 
 function fmtDate(iso?: string) {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** Compact number formatter — keeps large USD values from overflowing cells */
+function fmtUSDT(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 10_000)    return `$${(n / 1_000).toFixed(1)}K`;
+  return `$${n.toFixed(2)}`;
 }
 
 export function OverviewPage() {
@@ -27,22 +34,11 @@ export function OverviewPage() {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  // Switch balance grid to 2 cols on very narrow screens (< 360px viewport)
-  const [tinyScreen, setTinyScreen] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 359px)').matches
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 359px)');
-    const handler = (e: MediaQueryListEvent) => setTinyScreen(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
   const wonBets      = bets.filter(b => b.status === 'won' || b.status === 'settled').length;
   const openBets     = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
   const lockedInBets = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').reduce((s, b) => s + b.stake, 0);
   const totalWagered = bets.reduce((s, b) => s + b.stake, 0);
-  const winRate   = bets.length > 0 ? Math.round((wonBets / bets.length) * 100) : 0;
+  const winRate      = bets.length > 0 ? Math.round((wonBets / bets.length) * 100) : 0;
   const displayLabel = userDisplayLabel(user);
   const initials     = addressInitials(displayLabel);
 
@@ -76,8 +72,8 @@ export function OverviewPage() {
       href: '/account/bets',
     },
     {
-      label: 'Total Wagered',
-      value: `${totalWagered.toFixed(2)}`,
+      label: 'Wagered',
+      value: fmtUSDT(totalWagered),
       sub: 'USDT',
       icon: Activity,
       color: '#A78BFA',
@@ -90,7 +86,7 @@ export function OverviewPage() {
   const QUICK = [
     { label: 'Wallet',       icon: Wallet,          href: '/account/wallet',       color: '#00DFA9' },
     { label: 'My Bets',      icon: Receipt,         href: '/account/bets',         color: '#38BDF8' },
-    { label: 'Transactions', icon: ArrowLeftRight,  href: '/account/transactions', color: '#A78BFA' },
+    { label: 'Transfers',    icon: ArrowLeftRight,  href: '/account/transactions', color: '#A78BFA' },
     { label: 'Referrals',    icon: Users,           href: '/account/referrals',    color: '#FACC15' },
     { label: 'Promotions',   icon: Gift,            href: '/account/promotions',   color: '#F97316' },
     { label: 'WinSpin',      icon: Star,            href: '/account/winspin',      color: '#EC4899' },
@@ -99,211 +95,202 @@ export function OverviewPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 pb-28 sm:pb-6">
 
-      {/* ── Hero card ── */}
+      {/* ── Profile card — compact horizontal layout ── */}
       <div className="relative overflow-hidden rounded-2xl border border-white/[0.07]"
         style={{ background: 'linear-gradient(135deg, #0C1A28 0%, #091510 60%, #0B0F14 100%)' }}>
-        <div className="pointer-events-none absolute -top-16 -left-16 w-32 h-32 sm:w-64 sm:h-64 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(0,223,169,0.10) 0%, transparent 70%)' }} />
-        <div className="pointer-events-none absolute -bottom-8 right-8 w-28 h-28 sm:w-48 sm:h-48 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.08) 0%, transparent 70%)' }} />
+        {/* Decorative glows */}
+        <div className="pointer-events-none absolute -top-10 -left-10 w-40 h-40 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(0,223,169,0.12) 0%, transparent 70%)' }} />
+        <div className="pointer-events-none absolute -bottom-6 right-4 w-32 h-32 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%)' }} />
 
-        <div className="relative p-4 sm:p-5">
-          <div className="flex flex-row flex-wrap items-center gap-3 sm:gap-5">
+        <div className="relative p-4">
+          {/* Row 1: avatar + name + badges */}
+          <div className="flex items-center gap-3">
             {/* Avatar */}
-            <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border-2 border-[#00DFA9]/40 flex items-center justify-center shadow-[0_0_24px_rgba(0,223,169,0.2)]">
-                <span className="text-[24px] font-black text-[#00DFA9]">{initials}</span>
+            <div className="relative shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border-2 border-[#00DFA9]/40 flex items-center justify-center shadow-[0_0_16px_rgba(0,223,169,0.2)]">
+                <span className="text-[18px] font-black text-[#00DFA9]">{initials}</span>
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#00DFA9] border-2 border-[#0B0F14] flex items-center justify-center">
-                <ShieldCheck className="h-2.5 w-2.5 text-[#0B0F14]" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#00DFA9] border-2 border-[#0B0F14] flex items-center justify-center">
+                <ShieldCheck className="h-2 w-2 text-[#0B0F14]" />
               </div>
             </div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0" style={{ minWidth: 0 }}>
-              <h1 className="text-[18px] sm:text-[22px] font-black text-[#F8FAFC] leading-tight">{displayLabel}</h1>
+            {/* Name + meta */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[16px] font-black text-[#F8FAFC] leading-tight truncate">{displayLabel}</p>
               {user?.walletAddress && (
-                <p className="text-[11px] font-mono text-[#00DFA9]/50 mt-0.5 truncate">
-                  {user.walletAddress}
-                </p>
+                <p className="text-[10px] font-mono text-[#00DFA9]/50 mt-0.5 truncate">{shortAddress(user.walletAddress)}</p>
               )}
-
-              <div className="flex flex-wrap items-center gap-3 mt-3">
-                {/* Member since */}
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 {user?.createdAt && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-[#64748B]">
-                    <Calendar className="h-3 w-3" />
-                    Member since {fmtDate(user.createdAt as string)}
-                  </div>
+                  <span className="flex items-center gap-1 text-[10px] text-[#64748B]">
+                    <Calendar className="h-2.5 w-2.5 shrink-0" />
+                    {fmtDate(user.createdAt as string)}
+                  </span>
                 )}
-                {/* KYC */}
-                <div className={cn(
-                  'flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border',
+                <span className={cn(
+                  'flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold border',
                   user?.kycStatus === 'verified'
                     ? 'bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/25'
                     : 'bg-[#64748B]/10 text-[#64748B] border-[#64748B]/20'
                 )}>
-                  <ShieldCheck className="h-2.5 w-2.5" />
+                  <ShieldCheck className="h-2 w-2" />
                   {user?.kycStatus === 'verified' ? 'Verified' : 'Unverified'}
-                </div>
+                </span>
               </div>
             </div>
-
-            {/* Referral code */}
-            {user?.referralCode && (
-              <div className="w-full sm:w-auto sm:shrink-0">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-[#64748B] mb-1.5">Your Referral Code</p>
-                <button
-                  onClick={handleCopyRef}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#00DFA9]/25 bg-[#00DFA9]/6 hover:bg-[#00DFA9]/12 transition-all cursor-pointer group"
-                >
-                  <span className="text-[18px] font-black text-[#00DFA9] font-mono tracking-[0.2em]">{user.referralCode}</span>
-                  <div className="w-6 h-6 rounded-lg bg-[#00DFA9]/12 flex items-center justify-center group-hover:bg-[#00DFA9]/20 transition-colors">
-                    {copied ? <Check className="h-3 w-3 text-[#00DFA9]" /> : <Copy className="h-3 w-3 text-[#00DFA9]/70" />}
-                  </div>
-                </button>
-              </div>
-            )}
           </div>
+
+          {/* Row 2: referral code (compact inline) */}
+          {user?.referralCode && (
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border border-[#00DFA9]/20 bg-[#00DFA9]/5">
+              <div className="min-w-0">
+                <p className="text-[8px] font-bold uppercase tracking-widest text-[#64748B] leading-none mb-1">Referral Code</p>
+                <p className="text-[15px] font-black text-[#00DFA9] font-mono tracking-[0.18em] leading-none">{user.referralCode}</p>
+              </div>
+              <button
+                onClick={handleCopyRef}
+                className="shrink-0 w-8 h-8 rounded-lg bg-[#00DFA9]/12 border border-[#00DFA9]/25 flex items-center justify-center hover:bg-[#00DFA9]/20 transition-colors active:scale-95"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-[#00DFA9]" /> : <Copy className="h-3.5 w-3.5 text-[#00DFA9]/70" />}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Balance Breakdown Card ── */}
+      {/* ── Wallet Balance ── */}
       <Link href="/account/wallet">
-        <div className="relative overflow-hidden rounded-2xl border border-[#00DFA9]/20 p-5 cursor-pointer hover:border-[#00DFA9]/35 transition-colors"
+        <div className="relative overflow-hidden rounded-2xl border border-[#00DFA9]/20 p-3.5 cursor-pointer hover:border-[#00DFA9]/35 active:scale-[0.99] transition-all"
           style={{ background: 'linear-gradient(135deg, #071A12 0%, #0A1A10 60%, #0B0F14 100%)' }}>
-          <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full"
+          <div className="pointer-events-none absolute -top-8 -right-8 w-32 h-32 rounded-full"
             style={{ background: 'radial-gradient(circle, rgba(0,223,169,0.10) 0%, transparent 70%)' }} />
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
+            {/* Header row */}
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/12 border border-[#00DFA9]/25 flex items-center justify-center">
-                  <Wallet className="h-3.5 w-3.5 text-[#00DFA9]" />
+                <div className="w-6 h-6 rounded-lg bg-[#00DFA9]/12 border border-[#00DFA9]/25 flex items-center justify-center">
+                  <Wallet className="h-3 w-3 text-[#00DFA9]" />
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Wallet Balance</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-[#64748B]">Wallet Balance</p>
               </div>
-              <span className="text-[10px] font-semibold text-[#38BDF8]">View Wallet →</span>
+              <span className="text-[10px] font-semibold text-[#38BDF8] flex items-center gap-0.5">
+                View <ChevronRight className="h-3 w-3" />
+              </span>
             </div>
-            {/* ≥360px: 3 cols; <360px: 2 cols (Bonus wraps to second row) */}
-            <div className={tinyScreen ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-3 gap-2'}>
-              <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(0,223,169,0.06)', borderColor: 'rgba(0,223,169,0.14)' }}>
-                <div className="flex items-center gap-1 mb-1.5">
-                  <ArrowDownLeft className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#00DFA9] shrink-0" />
-                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Available</p>
-                </div>
-                <p className="text-[14px] sm:text-[18px] font-black text-[#00DFA9] leading-tight">${balance.toFixed(2)}</p>
-                <p className="text-[8px] sm:text-[9px] text-[#64748B] mt-0.5">USDT</p>
-              </div>
-              <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(56,189,248,0.06)', borderColor: 'rgba(56,189,248,0.14)' }}>
-                <div className="flex items-center gap-1 mb-1.5">
-                  <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#38BDF8] shrink-0" />
-                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Active Bets</p>
-                </div>
-                <p className="text-[14px] sm:text-[18px] font-black text-[#38BDF8] leading-tight">${lockedInBets.toFixed(2)}</p>
-                <p className="text-[8px] sm:text-[9px] text-[#64748B] mt-0.5">locked</p>
-              </div>
-              <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(250,204,21,0.06)', borderColor: 'rgba(250,204,21,0.14)' }}
-                title="Bonus funds are for betting only — cannot be withdrawn">
-                <div className="flex items-center gap-1 mb-1.5">
-                  <Gift className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#FACC15] shrink-0" />
-                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Bonus</p>
-                </div>
-                <p className="text-[14px] sm:text-[18px] font-black text-[#FACC15] leading-tight">${bonusBalance.toFixed(2)}</p>
-                <p className="text-[8px] sm:text-[9px] text-[#FACC15]/50 mt-0.5">Bet only</p>
-              </div>
+            {/* 3-col balance grid */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { icon: ArrowDownLeft, label: 'Available', value: fmtUSDT(balance),      sub: 'USDT',     color: '#00DFA9', bg: 'rgba(0,223,169,0.06)',   border: 'rgba(0,223,169,0.14)'   },
+                { icon: Lock,          label: 'In Bets',   value: fmtUSDT(lockedInBets), sub: 'locked',   color: '#38BDF8', bg: 'rgba(56,189,248,0.06)',  border: 'rgba(56,189,248,0.14)'  },
+                { icon: Gift,          label: 'Bonus',     value: fmtUSDT(bonusBalance), sub: 'bet only', color: '#FACC15', bg: 'rgba(250,204,21,0.06)',  border: 'rgba(250,204,21,0.14)'  },
+              ].map(cell => {
+                const CellIcon = cell.icon;
+                return (
+                  <div key={cell.label} className="rounded-xl p-2.5 border" style={{ background: cell.bg, borderColor: cell.border }}>
+                    <div className="flex items-center gap-1 mb-1.5">
+                      <CellIcon className="h-2.5 w-2.5 shrink-0" style={{ color: cell.color }} />
+                      <p className="text-[8px] font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>{cell.label}</p>
+                    </div>
+                    <p className="text-[13px] font-black leading-tight tabular-nums" style={{ color: cell.color }}>{cell.value}</p>
+                    <p className="text-[8px] mt-0.5" style={{ color: cell.color === '#FACC15' ? 'rgba(250,204,21,0.5)' : '#64748B' }}>{cell.sub}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </Link>
 
-      {/* ── Stat tiles ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* ── Stat tiles — always 3 columns, compact ── */}
+      <div className="grid grid-cols-3 gap-2">
         {STATS.map(s => {
           const Icon = s.icon;
           return (
             <Link key={s.label} href={s.href}>
-              <div className="relative rounded-2xl p-4 border cursor-pointer transition-all duration-150 hover:scale-[1.02] overflow-hidden"
+              <div className="relative rounded-xl p-3 border cursor-pointer active:scale-[0.97] transition-all overflow-hidden"
                 style={{ background: s.bg, borderColor: s.border }}>
                 <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1.5px]"
                   style={{ background: `linear-gradient(90deg, ${s.color}, transparent)` }} />
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-                    style={{ background: `${s.color}18`, border: `1px solid ${s.color}25` }}>
-                    <Icon className="h-3.5 w-3.5" style={{ color: s.color }} />
-                  </div>
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center mb-2"
+                  style={{ background: `${s.color}18`, border: `1px solid ${s.color}25` }}>
+                  <Icon className="h-3 w-3" style={{ color: s.color }} />
                 </div>
-                <p className="text-[22px] font-black leading-none" style={{ color: s.color }}>{s.value}</p>
-                <p className="text-[11px] text-[#64748B] mt-1">{s.label}</p>
-                <p className="text-[10px] text-[#475569] mt-0.5">{s.sub}</p>
+                <p className="text-[18px] font-black leading-none tabular-nums" style={{ color: s.color }}>{s.value}</p>
+                <p className="text-[9px] text-[#64748B] mt-1 leading-tight">{s.label}</p>
+                <p className="text-[9px] text-[#475569] mt-0.5 leading-tight">{s.sub}</p>
               </div>
             </Link>
           );
         })}
       </div>
 
-      {/* ── Quick Actions Bar ── */}
-      <div className="grid grid-cols-4 gap-2.5">
+      {/* ── Quick Actions — 4 cols, compact ── */}
+      <div className="grid grid-cols-4 gap-2">
         {([
-          { label: 'Deposit',     Icon: ArrowDownLeft, href: '/account/wallet',      color: '#00DFA9', bg: 'rgba(0,223,169,0.07)',   border: 'rgba(0,223,169,0.20)',  glow: 'rgba(0,223,169,0.18)' },
-          { label: 'Withdraw',    Icon: ArrowUpRight,  href: '/account/wallet',      color: '#38BDF8', bg: 'rgba(56,189,248,0.07)',  border: 'rgba(56,189,248,0.20)', glow: 'rgba(56,189,248,0.14)' },
-          { label: 'Bet History', Icon: Receipt,       href: '/account/bets',        color: '#FACC15', bg: 'rgba(250,204,21,0.07)', border: 'rgba(250,204,21,0.20)', glow: 'rgba(250,204,21,0.14)' },
-          { label: 'Promotions',  Icon: Gift,          href: '/account/promotions',  color: '#F97316', bg: 'rgba(249,115,22,0.07)', border: 'rgba(249,115,22,0.20)', glow: 'rgba(249,115,22,0.14)' },
+          { label: 'Deposit',  Icon: ArrowDownLeft, href: '/account/wallet',     color: '#00DFA9', bg: 'rgba(0,223,169,0.07)',   border: 'rgba(0,223,169,0.22)',  glow: 'rgba(0,223,169,0.18)' },
+          { label: 'Withdraw', Icon: ArrowUpRight,  href: '/account/wallet',     color: '#38BDF8', bg: 'rgba(56,189,248,0.07)',  border: 'rgba(56,189,248,0.22)', glow: 'rgba(56,189,248,0.14)' },
+          { label: 'My Bets',  Icon: Receipt,       href: '/account/bets',       color: '#FACC15', bg: 'rgba(250,204,21,0.07)',  border: 'rgba(250,204,21,0.22)', glow: 'rgba(250,204,21,0.14)' },
+          { label: 'Promos',   Icon: Gift,          href: '/account/promotions', color: '#F97316', bg: 'rgba(249,115,22,0.07)',  border: 'rgba(249,115,22,0.22)', glow: 'rgba(249,115,22,0.14)' },
         ] as const).map(({ label, Icon, href, color, bg, border, glow }) => (
           <Link key={label} href={href}>
-            <div className="relative flex flex-col items-center gap-2.5 py-4 px-2 rounded-2xl border cursor-pointer transition-all duration-150 hover:scale-[1.03] active:scale-[0.97] overflow-hidden"
+            <div className="relative flex flex-col items-center gap-2 py-3 px-1.5 rounded-xl border cursor-pointer active:scale-[0.96] transition-all overflow-hidden"
               style={{ background: bg, borderColor: border }}>
               <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px]"
                 style={{ background: `linear-gradient(90deg, transparent, ${color}60, transparent)` }} />
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: `${color}18`, border: `1px solid ${color}30`, boxShadow: `0 0 14px ${glow}` }}>
-                <Icon className="h-5 w-5" style={{ color }} />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: `${color}18`, border: `1px solid ${color}30`, boxShadow: `0 0 10px ${glow}` }}>
+                <Icon className="h-4 w-4" style={{ color }} />
               </div>
-              <span className="text-[9px] sm:text-[11px] font-bold text-[#F8FAFC] text-center leading-tight">{label}</span>
+              <span className="text-[10px] font-bold text-[#F8FAFC] text-center leading-tight">{label}</span>
             </div>
           </Link>
         ))}
       </div>
 
-      {/* ── Referral earnings strip ── */}
+      {/* ── Referral earnings strip (conditional) ── */}
       {ref.isLoaded && ref.totalEarned > 0 && (
         <Link href="/account/referrals">
-          <div className="flex items-center justify-between p-4 rounded-2xl border border-[#FACC15]/20 bg-[#FACC15]/5 cursor-pointer hover:bg-[#FACC15]/8 transition-colors">
+          <div className="flex items-center justify-between px-3.5 py-3 rounded-xl border border-[#FACC15]/20 bg-[#FACC15]/5 cursor-pointer hover:bg-[#FACC15]/8 transition-colors active:scale-[0.99]">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#FACC15]/12 border border-[#FACC15]/25 flex items-center justify-center">
-                <Users className="h-4 w-4 text-[#FACC15]" />
+              <div className="w-8 h-8 rounded-lg bg-[#FACC15]/12 border border-[#FACC15]/25 flex items-center justify-center shrink-0">
+                <Users className="h-3.5 w-3.5 text-[#FACC15]" />
               </div>
               <div>
-                <p className="text-[13px] font-bold text-[#F8FAFC]">Referral Earnings</p>
-                <p className="text-[11px] text-[#64748B]">{ref.referrals.length} referrals · {ref.totalEarned.toFixed(2)} USDT earned</p>
+                <p className="text-[12px] font-bold text-[#F8FAFC]">Referral Earnings</p>
+                <p className="text-[10px] text-[#64748B]">{ref.referrals.length} referrals · {ref.totalEarned.toFixed(2)} USDT</p>
               </div>
             </div>
-            <span className="text-[11px] font-semibold text-[#FACC15]">View →</span>
+            <ChevronRight className="h-4 w-4 text-[#FACC15]/60 shrink-0" />
           </div>
         </Link>
       )}
 
-      {/* ── Quick nav grid ── */}
+      {/* ── Quick access grid — 4×2 ── */}
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]/35 mb-3">Quick Access</p>
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+        <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#94A3B8]/30 mb-2">Quick Access</p>
+        <div className="grid grid-cols-4 gap-2">
           {QUICK.map(q => {
             const Icon = q.icon;
             return (
               <Link key={q.href} href={q.href}>
-                <div className="flex flex-col items-center gap-2 py-3 px-1 rounded-2xl bg-[#0E1520] border border-white/[0.06] hover:border-white/[0.12] hover:bg-[#141E2A] transition-all cursor-pointer active:scale-95">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                <div className="flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl bg-[#0E1520] border border-white/[0.06] hover:border-white/[0.12] hover:bg-[#141E2A] transition-all cursor-pointer active:scale-95">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center"
                     style={{ background: `${q.color}12`, border: `1px solid ${q.color}20` }}>
-                    <Icon className="h-4 w-4" style={{ color: q.color }} />
+                    <Icon className="h-3.5 w-3.5" style={{ color: q.color }} />
                   </div>
-                  <span className="text-[10px] font-medium text-[#94A3B8]/60 text-center leading-tight">{q.label}</span>
+                  <span className="text-[9px] font-medium text-[#94A3B8]/60 text-center leading-tight">{q.label}</span>
                 </div>
               </Link>
             );
           })}
         </div>
       </div>
+
     </div>
   );
 }
