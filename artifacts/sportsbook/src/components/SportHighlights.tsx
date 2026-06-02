@@ -261,100 +261,96 @@ function TrendingCard({ p }: { p: TrendingPill }) {
     <div
       className="relative flex flex-col rounded-xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5"
       style={{
-        background:  `linear-gradient(160deg, ${bucket.color}0a 0%, #0B0F14 55%)`,
-        borderColor: isHot ? `${bucket.color}38` : 'rgba(37,50,65,0.55)',
+        background:  '#0D1320',
+        borderColor: 'rgba(37,50,65,0.6)',
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
-        el.style.boxShadow    = `0 6px 20px ${bucket.color}14`;
-        el.style.borderColor  = `${bucket.color}55`;
+        el.style.boxShadow   = `0 4px 20px ${bucket.color}14`;
+        el.style.borderColor = `${bucket.color}45`;
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
         el.style.boxShadow   = '';
-        el.style.borderColor = isHot ? `${bucket.color}38` : 'rgba(37,50,65,0.55)';
+        el.style.borderColor = 'rgba(37,50,65,0.6)';
       }}
     >
-      {/* Coloured left border accent */}
-      <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-xl"
-        style={{ background: `linear-gradient(180deg, ${bucket.color} 0%, ${bucket.color}30 100%)` }} />
+      {/* Sport-coloured top bar */}
+      <div className="h-[3px] w-full shrink-0"
+        style={{ background: `linear-gradient(90deg, ${bucket.color} 0%, ${bucket.color}40 60%, transparent 100%)` }} />
 
-      <div className="pl-4 pr-3 pt-3 pb-3 flex flex-col flex-1 gap-2.5">
+      <div className="flex flex-col flex-1 p-3 gap-3">
 
-        {/* Row 1 — sport + label + live/time */}
-        <div className="flex items-center justify-between">
+        {/* ── Row 1: sport label + time/live ── */}
+        <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span
-              className="text-[12px] w-5 h-5 rounded flex items-center justify-center shrink-0"
-              style={{ background: `${bucket.color}18` }}
-            >
-              {bucket.emoji}
-            </span>
-            <span className="text-[9.5px] font-semibold truncate" style={{ color: `${bucket.color}90` }}>
+            <span className="text-[11px] leading-none">{bucket.emoji}</span>
+            <span className="text-[9px] font-semibold truncate" style={{ color: bucket.color }}>
               {bucket.label}
             </span>
             {isHot && (
-              <span className="flex items-center gap-0.5 text-[8px] font-black uppercase text-[#EF4444] shrink-0">
-                <Flame className="h-2 w-2" /> HOT
+              <span className="flex items-center gap-0.5 text-[7.5px] font-black uppercase text-[#EF4444] shrink-0 leading-none">
+                <Flame className="h-[9px] w-[9px]" /> HOT
               </span>
             )}
           </div>
           {match.isLive ? (
-            <span className="flex items-center gap-0.5 text-[8px] font-black text-[#EF4444] shrink-0">
-              <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" /> LIVE
-              {match.liveMinute != null && <span className="ml-0.5 opacity-60">{match.liveMinute}'</span>}
+            <span className="flex items-center gap-1 text-[7.5px] font-black text-[#EF4444] shrink-0">
+              <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse shrink-0" />
+              LIVE{match.liveMinute != null ? ` ${match.liveMinute}'` : ''}
             </span>
           ) : (
-            <span className="text-[8.5px] text-[#475569] shrink-0 tabular-nums">
-              {getTimeLabel(match)}
-            </span>
+            <span className="text-[8px] text-[#475569] shrink-0 tabular-nums">{getTimeLabel(match)}</span>
           )}
         </div>
 
-        {/* Row 2 — team names */}
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1.5">
-            <TeamBadge name={match.team1} size={18} bg={`${bucket.color}18`} color={bucket.color} />
-            <span className="text-[11.5px] font-bold text-[#E2E8F0] truncate leading-none">{match.team1}</span>
+        {/* ── Row 2: teams ── */}
+        <div className="flex flex-col gap-2">
+          {/* Home */}
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 shrink-0 rounded flex items-center justify-center text-[9px] font-black"
+              style={{ background: `${bucket.color}18`, color: bucket.color }}>
+              {match.team1.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-[11px] font-bold text-[#E2E8F0] leading-none truncate">{match.team1}</span>
           </div>
-          <div className="flex items-center gap-1.5 pl-[1px]">
-            <div className="w-[16px] h-[1px] mx-[1px]" style={{ background: 'rgba(37,50,65,0.6)' }} />
-            <span className="text-[9px] font-semibold text-[#475569] tracking-wide uppercase">vs</span>
+          {/* Separator */}
+          <div className="flex items-center gap-2">
+            <div className="w-5 shrink-0 flex justify-center">
+              <div className="w-px h-3 bg-[#1E2A38]" />
+            </div>
+            <span className="text-[8.5px] font-semibold text-[#334155] uppercase tracking-widest">vs</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <TeamBadge name={match.team2} size={18} bg="rgba(37,50,65,0.5)" color="#64748B" />
-            <span className="text-[11px] font-semibold text-[#64748B] truncate leading-none">{match.team2}</span>
+          {/* Away */}
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 shrink-0 rounded flex items-center justify-center text-[9px] font-black bg-[#1A2232] text-[#475569]">
+              {match.team2.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-[11px] font-semibold text-[#64748B] leading-none truncate">{match.team2}</span>
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="h-px" style={{ background: 'rgba(37,50,65,0.5)' }} />
-
-        {/* Row 3 — odds labels + buttons */}
-        <div onClick={e => e.stopPropagation()}>
-          <div className="flex items-center gap-1 mb-1">
-            <span className="flex-1 text-center text-[8.5px] font-semibold uppercase tracking-wide text-[#334155]">
+        {/* ── Row 3: odds ── */}
+        <div className="mt-auto" onClick={e => e.stopPropagation()}>
+          {/* Column labels */}
+          <div className={`grid mb-1.5 ${hasDraw ? 'grid-cols-3' : 'grid-cols-2'} gap-1`}>
+            <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-[#334155]">
               {hasDraw ? '1' : 'Home'}
             </span>
             {hasDraw && (
-              <span className="flex-1 text-center text-[8.5px] font-semibold uppercase tracking-wide text-[#334155]">X</span>
+              <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-[#334155]">X</span>
             )}
-            <span className="flex-1 text-center text-[8.5px] font-semibold uppercase tracking-wide text-[#334155]">
+            <span className="text-center text-[8px] font-semibold uppercase tracking-wider text-[#334155]">
               {hasDraw ? '2' : 'Away'}
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="flex-1">
-              <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
-            </div>
+          {/* Buttons — w-full overrides OddsButton's hardcoded w-[52px] */}
+          <div className={`grid ${hasDraw ? 'grid-cols-3' : 'grid-cols-2'} gap-1`}>
+            <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} className="w-full" />
             {hasDraw && (
-              <div className="flex-1">
-                <OddsButton {...shared} selectionType="X" selectionName="Draw" odds={match.odds.draw!} />
-              </div>
+              <OddsButton {...shared} selectionType="X" selectionName="Draw" odds={match.odds.draw!} className="w-full" />
             )}
-            <div className="flex-1">
-              <OddsButton {...shared} selectionType="2" selectionName={match.team2} odds={match.odds.away} />
-            </div>
+            <OddsButton {...shared} selectionType="2" selectionName={match.team2} odds={match.odds.away} className="w-full" />
           </div>
         </div>
 
