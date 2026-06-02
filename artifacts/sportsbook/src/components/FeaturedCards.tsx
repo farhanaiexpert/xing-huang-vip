@@ -41,20 +41,6 @@ function getCardTheme(title: CardType) {
 export function FeaturedCards() {
   return (
     <div className="mb-5">
-      {/* Section header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#94A3B8]/60">Featured</h2>
-          <div className="h-px w-8 bg-[#253241]" />
-        </div>
-        <button
-          className="text-[11px] font-medium text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors"
-          data-testid="button-view-all-featured"
-        >
-          View All →
-        </button>
-      </div>
-
       <ScrollArea className="w-full">
         <div className="flex gap-3 w-max pb-2">
           {FEATURED_CARDS.map((card) => {

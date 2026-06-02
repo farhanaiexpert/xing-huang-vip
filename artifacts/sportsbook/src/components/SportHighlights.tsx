@@ -244,6 +244,7 @@ interface TrendingPill {
 function TrendingCard({ p }: { p: TrendingPill }) {
   const { match, league, bucket, rank } = p;
   const isHot = rank < 2;
+  const hasDraw = match.odds.draw != null;
   const shared = {
     matchId:      match.id,
     marketId:     `1x2_${match.id}`,
@@ -258,71 +259,105 @@ function TrendingCard({ p }: { p: TrendingPill }) {
 
   return (
     <div
-      className="relative rounded-xl overflow-hidden border cursor-pointer transition-all duration-200 hover:-translate-y-0.5 group"
+      className="relative flex flex-col rounded-xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5"
       style={{
-        background: `linear-gradient(135deg, ${bucket.color}08 0%, rgba(11,15,20,0.95) 60%)`,
-        borderColor: isHot ? `${bucket.color}40` : 'rgba(37,50,65,0.5)',
+        background:  `linear-gradient(160deg, ${bucket.color}0a 0%, #0B0F14 55%)`,
+        borderColor: isHot ? `${bucket.color}38` : 'rgba(37,50,65,0.55)',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${bucket.color}18`;
-        (e.currentTarget as HTMLElement).style.borderColor = `${bucket.color}60`;
+        const el = e.currentTarget as HTMLElement;
+        el.style.boxShadow    = `0 6px 20px ${bucket.color}14`;
+        el.style.borderColor  = `${bucket.color}55`;
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = '';
-        (e.currentTarget as HTMLElement).style.borderColor = isHot ? `${bucket.color}40` : 'rgba(37,50,65,0.5)';
+        const el = e.currentTarget as HTMLElement;
+        el.style.boxShadow   = '';
+        el.style.borderColor = isHot ? `${bucket.color}38` : 'rgba(37,50,65,0.55)';
       }}
     >
-      {/* Top accent stripe */}
-      <div className="h-[2px] w-full" style={{
-        background: `linear-gradient(90deg, ${bucket.color} 0%, ${bucket.color}30 70%, transparent 100%)`
-      }} />
+      {/* Coloured left border accent */}
+      <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-xl"
+        style={{ background: `linear-gradient(180deg, ${bucket.color} 0%, ${bucket.color}30 100%)` }} />
 
-      <div className="p-3">
-        {/* Header row: sport badge + rank + live */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
+      <div className="pl-4 pr-3 pt-3 pb-3 flex flex-col flex-1 gap-2.5">
+
+        {/* Row 1 — sport + label + live/time */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span
-              className="text-[13px] w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-              style={{ background: `${bucket.color}15`, border: `1px solid ${bucket.color}25` }}
+              className="text-[12px] w-5 h-5 rounded flex items-center justify-center shrink-0"
+              style={{ background: `${bucket.color}18` }}
             >
               {bucket.emoji}
             </span>
+            <span className="text-[9.5px] font-semibold truncate" style={{ color: `${bucket.color}90` }}>
+              {bucket.label}
+            </span>
             {isHot && (
-              <span className="flex items-center gap-0.5 text-[8px] font-black uppercase tracking-wide text-[#EF4444]">
-                <Flame className="h-2.5 w-2.5" /> HOT
-              </span>
-            )}
-            {!isHot && (
-              <span className="text-[9px] font-bold tabular-nums px-1 py-0.5 rounded"
-                style={{ color: `${bucket.color}80`, background: `${bucket.color}12` }}>
-                #{rank + 1}
+              <span className="flex items-center gap-0.5 text-[8px] font-black uppercase text-[#EF4444] shrink-0">
+                <Flame className="h-2 w-2" /> HOT
               </span>
             )}
           </div>
           {match.isLive ? (
-            <span className="flex items-center gap-0.5 text-[8px] font-black text-[#EF4444]">
+            <span className="flex items-center gap-0.5 text-[8px] font-black text-[#EF4444] shrink-0">
               <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" /> LIVE
-              {match.liveMinute != null && <span className="text-[#EF4444]/60 ml-0.5">{match.liveMinute}'</span>}
+              {match.liveMinute != null && <span className="ml-0.5 opacity-60">{match.liveMinute}'</span>}
             </span>
           ) : (
-            <span className="text-[9px] text-[#475569]">{league.name.slice(0, 14)}</span>
+            <span className="text-[8.5px] text-[#475569] shrink-0 tabular-nums">
+              {getTimeLabel(match)}
+            </span>
           )}
         </div>
 
-        {/* Teams */}
-        <div className="mb-2.5">
-          <p className="text-[12px] font-bold text-[#E2E8F0] leading-snug truncate">{match.team1}</p>
-          <p className="text-[11px] font-medium text-[#64748B] leading-snug truncate mt-0.5">{match.team2}</p>
+        {/* Row 2 — team names */}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            <TeamBadge name={match.team1} size={18} bg={`${bucket.color}18`} color={bucket.color} />
+            <span className="text-[11.5px] font-bold text-[#E2E8F0] truncate leading-none">{match.team1}</span>
+          </div>
+          <div className="flex items-center gap-1.5 pl-[1px]">
+            <div className="w-[16px] h-[1px] mx-[1px]" style={{ background: 'rgba(37,50,65,0.6)' }} />
+            <span className="text-[9px] font-semibold text-[#475569] tracking-wide uppercase">vs</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <TeamBadge name={match.team2} size={18} bg="rgba(37,50,65,0.5)" color="#64748B" />
+            <span className="text-[11px] font-semibold text-[#64748B] truncate leading-none">{match.team2}</span>
+          </div>
         </div>
 
-        {/* Odds row */}
-        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
-          {match.odds.draw != null && (
-            <OddsButton {...shared} selectionType="X" selectionName="Draw" odds={match.odds.draw} />
-          )}
-          <OddsButton {...shared} selectionType="2" selectionName={match.team2} odds={match.odds.away} />
+        {/* Divider */}
+        <div className="h-px" style={{ background: 'rgba(37,50,65,0.5)' }} />
+
+        {/* Row 3 — odds labels + buttons */}
+        <div onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-1 mb-1">
+            <span className="flex-1 text-center text-[8.5px] font-semibold uppercase tracking-wide text-[#334155]">
+              {hasDraw ? '1' : 'Home'}
+            </span>
+            {hasDraw && (
+              <span className="flex-1 text-center text-[8.5px] font-semibold uppercase tracking-wide text-[#334155]">X</span>
+            )}
+            <span className="flex-1 text-center text-[8.5px] font-semibold uppercase tracking-wide text-[#334155]">
+              {hasDraw ? '2' : 'Away'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="flex-1">
+              <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
+            </div>
+            {hasDraw && (
+              <div className="flex-1">
+                <OddsButton {...shared} selectionType="X" selectionName="Draw" odds={match.odds.draw!} />
+              </div>
+            )}
+            <div className="flex-1">
+              <OddsButton {...shared} selectionType="2" selectionName={match.team2} odds={match.odds.away} />
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   );
