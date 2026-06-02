@@ -1,0 +1,96 @@
+Fix the bet settlement system so bets realistically become won, lost, void, or manual_review based on real match results.
+
+Current issue:
+Bets stay open and then auto-void after 12 hours because the settlement worker uses bet placement time. This is wrong. Auto-void/manual review must be based on match commence time, not placedAt.
+
+Required fixes:
+
+1. Update settlementWorker.ts
+
+* Do not auto-void based on bet.createdAt or placedAt.
+* Use each selection's commenceTime.
+* For single bets, settlement deadline should be 48 hours after the match commenceTime.
+* For accumulators, use the latest commenceTime among all selections.
+* Rename AUTO_VOID_HOURS to AUTO_SETTLEMENT_REVIEW_HOURS_AFTER_COMMENCE.
+* Set it to 48 or 72 hours.
+
+2. Settlement result flow
+   For every open bet:
+
+* Fetch result from The Odds API scores endpoint using the saved sportKey and eventId.
+* If no result is found, try API-Football fallback.
+* If match has not started yet, keep bet open.
+* If match started but result not completed yet, keep bet open.
+* If match completed and result exists, settle selections as won/lost/void.
+* If result is still missing after 48–72 hours after commenceTime, do not instantly refund. Set status to manual_review unless the event is clearly cancelled/postponed/abandoned.
+
+3. Required saved data
+   Make sure every bet_selection stores:
+
+* eventId
+* sportKey
+* marketType
+* selection
+* odds
+* commenceTime
+* homeTeam
+* awayTeam
+* point/handicap if market is spreads or totals
+
+If any of this is missing, update POST /bets to save it.
+
+4. Market settlement rules
+   Support realistic settlement for:
+
+* h2h / moneyline: selected winner wins, loser loses
+* soccer draw: draw wins only if draw was selected
+* totals: over/under based on total final score and point line
+* spreads: apply handicap/point line to selected team
+* cancelled/postponed/abandoned/no result: void or manual_review
+* accumulator: all won = bet won; any lost = bet lost; void legs are removed and payout recalculated using remaining odds
+
+5. Wallet/transaction logic
+
+* Won bet: credit real balance_usdt with payout.
+* Lost bet: no refund.
+* Void bet: refund original stake to real balance_usdt.
+* Partial void accumulator: recalculate payout using only valid winning legs.
+* Prevent double settlement by using database transaction/lock and checking status is still open before updating.
+
+6. Logging
+   Add detailed logs:
+
+* worker started timestamp
+* number of open bets found
+* betId, eventId, sportKey, marketType, selection, commenceTime
+* result source used: odds_api or api_football
+* resultFound true/false
+* completed true/false
+* final score
+* final settlement status
+* wallet credit/refund transaction id
+
+7. Safety
+
+* Do not let the worker crash if one bet fails.
+* Wrap each bet settlement in try/catch.
+* Continue processing other bets.
+* Add idempotency so the same bet cannot be credited/refunded twice.
+
+8. Testing
+   Create test cases for:
+
+* bet placed before match starts should stay open
+* bet after 12 hours but match not started should stay open
+* completed h2h win should become won
+* completed h2h loss should become lost
+* draw handling
+* totals over/under
+* spreads
+* accumulator with all wins
+* accumulator with one loss
+* accumulator with one void leg
+* missing result after 48–72 hours should become manual_review, not auto-refund unless clearly cancelled
+
+Goal:
+Bets must not stay open forever, and must not auto-void just because 12 hours passed after placement. Bets should settle based on actual completed match results.
