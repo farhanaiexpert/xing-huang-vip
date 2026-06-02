@@ -175,30 +175,44 @@ export function OverviewPage() {
               </div>
               <span className="text-[10px] font-semibold text-[#38BDF8]">View Wallet →</span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            {/* ≥360px: 3 cols; <360px: 2 cols (Bonus wraps to second row) */}
+            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+              ref={(el) => {
+                if (!el) return;
+                const update = () => {
+                  el.style.gridTemplateColumns = el.offsetWidth < 320
+                    ? 'repeat(2, minmax(0, 1fr))'
+                    : 'repeat(3, minmax(0, 1fr))';
+                };
+                update();
+                const ro = new ResizeObserver(update);
+                ro.observe(el);
+                return () => ro.disconnect();
+              }}
+            >
               <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(0,223,169,0.06)', borderColor: 'rgba(0,223,169,0.14)' }}>
                 <div className="flex items-center gap-1 mb-1.5">
                   <ArrowDownLeft className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#00DFA9] shrink-0" />
-                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide truncate">Available</p>
+                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Available</p>
                 </div>
-                <p className="text-[14px] sm:text-[18px] font-black text-[#00DFA9] leading-tight truncate">${balance.toFixed(2)}</p>
+                <p className="text-[14px] sm:text-[18px] font-black text-[#00DFA9] leading-tight">${balance.toFixed(2)}</p>
                 <p className="text-[8px] sm:text-[9px] text-[#64748B] mt-0.5">USDT</p>
               </div>
               <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(56,189,248,0.06)', borderColor: 'rgba(56,189,248,0.14)' }}>
                 <div className="flex items-center gap-1 mb-1.5">
                   <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#38BDF8] shrink-0" />
-                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide truncate">Active</p>
+                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Active Bets</p>
                 </div>
-                <p className="text-[14px] sm:text-[18px] font-black text-[#38BDF8] leading-tight truncate">${lockedInBets.toFixed(2)}</p>
+                <p className="text-[14px] sm:text-[18px] font-black text-[#38BDF8] leading-tight">${lockedInBets.toFixed(2)}</p>
                 <p className="text-[8px] sm:text-[9px] text-[#64748B] mt-0.5">locked</p>
               </div>
               <div className="rounded-xl p-2.5 sm:p-3 border" style={{ background: 'rgba(250,204,21,0.06)', borderColor: 'rgba(250,204,21,0.14)' }}
                 title="Bonus funds are for betting only — cannot be withdrawn">
                 <div className="flex items-center gap-1 mb-1.5">
                   <Gift className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#FACC15] shrink-0" />
-                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide truncate">Bonus</p>
+                  <p className="text-[8px] sm:text-[9px] font-bold text-[#64748B] uppercase tracking-wide">Bonus</p>
                 </div>
-                <p className="text-[14px] sm:text-[18px] font-black text-[#FACC15] leading-tight truncate">${bonusBalance.toFixed(2)}</p>
+                <p className="text-[14px] sm:text-[18px] font-black text-[#FACC15] leading-tight">${bonusBalance.toFixed(2)}</p>
                 <p className="text-[8px] sm:text-[9px] text-[#FACC15]/50 mt-0.5">Bet only</p>
               </div>
             </div>

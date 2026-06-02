@@ -91,7 +91,7 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
 
   return (
     <aside className={cn(
-      'w-[220px] xl:w-[240px] 2xl:w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-0 hidden lg:flex',
+      'w-[220px] xl:w-[240px] 2xl:w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-0 hidden xl:flex',
       'bg-[#0A0E13] border-r border-[#253241]',
       className
     )}>
