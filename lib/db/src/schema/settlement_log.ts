@@ -10,6 +10,7 @@ export const settlementLogTable = pgTable("settlement_log", {
   awayTeam: text("away_team").default(""),
   homeScore: text("home_score").default(""),
   awayScore: text("away_score").default(""),
+  commenceTime: timestamp("commence_time", { withTimezone: true }),
   betsSettled: integer("bets_settled").notNull().default(0),
   betsWon: integer("bets_won").notNull().default(0),
   betsLost: integer("bets_lost").notNull().default(0),

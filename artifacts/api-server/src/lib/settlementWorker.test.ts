@@ -14,6 +14,7 @@ import {
   expandSportKey,
   shouldSkipFutureEvent,
   shouldEscalateToManualReview,
+  combineAccumulatorOutcome,
 } from "./settlementWorker.js";
 import type { CompletedEvent } from "./apiFootball.js";
 
@@ -317,5 +318,97 @@ describe("shouldEscalateToManualReview", () => {
   it("future commence_time results in false (match hasn't happened yet)", () => {
     const commence = new Date(now.getTime() + 10 * 60 * 60 * 1000); // 10h in the future
     expect(shouldEscalateToManualReview(commence, now)).toBe(false);
+  });
+});
+
+// ─── combineAccumulatorOutcome ────────────────────────────────────────────────
+
+describe("combineAccumulatorOutcome — single selection", () => {
+  it("single won leg → won", () => {
+    expect(combineAccumulatorOutcome(["won"])).toBe("won");
+  });
+  it("single lost leg → lost", () => {
+    expect(combineAccumulatorOutcome(["lost"])).toBe("lost");
+  });
+  it("single void leg → void", () => {
+    expect(combineAccumulatorOutcome(["void"])).toBe("void");
+  });
+  it("single open leg → open (still running)", () => {
+    expect(combineAccumulatorOutcome(["open"])).toBe("open");
+  });
+  it("empty array → void (defensive)", () => {
+    expect(combineAccumulatorOutcome([])).toBe("void");
+  });
+});
+
+describe("combineAccumulatorOutcome — accumulator scenarios", () => {
+  it("all legs won → won", () => {
+    expect(combineAccumulatorOutcome(["won", "won", "won"])).toBe("won");
+  });
+  it("one leg lost, rest won → lost (any loss kills acca)", () => {
+    expect(combineAccumulatorOutcome(["won", "lost", "won"])).toBe("lost");
+  });
+  it("one leg lost, one void → lost (loss takes priority over void)", () => {
+    expect(combineAccumulatorOutcome(["void", "lost", "won"])).toBe("lost");
+  });
+  it("all legs void → void (stake refunded)", () => {
+    expect(combineAccumulatorOutcome(["void", "void", "void"])).toBe("void");
+  });
+  it("some won, some void (no losses) → won (void legs excluded from odds)", () => {
+    expect(combineAccumulatorOutcome(["won", "void", "won"])).toBe("won");
+  });
+  it("one open leg → open (acca still running)", () => {
+    expect(combineAccumulatorOutcome(["won", "won", "open"])).toBe("open");
+  });
+  it("open takes priority over lost (still in-play)", () => {
+    expect(combineAccumulatorOutcome(["open", "lost"])).toBe("open");
+  });
+  it("4-leg acca: all won → won", () => {
+    expect(combineAccumulatorOutcome(["won", "won", "won", "won"])).toBe("won");
+  });
+  it("4-leg acca: first leg lost → lost", () => {
+    expect(combineAccumulatorOutcome(["lost", "won", "won", "won"])).toBe("lost");
+  });
+  it("4-leg acca: last leg open → open", () => {
+    expect(combineAccumulatorOutcome(["won", "won", "won", "open"])).toBe("open");
+  });
+});
+
+// ─── eventId-mismatch non-settlement ─────────────────────────────────────────
+//
+// The settlement worker only processes events whose IDs appear in completedMap
+// (from Odds API).  Events NOT in completedMap are never settled — they remain
+// open until a later tick produces a result or the 48h manual_review escalation
+// fires.  This is tested here via the pure shouldEscalateToManualReview and
+// shouldSkipFutureEvent helpers that gate those two paths.
+
+describe("eventId-mismatch → event stays open (non-settlement)", () => {
+  const now = new Date("2025-06-11T20:00:00Z");
+
+  it("unmatched event within 48h window stays open (not escalated)", () => {
+    const commence = new Date("2025-06-11T16:00:00Z"); // 4h ago
+    // Should NOT be skipped (past), should NOT be escalated (under 48h)
+    expect(shouldSkipFutureEvent(commence, now)).toBe(false);
+    expect(shouldEscalateToManualReview(commence, now)).toBe(false);
+    // → no action: event remains open and retried next tick
+  });
+
+  it("unmatched event 49h after kick-off escalates to manual_review", () => {
+    const commence = new Date(now.getTime() - 49 * 60 * 60 * 1000);
+    expect(shouldSkipFutureEvent(commence, now)).toBe(false);      // not future
+    expect(shouldEscalateToManualReview(commence, now)).toBe(true); // ≥ 48h → escalate
+  });
+
+  it("unmatched future event is skipped (no result can exist yet)", () => {
+    const commence = new Date("2025-06-12T10:00:00Z"); // tomorrow
+    expect(shouldSkipFutureEvent(commence, now)).toBe(true);
+    expect(shouldEscalateToManualReview(commence, now)).toBe(false);
+    // → skipped this tick; retried after kick-off time passes
+  });
+
+  it("legacy row (null commenceTime) is never skipped or escalated", () => {
+    expect(shouldSkipFutureEvent(null, now)).toBe(false);
+    expect(shouldEscalateToManualReview(null, now)).toBe(false);
+    // → always retried; manual settlement required
   });
 });

@@ -445,6 +445,15 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v24 skipped");
   }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE settlement_log ADD COLUMN IF NOT EXISTS commence_time TIMESTAMPTZ
+    `);
+    logger.info("DB migration v25 applied (settlement_log.commence_time)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v25 skipped");
+  }
 }
 
 runMigrations().then(() => {

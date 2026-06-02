@@ -186,6 +186,27 @@ export function shouldEscalateToManualReview(
   return (now.getTime() - commenceTime.getTime()) >= reviewHours * 60 * 60 * 1000;
 }
 
+/**
+ * Pure function mirroring the accumulator outcome logic in settleBetsForEvent.
+ * Given an array of settled selection statuses for one bet, returns the final
+ * bet outcome.  "open" status means at least one leg is still running.
+ *
+ * Rules (in priority order):
+ *   1. Any "open"  → bet still running ("open")
+ *   2. Any "lost"  → entire accumulator lost ("lost")
+ *   3. All "void"  → stake refunded ("void")
+ *   4. Otherwise   → all remaining legs won, possibly with some voids ("won")
+ */
+export function combineAccumulatorOutcome(
+  statuses: ("won" | "lost" | "void" | "open")[],
+): "won" | "lost" | "void" | "open" {
+  if (statuses.length === 0)             return "void";
+  if (statuses.some(s => s === "open"))  return "open";
+  if (statuses.some(s => s === "lost"))  return "lost";
+  if (statuses.every(s => s === "void")) return "void";
+  return "won";
+}
+
 // ─── Team name fuzzy matching (used within mapSelectionOutcome score mapping) ──
 
 function normalizeTeam(name: string): string {
@@ -439,8 +460,9 @@ export function mapSpreadsOutcome(
 async function settleBetsForEvent(
   eventId:  string,
   outcomes: EventOutcome[],
-): Promise<{ settled: number; won: number; lost: number; voided: number; payout: number }> {
+): Promise<{ settled: number; won: number; lost: number; voided: number; payout: number; transactionIds: number[] }> {
   let totalSettled = 0, totalWon = 0, totalLost = 0, totalVoided = 0, totalPayout = 0;
+  const transactionIds: number[] = [];
 
   await db.transaction(async tx => {
     const affectedBetIds = new Set<number>();
@@ -533,7 +555,7 @@ async function settleBetsForEvent(
       if (payout > 0) {
         totalPayout += payout;
         const txType = newStatus === "void" ? "refund" : "win";
-        await tx.insert(transactionsTable).values({
+        const [txRow] = await tx.insert(transactionsTable).values({
           userId: bet.userId,
           type:   txType,
           amount: payout.toFixed(8),
@@ -541,7 +563,8 @@ async function settleBetsForEvent(
           notes:  newStatus === "void"
             ? `Bet #${betId} voided — stake refunded`
             : `Bet #${betId} won — payout ${payout.toFixed(2)} USDT`,
-        });
+        }).returning({ id: transactionsTable.id });
+        if (txRow) transactionIds.push(txRow.id);
         await tx.execute(sql`
           UPDATE wallets
           SET balance_usdt = balance_usdt + ${payout.toFixed(8)}
@@ -561,7 +584,7 @@ async function settleBetsForEvent(
     }
   });
 
-  return { settled: totalSettled, won: totalWon, lost: totalLost, voided: totalVoided, payout: totalPayout };
+  return { settled: totalSettled, won: totalWon, lost: totalLost, voided: totalVoided, payout: totalPayout, transactionIds };
 }
 
 // ─── Mark bets as manual_review ───────────────────────────────────────────────
@@ -599,9 +622,10 @@ async function markBetsAsManualReview(eventId: string, eventName: string): Promi
 // ─── Settle a single event from any source ───────────────────────────────────
 
 async function processEvent(
-  event:  CompletedEvent,
-  sport:  string,
-  source: "odds-api" | "api-football",
+  event:         CompletedEvent,
+  sport:         string,
+  source:        "odds_api" | "api_football",
+  commenceTime?: Date | null,
 ): Promise<number> {
   const matchOutcome = determineMatchOutcome(event);
 
@@ -667,24 +691,39 @@ async function processEvent(
   const awayEntry = event.scores?.find(s => s.name === event.away_team);
 
   await db.insert(settlementLogTable).values({
-    eventId:    event.id,
+    eventId:     event.id,
     eventName,
     sport,
-    result:     matchOutcome,
-    homeTeam:   event.home_team,
-    awayTeam:   event.away_team,
-    homeScore:  homeEntry?.score ?? "",
-    awayScore:  awayEntry?.score ?? "",
+    result:      matchOutcome,
+    homeTeam:    event.home_team,
+    awayTeam:    event.away_team,
+    homeScore:   homeEntry?.score ?? "",
+    awayScore:   awayEntry?.score ?? "",
+    commenceTime: commenceTime ?? null,
     betsSettled: stats.settled,
-    betsWon:    stats.won,
-    betsLost:   stats.lost,
-    betsVoided: stats.voided,
+    betsWon:     stats.won,
+    betsLost:    stats.lost,
+    betsVoided:  stats.voided,
     totalPayout: stats.payout.toFixed(8),
     source,
   });
 
   logger.info(
-    { eventId: event.id, eventName, sport, source, matchOutcome, ...stats },
+    {
+      eventId:        event.id,
+      eventName,
+      sport,
+      source,
+      matchOutcome,
+      finalScore:     `${homeEntry?.score ?? "?"}-${awayEntry?.score ?? "?"}`,
+      commenceTime:   commenceTime?.toISOString() ?? null,
+      transactionIds: stats.transactionIds,
+      betsSettled:    stats.settled,
+      betsWon:        stats.won,
+      betsLost:       stats.lost,
+      betsVoided:     stats.voided,
+      totalPayout:    stats.payout,
+    },
     "Settlement worker: event settled",
   );
   return stats.settled;
@@ -794,7 +833,8 @@ async function processSettlement(): Promise<void> {
     for (const [id, event] of completedMap) {
       if (!unsettledIds.has(id)) continue;
       try {
-        const n = await processEvent(event, sport, "odds-api");
+        const meta = startedEvents.find(e => e.eventId === id);
+        const n = await processEvent(event, sport, "odds_api", meta?.commenceTime);
         grandTotal += n;
         unsettledIds.delete(id);
       } catch (err) {
@@ -809,7 +849,8 @@ async function processSettlement(): Promise<void> {
       if (!apiEvent) continue;
       const patchedEvent: CompletedEvent = { ...apiEvent, id: syntheticId };
       try {
-        const n = await processEvent(patchedEvent, sport, "odds-api");
+        const meta = startedEvents.find(e => e.eventId === syntheticId);
+        const n = await processEvent(patchedEvent, sport, "odds_api", meta?.commenceTime);
         grandTotal += n;
         unsettledIds.delete(syntheticId);
         logger.info({ syntheticId, realId }, "Settlement worker: resolved api_live_ event");
@@ -820,35 +861,13 @@ async function processSettlement(): Promise<void> {
 
     if (unsettledIds.size === 0) continue;
 
-    // ── Step 2: API-Football fallback (soccer only) ───────────────────────────
-    if (isApiFootballSport(sport)) {
-      const remaining = startedEvents.filter(e => unsettledIds.has(e.eventId));
-      try {
-        const apfbCompleted = await fetchCompletedScoresApiFootball(
-          sport,
-          remaining.map(e => ({
-            id:            e.eventId,
-            homeTeam:      e.homeTeam,
-            awayTeam:      e.awayTeam,
-            commenceDate:  e.commenceTime ? e.commenceTime.toISOString() : undefined,
-          })),
-        );
-
-        for (const event of apfbCompleted) {
-          try {
-            const n = await processEvent(event, sport, "api-football");
-            grandTotal += n;
-            unsettledIds.delete(event.id);
-          } catch (err) {
-            logger.error({ err, eventId: event.id }, "Settlement worker: API-Football event error");
-          }
-        }
-      } catch (err) {
-        logger.warn({ err, sport }, "Settlement worker: API-Football fetch error");
-      }
-    }
-
-    if (unsettledIds.size === 0) continue;
+    // ── Step 2: API-Football fallback removed ─────────────────────────────────
+    // API-Football uses team-name matching to identify fixtures in its own
+    // database (it has no Odds API event IDs), which can mis-associate similar
+    // fixtures between the same teams played on different days.
+    // Settlement is gated to Odds-API-sourced results only so event identity
+    // is always exact-ID-based.  Soccer matches without an Odds API result
+    // remain open until the 48h manual_review escalation fires in Step 3.
 
     // ── Step 3: Manual review — events ≥ 48h past commence_time with no result ─
     const toReview = startedEvents.filter(e => {
