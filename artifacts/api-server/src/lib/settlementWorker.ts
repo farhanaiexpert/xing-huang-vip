@@ -564,11 +564,12 @@ async function settleBetsForEvent(
         totalPayout += payout;
         const txType = newStatus === "void" ? "refund" : "win";
         const [txRow] = await tx.insert(transactionsTable).values({
-          userId: bet.userId,
-          type:   txType,
-          amount: payout.toFixed(8),
-          status: "completed",
-          notes:  newStatus === "void"
+          userId:    bet.userId,
+          type:      txType,
+          amount:    payout.toFixed(8),
+          status:    "completed",
+          reference: `bet_${betId}`,
+          notes:     newStatus === "void"
             ? `Bet #${betId} voided — stake refunded`
             : `Bet #${betId} won — payout ${payout.toFixed(2)} USDT`,
         }).returning({ id: transactionsTable.id });

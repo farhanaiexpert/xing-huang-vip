@@ -154,36 +154,52 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     ? `${verification.note} — Awaiting admin USDT credit conversion.`
     : verification.note;
 
-  // ── Atomic INSERT with ON CONFLICT — duplicate tx_hash protection ─────────────
-  // The DB has a unique partial index on tx_hash (WHERE tx_hash IS NOT NULL).
-  // ON CONFLICT DO NOTHING means concurrent duplicate submissions are silently
-  // dropped at the DB level — exactly one INSERT wins regardless of request timing.
-  const inserted = await db.insert(transactionsTable).values({
-    userId,
-    type: "deposit",
-    amount: amount.toString(),
-    status: newStatus,
-    txHash,
-    network,
-    verified: newVerified,
-    verificationNote: newNote,
-  }).onConflictDoNothing().returning();
+  // ── Atomic INSERT + wallet credit in a single DB transaction ─────────────────
+  // The DB has a unique partial index on tx_hash (WHERE tx_hash IS NOT NULL) —
+  // see migration v21. ON CONFLICT DO NOTHING ensures only one INSERT wins even
+  // under concurrent duplicate submissions. The wallet credit is inside the same
+  // transaction so a crash between INSERT and UPDATE cannot leave a "completed"
+  // ledger entry with no corresponding balance change.
+  let txn: typeof transactionsTable.$inferSelect;
+  try {
+    const result = await db.transaction(async (tx) => {
+      const inserted = await tx.insert(transactionsTable).values({
+        userId,
+        type: "deposit",
+        amount: amount.toString(),
+        status: newStatus,
+        txHash,
+        network,
+        verified: newVerified,
+        verificationNote: newNote,
+      }).onConflictDoNothing().returning();
 
-  if (inserted.length === 0) {
-    // Another request already recorded this tx hash — reject as duplicate
-    res.status(409).json({ error: "This transaction hash has already been submitted." });
-    return;
+      if (inserted.length === 0) return null; // Duplicate tx_hash — signal 409
+
+      const [record] = inserted;
+
+      if (autoVerified) {
+        // Credit balance inside the same transaction — atomic with the INSERT
+        await tx.update(walletsTable)
+          .set({ balanceUsdt: sql`balance_usdt + ${amount.toString()}` })
+          .where(eq(walletsTable.userId, userId));
+      }
+
+      return record;
+    });
+
+    if (result === null) {
+      res.status(409).json({ error: "This transaction hash has already been submitted." });
+      return;
+    }
+
+    txn = result;
+  } catch (err) {
+    throw err;
   }
 
-  const [txn] = inserted;
-
   if (autoVerified) {
-    // ── AUTO-APPROVE: verified on-chain → credit balance immediately ─────────
-    await db.update(walletsTable)
-      .set({ balanceUsdt: sql`balance_usdt + ${amount.toString()}` })
-      .where(eq(walletsTable.userId, userId));
-
-    // Record deposit usage across all active limit windows
+    // Record deposit usage across all active limit windows (outside transaction — informational)
     await recordDepositUsage(userId, amount.toString());
 
     logger.info({ txHash, amount, userId }, "Deposit auto-approved and balance credited");

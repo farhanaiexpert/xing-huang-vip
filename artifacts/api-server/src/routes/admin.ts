@@ -624,29 +624,68 @@ router.patch("/admin/transactions/:id", async (req, res): Promise<void> => {
   const parsed = PatchTransactionBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
+  // Initial fetch for early 404 / status guard (outside transaction — fast path)
   const [txn] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, id)).limit(1);
   if (!txn) { res.status(404).json({ error: "Transaction not found" }); return; }
   if (txn.status !== "pending") { res.status(400).json({ error: "Transaction is not pending" }); return; }
 
   const { status, notes } = parsed.data;
-  await db.update(transactionsTable).set({ status, notes: notes ?? txn.notes }).where(eq(transactionsTable.id, id));
 
-  // Deposit approved → credit wallet
-  if (status === "completed" && txn.type === "deposit") {
-    await db.update(walletsTable)
-      .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
-      .where(eq(walletsTable.userId, txn.userId));
-  }
-  // Withdrawal approved → debit wallet (funds are held in "pending" state, not deducted at request time)
-  if (status === "completed" && txn.type === "withdrawal") {
-    const [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, txn.userId)).limit(1);
-    if (!wallet || parseFloat(wallet.balanceUsdt) < parseFloat(txn.amount)) {
-      res.status(400).json({ error: "Insufficient wallet balance to complete withdrawal" });
-      return;
+  // ── Atomic approval: status update + wallet credit/debit in a single transaction
+  // This prevents the status reaching "completed" while the balance update fails,
+  // and prevents the TOCTOU race where two concurrent approvals both pass the balance check.
+  try {
+    await db.transaction(async (tx) => {
+      // Re-acquire row lock on the transaction record — prevents double-approval race
+      const recheck = await tx.execute(sql`
+        SELECT status FROM transactions WHERE id = ${id} FOR UPDATE
+      `);
+      const recheckRow = recheck.rows[0] as { status: string } | undefined;
+      if (!recheckRow || recheckRow.status !== "pending") {
+        throw Object.assign(new Error("Transaction is no longer pending"), { code: "NOT_PENDING" });
+      }
+
+      // Update status + notes atomically with the wallet operation below
+      await tx.update(transactionsTable)
+        .set({ status, notes: notes ?? txn.notes })
+        .where(eq(transactionsTable.id, id));
+
+      // Deposit approved → credit wallet
+      if (status === "completed" && txn.type === "deposit") {
+        await tx.update(walletsTable)
+          .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
+          .where(eq(walletsTable.userId, txn.userId));
+      }
+
+      // Withdrawal approved → debit wallet with conditional atomic check.
+      // Uses UPDATE...WHERE balance >= amount so it only deducts when funds are
+      // sufficient — no silent GREATEST(0,...) clamp, no TOCTOU between SELECT and UPDATE.
+      if (status === "completed" && txn.type === "withdrawal") {
+        const result = await tx.execute(sql`
+          UPDATE wallets
+          SET balance_usdt = balance_usdt - ${txn.amount}::numeric
+          WHERE user_id   = ${txn.userId}
+            AND balance_usdt >= ${txn.amount}::numeric
+          RETURNING balance_usdt
+        `);
+        if (result.rows.length === 0) {
+          throw Object.assign(new Error("Insufficient wallet balance to complete withdrawal"), { code: "INSUFFICIENT_BALANCE" });
+        }
+      }
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      const code = (err as { code?: string }).code;
+      if (code === "NOT_PENDING") {
+        res.status(409).json({ error: "Transaction was modified concurrently — please refresh and try again" });
+        return;
+      }
+      if (code === "INSUFFICIENT_BALANCE") {
+        res.status(400).json({ error: "Insufficient wallet balance to complete withdrawal" });
+        return;
+      }
     }
-    await db.update(walletsTable)
-      .set({ balanceUsdt: sql`GREATEST(0, balance_usdt - ${txn.amount})` })
-      .where(eq(walletsTable.userId, txn.userId));
+    throw err;
   }
 
   await logAdminAction(req.user!.userId, `${status}_transaction`, "transaction", id, { type: txn.type, amount: txn.amount });

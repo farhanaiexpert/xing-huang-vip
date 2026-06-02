@@ -1,0 +1,68 @@
+Please audit and fix the remaining high-risk money flow issues in our sports betting platform.
+
+Focus on these areas:
+
+1. Deposit flow
+
+* Verify Web3 deposits are credited correctly.
+* Confirm deposit works even if user refreshes or closes browser after sending transaction.
+* Save txHash immediately after wallet sends transaction.
+* Backend must be able to recover and verify pending txHash.
+* Add duplicate txHash protection so same blockchain transaction can never credit balance twice.
+* Confirm deposit creates a proper wallet transaction record.
+
+2. Withdrawal flow
+
+* Audit withdrawal request logic.
+* Ensure users cannot withdraw bonus balance.
+* Only real withdrawable balance should be used.
+* Add proper admin approval/rejection flow if missing.
+* Balance should only deduct safely when withdrawal is approved or locked correctly.
+* Create wallet transaction records for requested, approved, rejected, and completed withdrawals.
+
+3. Wallet ledger integrity
+
+* Create a clear transaction ledger for:
+
+  * deposits
+  * bets
+  * bet winnings
+  * refunds
+  * bonuses
+  * withdrawals
+* Every balance change must have a matching transaction record.
+* No direct balance update should happen without a ledger entry.
+* Add idempotency keys where needed.
+
+4. Settlement end-to-end test
+
+* Place a small test bet on a recently completed or near-complete match.
+* Wait for settlement worker cron.
+* Confirm status changes from open to won/lost/void/manual_review.
+* Confirm user balance updates correctly.
+* Confirm transaction record is created correctly.
+
+5. Safety checks
+
+* Prevent negative balances.
+* Prevent duplicate settlement.
+* Prevent duplicate deposit credit.
+* Prevent withdrawal of bonus balance.
+* Prevent race conditions during bet placement, deposits, settlement, and withdrawals.
+
+6. Add tests / logs
+
+* Add backend tests or clear manual test scripts for all above flows.
+* Add useful logs for deposit verification, withdrawal approval, settlement result, and ledger creation.
+* Run typecheck and confirm no errors.
+
+Important:
+Do not change the existing working betting logic unless required.
+Keep current UI/UX mostly same.
+Only fix and strengthen the money flow, ledger, deposits, withdrawals, and settlement verification.
+After fixing, give me a clear report of:
+
+* what was broken
+* what was fixed
+* what files changed
+* how to test everything

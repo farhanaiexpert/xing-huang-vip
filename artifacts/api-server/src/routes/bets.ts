@@ -134,65 +134,90 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     }
   }
 
-  // ── Balance check — total of real + bonus ─────────────────────────────────
-  const [wallet] = await db.select().from(walletsTable)
-    .where(eq(walletsTable.userId, userId)).limit(1);
-  const realBalance  = wallet ? parseFloat(wallet.balanceUsdt)       : 0;
-  const bonusBalance = wallet ? parseFloat(wallet.bonusBalanceUsdt)  : 0;
-  if (!wallet || (realBalance + bonusBalance) < stake) {
-    res.status(400).json({ error: "Insufficient balance" });
-    return;
-  }
-
   const totalOdds = selections.reduce((acc, s) => acc * s.odds, 1);
   const potentialReturn = stake * totalOdds;
 
-  const [bet] = await db.insert(betsTable).values({
-    userId,
-    type,
-    stake: stake.toString(),
-    totalOdds: totalOdds.toFixed(4),
-    potentialReturn: potentialReturn.toFixed(8),
-    status: "open",
-  }).returning();
+  // ── Atomic bet placement: lock wallet → check balance → insert bet + selections
+  // → deduct via subtractive SQL → ledger entry. All in one DB transaction so
+  // concurrent bets from the same session cannot race past the balance check.
+  let bet: typeof betsTable.$inferSelect;
+  try {
+    bet = await db.transaction(async (tx) => {
+      // Lock the wallet row so concurrent requests queue up behind this transaction
+      const walletRows = await tx.execute(sql`
+        SELECT balance_usdt::numeric       AS balance,
+               bonus_balance_usdt::numeric AS bonus
+        FROM wallets
+        WHERE user_id = ${userId}
+        FOR UPDATE
+      `);
+      const walletRow = walletRows.rows[0] as { balance: string; bonus: string } | undefined;
+      const realBalance  = walletRow ? Number(walletRow.balance) : 0;
+      const bonusBalance = walletRow ? Number(walletRow.bonus)   : 0;
 
-  await db.insert(betSelectionsTable).values(
-    selections.map(s => ({
-      betId:            bet.id,
-      eventId:          s.eventId,
-      eventName:        s.eventName,
-      sport:            s.sportKey ?? s.sport ?? "",
-      sportKey:         s.sportKey ?? s.sport ?? "",
-      homeTeam:         s.homeTeam ?? "",
-      awayTeam:         s.awayTeam ?? "",
-      commenceTime:     new Date(s.commenceTime),
-      marketType:       s.marketType,
-      selection:        s.selection,
-      odds:             s.odds.toFixed(4),
-      point:            s.point != null ? s.point.toFixed(4) : null,
-      status:           "open",
-      isLive:           s.isLive ?? false,
-      scoreAtPlacement: s.scoreAtPlacement ?? null,
-    }))
-  );
+      if (!walletRow || (realBalance + bonusBalance) < stake) {
+        throw Object.assign(new Error("Insufficient balance"), { code: "INSUFFICIENT_BALANCE" });
+      }
 
-  // ── Deduct: bonus first, then real balance ────────────────────────────────
-  let fromBonus = Math.min(bonusBalance, stake);
-  let fromReal  = stake - fromBonus;
-  const newBonusBalance = (bonusBalance - fromBonus).toFixed(8);
-  const newRealBalance  = (realBalance  - fromReal ).toFixed(8);
-  await db.update(walletsTable)
-    .set({ balanceUsdt: newRealBalance, bonusBalanceUsdt: newBonusBalance })
-    .where(eq(walletsTable.userId, userId));
+      const [newBet] = await tx.insert(betsTable).values({
+        userId,
+        type,
+        stake: stake.toString(),
+        totalOdds: totalOdds.toFixed(4),
+        potentialReturn: potentialReturn.toFixed(8),
+        status: "open",
+      }).returning();
 
-  await db.insert(transactionsTable).values({
-    userId,
-    type: "bet_stake",
-    amount: stake.toString(),
-    status: "completed",
-    reference: `bet_${bet.id}`,
-    notes: `Bet #${bet.id} stake`,
-  });
+      await tx.insert(betSelectionsTable).values(
+        selections.map(s => ({
+          betId:            newBet.id,
+          eventId:          s.eventId,
+          eventName:        s.eventName,
+          sport:            s.sportKey ?? s.sport ?? "",
+          sportKey:         s.sportKey ?? s.sport ?? "",
+          homeTeam:         s.homeTeam ?? "",
+          awayTeam:         s.awayTeam ?? "",
+          commenceTime:     new Date(s.commenceTime),
+          marketType:       s.marketType,
+          selection:        s.selection,
+          odds:             s.odds.toFixed(4),
+          point:            s.point != null ? s.point.toFixed(4) : null,
+          status:           "open",
+          isLive:           s.isLive ?? false,
+          scoreAtPlacement: s.scoreAtPlacement ?? null,
+        }))
+      );
+
+      // ── Deduct: bonus first, then real balance — subtractive SQL (race-safe) ─
+      const fromBonus = Math.min(bonusBalance, stake);
+      const fromReal  = stake - fromBonus;
+      await tx.execute(sql`
+        UPDATE wallets
+        SET
+          balance_usdt       = balance_usdt       - ${fromReal.toFixed(8)}::numeric,
+          bonus_balance_usdt = bonus_balance_usdt - ${fromBonus.toFixed(8)}::numeric
+        WHERE user_id = ${userId}
+      `);
+
+      // Ledger entry — every balance deduction must have a matching record
+      await tx.insert(transactionsTable).values({
+        userId,
+        type: "bet_stake",
+        amount: stake.toString(),
+        status: "completed",
+        reference: `bet_${newBet.id}`,
+        notes: `Bet #${newBet.id} stake`,
+      });
+
+      return newBet;
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error && (err as { code?: string }).code === "INSUFFICIENT_BALANCE") {
+      res.status(400).json({ error: "Insufficient balance" });
+      return;
+    }
+    throw err;
+  }
 
   // ── Upsert market liability ────────────────────────────────────────────────
   const liabilityThresholdRow = await db.select().from(platformSettingsTable)
