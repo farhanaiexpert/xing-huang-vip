@@ -454,6 +454,40 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v25 skipped");
   }
+
+  // v26: commissions.tier — track which tier (1/2/3) each commission belongs to
+  try {
+    await db.execute(sql`
+      ALTER TABLE commissions ADD COLUMN IF NOT EXISTS tier integer NOT NULL DEFAULT 1
+    `);
+    logger.info("DB migration v26 applied (commissions.tier)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v26 skipped");
+  }
+
+  // v27: referrals — replace per-user unique on referred_id with composite unique
+  //       on (referrer_id, referred_id) to allow multi-tier rows per referred user;
+  //       also add commissions idempotency index.
+  try {
+    await db.execute(sql`
+      ALTER TABLE referrals DROP CONSTRAINT IF EXISTS referrals_referred_id_unique
+    `);
+    await db.execute(sql`
+      DROP INDEX IF EXISTS referrals_referred_id_unique
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS referrals_referrer_referred_uniq
+        ON referrals (referrer_id, referred_id)
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS commissions_referral_source_uniq
+        ON commissions (referral_id, source_transaction_id)
+        WHERE source_transaction_id IS NOT NULL
+    `);
+    logger.info("DB migration v27 applied (referrals composite unique + commissions idempotency index)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v27 skipped");
+  }
 }
 
 runMigrations().then(() => {

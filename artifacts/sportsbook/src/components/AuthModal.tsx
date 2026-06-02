@@ -135,8 +135,10 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       );
       const signature = await evmWallet.signMessage(message);
       setWalletStep('verifying');
+      const storedRef = sessionStorage.getItem('cb_ref');
       const data = await api.post<AuthResponse>('/auth/wallet/verify', {
         address: addr.toLowerCase(), signature, nonce, chainId: evmWallet.chainId,
+        ...(storedRef ? { referralCode: storedRef } : {}),
       });
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
@@ -181,7 +183,11 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       );
       const signature = await tw.trx.signMessageV2(message) as string;
       setWalletStep('verifying');
-      const data = await api.post<AuthResponse>('/auth/wallet/verify/tron', { address: tronAddr, signature, nonce });
+      const storedRef = sessionStorage.getItem('cb_ref');
+      const data = await api.post<AuthResponse>('/auth/wallet/verify/tron', {
+        address: tronAddr, signature, nonce,
+        ...(storedRef ? { referralCode: storedRef } : {}),
+      });
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setWalletStep('done');
@@ -211,7 +217,11 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       const { signature } = await ph.signMessage(encoded, 'utf8') as { signature: Uint8Array; publicKey: unknown };
       const sigHex = Array.from(signature).map((b: unknown) => (b as number).toString(16).padStart(2, '0')).join('');
       setWalletStep('verifying');
-      const data = await api.post<AuthResponse>('/auth/wallet/verify/solana', { address: solAddr, signature: sigHex, nonce });
+      const storedRef = sessionStorage.getItem('cb_ref');
+      const data = await api.post<AuthResponse>('/auth/wallet/verify/solana', {
+        address: solAddr, signature: sigHex, nonce,
+        ...(storedRef ? { referralCode: storedRef } : {}),
+      });
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setWalletStep('done');
@@ -251,6 +261,8 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
         const result = await ton.send('ton_signMessage', { data: btoa(message) }) as { signature: string; publicKey: string };
         verifyBody = { address: tonAddress, signature: result.signature, nonce };
       }
+      const storedRef = sessionStorage.getItem('cb_ref');
+      if (storedRef) verifyBody.referralCode = storedRef;
       setWalletStep('verifying');
       const data = await api.post<AuthResponse>('/auth/wallet/verify/ton', verifyBody);
       setTokens(data.accessToken, data.refreshToken);

@@ -741,30 +741,28 @@ router.post("/admin/referrals/:referrerId/mark-paid", async (req, res): Promise<
   }
 
   await db.transaction(async tx => {
-    // Get all pending commissions for this referrer
-    const pending = await tx
-      .select({ id: commissionsTable.id, amount: commissionsTable.amount })
-      .from(commissionsTable)
-      .where(and(eq(commissionsTable.userId, referrerId), eq(commissionsTable.status, "pending")));
-
-    if (pending.length === 0) {
+    // Atomic UPDATE…RETURNING: mark as paid and get amounts in one statement,
+    // preventing double-credit under concurrent requests.
+    const updated = await tx.execute(sql`
+      UPDATE commissions
+      SET status = 'paid'
+      WHERE user_id = ${referrerId} AND status = 'pending'
+      RETURNING id, amount
+    `);
+    const rows = updated.rows as { id: number; amount: string }[];
+    if (rows.length === 0) {
       res.json({ updated: 0, total: "0" });
       return;
     }
 
-    const totalAmt = pending.reduce((s, c) => s + parseFloat(c.amount), 0);
-    const ids = pending.map(c => c.id);
-
-    await tx.update(commissionsTable)
-      .set({ status: "paid" })
-      .where(and(eq(commissionsTable.userId, referrerId), inArray(commissionsTable.id, ids)));
+    const totalAmt = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
 
     await tx.execute(sql`
       UPDATE wallets SET balance_usdt = balance_usdt + ${totalAmt.toFixed(8)}::numeric
       WHERE user_id = ${referrerId}
     `);
 
-    res.json({ updated: pending.length, total: totalAmt.toFixed(8) });
+    res.json({ updated: rows.length, total: totalAmt.toFixed(8) });
   });
 });
 

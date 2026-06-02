@@ -11,6 +11,41 @@ import { isTronAddress, verifyTronSignature } from "../lib/tronUtils.js";
 
 const router = Router();
 
+// ── Referral chain creation helper ───────────────────────────────────────────
+// Called at every registration path (email + all wallet types).
+// With the multi-tier row model, one referred user can have up to 3 rows in
+// referrals: tier-1 (direct referrer), tier-2, tier-3.
+async function createReferralChain(newUserId: number, referrerId: number): Promise<void> {
+  // Tier 1: direct referrer → new user
+  await db.insert(referralsTable)
+    .values({ referrerId, referredId: newUserId, tier: 1 })
+    .onConflictDoNothing();
+
+  // Tier 2: referrer's direct referrer
+  const [ref2] = await db
+    .select({ referrerId: referralsTable.referrerId })
+    .from(referralsTable)
+    .where(and(eq(referralsTable.referredId, referrerId), eq(referralsTable.tier, 1)))
+    .limit(1);
+  if (!ref2) return;
+
+  await db.insert(referralsTable)
+    .values({ referrerId: ref2.referrerId, referredId: newUserId, tier: 2 })
+    .onConflictDoNothing();
+
+  // Tier 3: referrer's referrer's direct referrer
+  const [ref3] = await db
+    .select({ referrerId: referralsTable.referrerId })
+    .from(referralsTable)
+    .where(and(eq(referralsTable.referredId, ref2.referrerId), eq(referralsTable.tier, 1)))
+    .limit(1);
+  if (!ref3) return;
+
+  await db.insert(referralsTable)
+    .values({ referrerId: ref3.referrerId, referredId: newUserId, tier: 3 })
+    .onConflictDoNothing();
+}
+
 // ── Wallet authentication helpers ────────────────────────────────────────────
 
 const NONCE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -66,6 +101,7 @@ const WalletVerifyBody = z.object({
   signature: z.string(),
   nonce: z.string(),
   chainId: z.number().optional(),
+  referralCode: z.string().optional(),
 });
 
 router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
@@ -139,6 +175,14 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
     user = created;
     // Initialise wallet balance
     await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+    // Referral chain
+    if (parsed.data.referralCode) {
+      const [ref] = await db.select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.referralCode, parsed.data.referralCode.toUpperCase()))
+        .limit(1);
+      if (ref) await createReferralChain(user.id, ref.id);
+    }
   } else if (network && user.walletNetwork !== network) {
     // Update network if it changed or was never set
     await db.update(usersTable).set({ walletNetwork: network }).where(eq(usersTable.id, user.id));
@@ -225,6 +269,7 @@ const TronVerifyBody = z.object({
   address: z.string(),
   signature: z.string(),
   nonce: z.string(),
+  referralCode: z.string().optional(),
 });
 
 router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
@@ -285,6 +330,13 @@ router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
     }).returning();
     user = created;
     await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+    if (parsed.data.referralCode) {
+      const [ref] = await db.select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.referralCode, parsed.data.referralCode.toUpperCase()))
+        .limit(1);
+      if (ref) await createReferralChain(user.id, ref.id);
+    }
   } else if (user.walletNetwork !== "TRON") {
     await db.update(usersTable).set({ walletNetwork: "TRON" }).where(eq(usersTable.id, user.id));
     user = { ...user, walletNetwork: "TRON" };
@@ -402,9 +454,10 @@ router.get("/auth/wallet/nonce/solana", async (req, res): Promise<void> => {
 
 // ── POST /auth/wallet/verify/solana ───────────────────────────────────────────
 const SolanaVerifyBody = z.object({
-  address:   z.string(),
-  signature: z.string().regex(/^[0-9a-f]{128}$/i, "signature must be 64-byte hex"),
-  nonce:     z.string(),
+  address:      z.string(),
+  signature:    z.string().regex(/^[0-9a-f]{128}$/i, "signature must be 64-byte hex"),
+  nonce:        z.string(),
+  referralCode: z.string().optional(),
 });
 
 router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
@@ -470,6 +523,13 @@ router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
     }).returning();
     user = created;
     await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+    if (parsed.data.referralCode) {
+      const [ref] = await db.select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.referralCode, parsed.data.referralCode.toUpperCase()))
+        .limit(1);
+      if (ref) await createReferralChain(user.id, ref.id);
+    }
   } else if (user.walletNetwork !== "SOLANA") {
     await db.update(usersTable).set({ walletNetwork: "SOLANA" }).where(eq(usersTable.id, user.id));
     user = { ...user, walletNetwork: "SOLANA" };
@@ -652,8 +712,9 @@ router.get("/auth/wallet/nonce/ton", async (req, res): Promise<void> => {
 //   A) ton_proof  — { address, nonce, proof: { timestamp, domain, signature, payload } }
 //   B) signMessage — { address, nonce, signature }  (publicKey ALWAYS fetched on-chain)
 const TonVerifyBody = z.object({
-  address: z.string(),
-  nonce:   z.string(),
+  address:      z.string(),
+  nonce:        z.string(),
+  referralCode: z.string().optional(),
   // ton_proof format (preferred — Tonkeeper ≥3 / TonConnect)
   proof: z.object({
     timestamp: z.number(),
@@ -790,6 +851,13 @@ router.post("/auth/wallet/verify/ton", async (req, res): Promise<void> => {
     }).returning();
     user = created;
     await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+    if (parsed.data.referralCode) {
+      const [ref] = await db.select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.referralCode, parsed.data.referralCode.toUpperCase()))
+        .limit(1);
+      if (ref) await createReferralChain(user.id, ref.id);
+    }
   } else if (user.walletNetwork !== "TON") {
     await db.update(usersTable).set({ walletNetwork: "TON" }).where(eq(usersTable.id, user.id));
     user = { ...user, walletNetwork: "TON" };
@@ -1022,7 +1090,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
 
   if (referrerId) {
-    await db.insert(referralsTable).values({ referrerId, referredId: user.id, tier: 1 }).catch(() => {});
+    await createReferralChain(user.id, referrerId);
   }
 
   const payload = { userId: user.id, role: user.role };

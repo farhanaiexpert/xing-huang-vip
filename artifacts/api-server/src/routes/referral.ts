@@ -96,21 +96,18 @@ router.post("/referral/commissions/claim", authenticate, async (req, res): Promi
   let total = "0";
 
   await db.transaction(async tx => {
-    const pending = await tx
-      .select({ id: commissionsTable.id, amount: commissionsTable.amount })
-      .from(commissionsTable)
-      .where(and(eq(commissionsTable.userId, userId), eq(commissionsTable.status, "pending")));
+    // Atomic UPDATE…RETURNING: mark as paid and get amounts in one statement,
+    // preventing double-credit under concurrent requests.
+    const updated = await tx.execute(sql`
+      UPDATE commissions
+      SET status = 'paid'
+      WHERE user_id = ${userId} AND status = 'pending'
+      RETURNING id, amount
+    `);
+    const rows = updated.rows as { id: number; amount: string }[];
+    if (rows.length === 0) return;
 
-    if (pending.length === 0) {
-      return;
-    }
-
-    const totalAmt = pending.reduce((s, c) => s + parseFloat(c.amount), 0);
-    const ids = pending.map(c => c.id);
-
-    await tx.update(commissionsTable)
-      .set({ status: "paid" })
-      .where(and(eq(commissionsTable.userId, userId), inArray(commissionsTable.id, ids)));
+    const totalAmt = rows.reduce((s, r) => s + parseFloat(r.amount), 0);
 
     await tx.execute(sql`
       UPDATE wallets
@@ -118,7 +115,7 @@ router.post("/referral/commissions/claim", authenticate, async (req, res): Promi
       WHERE user_id = ${userId}
     `);
 
-    claimed = pending.length;
+    claimed = rows.length;
     total = totalAmt.toFixed(8);
   });
 

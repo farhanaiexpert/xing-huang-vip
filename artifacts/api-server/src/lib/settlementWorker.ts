@@ -584,27 +584,27 @@ async function settleBetsForEvent(
         reason: "bet_settled",
       }).onConflictDoNothing();
 
-      // Generate referral commissions for winning bets only
+      // Generate referral commissions for winning bets only.
+      // With the multi-tier row model, referralsTable has explicit rows for
+      // tier 1/2/3 for every referred user — no chain-walk needed.
       if (newStatus === "won") {
         const commRates: Record<number, number> = { 1: 0.05, 2: 0.03, 3: 0.01 };
-        let chainUserId = bet.userId;
-        for (let tier = 1; tier <= 3; tier++) {
-          const [ref] = await tx
-            .select({ id: referralsTable.id, referrerId: referralsTable.referrerId })
-            .from(referralsTable)
-            .where(eq(referralsTable.referredId, chainUserId))
-            .limit(1);
-          if (!ref) break;
-          const commAmount = stakeAmt * commRates[tier];
+        const refs = await tx
+          .select({ id: referralsTable.id, referrerId: referralsTable.referrerId, tier: referralsTable.tier })
+          .from(referralsTable)
+          .where(eq(referralsTable.referredId, bet.userId));
+        for (const ref of refs) {
+          const rate = commRates[ref.tier];
+          if (!rate) continue;
+          const commAmount = stakeAmt * rate;
           await tx.insert(commissionsTable).values({
             referralId: ref.id,
             userId: ref.referrerId,
             amount: commAmount.toFixed(8),
             status: "pending",
-            tier,
+            tier: ref.tier,
             sourceTransactionId: betId,
           }).onConflictDoNothing();
-          chainUserId = ref.referrerId;
         }
       }
     }
