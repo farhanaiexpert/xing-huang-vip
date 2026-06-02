@@ -195,6 +195,14 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     resetDeposit();
   }
 
+  async function handleChangeWallet() {
+    if (isProcessing) return;
+    resetDeposit();
+    evmWallet.disconnect();
+    await new Promise(r => setTimeout(r, 200));
+    await evmWallet.connect();
+  }
+
   useEffect(() => {
     if (!isConnected) resetDeposit();
   }, [isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -631,7 +639,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={(view === 'npp-invoice' || view === 'plisio-invoice') ? undefined : close} />
 
           <div
-            className="relative w-full max-w-[460px] rounded-2xl overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.9)]"
+            className="relative w-full max-w-[560px] rounded-2xl overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.9)]"
             style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.07)' }}
           >
             {/* Top bar */}
@@ -664,7 +672,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
               )}
             </div>
 
-            <div className="px-4 py-4 space-y-3 max-h-[80vh] overflow-y-auto">
+            <div className="px-5 py-5 space-y-4 max-h-[82vh] overflow-y-auto">
 
               {/* ══════════ PHANTOM (SOLANA) FORM VIEW ══════════ */}
               {view === 'phantom-form' && (
@@ -1383,26 +1391,26 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     <button
                       onClick={handleConnectWallet}
                       disabled={reownStep === 'connecting'}
-                      className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer group disabled:opacity-80 disabled:cursor-wait"
+                      className="w-full text-left rounded-2xl overflow-hidden p-5 transition-all hover:brightness-105 active:scale-[0.99] cursor-pointer group disabled:opacity-80 disabled:cursor-wait"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(167,139,250,0.13) 0%, rgba(139,92,246,0.06) 100%)',
-                        border: '1px solid rgba(167,139,250,0.30)',
-                        boxShadow: '0 0 28px rgba(167,139,250,0.07)',
+                        background: 'linear-gradient(135deg, rgba(167,139,250,0.15) 0%, rgba(139,92,246,0.07) 100%)',
+                        border: '2px solid rgba(167,139,250,0.35)',
+                        boxShadow: '0 0 36px rgba(167,139,250,0.10)',
                       }}
                     >
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                        <div className="w-13 h-13 rounded-2xl flex items-center justify-center shrink-0"
                           style={{
-                            background: 'linear-gradient(135deg, rgba(167,139,250,0.25) 0%, rgba(139,92,246,0.12) 100%)',
-                            border: '1px solid rgba(167,139,250,0.4)',
-                            boxShadow: '0 0 16px rgba(167,139,250,0.2)',
+                            background: 'linear-gradient(135deg, rgba(167,139,250,0.28) 0%, rgba(139,92,246,0.14) 100%)',
+                            border: '1px solid rgba(167,139,250,0.45)',
+                            boxShadow: '0 0 20px rgba(167,139,250,0.25)',
                           }}>
                           <Wallet className="w-6 h-6 text-[#A78BFA]" />
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                            <span className="text-[15px] font-black text-[#F8FAFC]">Connect Wallet</span>
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <span className="text-[16px] font-black text-[#F8FAFC]">Connect Wallet</span>
                             <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
                               style={{ background: 'rgba(167,139,250,0.18)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.35)' }}>
                               Web3
@@ -1411,8 +1419,12 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               style={{ background: 'rgba(250,204,21,0.12)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.25)' }}>
                               <Sparkles className="w-2 h-2" />Auto
                             </span>
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider"
+                              style={{ background: 'rgba(0,223,169,0.16)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.32)' }}>
+                              ★ Recommended
+                            </span>
                           </div>
-                          <p className="text-[11px] text-[#A78BFA]/80 font-semibold mb-1.5">MetaMask · Trust · OKX · TronLink · 300+ wallets</p>
+                          <p className="text-[11px] text-[#A78BFA]/80 font-semibold mb-2">MetaMask · Trust · OKX · TronLink · 300+ wallets</p>
                           <p className="text-[12px] text-[#94A3B8] leading-relaxed mb-3">
                             Connect your wallet and deposit USDT in one click. No manual TxHash needed.
                           </p>
@@ -1516,7 +1528,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             </div>
                             <div className="flex gap-1.5 shrink-0">
                               <button
-                                onClick={() => { if (!isProcessing) void evmWallet.connect(); }}
+                                onClick={() => { void handleChangeWallet(); }}
                                 disabled={isProcessing}
                                 className="px-2 py-1 rounded-lg text-[10px] font-bold text-[#94A3B8] bg-white/[0.04] border border-white/[0.10] hover:border-white/[0.20] hover:text-[#F8FAFC] transition-all disabled:opacity-50 flex items-center gap-1"
                               >
@@ -1783,6 +1795,12 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     </div>
                   )}
 
+                  {/* ── Section: Other crypto wallets ── */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <p className="text-[10px] font-bold text-[#475569] uppercase tracking-widest whitespace-nowrap">More wallets</p>
+                    <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+                  </div>
+
                   {/* ── PHANTOM (Solana USDT SPL) ── */}
                   <button
                     onClick={() => { if (!user) { setAuthOpen(true); return; } setView('phantom-form'); }}
@@ -1863,6 +1881,12 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     </div>
                   </button>
 
+                  {/* ── Section: Payment gateways ── */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <p className="text-[10px] font-bold text-[#475569] uppercase tracking-widest whitespace-nowrap">Payment gateways</p>
+                    <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+                  </div>
+
                   {/* ── OPTION 2: NowPayments ── */}
                   <button
                     onClick={handleNppClick}
@@ -1891,8 +1915,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             NOWPayments
                           </span>
                           <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"
-                            style={{ background: 'rgba(250,204,21,0.12)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.25)' }}>
-                            <Sparkles className="w-2 h-2" />Recommended
+                            style={{ background: 'rgba(0,223,169,0.10)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.22)' }}>
+                            <Zap className="w-2 h-2" />Auto-credit
                           </span>
                         </div>
                         <p className="text-[11px] text-[#38BDF8]/80 font-semibold mb-1.5">USDT TRC-20 · ERC-20 · 100+ coins</p>
@@ -1974,6 +1998,12 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                       </div>
                     </div>
                   </button>
+
+                  {/* ── Section: Manual ── */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <p className="text-[10px] font-bold text-[#475569] uppercase tracking-widest whitespace-nowrap">Manual transfer</p>
+                    <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+                  </div>
 
                   {/* ── OPTION 4: Manual ── */}
                   <button
