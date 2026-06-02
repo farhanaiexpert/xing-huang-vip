@@ -175,10 +175,11 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
 
   await db.insert(transactionsTable).values({
     userId,
-    type: "debit",
+    type: "bet_stake",
     amount: stake.toString(),
     status: "completed",
     reference: `bet_${bet.id}`,
+    notes: `Bet #${bet.id} stake`,
   });
 
   // ── Upsert market liability ────────────────────────────────────────────────
@@ -228,10 +229,20 @@ router.get("/bets", authenticate, async (req, res): Promise<void> => {
     .where(eq(betsTable.userId, req.user!.userId))
     .orderBy(desc(betsTable.createdAt));
 
-  const betsWithSelections = await Promise.all(bets.map(async (bet) => {
-    const selections = await db.select().from(betSelectionsTable)
-      .where(eq(betSelectionsTable.betId, bet.id));
-    return { ...bet, selections };
+  const betIds = bets.map(b => b.id);
+  const allSelections = betIds.length > 0
+    ? await db.select().from(betSelectionsTable).where(inArray(betSelectionsTable.betId, betIds))
+    : [];
+
+  const selByBetId = new Map<number, typeof allSelections>();
+  for (const sel of allSelections) {
+    if (!selByBetId.has(sel.betId)) selByBetId.set(sel.betId, []);
+    selByBetId.get(sel.betId)!.push(sel);
+  }
+
+  const betsWithSelections = bets.map(bet => ({
+    ...bet,
+    selections: selByBetId.get(bet.id) ?? [],
   }));
 
   res.json(betsWithSelections);

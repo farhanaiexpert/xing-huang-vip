@@ -25,7 +25,8 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     oddsChanges, acceptOddsChanges,
   } = useBetSlip();
 
-  const { isConnected, balance, refreshBalance, connect } = useWallet();
+  const { isConnected, balance, bonusBalance, refreshBalance, connect } = useWallet();
+  const totalBalance = balance + bonusBalance;
   const { isAuthenticated } = useAuth();
   const { addBet, refresh: refreshBetHistory } = useBetHistory();
   const { toast } = useToast();
@@ -55,7 +56,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
       const stakeNum = parseFloat(stake || '0');
       const payout   = accaReturn;
       const odds     = totalOdds;
-      if (stakeNum <= 0 || balance <= 0 || stakeNum > balance) return;
+      if (stakeNum <= 0 || totalBalance <= 0 || stakeNum > totalBalance) return;
 
       setIsPlacing(true);
       try {
@@ -101,7 +102,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     } else {
       // ── Singles: one independent API call per selection ──
       const validSels = selections.filter(s => parseFloat(singleStakes[s.id] || '0') > 0);
-      if (validSels.length === 0 || balance <= 0 || totalSingleStaked > balance) return;
+      if (validSels.length === 0 || totalBalance <= 0 || totalSingleStaked > totalBalance) return;
 
       setIsPlacing(true);
       try {
@@ -198,8 +199,8 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   // ── Bet logic ─────────────────────────────────────────────────
   const accaStakeNum     = parseFloat(stake || '0');
-  const canPlaceAcca     = isAuthenticated && betType === 'acca'   && accaStakeNum > 0 && hasSelections && balance > 0 && accaStakeNum <= balance;
-  const canPlaceSingle   = isAuthenticated && betType === 'single' && totalSingleStaked > 0 && hasSelections && balance > 0 && totalSingleStaked <= balance;
+  const canPlaceAcca     = isAuthenticated && betType === 'acca'   && accaStakeNum > 0 && hasSelections && totalBalance > 0 && accaStakeNum <= totalBalance;
+  const canPlaceSingle   = isAuthenticated && betType === 'single' && totalSingleStaked > 0 && hasSelections && totalBalance > 0 && totalSingleStaked <= totalBalance;
   const canPlace         = canPlaceAcca || canPlaceSingle;
   const readyToStake     = hasSelections;
 
@@ -352,14 +353,21 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
           <div className="flex items-center gap-2 pb-2.5">
             <div className={cn(
               'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border flex-1 min-w-0',
-              balance > 0
+              totalBalance > 0
                 ? 'bg-[#00DFA9]/8 border-[#00DFA9]/20 text-[#00DFA9]'
                 : 'bg-[#FACC15]/6 border-[#FACC15]/20 text-[#FACC15]'
             )}>
               <Wallet className="h-3.5 w-3.5 shrink-0" />
-              <span className="text-[12px] font-bold tabular-nums leading-none truncate">
-                {balance.toFixed(2)} USDT
-              </span>
+              <div className="flex-1 min-w-0">
+                <span className="text-[12px] font-bold tabular-nums leading-none block">
+                  {totalBalance.toFixed(2)} USDT
+                </span>
+                {bonusBalance > 0 && (
+                  <span className="text-[9px] text-[#FACC15]/70 leading-none block mt-0.5">
+                    incl. {bonusBalance.toFixed(2)} bonus
+                  </span>
+                )}
+              </div>
             </div>
             <button
               onClick={() => setDepositOpen(true)}
@@ -418,7 +426,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               totalSingleReturn={totalSingleReturn}
               isConnected={isConnected}
               isAuthenticated={isAuthenticated}
-              balance={balance}
+              balance={totalBalance}
               canPlace={canPlaceSingle}
               isPlacing={isPlacing}
               onConnectWallet={() => setDepositOpen(true)}
@@ -435,7 +443,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               accaReturn={accaReturn}
               isConnected={isConnected}
               isAuthenticated={isAuthenticated}
-              balance={balance}
+              balance={totalBalance}
               canPlace={canPlaceAcca}
               readyToStake={readyToStake}
               isPlacing={isPlacing}

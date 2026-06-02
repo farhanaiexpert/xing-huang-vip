@@ -11,7 +11,7 @@ import {
   CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp,
   ArrowLeft, TrendingUp, TrendingDown, BarChart2,
   Wallet, ShieldCheck, Search, X, SlidersHorizontal, Calendar,
-  FileText,
+  FileText, MinusCircle,
 } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────
@@ -184,7 +184,9 @@ export function BetHistory() {
         {bets.length > 0 && (
           <div className="flex gap-1 mb-5 bg-[#121821] border border-[#253241] rounded-xl p-1 overflow-x-auto">
             {FILTERS.map(f => {
-              const count = f.key === 'all' ? bets.length : bets.length;
+              const count = f.key === 'all'
+                ? bets.length
+                : bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
               return (
                 <button
                   key={f.key}
@@ -294,17 +296,43 @@ function BetCard({ bet }: { bet: PlacedBet }) {
   const isAcca  = bet.betType === 'acca';
   const mainSel = bet.selections[0];
 
+  const isWon    = bet.status === 'won' || bet.status === 'settled';
+  const isLost   = bet.status === 'lost';
+  const isVoid   = bet.status === 'void' || bet.status === 'voided';
+  const isActive = !bet.status || bet.status === 'open' || bet.status === 'pending';
+
+  const theme = isWon ? {
+    border: 'border-[#22C55E]/25', bg: 'bg-[#22C55E]/5', bar: 'bg-[#22C55E]',
+    badgeText: 'text-[#22C55E]', badgeBg: 'bg-[#22C55E]/8',
+    icon: <CheckCircle2 className="h-3.5 w-3.5" />, label: 'Won',
+    oddsColor: 'text-[#22C55E]',
+  } : isLost ? {
+    border: 'border-[#EF4444]/25', bg: 'bg-[#EF4444]/5', bar: 'bg-[#EF4444]',
+    badgeText: 'text-[#EF4444]', badgeBg: 'bg-[#EF4444]/8',
+    icon: <XCircle className="h-3.5 w-3.5" />, label: 'Lost',
+    oddsColor: 'text-[#EF4444]',
+  } : isVoid ? {
+    border: 'border-[#64748B]/25', bg: 'bg-[#64748B]/5', bar: 'bg-[#64748B]',
+    badgeText: 'text-[#64748B]', badgeBg: 'bg-[#64748B]/8',
+    icon: <MinusCircle className="h-3.5 w-3.5" />, label: 'Voided',
+    oddsColor: 'text-[#64748B]',
+  } : {
+    border: 'border-[#FACC15]/20', bg: 'bg-[#FACC15]/5', bar: 'bg-[#FACC15]',
+    badgeText: 'text-[#FACC15]', badgeBg: 'bg-[#FACC15]/5',
+    icon: <Clock className="h-3.5 w-3.5" />, label: 'Active',
+    oddsColor: 'text-[#FACC15]',
+  };
+
   return (
-    <div className="relative rounded-xl border overflow-hidden transition-all duration-200 bg-[#FACC15]/5 border-[#FACC15]/20">
-      {/* Left status bar — amber for pending/active */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#FACC15]" />
+    <div className={cn('relative rounded-xl border overflow-hidden transition-all duration-200', theme.bg, theme.border)}>
+      <div className={cn('absolute left-0 top-0 bottom-0 w-1', theme.bar)} />
 
       <div className="pl-4 pr-3 py-3">
 
         {/* Top row: type + ID + status */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-[#FACC15] bg-[#FACC15]/5">
+            <span className={cn('text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded', theme.badgeText, theme.badgeBg)}>
               {isAcca ? `${bet.selections.length}-Fold Acca` : 'Single'}
             </span>
             <span className="text-[10px] font-mono text-[#94A3B8]/50 bg-[#0B0F14] border border-[#253241] px-1.5 py-0.5 rounded">
@@ -312,22 +340,39 @@ function BetCard({ bet }: { bet: PlacedBet }) {
             </span>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-[#FACC15] bg-[#FACC15]/5">
-              <Clock className="h-3.5 w-3.5" />
-              Active
+            <div className={cn('flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold', theme.badgeText, theme.badgeBg)}>
+              {theme.icon}
+              {theme.label}
             </div>
-            {bet.selections.some(s => s.isLive) ? (
-              <span className="flex items-center gap-0.5 text-[9px] text-[#EF4444]/80">
-                <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse inline-block" />
-                In play
+            {isActive && (
+              bet.selections.some(s => s.isLive) ? (
+                <span className="flex items-center gap-0.5 text-[9px] text-[#EF4444]/80">
+                  <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse inline-block" />
+                  In play
+                </span>
+              ) : (() => {
+                const kt = bet.selections[0]?.kickoffTime;
+                const cd = kt ? kickoffCountdown(kt) : null;
+                return cd
+                  ? <span className="text-[9px] text-[#FACC15]/70">🕐 {cd}</span>
+                  : <span className="text-[9px] text-[#64748B]">Awaiting result</span>;
+              })()
+            )}
+            {isWon && (
+              <span className="text-[9px] text-[#22C55E]/80 font-semibold">
+                +{(bet.estimatedPayout - bet.stake).toFixed(2)} USDT profit
               </span>
-            ) : (() => {
-              const kt = bet.selections[0]?.kickoffTime;
-              const cd = kt ? kickoffCountdown(kt) : null;
-              return cd
-                ? <span className="text-[9px] text-[#FACC15]/70">🕐 {cd}</span>
-                : <span className="text-[9px] text-[#64748B]">Awaiting result</span>;
-            })()}
+            )}
+            {isLost && (
+              <span className="text-[9px] text-[#EF4444]/70">
+                -{bet.stake.toFixed(2)} USDT lost
+              </span>
+            )}
+            {isVoid && (
+              <span className="text-[9px] text-[#64748B]">
+                {bet.stake.toFixed(2)} USDT refunded
+              </span>
+            )}
           </div>
         </div>
 
@@ -347,13 +392,21 @@ function BetCard({ bet }: { bet: PlacedBet }) {
           )}
         </div>
 
-        {/* Odds / Stake / Pot. Returns */}
+        {/* Odds / Stake / Return pills */}
         <div className="flex items-center gap-3 pt-2.5 border-t border-white/5 flex-wrap">
-          <DataPill label="Odds"        value={formatOdds(bet.totalOdds, format)} accent="yellow" />
+          <DataPill label="Odds" value={formatOdds(bet.totalOdds, format)} accent="yellow" />
           <div className="hidden sm:block w-px h-6 bg-[#253241]" />
-          <DataPill label="Stake"       value={`${bet.stake.toFixed(2)} USDT`} />
+          <DataPill label="Stake" value={`${bet.stake.toFixed(2)} USDT`} />
           <div className="hidden sm:block w-px h-6 bg-[#253241]" />
-          <DataPill label="Pot. Return" value={`${bet.estimatedPayout.toFixed(2)} USDT`} accent="green" />
+          {isWon ? (
+            <DataPill label="Payout" value={`${bet.estimatedPayout.toFixed(2)} USDT`} accent="green" />
+          ) : isLost ? (
+            <DataPill label="Result" value="Lost" accent="red" />
+          ) : isVoid ? (
+            <DataPill label="Refund" value={`${bet.stake.toFixed(2)} USDT`} />
+          ) : (
+            <DataPill label="Pot. Return" value={`${bet.estimatedPayout.toFixed(2)} USDT`} accent="green" />
+          )}
           {isAcca && (
             <button
               onClick={() => setExpanded(v => !v)}
@@ -377,7 +430,7 @@ function BetCard({ bet }: { bet: PlacedBet }) {
                     {sel.matchName}{sel.leagueName ? ` · ${sel.leagueName}` : ''}
                   </p>
                 </div>
-                <span className="text-xs font-bold text-[#FACC15] tabular-nums shrink-0">
+                <span className={cn('text-xs font-bold tabular-nums shrink-0', theme.oddsColor)}>
                   {formatOdds(sel.odds, format)}
                 </span>
               </div>
