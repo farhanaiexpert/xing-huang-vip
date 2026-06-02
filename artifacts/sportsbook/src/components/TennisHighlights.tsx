@@ -104,14 +104,14 @@ export function TennisHighlights() {
         className="rounded-2xl overflow-hidden"
         style={{
           border:     '1px solid #253241',
-          background: 'linear-gradient(180deg,#18212B 0%,#141C26 100%)',
-          boxShadow:  '0 4px 20px rgba(0,0,0,0.25)',
+          background: '#0E1520',
+          boxShadow:  '0 2px 8px rgba(0,0,0,0.18)',
         }}
       >
         {/* Column header */}
         <div
           className="flex items-center justify-between px-3 py-2 border-b"
-          style={{ borderColor: '#253241', background: 'rgba(13,21,32,0.5)' }}
+          style={{ borderColor: '#1E2D3D', background: 'rgba(11,15,20,0.6)' }}
         >
           <span className="text-[10px] font-bold text-[#94A3B8]/40 uppercase tracking-wider">{today}</span>
           <div className="flex items-center gap-1 shrink-0 mr-8">

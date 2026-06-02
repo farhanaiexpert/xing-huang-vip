@@ -15,8 +15,8 @@ import { AllSportsHighlights } from "./AllSportsHighlights";
 import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { FlashOdds } from "./FlashOdds";
 import { JackpotPool } from "./JackpotPool";
-import { PriceBoostsStrip } from "./PriceBoostsStrip";
 import { LiveBetFeed } from "./LiveBetFeed";
+import { SportHighlights } from "./SportHighlights";
 import { SportDetailPage, SPORT_DETAIL_IDS } from "./SportDetailPage";
 import { ConnectWalletModal } from "./ConnectWalletModal";
 import { cn } from "../lib/utils";
@@ -633,18 +633,21 @@ export function MainContent({
                 </div>
               )}
               {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
-              {showFeatured && <PriceBoostsStrip />}
-              {showFeatured && <JackpotPool />}
-              {showFeatured && <FlashOdds />}
-              {showFeatured && <LiveBetFeed />}
-              {showFeatured && <FeaturedCards />}
-              {showFeatured && <PopularBets />}
+              {showFeatured && (
+                <>
+                  <div className="hidden sm:block"><FeaturedCards /></div>
+                  <div className="hidden sm:block"><PopularBets /></div>
+                  <Link
+                    to="/promotions"
+                    className="sm:hidden flex items-center gap-1 mb-4 pl-1 text-[12px] font-semibold text-[#38BDF8] hover:opacity-75 transition-opacity"
+                  >
+                    View all promotions <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </>
+              )}
               {showFeatured && hasRealData && <TopMatchesBanner leagues={realLeagues} />}
               {showFeatured && <EuropaLeagueFinal />}
-              {showFeatured && <SoccerHighlights />}
-              {showFeatured && <TennisHighlights />}
-              {showFeatured && <NBAHighlights />}
-              {showFeatured && <AllSportsHighlights />}
+              {showFeatured && <SportHighlights />}
               {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights />
               )}
@@ -706,6 +709,11 @@ export function MainContent({
                   />
                 )}
               </div>
+
+              {/* ── Post-match activity panels (below the match list) ── */}
+              {showFeatured && <div className="mt-5"><FlashOdds /></div>}
+              {showFeatured && <div className="mt-4"><JackpotPool /></div>}
+              {showFeatured && <div className="mt-4"><LiveBetFeed /></div>}
             </>
           )}
         </div>
