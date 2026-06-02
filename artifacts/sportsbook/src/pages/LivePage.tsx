@@ -717,7 +717,7 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
 // ─── LivePage ─────────────────────────────────────────────────────────────────
 
 export function LivePage() {
-  const { matches: realMatches, loading: liveLoading, isRealData, lastUpdated } = useLiveOdds();
+  const { matches: realMatches, loading: liveLoading, isRealData, lastUpdated, refreshing, nextRefreshIn } = useLiveOdds();
 
   const displayMatches = useMemo<LiveMatch[]>(
     () => realMatches as LiveMatch[],
@@ -892,10 +892,14 @@ export function LivePage() {
                   Real in-play events with live bookmaker odds — scores update every 60 seconds.
                 </p>
               </div>
-              <div className="self-start sm:self-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border"
-                style={{ background: 'rgba(56,189,248,0.07)', borderColor: 'rgba(56,189,248,0.2)', color: '#38BDF8' }}>
-                <RefreshCw className="h-3 w-3" />
-                60s refresh
+              <div className="self-start sm:self-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold border transition-colors duration-300"
+                style={{
+                  background:   refreshing ? 'rgba(0,223,169,0.07)' : 'rgba(56,189,248,0.07)',
+                  borderColor:  refreshing ? 'rgba(0,223,169,0.25)' : 'rgba(56,189,248,0.2)',
+                  color:        refreshing ? '#00DFA9' : '#38BDF8',
+                }}>
+                <RefreshCw className={cn('h-3 w-3', refreshing && 'animate-spin')} />
+                {refreshing ? 'Refreshing…' : `${nextRefreshIn}s`}
               </div>
             </div>
 

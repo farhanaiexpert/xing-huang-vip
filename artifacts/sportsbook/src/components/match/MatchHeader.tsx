@@ -1,15 +1,22 @@
 import { useLocation } from 'wouter';
-import { ChevronLeft, Wifi, Clock, AlertCircle, Star } from 'lucide-react';
+import { ChevronLeft, Wifi, Clock, AlertCircle, Star, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { TeamBadge } from '../TeamBadge';
 import type { MatchEntity } from '../../data/types';
 import type { LeagueEntity } from '../../data/types';
 import { formatKickoffTime, estimatedEndTime } from '../../lib/matchTime';
+import type { LiveMatchScoreResult } from '../../hooks/useLiveMatchScore';
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface MatchHeaderProps {
-  match: MatchEntity;
-  league: LeagueEntity;
+  match:     MatchEntity;
+  league:    LeagueEntity;
+  /** Present only when the match is live and the score hook has been started. */
+  liveData?: LiveMatchScoreResult;
 }
+
+// ─── Maps ─────────────────────────────────────────────────────────────────────
 
 const FLAG_MAP: Record<string, string> = {
   EU: '🇪🇺', GB: '🇬🇧', US: '🇺🇸', ES: '🇪🇸',
@@ -23,7 +30,9 @@ const SPORT_ICON: Record<string, string> = {
   sp_boxing: '🥊', sp_mma: '🥋', sp_formula_1: '🏎️',
 };
 
-export function MatchHeader({ match, league }: MatchHeaderProps) {
+// ─── MatchHeader ──────────────────────────────────────────────────────────────
+
+export function MatchHeader({ match, league, liveData }: MatchHeaderProps) {
   const [, setLocation] = useLocation();
   const sportIcon = SPORT_ICON[match.sportId] ?? '🏆';
   const isSoccer  = match.sportId === 'sp_soccer';
@@ -42,7 +51,6 @@ export function MatchHeader({ match, league }: MatchHeaderProps) {
           <ChevronLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
           <span>All Sports</span>
         </button>
-        {/* League segment — hidden on mobile to save space */}
         <span className="text-[#253241] hidden sm:inline shrink-0">/</span>
         <span className="hidden sm:inline text-xs text-[#94A3B8] shrink-0">
           {flag(league.countryCode)} {league.name}
@@ -57,7 +65,13 @@ export function MatchHeader({ match, league }: MatchHeaderProps) {
       {isHorse ? (
         <HorseHeader match={match} sportIcon={sportIcon} league={league} />
       ) : (
-        <TeamsHeader match={match} sportIcon={sportIcon} isTennis={isTennis} isSoccer={isSoccer} />
+        <TeamsHeader
+          match={match}
+          sportIcon={sportIcon}
+          isTennis={isTennis}
+          isSoccer={isSoccer}
+          liveData={liveData}
+        />
       )}
 
       {/* ── Info bar — two rows on mobile, one row on sm+ ──────────── */}
@@ -76,7 +90,7 @@ export function MatchHeader({ match, league }: MatchHeaderProps) {
           })()}
         </div>
 
-        {/* League + markets row */}
+        {/* League + markets + live refresh info row */}
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] text-[#94A3B8]/60 truncate max-w-[180px] sm:max-w-none">
             {flag(league.countryCode)} {league.name}
@@ -94,21 +108,53 @@ export function MatchHeader({ match, league }: MatchHeaderProps) {
               </span>
             </>
           )}
+          {/* Live score refresh indicator */}
+          {match.isLive && liveData && (
+            <>
+              <span className="text-[#253241] shrink-0">·</span>
+              <span className="flex items-center gap-1 text-[10px] shrink-0"
+                style={{ color: liveData.isPolling ? '#00DFA9' : '#475569' }}>
+                <RefreshCw className={cn('h-3 w-3', liveData.isPolling && 'animate-spin')} />
+                {liveData.isPolling
+                  ? 'updating…'
+                  : liveData.lastUpdated
+                    ? `next in ${liveData.nextRefreshIn}s`
+                    : 'polling…'}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function TeamsHeader({ match, sportIcon, isSoccer, isTennis }: {
-  match: MatchEntity; sportIcon: string; isSoccer: boolean; isTennis: boolean;
+// ─── TeamsHeader ──────────────────────────────────────────────────────────────
+
+function TeamsHeader({ match, sportIcon, isSoccer, isTennis, liveData }: {
+  match:      MatchEntity;
+  sportIcon:  string;
+  isSoccer:   boolean;
+  isTennis:   boolean;
+  liveData?:  LiveMatchScoreResult;
 }) {
+  // Prefer live-polled score over the static snapshot
+  const displayScore = liveData?.score ?? match.score;
+
+  // Flash state from the hook (or static false when not live)
+  const homeFlash = liveData?.homeFlash ?? false;
+  const awayFlash = liveData?.awayFlash ?? false;
+
+  // Clock — prefer BetsAPI real clock; fall back to match.liveMinute
+  const clockMin = liveData?.clockMin ?? match.liveMinute ?? null;
+  const clockSec = liveData?.clockSec ?? 0;
+  const hasClock = clockMin !== null && isSoccer && match.isLive;
+
   return (
     <div className="flex items-center justify-between px-3 sm:px-5 py-4 sm:py-5 gap-3 sm:gap-5">
 
       {/* Home team */}
       <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
-        {/* Badge: md on mobile, lg on sm+ */}
         <div className="block sm:hidden">
           <TeamBadge name={match.homeTeamName} sportIcon={sportIcon} size="md" />
         </div>
@@ -122,18 +168,54 @@ function TeamsHeader({ match, sportIcon, isSoccer, isTennis }: {
 
       {/* Score / status — fixed min-width so it never gets squeezed */}
       <div className="shrink-0 flex flex-col items-center gap-1.5 sm:gap-2 min-w-[80px] sm:min-w-[96px]">
-        {match.isLive && match.score ? (
+        {match.isLive && displayScore ? (
           <>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <span className="text-[28px] sm:text-4xl font-black text-[#F8FAFC] tabular-nums leading-none">
-                {match.score.home}
+            {/* Score box */}
+            <div
+              className="flex items-center gap-2 sm:gap-3 px-3 py-2 rounded-xl border transition-all duration-500"
+              style={{
+                background:  (homeFlash || awayFlash) ? 'rgba(0,223,169,0.07)' : 'rgba(255,255,255,0.03)',
+                borderColor: (homeFlash || awayFlash) ? 'rgba(0,223,169,0.35)' : 'rgba(255,255,255,0.08)',
+                boxShadow:   (homeFlash || awayFlash) ? '0 0 16px rgba(0,223,169,0.2)' : undefined,
+              }}
+            >
+              <span
+                className="text-[28px] sm:text-4xl font-black tabular-nums leading-none transition-all duration-300"
+                style={{
+                  display:    'inline-block',
+                  color:      homeFlash ? '#00DFA9'
+                              : displayScore.home > displayScore.away ? '#00DFA9'
+                              : '#F8FAFC',
+                  textShadow: homeFlash ? '0 0 20px rgba(0,223,169,0.8)' : undefined,
+                  transform:  homeFlash ? 'scale(1.15)' : 'scale(1)',
+                }}
+              >
+                {displayScore.home}
               </span>
               <span className="text-[#94A3B8]/40 text-base sm:text-xl font-bold">:</span>
-              <span className="text-[28px] sm:text-4xl font-black text-[#F8FAFC] tabular-nums leading-none">
-                {match.score.away}
+              <span
+                className="text-[28px] sm:text-4xl font-black tabular-nums leading-none transition-all duration-300"
+                style={{
+                  display:    'inline-block',
+                  color:      awayFlash ? '#00DFA9'
+                              : displayScore.away > displayScore.home ? '#00DFA9'
+                              : '#F8FAFC',
+                  textShadow: awayFlash ? '0 0 20px rgba(0,223,169,0.8)' : undefined,
+                  transform:  awayFlash ? 'scale(1.15)' : 'scale(1)',
+                }}
+              >
+                {displayScore.away}
               </span>
             </div>
-            <LivePill match={match} />
+
+            {/* Live clock (soccer only, when BetsAPI data available) */}
+            {hasClock ? (
+              <p className="text-[10px] font-black tabular-nums tracking-wider" style={{ color: '#EF4444' }}>
+                {clockMin}:{String(clockSec).padStart(2, '0')}
+              </p>
+            ) : (
+              <LivePill match={match} />
+            )}
           </>
         ) : (
           <>
@@ -166,6 +248,8 @@ function TeamsHeader({ match, sportIcon, isSoccer, isTennis }: {
   );
 }
 
+// ─── HorseHeader ──────────────────────────────────────────────────────────────
+
 function HorseHeader({ match, sportIcon, league }: {
   match: MatchEntity; sportIcon: string; league: LeagueEntity;
 }) {
@@ -185,6 +269,8 @@ function HorseHeader({ match, sportIcon, league }: {
   );
 }
 
+// ─── LivePill ─────────────────────────────────────────────────────────────────
+
 function LivePill({ match }: { match: MatchEntity }) {
   return (
     <div className="flex items-center gap-1.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-full px-2.5 py-1">
@@ -196,6 +282,8 @@ function LivePill({ match }: { match: MatchEntity }) {
     </div>
   );
 }
+
+// ─── StatusPill ───────────────────────────────────────────────────────────────
 
 function StatusPill({ match }: { match: MatchEntity }) {
   if (match.status === 'live') return <LivePill match={match} />;

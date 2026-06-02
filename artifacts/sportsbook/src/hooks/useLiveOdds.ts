@@ -5,7 +5,7 @@
  *
  * BetsAPI events are preferred for score accuracy; Odds API for markets breadth.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchBetsApiLive, type BetsApiEvent } from '../lib/betsApi';
 
 // ─── Raw Odds API response shapes ─────────────────────────────────────────────
@@ -378,20 +378,30 @@ function normalizeBetsApiLiveEvent(ev: BetsApiEvent): NormalizedLiveMatch | null
 const POLL_MS = 60 * 1000; // 60 seconds
 
 export interface UseLiveOddsResult {
-  matches:     NormalizedLiveMatch[];
-  loading:     boolean;
-  error:       string | null;
-  isRealData:  boolean;
-  lastUpdated: Date | null;
+  matches:       NormalizedLiveMatch[];
+  loading:       boolean;
+  /** True while a refresh poll is in-flight (not the initial load). */
+  refreshing:    boolean;
+  error:         string | null;
+  isRealData:    boolean;
+  lastUpdated:   Date | null;
+  /** Seconds until the next automatic poll. Counts 60 → 0. */
+  nextRefreshIn: number;
 }
 
 export function useLiveOdds(): UseLiveOddsResult {
-  const [matches,     setMatches]     = useState<NormalizedLiveMatch[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [matches,       setMatches]       = useState<NormalizedLiveMatch[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [refreshing,    setRefreshing]    = useState(false);
+  const [error,         setError]         = useState<string | null>(null);
+  const [lastUpdated,   setLastUpdated]   = useState<Date | null>(null);
+  const [nextRefreshIn, setNextRefreshIn] = useState(POLL_MS / 1000);
+
+  const isFirstFetch = useRef(true);
 
   const fetchLiveData = useCallback(async () => {
+    // After the initial load, show a refreshing indicator instead of full loading
+    if (!isFirstFetch.current) setRefreshing(true);
     try {
       // Fetch from both sources in parallel
       const [eventsRes, scoresRes, betsApiLive] = await Promise.all([
@@ -440,7 +450,10 @@ export function useLiveOdds(): UseLiveOddsResult {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load live odds');
     } finally {
+      isFirstFetch.current = false;
       setLoading(false);
+      setRefreshing(false);
+      setNextRefreshIn(POLL_MS / 1000);
     }
   }, []);
 
@@ -450,11 +463,19 @@ export function useLiveOdds(): UseLiveOddsResult {
     return () => clearInterval(timer);
   }, [fetchLiveData]);
 
+  // Countdown to next refresh (ticks every second)
+  useEffect(() => {
+    const t = setInterval(() => setNextRefreshIn(n => Math.max(0, n - 1)), 1000);
+    return () => clearInterval(t);
+  }, []);
+
   return {
     matches,
     loading,
+    refreshing,
     error,
     isRealData:  matches.length > 0,
     lastUpdated,
+    nextRefreshIn,
   };
 }

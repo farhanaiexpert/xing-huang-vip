@@ -9,8 +9,9 @@ import { MarketNav } from '../components/match/MarketNav';
 import { generateDetailMarkets } from '../data/marketDetails';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useOddsData } from '../hooks/useOddsData';
+import { useLiveMatchScore } from '../hooks/useLiveMatchScore';
 import { findMatchInLeagues } from '../lib/matchUtils';
-import { Receipt, TrendingUp, BarChart2, Users } from 'lucide-react';
+import { Receipt, TrendingUp, BarChart2, Users, RefreshCw } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle, DrawerDescription } from '../components/ui/drawer';
 import { cn } from '../lib/utils';
 import type { MatchEntity, LeagueEntity } from '../data/types';
@@ -288,6 +289,53 @@ export function MatchDetail() {
     : match.homeTeamName;
 
   return (
+    <MatchDetailBody
+      match={match}
+      league={league}
+      sportKey={sportKey}
+      matchName={matchName}
+      groups={groups}
+      activeGroupId={activeGroupId}
+      groupRefs={groupRefs}
+      handleNavSelect={handleNavSelect}
+      selections={selections}
+      fabPulse={fabPulse}
+    />
+  );
+}
+
+// ─── Inner body — separated so hooks are called at top level ─────────────────
+
+function MatchDetailBody({
+  match, league, sportKey, matchName, groups, activeGroupId,
+  groupRefs, handleNavSelect, selections, fabPulse,
+}: {
+  match: MatchEntity;
+  league: LeagueEntity;
+  sportKey: string | undefined;
+  matchName: string;
+  groups: ReturnType<typeof generateDetailMarkets>;
+  activeGroupId: string | null;
+  groupRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  handleNavSelect: (id: string) => void;
+  selections: ReturnType<typeof useBetSlip>['selections'];
+  fabPulse: boolean;
+}) {
+  const isSoccer = match.sportId === 'sp_soccer';
+
+  // Real-time live score polling — only fires when the match is live
+  const liveData = useLiveMatchScore({
+    matchId:  match.id,
+    homeTeam: match.homeTeamName,
+    awayTeam: match.awayTeamName,
+    isLive:   match.isLive,
+    isSoccer,
+  });
+
+  // Use the polled score if available (falls back to static snapshot)
+  const displayScore = liveData.score ?? match.score;
+
+  return (
     <div className="min-h-screen flex flex-col bg-[#0B0F14] text-white overflow-hidden">
       <Header />
 
@@ -296,8 +344,12 @@ export function MatchDetail() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <ScrollArea className="flex-1 h-[calc(100vh-3.5rem)] pb-14 xl:pb-0">
 
-            {/* Match hero */}
-            <MatchHeader match={match} league={league} />
+            {/* Match hero — with live score data wired in */}
+            <MatchHeader
+              match={match}
+              league={league}
+              liveData={match.isLive ? liveData : undefined}
+            />
 
             {/* Quick odds overview — primary market prominent at top */}
             <OddsOverview match={match} sportKey={sportKey} commenceTime={match.startTime} />
@@ -319,14 +371,34 @@ export function MatchDetail() {
                     <p className="text-sm font-semibold text-[#EF4444]">Match is Live</p>
                     <p className="text-xs text-[#94A3B8]">
                       Odds may be suspended during key moments
-                      {match.liveMinute ? ` · ${match.liveMinute}' played` : ''}
+                      {liveData.clockMin !== null
+                        ? ` · ${liveData.clockMin}'`
+                        : match.liveMinute
+                          ? ` · ${match.liveMinute}' played`
+                          : ''}
                     </p>
                   </div>
-                  {match.score && (
-                    <span className="text-xs font-mono font-bold text-[#EF4444] shrink-0">
-                      {match.score.home} – {match.score.away}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {displayScore && (
+                      <span
+                        className="text-xs font-mono font-bold tabular-nums transition-colors duration-300"
+                        style={{ color: (liveData.homeFlash || liveData.awayFlash) ? '#00DFA9' : '#EF4444' }}
+                      >
+                        {displayScore.home} – {displayScore.away}
+                      </span>
+                    )}
+                    <span
+                      className="text-[10px] flex items-center gap-1"
+                      style={{ color: liveData.isPolling ? '#00DFA9' : '#475569' }}
+                    >
+                      <RefreshCw className={cn('h-3 w-3', liveData.isPolling && 'animate-spin')} />
+                      {liveData.isPolling
+                        ? ''
+                        : liveData.lastUpdated
+                          ? `${liveData.nextRefreshIn}s`
+                          : ''}
                     </span>
-                  )}
+                  </div>
                 </div>
               )}
 
