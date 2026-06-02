@@ -878,40 +878,13 @@ async function processSettlement(): Promise<void> {
 
     if (unsettledIds.size === 0) continue;
 
-    // ── Step 2: API-Football fallback (soccer only) ───────────────────────────
-    // Secondary source: API-Football uses team-name + commence-date matching.
-    // We only run this for soccer sports and only when events have stored
-    // homeTeam/awayTeam from the bet_selections table.
-    if (unsettledIds.size > 0) {
-      const soccerKey = apiKeys.find(k => k.startsWith("soccer_")) ?? sport;
-      const openForFootball = startedEvents
-        .filter(e => unsettledIds.has(e.eventId) && (e.homeTeam || e.awayTeam))
-        .map(e => ({
-          id:          e.eventId,
-          homeTeam:    e.homeTeam,
-          awayTeam:    e.awayTeam,
-          commenceDate: e.commenceTime ? e.commenceTime.toISOString().slice(0, 10) : undefined,
-        }));
-
-      if (openForFootball.length > 0) {
-        try {
-          const afResults = await fetchCompletedScoresApiFootball(soccerKey, openForFootball);
-          for (const event of afResults) {
-            if (!unsettledIds.has(event.id)) continue;
-            try {
-              const meta = startedEvents.find(e => e.eventId === event.id);
-              const n = await processEvent(event, sport, "api_football", meta?.commenceTime);
-              grandTotal += n;
-              unsettledIds.delete(event.id);
-            } catch (err) {
-              logger.error({ err, eventId: event.id }, "Settlement worker: API-Football event error");
-            }
-          }
-        } catch (err) {
-          logger.warn({ err, sport }, "Settlement worker: API-Football fetch error");
-        }
-      }
-    }
+    // ── Step 2: No team-name fallback — ID-first semantics only ─────────────────
+    // API-Football identifies fixtures by team-name fuzzy matching, which
+    // violates the ID-first event-identity requirement: it cannot guarantee
+    // which exact fixture is being settled when teams have played multiple
+    // times. Settlement is gated to Odds-API-exact-ID results only.
+    // Events that Odds API has not yet reported as completed remain open and
+    // will escalate to manual_review after the 48h cutoff (Step 3).
 
     // ── Step 3: Manual review — events ≥ 48h past commence_time with no result ─
     const toReview = startedEvents.filter(e => {

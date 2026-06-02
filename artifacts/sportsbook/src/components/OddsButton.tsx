@@ -104,7 +104,7 @@ export function OddsButton({
         sportKey,
         sportId,
         kickoffTime: isLive ? undefined : kickoffTime,
-        commenceTime: isLive ? undefined : commenceTime,
+        commenceTime: commenceTime,
         homeTeam,
         awayTeam,
       });

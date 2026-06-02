@@ -15,10 +15,12 @@ const SelectionSchema = z.object({
   eventId:          z.string().min(1),
   eventName:        z.string(),
   sport:            z.string().default(""),            // legacy field, kept for compat
-  sportKey:         z.string().default(""),               // Odds API sport key — preferred for settlement
-  homeTeam:         z.string().default(""),               // stored on bet_selections for settlement
-  awayTeam:         z.string().default(""),               // stored on bet_selections for settlement
-  commenceTime:     z.string().default(""),               // ISO 8601 — used for settlement timing
+  sportKey:         z.string().min(1, "sportKey is required for settlement"),
+  homeTeam:         z.string().min(1, "homeTeam is required for settlement"),
+  awayTeam:         z.string().min(1, "awayTeam is required for settlement"),
+  commenceTime:     z.string()
+                      .min(1, "commenceTime is required for settlement")
+                      .refine(s => !isNaN(Date.parse(s)), { message: "commenceTime must be a valid ISO 8601 date" }),
   marketType:       z.string().min(1),
   selection:        z.string().min(1),
   odds:             z.number().positive(),
