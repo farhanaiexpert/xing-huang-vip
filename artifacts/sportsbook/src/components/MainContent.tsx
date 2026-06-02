@@ -53,34 +53,34 @@ type DateFilter = "all" | "today" | "tomorrow" | "upcoming";
 
 // Sport-carousel definitions — counts are computed from live API data below
 const CAROUSEL_SPORTS = [
-  { id: "soccer",            name: "Soccer",       icon: "⚽"  },
-  { id: "tennis",            name: "Tennis",       icon: "🎾"  },
-  { id: "basketball",        name: "Basketball",   icon: "🏀"  },
-  { id: "cricket",           name: "Cricket",      icon: "🏏"  },
-  { id: "ice-hockey",        name: "Ice Hockey",   icon: "🏒"  },
-  { id: "mma",               name: "MMA",          icon: "🥋"  },
-  { id: "american-football", name: "NFL",          icon: "🏈"  },
-  { id: "baseball",          name: "Baseball",     icon: "⚾"  },
-  { id: "rugby",             name: "Rugby",        icon: "🏉"  },
-  { id: "volleyball",        name: "Volleyball",   icon: "🏐"  },
-  { id: "darts",             name: "Darts",        icon: "🎯"  },
-  { id: "boxing",            name: "Boxing",       icon: "🥊"  },
+  { id: "sp_soccer",            name: "Soccer",       icon: "⚽"  },
+  { id: "sp_tennis",            name: "Tennis",       icon: "🎾"  },
+  { id: "sp_basketball",        name: "Basketball",   icon: "🏀"  },
+  { id: "sp_cricket",           name: "Cricket",      icon: "🏏"  },
+  { id: "sp_ice_hockey",        name: "Ice Hockey",   icon: "🏒"  },
+  { id: "sp_mma",               name: "MMA",          icon: "🥋"  },
+  { id: "sp_american_football", name: "NFL",          icon: "🏈"  },
+  { id: "sp_baseball",          name: "Baseball",     icon: "⚾"  },
+  { id: "sp_rugby_league",      name: "Rugby",        icon: "🏉"  },
+  { id: "sp_volleyball",        name: "Volleyball",   icon: "🏐"  },
+  { id: "sp_darts",             name: "Darts",        icon: "🎯"  },
+  { id: "sp_boxing",            name: "Boxing",       icon: "🥊"  },
 ];
 
-// Map carousel sport IDs → sportKey/sportId prefixes used in allLeagues
+// Map sp_* sport IDs → sportKey prefixes used in allLeagues (for match counts)
 const SPORT_KEY_MAP: Record<string, string[]> = {
-  "soccer":            ["soccer_", "sp_soccer", "sp_ucl"],
-  "tennis":            ["tennis_", "sp_tennis"],
-  "basketball":        ["basketball_", "sp_basketball", "sp_nba"],
-  "cricket":           ["cricket_"],
-  "ice-hockey":        ["icehockey_"],
-  "mma":               ["mma_", "ufc_"],
-  "american-football": ["americanfootball_"],
-  "baseball":          ["baseball_"],
-  "rugby":             ["rugbyleague_", "rugbyunion_", "betsapi_rugby"],
-  "volleyball":        ["volleyball_", "betsapi_volleyball"],
-  "darts":             ["darts_", "betsapi_darts"],
-  "boxing":            ["boxing_"],
+  "sp_soccer":            ["soccer_", "sp_soccer", "sp_ucl"],
+  "sp_tennis":            ["tennis_", "sp_tennis"],
+  "sp_basketball":        ["basketball_", "sp_basketball", "sp_nba"],
+  "sp_cricket":           ["cricket_"],
+  "sp_ice_hockey":        ["icehockey_"],
+  "sp_mma":               ["mma_", "ufc_"],
+  "sp_american_football": ["americanfootball_"],
+  "sp_baseball":          ["baseball_"],
+  "sp_rugby_league":      ["rugbyleague_", "rugbyunion_", "betsapi_rugby"],
+  "sp_volleyball":        ["volleyball_", "betsapi_volleyball"],
+  "sp_darts":             ["darts_", "betsapi_darts"],
+  "sp_boxing":            ["boxing_"],
 };
 
 const DATE_FILTERS: { id: DateFilter; label: string }[] = [
@@ -295,11 +295,19 @@ export function MainContent({
       selectedSportId &&
       !["all", "early-payout", "acca-boost"].includes(selectedSportId)
     ) {
-      leagues = leagues.filter(
-        (l) =>
-          l.sportId === selectedSportId ||
-          l.sportId === `sp_${selectedSportId.replace("-", "_")}`,
-      );
+      const prefixes = SPORT_KEY_MAP[selectedSportId];
+      leagues = leagues.filter((l) => {
+        // Direct sportId match
+        if (l.sportId === selectedSportId) return true;
+        // Legacy: old-style non-sp_ IDs from any remaining carousel remnants
+        if (l.sportId === `sp_${selectedSportId.replace("-", "_")}`) return true;
+        // Match by sportKey prefix (most reliable for Odds API data)
+        if (prefixes) {
+          const sk = (l.sportKey ?? l.sportId ?? '').toLowerCase();
+          return prefixes.some(p => sk.startsWith(p.toLowerCase()));
+        }
+        return false;
+      });
     }
 
     if (dateFilter !== "all") {
@@ -699,9 +707,6 @@ export function MainContent({
               {/* Soccer highlights — always visible on default homepage so users can
                   immediately see soccer matches and click through to match detail */}
               {showFeatured && (
-                <SoccerHighlights onViewAll={scrollToLeagueList} />
-              )}
-              {!search.trim() && selectedSportId === "soccer" && (
                 <SoccerHighlights onViewAll={scrollToLeagueList} />
               )}
               {!search.trim() && selectedSportId === "ucl-final" && (

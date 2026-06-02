@@ -129,6 +129,55 @@ const STANDARD_TABS: TabConfig[] = [
 
 export const SPORT_DETAIL_CONFIGS: Record<string, SportDetailConfig> = {
 
+  // ── Soccer ──────────────────────────────────────────────────────────────────
+  sp_soccer: {
+    sportId:    'sp_soccer',
+    name:       'Soccer',
+    emoji:      '⚽',
+    tabs: [
+      { id: 'featured',     label: 'Featured'      },
+      { id: 'competitions', label: 'Competitions'  },
+      { id: 'futures',      label: 'Futures'       },
+      { id: 'offers',       label: 'Offers'        },
+    ],
+    defaultTab: 'featured',
+    featuredSectionLabel: 'Featured Matches',
+    competitions: [
+      { id: 'fifa_wc_2026',    name: 'FIFA World Cup 2026',        countryCode: 'WW' },
+      { id: 'copa_america',    name: 'Copa América 2026',          countryCode: 'WW' },
+      { id: 'mls',             name: 'MLS',                        countryCode: 'US' },
+      { id: 'liga_mx',         name: 'Liga MX',                    countryCode: 'MX' },
+      { id: 'brasileirao',     name: 'Brasileirão Série A',        countryCode: 'BR' },
+      { id: 'arg_primera',     name: 'Argentine Primera División', countryCode: 'AR' },
+      { id: 'premier_league',  name: 'Premier League',             countryCode: 'GB' },
+      { id: 'la_liga',         name: 'La Liga',                    countryCode: 'ES' },
+      { id: 'bundesliga',      name: 'Bundesliga',                 countryCode: 'DE' },
+      { id: 'serie_a',         name: 'Serie A',                    countryCode: 'IT' },
+      { id: 'ligue_1',         name: 'Ligue 1',                    countryCode: 'FR' },
+      { id: 'ucl',             name: 'UEFA Champions League',      countryCode: 'EU' },
+      { id: 'uel',             name: 'UEFA Europa League',         countryCode: 'EU' },
+      { id: 'eredivisie',      name: 'Eredivisie',                 countryCode: 'NL' },
+      { id: 'primeira_liga',   name: 'Primeira Liga',              countryCode: 'PT' },
+      { id: 'ekstraklasa',     name: 'Ekstraklasa',                countryCode: 'PL' },
+      { id: 'j_league',        name: 'J1 League',                  countryCode: 'JP' },
+      { id: 'k_league',        name: 'K League 1',                 countryCode: 'KR' },
+      { id: 'saudi_pl',        name: 'Saudi Pro League',           countryCode: 'SA' },
+    ],
+    futuresMarkets: [
+      'FIFA World Cup 2026 Winner',
+      'FIFA World Cup 2026 — Golden Boot',
+      'FIFA World Cup 2026 — Golden Ball',
+      'Premier League Winner 2026/27',
+      'La Liga Winner 2026/27',
+      'Bundesliga Winner 2026/27',
+      'Serie A Winner 2026/27',
+      'Champions League Winner 2026/27',
+      'MLS Cup Winner 2026',
+      'Copa Libertadores 2026 Winner',
+    ],
+    mockMatches: [],
+  },
+
   // ── American Football ───────────────────────────────────────────────────────
   sp_american_football: {
     sportId:    'sp_american_football',
