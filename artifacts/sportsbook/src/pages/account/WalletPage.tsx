@@ -945,6 +945,27 @@ export function WalletPage() {
                   </div>
                 </div>
               </div>
+              {/* Network strip */}
+              <div className="px-5 py-2 border-b border-white/[0.05] flex items-center gap-2 overflow-x-auto scrollbar-none">
+                <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider shrink-0">Supports:</span>
+                {([
+                  { name: 'USDT TRC-20', color: '#00DFA9' },
+                  { name: 'USDT ERC-20', color: '#627EEA' },
+                  { name: 'USDT BEP-20', color: '#F0B90B' },
+                  { name: 'TON', color: '#0098EA' },
+                  { name: 'Solana', color: '#9945FF' },
+                  { name: 'BTC', color: '#F7931A' },
+                  { name: 'LTC', color: '#A5A5A5' },
+                  { name: 'ETH', color: '#627EEA' },
+                  { name: 'XRP', color: '#00C2FF' },
+                  { name: '300+ more', color: '#64748B' },
+                ] as { name: string; color: string }[]).map(n => (
+                  <span key={n.name} className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
+                    style={{ background: `${n.color}18`, color: n.color, border: `1px solid ${n.color}30` }}>
+                    {n.name}
+                  </span>
+                ))}
+              </div>
               <div className="p-5">
 
                 {/* IDLE */}
@@ -1192,6 +1213,24 @@ export function WalletPage() {
                   </div>
                 </div>
               </div>
+              {/* Network strip */}
+              <div className="px-5 py-2 border-b border-white/[0.05] flex items-center gap-2 overflow-x-auto scrollbar-none">
+                <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider shrink-0">Supports:</span>
+                {([
+                  { name: 'USDT TRC-20', color: '#00DFA9' },
+                  { name: 'USDT ERC-20', color: '#627EEA' },
+                  { name: 'BTC', color: '#F7931A' },
+                  { name: 'ETH', color: '#627EEA' },
+                  { name: 'LTC', color: '#A5A5A5' },
+                  { name: 'BNB', color: '#F0B90B' },
+                  { name: 'XRP', color: '#00C2FF' },
+                ] as { name: string; color: string }[]).map(n => (
+                  <span key={n.name} className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
+                    style={{ background: `${n.color}18`, color: n.color, border: `1px solid ${n.color}30` }}>
+                    {n.name}
+                  </span>
+                ))}
+              </div>
               <div className="p-5">
 
                 {/* IDLE */}
@@ -1399,6 +1438,24 @@ export function WalletPage() {
                     <p className="text-[11px] text-[#64748B] mt-0.5">Send USDT in one click — no TxHash needed</p>
                   </div>
                 </div>
+              </div>
+              {/* Network strip */}
+              <div className="px-5 py-2 border-b border-white/[0.05] flex items-center gap-2 overflow-x-auto scrollbar-none">
+                <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider shrink-0">Chains:</span>
+                {([
+                  { name: 'Ethereum',  color: '#627EEA' },
+                  { name: 'BSC',       color: '#F0B90B' },
+                  { name: 'TRC-20',    color: '#00DFA9' },
+                  { name: 'Polygon',   color: '#8247E5' },
+                  { name: 'Arbitrum',  color: '#28A0F0' },
+                  { name: 'Optimism',  color: '#FF0420' },
+                  { name: 'Base',      color: '#0052FF' },
+                ] as { name: string; color: string }[]).map(n => (
+                  <span key={n.name} className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
+                    style={{ background: `${n.color}18`, color: n.color, border: `1px solid ${n.color}30` }}>
+                    {n.name}
+                  </span>
+                ))}
               </div>
               <div className="p-5">
 
@@ -1767,6 +1824,19 @@ export function WalletPage() {
                   </div>
                 </div>
               </div>
+              {/* Network strip */}
+              <div className="px-5 py-2 border-b border-white/[0.05] flex items-center gap-2 overflow-x-auto scrollbar-none">
+                <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider shrink-0">Supports:</span>
+                {([
+                  { name: 'USDT TRC-20', color: '#00DFA9' },
+                  { name: 'USDT ERC-20', color: '#627EEA' },
+                ] as { name: string; color: string }[]).map(n => (
+                  <span key={n.name} className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
+                    style={{ background: `${n.color}18`, color: n.color, border: `1px solid ${n.color}30` }}>
+                    {n.name}
+                  </span>
+                ))}
+              </div>
               <div className="p-5">
 
                 {/* IDLE */}
@@ -2018,6 +2088,24 @@ export function WalletPage() {
 
             return (
               <>
+                {/* ── Network summary strip ── */}
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none px-1 pb-1">
+                  <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider shrink-0">6 Networks:</span>
+                  {([
+                    { name: 'TRC-20',  color: '#00DFA9' },
+                    { name: 'ERC-20',  color: '#627EEA' },
+                    { name: 'BEP-20',  color: '#F0B90B' },
+                    { name: 'Solana',  color: '#9945FF' },
+                    { name: 'TON',     color: '#0098EA' },
+                    { name: 'Bitcoin', color: '#F7931A' },
+                  ] as { name: string; color: string }[]).map(n => (
+                    <span key={n.name} className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
+                      style={{ background: `${n.color}18`, color: n.color, border: `1px solid ${n.color}30` }}>
+                      {n.name}
+                    </span>
+                  ))}
+                </div>
+
                 {/* ── Step indicator ── */}
                 <div className="flex items-center gap-2 px-1">
                   {['Select Network', 'Send Funds', 'Confirm TxID'].map((s, i) => (
