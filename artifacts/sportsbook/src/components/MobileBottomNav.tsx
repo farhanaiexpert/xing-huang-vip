@@ -5,6 +5,7 @@ import {
   History, HelpCircle, Star, FileText, ShieldCheck,
   Landmark, ChevronRight, Wallet, X, Check,
   TrendingUp, Share2, UserCircle, Radio, ArrowDownLeft,
+  Zap, Globe,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useBetHistory } from '../hooks/useBetHistory';
