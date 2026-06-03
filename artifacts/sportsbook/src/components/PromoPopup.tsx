@@ -122,24 +122,25 @@ export function PromoPopup() {
     return () => clearInterval(t);
   }, [visible, hovered]);
 
-  // Sticky bar loop: appears 600ms after popup close, visible 30s, hidden 15s, repeats
+  // Sticky bar loop: appears 600ms after popup close, visible 5s, hidden 60s, repeats
+  // Never shown if the bonus is already claimed
   useEffect(() => {
-    if (!dismissed || barStopped) return;
+    if (!dismissed || barStopped || alreadyClaimed) return;
     const schedule = (nextVisible: boolean, delay: number) => {
       loopRef.current = setTimeout(() => {
         setBarVisible(nextVisible);
-        schedule(!nextVisible, nextVisible ? 30000 : 15000);
+        schedule(!nextVisible, nextVisible ? 5000 : 60000);
       }, delay);
     };
     initRef.current = setTimeout(() => {
       setBarVisible(true);
-      schedule(false, 30000);
+      schedule(false, 5000);
     }, 600);
     return () => {
       if (initRef.current) clearTimeout(initRef.current);
       if (loopRef.current) clearTimeout(loopRef.current);
     };
-  }, [dismissed, barStopped]);
+  }, [dismissed, barStopped, alreadyClaimed]);
 
   function close() {
     if (showCongrats) return;
@@ -176,6 +177,15 @@ export function PromoPopup() {
     }
   }, [isAuthenticated, refreshBalance, navigate]);
 
+  // If bonus gets claimed (mid-session), kill the bar immediately
+  useEffect(() => {
+    if (!alreadyClaimed) return;
+    setBarVisible(false);
+    setBarStopped(true);
+    if (initRef.current) clearTimeout(initRef.current);
+    if (loopRef.current) clearTimeout(loopRef.current);
+  }, [alreadyClaimed]);
+
   function dismissBar() {
     setBarStopped(true);
     setBarVisible(false);
@@ -189,7 +199,8 @@ export function PromoPopup() {
   if (location !== '/') return null;
 
   // Sticky claim bar — desktop: fixed bottom strip; mobile: slim top notice below header
-  const StickyBar = dismissed && !barStopped ? (
+  // Never rendered once bonus has been claimed
+  const StickyBar = dismissed && !barStopped && !alreadyClaimed ? (
     <>
       <style>{`
         @keyframes pCTAPulse { 0%,100%{box-shadow:0 0 18px rgba(0,223,169,.35)} 50%{box-shadow:0 0 30px rgba(0,223,169,.6)} }
