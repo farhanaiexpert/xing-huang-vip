@@ -635,11 +635,11 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   return createPortal(
     <>
       {isVisible && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center sm:p-4">
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={(view === 'npp-invoice' || view === 'plisio-invoice') ? undefined : close} />
 
           <div
-            className="relative w-full max-w-[560px] rounded-2xl overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.9)]"
+            className="relative w-full max-w-[560px] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-[0_-4px_60px_rgba(0,0,0,0.8)] sm:shadow-[0_40px_100px_rgba(0,0,0,0.9)]"
             style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,0.07)' }}
           >
             {/* Top bar */}
@@ -647,7 +647,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
               style={{ background: 'linear-gradient(90deg, #00DFA9 0%, #38BDF8 50%, #A78BFA 100%)' }} />
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.05]">
+            <div className="flex items-center justify-between px-4 sm:px-5 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-white/[0.05]">
               <div className="flex items-center gap-2.5">
                 {hdr.showBack && (
                   <button
@@ -658,8 +658,17 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                   </button>
                 )}
                 <div>
-                  <h2 className="text-[17px] font-black text-[#F8FAFC] tracking-tight">{hdr.title}</h2>
-                  <p className="text-[12px] text-[#64748B] mt-0.5">{hdr.subtitle}</p>
+                  <h2 className="text-[15px] sm:text-[17px] font-black text-[#F8FAFC] tracking-tight">{hdr.title}</h2>
+                  <p className="text-[11px] text-[#64748B] mt-0.5">{hdr.subtitle}</p>
+                  {view === 'methods' && (
+                    <button
+                      onClick={() => { close(); navigate('/account/wallet'); }}
+                      className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-[#38BDF8] hover:text-[#7DD3FC] transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Open Wallet Page
+                    </button>
+                  )}
                 </div>
               </div>
               {view !== 'npp-invoice' && view !== 'plisio-invoice' && (
@@ -672,7 +681,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
               )}
             </div>
 
-            <div className="px-5 py-5 space-y-4 max-h-[82vh] overflow-y-auto">
+            <div className="px-3 sm:px-5 py-3 sm:py-5 space-y-3 sm:space-y-4 max-h-[80svh] sm:max-h-[72vh] overflow-y-auto [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/[0.12] [&::-webkit-scrollbar-thumb:hover]:bg-white/25">
 
               {/* ══════════ PHANTOM (SOLANA) FORM VIEW ══════════ */}
               {view === 'phantom-form' && (
@@ -1391,26 +1400,26 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                     <button
                       onClick={handleConnectWallet}
                       disabled={reownStep === 'connecting'}
-                      className="w-full text-left rounded-2xl overflow-hidden p-5 transition-all hover:brightness-105 active:scale-[0.99] cursor-pointer group disabled:opacity-80 disabled:cursor-wait"
+                      className="w-full text-left rounded-2xl overflow-hidden p-3.5 sm:p-5 transition-all hover:brightness-105 active:scale-[0.99] cursor-pointer group disabled:opacity-80 disabled:cursor-wait"
                       style={{
                         background: 'linear-gradient(135deg, rgba(167,139,250,0.15) 0%, rgba(139,92,246,0.07) 100%)',
                         border: '2px solid rgba(167,139,250,0.35)',
                         boxShadow: '0 0 36px rgba(167,139,250,0.10)',
                       }}
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="w-13 h-13 rounded-2xl flex items-center justify-center shrink-0"
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0"
                           style={{
                             background: 'linear-gradient(135deg, rgba(167,139,250,0.28) 0%, rgba(139,92,246,0.14) 100%)',
                             border: '1px solid rgba(167,139,250,0.45)',
-                            boxShadow: '0 0 20px rgba(167,139,250,0.25)',
+                            boxShadow: '0 0 16px rgba(167,139,250,0.25)',
                           }}>
-                          <Wallet className="w-6 h-6 text-[#A78BFA]" />
+                          <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-[#A78BFA]" />
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <span className="text-[16px] font-black text-[#F8FAFC]">Connect Wallet</span>
+                            <span className="text-[14px] sm:text-[16px] font-black text-[#F8FAFC]">Connect Wallet</span>
                             <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
                               style={{ background: 'rgba(167,139,250,0.18)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.35)' }}>
                               Web3
@@ -1424,24 +1433,24 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               ★ Recommended
                             </span>
                           </div>
-                          <p className="text-[11px] text-[#A78BFA]/80 font-semibold mb-2">MetaMask · Trust · OKX · TronLink · 300+ wallets</p>
-                          <p className="text-[12px] text-[#94A3B8] leading-relaxed mb-3">
+                          <p className="text-[10px] text-[#A78BFA]/80 font-semibold mb-1.5">MetaMask · Trust · OKX · TronLink · 300+ wallets</p>
+                          <p className="text-[11px] text-[#94A3B8] leading-relaxed mb-2">
                             Connect your wallet and deposit USDT in one click. No manual TxHash needed.
                           </p>
 
-                          <div className="flex items-center gap-3 mb-3">
-                            <span className="flex items-center gap-1 text-[11px] font-semibold text-[#A78BFA]">
+                          <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 mb-2">
+                            <span className="flex items-center gap-1 text-[10px] font-semibold text-[#A78BFA]">
                               <Shield className="w-3 h-3" /> Self-custody
                             </span>
                             <span className="w-px h-3 bg-white/[0.1]" />
-                            <span className="flex items-center gap-1 text-[11px] font-semibold text-[#94A3B8]">
+                            <span className="flex items-center gap-1 text-[10px] font-semibold text-[#94A3B8]">
                               <CheckCircle2 className="w-3 h-3" /> Instant
                             </span>
                             <span className="w-px h-3 bg-white/[0.1]" />
-                            <span className="text-[11px] font-semibold text-[#94A3B8]">Min 10 USDT</span>
+                            <span className="text-[10px] font-semibold text-[#94A3B8]">Min 10 USDT</span>
                           </div>
 
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-black text-white transition-all w-fit"
+                          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] sm:text-[12px] font-black text-white transition-all w-fit"
                             style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)', boxShadow: '0 0 16px rgba(124,58,237,0.4)' }}>
                             {reownStep === 'connecting'
                               ? <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Connecting…</>
@@ -1804,25 +1813,25 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                   {/* ── PHANTOM (Solana USDT SPL) ── */}
                   <button
                     onClick={() => { if (!user) { setAuthOpen(true); return; } setView('phantom-form'); }}
-                    className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
+                    className="w-full text-left rounded-2xl overflow-hidden p-3 sm:p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
                     style={{
                       background: 'linear-gradient(135deg, rgba(153,69,255,0.11) 0%, rgba(123,47,190,0.05) 100%)',
                       border: '1px solid rgba(153,69,255,0.28)',
                       boxShadow: '0 0 20px rgba(153,69,255,0.05)',
                     }}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
                         style={{
                           background: 'linear-gradient(135deg, rgba(153,69,255,0.22) 0%, rgba(123,47,190,0.10) 100%)',
                           border: '1px solid rgba(153,69,255,0.38)',
-                          boxShadow: '0 0 12px rgba(153,69,255,0.15)',
+                          boxShadow: '0 0 10px rgba(153,69,255,0.15)',
                         }}>
-                        <Wallet className="w-5 h-5 text-[#9945FF]" />
+                        <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-[#9945FF]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-[15px] font-black text-[#F8FAFC]">Phantom Wallet</span>
+                          <span className="text-[13px] sm:text-[15px] font-black text-[#F8FAFC]">Phantom Wallet</span>
                           <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
                             style={{ background: 'rgba(153,69,255,0.15)', color: '#9945FF', border: '1px solid rgba(153,69,255,0.30)' }}>
                             Solana
@@ -1832,8 +1841,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             <Zap className="w-2 h-2" />Auto
                           </span>
                         </div>
-                        <p className="text-[11px] font-semibold mb-1.5" style={{ color: 'rgba(153,69,255,0.80)' }}>USDT SPL · Solana network</p>
-                        <p className="text-[12px] text-[#94A3B8] leading-relaxed">
+                        <p className="text-[10px] font-semibold mb-1" style={{ color: 'rgba(153,69,255,0.80)' }}>USDT SPL · Solana network</p>
+                        <p className="text-[11px] text-[#94A3B8] leading-relaxed">
                           Send USDT on Solana and paste the TxHash — auto-verified and credited instantly.
                         </p>
                       </div>
@@ -1844,25 +1853,25 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                   {/* ── TON USDT (Jetton) ── */}
                   <button
                     onClick={() => { if (!user) { setAuthOpen(true); return; } setView('ton-form'); }}
-                    className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
+                    className="w-full text-left rounded-2xl overflow-hidden p-3 sm:p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
                     style={{
                       background: 'linear-gradient(135deg, rgba(0,152,234,0.11) 0%, rgba(0,120,185,0.05) 100%)',
                       border: '1px solid rgba(0,152,234,0.28)',
                       boxShadow: '0 0 20px rgba(0,152,234,0.05)',
                     }}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
                         style={{
                           background: 'linear-gradient(135deg, rgba(0,152,234,0.22) 0%, rgba(0,120,185,0.10) 100%)',
                           border: '1px solid rgba(0,152,234,0.38)',
-                          boxShadow: '0 0 12px rgba(0,152,234,0.15)',
+                          boxShadow: '0 0 10px rgba(0,152,234,0.15)',
                         }}>
-                        <Wallet className="w-5 h-5 text-[#0098EA]" />
+                        <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-[#0098EA]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-[15px] font-black text-[#F8FAFC]">TON Wallet</span>
+                          <span className="text-[13px] sm:text-[15px] font-black text-[#F8FAFC]">TON Wallet</span>
                           <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
                             style={{ background: 'rgba(0,152,234,0.15)', color: '#0098EA', border: '1px solid rgba(0,152,234,0.30)' }}>
                             TON
@@ -1872,8 +1881,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             <Zap className="w-2 h-2" />Auto
                           </span>
                         </div>
-                        <p className="text-[11px] font-semibold mb-1.5" style={{ color: 'rgba(0,152,234,0.80)' }}>USDT Jetton · TON network</p>
-                        <p className="text-[12px] text-[#94A3B8] leading-relaxed">
+                        <p className="text-[10px] font-semibold mb-1" style={{ color: 'rgba(0,152,234,0.80)' }}>USDT Jetton · TON network</p>
+                        <p className="text-[11px] text-[#94A3B8] leading-relaxed">
                           Send USDT on TON and paste the TxHash — auto-verified and credited instantly.
                         </p>
                       </div>
@@ -1890,56 +1899,56 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                   {/* ── OPTION 2: NowPayments ── */}
                   <button
                     onClick={handleNppClick}
-                    className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
+                    className="w-full text-left rounded-2xl overflow-hidden p-3 sm:p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
                     style={{
                       background: 'linear-gradient(135deg, rgba(56,189,248,0.11) 0%, rgba(14,165,233,0.05) 100%)',
                       border: '1px solid rgba(56,189,248,0.28)',
                       boxShadow: '0 0 20px rgba(56,189,248,0.05)',
                     }}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
                         style={{
                           background: 'linear-gradient(135deg, rgba(56,189,248,0.22) 0%, rgba(14,165,233,0.10) 100%)',
                           border: '1px solid rgba(56,189,248,0.38)',
-                          boxShadow: '0 0 12px rgba(56,189,248,0.15)',
+                          boxShadow: '0 0 10px rgba(56,189,248,0.15)',
                         }}>
-                        <Zap className="w-5 h-5 text-[#38BDF8]" />
+                        <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-[#38BDF8]" />
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-[15px] font-black text-[#F8FAFC]">Crypto Deposit</span>
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                          <span className="text-[13px] sm:text-[15px] font-black text-[#F8FAFC]">Crypto Deposit</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                             style={{ background: 'rgba(56,189,248,0.15)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.30)' }}>
                             NOWPayments
                           </span>
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1"
                             style={{ background: 'rgba(0,223,169,0.10)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.22)' }}>
                             <Zap className="w-2 h-2" />Auto-credit
                           </span>
                         </div>
-                        <p className="text-[11px] text-[#38BDF8]/80 font-semibold mb-1.5">USDT TRC-20 · ERC-20 · 100+ coins</p>
-                        <p className="text-[12px] text-[#94A3B8] leading-relaxed mb-3">
+                        <p className="text-[10px] text-[#38BDF8]/80 font-semibold mb-1">USDT TRC-20 · ERC-20 · 100+ coins</p>
+                        <p className="text-[11px] text-[#94A3B8] leading-relaxed mb-2">
                           Get a unique deposit address. Balance credited automatically on confirmation — no TxHash needed.
                         </p>
 
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#38BDF8]">
+                        <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 mb-2">
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[#38BDF8]">
                             <Zap className="w-3 h-3" /> Instant address
                           </span>
                           <span className="w-px h-3 bg-white/[0.1]" />
-                          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#94A3B8]">
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[#94A3B8]">
                             <CheckCircle2 className="w-3 h-3" /> Auto-credited
                           </span>
                           <span className="w-px h-3 bg-white/[0.1]" />
-                          <span className="text-[11px] font-semibold text-[#94A3B8]">Min 10 USDT</span>
+                          <span className="text-[10px] font-semibold text-[#94A3B8]">Min 10 USDT</span>
                         </div>
 
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-black text-[#0B0F14] transition-all w-fit group-hover:scale-[1.02]"
-                          style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)', boxShadow: '0 0 16px rgba(56,189,248,0.35)' }}>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-[#0B0F14] transition-all w-fit group-hover:scale-[1.02]"
+                          style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)' }}>
                           {user ? 'Deposit with Crypto' : 'Sign In to Deposit'}
-                          <ArrowRight className="w-4 h-4 ml-1" />
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </div>
                       </div>
                     </div>
@@ -1948,52 +1957,52 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                   {/* ── OPTION 3: Plisio ── */}
                   <button
                     onClick={handlePlisioClick}
-                    className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
+                    className="w-full text-left rounded-2xl overflow-hidden p-3 sm:p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
                     style={{
                       background: 'linear-gradient(135deg, rgba(168,85,247,0.10) 0%, rgba(124,58,237,0.05) 100%)',
                       border: '1px solid rgba(168,85,247,0.25)',
                       boxShadow: '0 0 18px rgba(168,85,247,0.05)',
                     }}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
                         style={{
                           background: 'linear-gradient(135deg, rgba(168,85,247,0.22) 0%, rgba(124,58,237,0.10) 100%)',
                           border: '1px solid rgba(168,85,247,0.38)',
-                          boxShadow: '0 0 12px rgba(168,85,247,0.15)',
+                          boxShadow: '0 0 10px rgba(168,85,247,0.15)',
                         }}>
-                        <CreditCard className="w-5 h-5 text-[#A855F7]" />
+                        <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-[#A855F7]" />
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-[15px] font-black text-[#F8FAFC]">Crypto Deposit</span>
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                          <span className="text-[13px] sm:text-[15px] font-black text-[#F8FAFC]">Crypto Deposit</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                             style={{ background: 'rgba(168,85,247,0.15)', color: '#A855F7', border: '1px solid rgba(168,85,247,0.30)' }}>
                             Plisio
                           </span>
                         </div>
-                        <p className="text-[11px] text-[#A855F7]/80 font-semibold mb-1.5">USDT TRC-20 · ERC-20</p>
-                        <p className="text-[12px] text-[#94A3B8] leading-relaxed mb-3">
+                        <p className="text-[10px] text-[#A855F7]/80 font-semibold mb-1">USDT TRC-20 · ERC-20</p>
+                        <p className="text-[11px] text-[#94A3B8] leading-relaxed mb-2">
                           Pay via Plisio gateway. Get a unique deposit address — balance auto-credited on confirmation.
                         </p>
 
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#A855F7]">
+                        <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 mb-2">
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[#A855F7]">
                             <CreditCard className="w-3 h-3" /> Unique address
                           </span>
                           <span className="w-px h-3 bg-white/[0.1]" />
-                          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#94A3B8]">
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[#94A3B8]">
                             <CheckCircle2 className="w-3 h-3" /> Auto-credited
                           </span>
                           <span className="w-px h-3 bg-white/[0.1]" />
-                          <span className="text-[11px] font-semibold text-[#94A3B8]">Min 10 USDT</span>
+                          <span className="text-[10px] font-semibold text-[#94A3B8]">Min 10 USDT</span>
                         </div>
 
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-black text-white transition-all w-fit group-hover:scale-[1.02]"
-                          style={{ background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)', boxShadow: '0 0 16px rgba(168,85,247,0.35)' }}>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-white transition-all w-fit group-hover:scale-[1.02]"
+                          style={{ background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)' }}>
                           {user ? 'Deposit via Plisio' : 'Sign In to Deposit'}
-                          <ArrowRight className="w-4 h-4 ml-1" />
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </div>
                       </div>
                     </div>
@@ -2008,36 +2017,36 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                   {/* ── OPTION 4: Manual ── */}
                   <button
                     onClick={() => { close(); if (user) { navigate('/account/wallet'); sessionStorage.setItem('cupbett_deposit_method', 'manual'); } else { setAuthOpen(true); } }}
-                    className="w-full text-left rounded-2xl overflow-hidden p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
+                    className="w-full text-left rounded-2xl overflow-hidden p-3 sm:p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
                     style={{
                       background: 'linear-gradient(135deg, rgba(0,223,169,0.08) 0%, rgba(0,196,154,0.04) 100%)',
                       border: '1px solid rgba(0,223,169,0.20)',
                     }}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
                         style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.28)' }}>
-                        <QrCode className="w-5 h-5 text-[#00DFA9]" />
+                        <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-[#00DFA9]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[14px] font-bold text-[#F8FAFC]">Manual USDT Deposit</span>
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+                          <span className="text-[13px] sm:text-[14px] font-bold text-[#F8FAFC]">Manual USDT Deposit</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                             style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.28)' }}>
                             Live
                           </span>
                         </div>
-                        <p className="text-[11px] text-[#94A3B8] leading-relaxed">
+                        <p className="text-[10px] text-[#94A3B8] leading-relaxed">
                           Send USDT (TRC-20 or ERC-20) to our wallet, paste your TxID — credited in 5–30 min.
                         </p>
-                        <div className="flex items-center gap-3 mt-2">
-                          <span className="flex items-center gap-1 text-[11px] font-semibold text-[#00DFA9]">
+                        <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 mt-1.5">
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-[#00DFA9]">
                             <Shield className="w-3 h-3" /> 0% fee
                           </span>
                           <span className="w-px h-3 bg-white/[0.1]" />
-                          <span className="text-[11px] text-[#64748B]">Min 10 USDT</span>
+                          <span className="text-[10px] text-[#64748B]">Min 10 USDT</span>
                           <span className="w-px h-3 bg-white/[0.1]" />
-                          <span className="text-[11px] text-[#64748B]">TRC-20 / ERC-20</span>
+                          <span className="text-[10px] text-[#64748B]">TRC-20 / ERC-20</span>
                         </div>
                       </div>
                       <ArrowRight className="w-4 h-4 text-[#64748B] group-hover:text-[#00DFA9] transition-colors shrink-0 mt-1" />
