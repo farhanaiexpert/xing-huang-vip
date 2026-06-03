@@ -461,7 +461,7 @@ export function PromoPopup() {
 
           {/* ── IMAGE SECTION ── */}
           <div
-            className="promo-img-wrap relative shrink-0 w-full md:w-[44%] overflow-hidden"
+            className="promo-img-wrap relative shrink-0 w-full md:w-[35%] overflow-hidden"
             style={{ background: DOT_BG }}
             onMouseEnter={() => { setHovered(true); setShowAlt(true); }}
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
