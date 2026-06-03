@@ -49,15 +49,15 @@ const AZ_SPORTS: { name: string; id: string; iconUrl: string }[] = [
 const AZ_INITIAL = 10;
 
 const TRENDING_ITEMS = [
-  { title: 'Weekend Soccer',   icon: '⚽', count: 284, sportId: 'sp_soccer'        },
-  { title: 'ATP/WTA Rome',     icon: '🎾', count: 449, sportId: 'sp_tennis'        },
+  { title: 'FIFA World Cup',   icon: '⚽', count: 510, sportId: 'sp_soccer'        },
+  { title: 'ATP/WTA Paris',    icon: '🎾', count: 449, sportId: 'sp_tennis'        },
   { title: 'Italy Serie A',    icon: '⚽', count: 228, sportId: 'sp_soccer'        },
-  { title: 'Next Races',       icon: '🏇', count: 195, sportId: 'sp_horse_racing'  },
+  { title: 'NBA Finals',       icon: '🏀', count: 195, sportId: 'sp_nba'          },
   { title: 'Spain La Liga',    icon: '⚽', count: 183, sportId: 'sp_soccer'        },
-  { title: 'NBA Play-Offs',    icon: '🏀', count: 156, sportId: 'sp_nba'          },
-  { title: 'LoL World Champ.', icon: '🎮', count: 128, sportId: 'sp_esports'      },
+  { title: 'MLB Season',       icon: '⚾', count: 156, sportId: 'sp_baseball'      },
+  { title: 'MMA Events',       icon: '🥋', count: 128, sportId: 'sp_mma'          },
 ];
-const MAX_COUNT = 449;
+const MAX_COUNT = 510;
 
 function TrendBar({ count }: { count: number }) {
   const pct = count / MAX_COUNT;

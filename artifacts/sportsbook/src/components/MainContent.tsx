@@ -71,7 +71,8 @@ const CAROUSEL_SPORTS = [
 const SPORT_KEY_MAP: Record<string, string[]> = {
   "sp_soccer":            ["soccer_", "sp_soccer", "sp_ucl"],
   "sp_tennis":            ["tennis_", "sp_tennis"],
-  "sp_basketball":        ["basketball_", "sp_basketball", "sp_nba"],
+  "sp_basketball":        ["basketball_", "sp_basketball"],
+  "sp_nba":               ["basketball_nba"],
   "sp_cricket":           ["cricket_"],
   "sp_ice_hockey":        ["icehockey_"],
   "sp_mma":               ["mma_", "ufc_"],
