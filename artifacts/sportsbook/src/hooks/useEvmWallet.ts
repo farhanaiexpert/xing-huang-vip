@@ -141,5 +141,15 @@ export function useEvmWallet() {
     return client.signMessage({ message });
   }, []);
 
-  return { address, isConnected, chainId, connect, disconnect, signMessage, switchChain, openNetworks };
+  /** Opens the official Reown/AppKit wallet modal directly (skips injected shortcut). */
+  const openWalletModal = useCallback(async () => {
+    try {
+      await open();
+    } catch (err) {
+      console.error('[CupBett] AppKit open() failed:', err);
+      throw new Error('APPKIT_OPEN_FAILED');
+    }
+  }, [open]);
+
+  return { address, isConnected, chainId, connect, disconnect, signMessage, switchChain, openNetworks, openWalletModal };
 }
