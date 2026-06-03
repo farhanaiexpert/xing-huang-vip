@@ -303,6 +303,7 @@ export function PromoPopup() {
         @keyframes ringPulse   { 0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,.5)} 50%{box-shadow:0 0 0 18px rgba(250,204,21,0)} }
         .promo-noscroll::-webkit-scrollbar { display:none }
         .promo-noscroll { -ms-overflow-style:none; scrollbar-width:none }
+        @media(max-width:767px){ .promo-celeb-img { top:20px!important; height:calc(100% - 20px)!important } }
       `}</style>
 
       {/* Backdrop */}
@@ -450,10 +451,10 @@ export function PromoPopup() {
             {/* md+: give it proper height */}
             <style>{`@media(min-width:768px){.promo-img-wrap{height:auto!important;min-height:280px!important}}`}</style>
             {/* Original image */}
-            <img src={IMG_ORIGINAL} alt="CupBett Ambassador"
+            <img src={IMG_ORIGINAL} alt="CupBett Ambassador" className="promo-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 0 : 1 }} />
             {/* Alt image */}
-            <img src={IMG_ALT} alt="CupBett Ambassador"
+            <img src={IMG_ALT} alt="CupBett Ambassador" className="promo-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 1 : 0 }} />
 
             {/* Desktop right-edge fade */}
