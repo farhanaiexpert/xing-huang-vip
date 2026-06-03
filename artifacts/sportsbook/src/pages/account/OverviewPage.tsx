@@ -148,7 +148,7 @@ export function OverviewPage() {
 
       {/* ── WALLET BALANCE HERO ───────────────────────────────────────────── */}
       <Link href="/account/wallet">
-        <div className="relative overflow-hidden rounded-2xl border border-[#00DFA9]/22 cursor-pointer hover:border-[#00DFA9]/38 active:scale-[0.99] transition-all"
+        <div className="relative overflow-hidden rounded-2xl border border-[#00DFA9]/22 cursor-pointer hover:border-[#00DFA9]/38 active:scale-[0.99] transition-all mb-[15px]"
           style={{ background: 'linear-gradient(135deg, #071A12 0%, #0A1A10 55%, #0B0F14 100%)' }}>
           <div className="absolute top-0 left-0 right-0 h-[1.5px]"
             style={{ background: 'linear-gradient(90deg, #00DFA9, rgba(0,223,169,0.2) 60%, transparent)' }} />
