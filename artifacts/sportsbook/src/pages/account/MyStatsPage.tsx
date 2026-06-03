@@ -143,13 +143,13 @@ function StatCard({
   color?: string;
 }) {
   return (
-    <div className="bg-white/3 border border-white/8 rounded-2xl p-4">
-      <div className="flex items-center gap-2 text-xs mb-2" style={{ color }}>
+    <div className="bg-white/3 border border-white/8 rounded-2xl p-3">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold mb-1.5" style={{ color }}>
         {icon}
-        {label}
+        <span className="leading-none truncate">{label}</span>
       </div>
-      <p className="text-xl font-black text-white leading-none">{value}</p>
-      {sub && <p className="text-xs text-[#64748B] mt-1">{sub}</p>}
+      <p className="text-[16px] font-black text-white leading-none">{value}</p>
+      {sub && <p className="text-[10px] text-[#64748B] mt-1 leading-tight">{sub}</p>}
     </div>
   );
 }
@@ -316,14 +316,14 @@ export function MyStatsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 pb-20">
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-[#00DFA9]" /> My Stats
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h2 className="text-[16px] font-bold text-white flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[#00DFA9] shrink-0" /> My Stats
           </h2>
-          <p className="text-xs text-[#64748B] mt-0.5">
+          <p className="text-[11px] text-[#64748B] mt-0.5">
             {range === 0 ? 'All-time performance' : `Last ${range} days`} · {summary.totalBets} settled bets
           </p>
         </div>
@@ -331,7 +331,7 @@ export function MyStatsPage() {
       </div>
 
       {/* ── Animated content block — fades in on each data refresh ─────── */}
-      <div key={animKey} className="space-y-5 animate-in fade-in duration-300">
+      <div key={animKey} className="space-y-4 animate-in fade-in duration-300">
 
         {/* ── Primary stat cards ──────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -344,26 +344,26 @@ export function MyStatsPage() {
             color="#38BDF8"
           />
           {/* Net P&L */}
-          <div className={`bg-white/3 border rounded-2xl p-4 ${pnlPositive ? 'border-[#00DFA9]/25' : 'border-[#EF4444]/25'}`}>
-            <div className={`flex items-center gap-2 text-xs mb-2 ${pnlPositive ? 'text-[#00DFA9]' : 'text-[#EF4444]'}`}>
-              {pnlPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+          <div className={`bg-white/3 border rounded-2xl p-3 ${pnlPositive ? 'border-[#00DFA9]/25' : 'border-[#EF4444]/25'}`}>
+            <div className={`flex items-center gap-1.5 text-[10px] font-semibold mb-1.5 ${pnlPositive ? 'text-[#00DFA9]' : 'text-[#EF4444]'}`}>
+              {pnlPositive ? <TrendingUp className="w-3.5 h-3.5 shrink-0" /> : <TrendingDown className="w-3.5 h-3.5 shrink-0" />}
               Net P&L
             </div>
-            <p className={`text-xl font-black leading-none ${pnlPositive ? 'text-[#00DFA9]' : 'text-[#EF4444]'}`}>
+            <p className={`text-[16px] font-black leading-none ${pnlPositive ? 'text-[#00DFA9]' : 'text-[#EF4444]'}`}>
               {fmt(summary.netPnl)}
             </p>
-            <p className="text-xs text-[#64748B] mt-1">USDT</p>
+            <p className="text-[10px] text-[#64748B] mt-1">USDT</p>
           </div>
           {/* ROI */}
-          <div className={`bg-white/3 border rounded-2xl p-4 ${roiPositive ? 'border-white/8' : 'border-[#EF4444]/20'}`}>
-            <div className={`flex items-center gap-2 text-xs mb-2 ${roiPositive ? 'text-[#A78BFA]' : 'text-[#EF4444]'}`}>
-              <BarChart2 className="w-3.5 h-3.5" />
+          <div className={`bg-white/3 border rounded-2xl p-3 ${roiPositive ? 'border-white/8' : 'border-[#EF4444]/20'}`}>
+            <div className={`flex items-center gap-1.5 text-[10px] font-semibold mb-1.5 ${roiPositive ? 'text-[#A78BFA]' : 'text-[#EF4444]'}`}>
+              <BarChart2 className="w-3.5 h-3.5 shrink-0" />
               ROI
             </div>
-            <p className={`text-xl font-black leading-none ${roiPositive ? 'text-white' : 'text-[#EF4444]'}`}>
+            <p className={`text-[16px] font-black leading-none ${roiPositive ? 'text-white' : 'text-[#EF4444]'}`}>
               {roiPositive ? '+' : ''}{summary.roi.toFixed(1)}%
             </p>
-            <p className="text-xs text-[#64748B] mt-1">return on investment</p>
+            <p className="text-[10px] text-[#64748B] mt-1">return on investment</p>
           </div>
           {/* Best Win */}
           <StatCard
@@ -376,28 +376,28 @@ export function MyStatsPage() {
         </div>
 
         {/* ── Secondary metrics ───────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard
-            icon={<Zap className="w-3.5 h-3.5" />}
-            label="Total Staked"
-            value={summary.totalStaked.toFixed(2)}
-            sub="USDT"
-            color="#FACC15"
-          />
-          <StatCard
-            icon={<Zap className="w-3.5 h-3.5" />}
-            label="Avg Stake"
-            value={summary.avgStake.toFixed(2)}
-            sub="USDT per bet"
-            color="#FACC15"
-          />
-          <StatCard
-            icon={<Target className="w-3.5 h-3.5" />}
-            label="Avg Odds"
-            value={summary.avgOdds.toFixed(2)}
-            sub="per bet"
-            color="#38BDF8"
-          />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white/3 border border-white/8 rounded-xl p-2.5">
+            <div className="flex items-center gap-1 text-[9px] font-semibold text-[#FACC15] mb-1.5 leading-none">
+              <Zap className="w-3 h-3 shrink-0" /><span>Staked</span>
+            </div>
+            <p className="text-[14px] font-black text-white leading-none">{summary.totalStaked.toFixed(0)}</p>
+            <p className="text-[9px] text-[#64748B] mt-0.5">USDT total</p>
+          </div>
+          <div className="bg-white/3 border border-white/8 rounded-xl p-2.5">
+            <div className="flex items-center gap-1 text-[9px] font-semibold text-[#FACC15] mb-1.5 leading-none">
+              <Zap className="w-3 h-3 shrink-0" /><span>Avg Stake</span>
+            </div>
+            <p className="text-[14px] font-black text-white leading-none">{summary.avgStake.toFixed(2)}</p>
+            <p className="text-[9px] text-[#64748B] mt-0.5">USDT / bet</p>
+          </div>
+          <div className="bg-white/3 border border-white/8 rounded-xl p-2.5">
+            <div className="flex items-center gap-1 text-[9px] font-semibold text-[#38BDF8] mb-1.5 leading-none">
+              <Target className="w-3 h-3 shrink-0" /><span>Avg Odds</span>
+            </div>
+            <p className="text-[14px] font-black text-white leading-none">{summary.avgOdds.toFixed(2)}</p>
+            <p className="text-[9px] text-[#64748B] mt-0.5">per bet</p>
+          </div>
         </div>
 
         {/* ── Recent form strip ───────────────────────────────────────── */}
@@ -406,37 +406,37 @@ export function MyStatsPage() {
         )}
 
         {/* ── Streaks ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white/3 border border-white/8 rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#00DFA9]/10 flex items-center justify-center shrink-0">
-              <Flame className="w-4 h-4 text-[#00DFA9]" />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white/3 border border-white/8 rounded-xl p-2.5 flex flex-col items-center gap-1.5 text-center">
+            <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/10 flex items-center justify-center shrink-0">
+              <Flame className="w-3.5 h-3.5 text-[#00DFA9]" />
             </div>
             <div>
-              <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Current</p>
-              <p className="text-lg font-black text-white leading-none">
-                {streaks.current}<span className="text-xs font-medium text-[#64748B] ml-1">W</span>
+              <p className="text-[9px] text-[#64748B] uppercase tracking-wider leading-none">Current</p>
+              <p className="text-[18px] font-black text-white leading-none mt-0.5">
+                {streaks.current}<span className="text-[9px] font-medium text-[#64748B] ml-0.5">W</span>
               </p>
             </div>
           </div>
-          <div className="bg-white/3 border border-white/8 rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#FACC15]/10 flex items-center justify-center shrink-0">
-              <Trophy className="w-4 h-4 text-[#FACC15]" />
+          <div className="bg-white/3 border border-white/8 rounded-xl p-2.5 flex flex-col items-center gap-1.5 text-center">
+            <div className="w-7 h-7 rounded-lg bg-[#FACC15]/10 flex items-center justify-center shrink-0">
+              <Trophy className="w-3.5 h-3.5 text-[#FACC15]" />
             </div>
             <div>
-              <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Best Win</p>
-              <p className="text-lg font-black text-white leading-none">
-                {streaks.longest}<span className="text-xs font-medium text-[#64748B] ml-1">streak</span>
+              <p className="text-[9px] text-[#64748B] uppercase tracking-wider leading-none">Best Win</p>
+              <p className="text-[18px] font-black text-white leading-none mt-0.5">
+                {streaks.longest}<span className="text-[9px] font-medium text-[#64748B] ml-0.5">W</span>
               </p>
             </div>
           </div>
-          <div className="bg-white/3 border border-white/8 rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#EF4444]/10 flex items-center justify-center shrink-0">
-              <AlertCircle className="w-4 h-4 text-[#EF4444]" />
+          <div className="bg-white/3 border border-white/8 rounded-xl p-2.5 flex flex-col items-center gap-1.5 text-center">
+            <div className="w-7 h-7 rounded-lg bg-[#EF4444]/10 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-3.5 h-3.5 text-[#EF4444]" />
             </div>
             <div>
-              <p className="text-[10px] text-[#64748B] uppercase tracking-wider">Worst Loss</p>
-              <p className="text-lg font-black text-white leading-none">
-                {streaks.longestLoss}<span className="text-xs font-medium text-[#64748B] ml-1">streak</span>
+              <p className="text-[9px] text-[#64748B] uppercase tracking-wider leading-none">Worst</p>
+              <p className="text-[18px] font-black text-white leading-none mt-0.5">
+                {streaks.longestLoss}<span className="text-[9px] font-medium text-[#64748B] ml-0.5">L</span>
               </p>
             </div>
           </div>
@@ -444,10 +444,10 @@ export function MyStatsPage() {
 
         {/* ── Cumulative P&L chart ────────────────────────────────────── */}
         <div className="bg-white/3 border border-white/8 rounded-2xl p-4">
-          <p className="text-sm font-semibold text-white mb-4">
+          <p className="text-[13px] font-semibold text-white mb-3">
             {range === 0 ? '90-Day' : `${range}-Day`} Cumulative P&L
           </p>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={dailyPnl} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
@@ -463,10 +463,10 @@ export function MyStatsPage() {
                 interval={Math.max(1, Math.floor(chartDays / 7) - 1)}
               />
               <YAxis
-                tick={{ fill: '#475569', fontSize: 10 }}
+                tick={{ fill: '#475569', fontSize: 9 }}
                 axisLine={false} tickLine={false}
                 tickFormatter={v => `${v > 0 ? '+' : ''}${v}`}
-                width={42}
+                width={36}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area
@@ -487,8 +487,8 @@ export function MyStatsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
           {/* Enhanced sport breakdown — Staked vs Net P&L + win rate tooltip */}
-          <div className="bg-white/3 border border-white/8 rounded-2xl p-4">
-            <p className="text-sm font-semibold text-white mb-4">P&L by Sport</p>
+          <div className="bg-white/3 border border-white/8 rounded-2xl p-3 sm:p-4">
+            <p className="text-[13px] font-semibold text-white mb-3">P&L by Sport</p>
             {sportChartData.length === 0 ? (
               <p className="text-xs text-[#64748B] text-center py-6">No data yet</p>
             ) : (
@@ -527,8 +527,8 @@ export function MyStatsPage() {
           </div>
 
           {/* Bet type donut */}
-          <div className="bg-white/3 border border-white/8 rounded-2xl p-4">
-            <p className="text-sm font-semibold text-white mb-4">Bet Type Mix</p>
+          <div className="bg-white/3 border border-white/8 rounded-2xl p-3 sm:p-4">
+            <p className="text-[13px] font-semibold text-white mb-3">Bet Type Mix</p>
             {betTypeBreakdown.length === 0 ? (
               <p className="text-xs text-[#64748B] text-center py-6">No data yet</p>
             ) : (
@@ -580,25 +580,25 @@ export function MyStatsPage() {
 
         {/* ── Most-backed selection ───────────────────────────────────── */}
         {mostBackedSelection && (
-          <div className="bg-white/3 border border-white/8 rounded-2xl p-4">
-            <p className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-              <Star className="w-4 h-4 text-[#FACC15] fill-[#FACC15]" />
+          <div className="bg-white/3 border border-white/8 rounded-2xl p-3 sm:p-4">
+            <p className="text-[13px] font-semibold text-white mb-3 flex items-center gap-2">
+              <Star className="w-3.5 h-3.5 text-[#FACC15] fill-[#FACC15]" />
               Most-Backed Pick
             </p>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-lg font-black text-white truncate">{mostBackedSelection.selection}</p>
-                <p className="text-xs text-[#64748B] mt-0.5">
+                <p className="text-[15px] font-black text-white truncate">{mostBackedSelection.selection}</p>
+                <p className="text-[10px] text-[#64748B] mt-0.5">
                   Backed{' '}
-                  <span className="text-[#94A3B8] font-semibold">{mostBackedSelection.count}×</span>{' '}
-                  in this period
+                  <span className="text-[#94A3B8] font-semibold">{mostBackedSelection.count}×</span>
+                  {' '}in this period
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-2xl font-black ${mostBackedSelection.roi >= 0 ? 'text-[#00DFA9]' : 'text-[#EF4444]'}`}>
+                <p className={`text-[20px] font-black ${mostBackedSelection.roi >= 0 ? 'text-[#00DFA9]' : 'text-[#EF4444]'}`}>
                   {mostBackedSelection.roi >= 0 ? '+' : ''}{mostBackedSelection.roi.toFixed(1)}%
                 </p>
-                <p className="text-[10px] text-[#475569] mt-0.5">ROI on this pick</p>
+                <p className="text-[9px] text-[#475569] mt-0.5">ROI on this pick</p>
               </div>
             </div>
           </div>

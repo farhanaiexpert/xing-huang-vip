@@ -84,10 +84,15 @@ function matchesFilter(type: string, filter: TxFilter): boolean {
 function TxRow({ tx, runningBalance }: { tx: Transaction; runningBalance?: number }) {
   const credit = isCredit(tx.type);
   const color = txColor(tx.type);
+  const statusColor =
+    tx.status === 'completed'  ? '#00DFA9' :
+    tx.status === 'confirming' ? '#38BDF8' :
+    tx.status === 'pending'    ? '#FACC15' :
+    (tx.status === 'failed' || tx.status === 'rejected') ? '#EF4444' : '#64748B';
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5">
+    <div className="flex items-center gap-2.5 px-3 sm:px-4 py-3">
       <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-        style={{ background: `${color}10`, border: `1px solid ${color}20` }}>
+        style={{ background: `${color}12`, border: `1px solid ${color}25` }}>
         {tx.type === 'deposit'    && <ArrowDownLeft className="h-3.5 w-3.5" style={{ color }} />}
         {tx.type === 'withdrawal' && <ArrowUpRight  className="h-3.5 w-3.5" style={{ color }} />}
         {tx.type === 'win'        && <Trophy        className="h-3.5 w-3.5" style={{ color }} />}
@@ -96,22 +101,28 @@ function TxRow({ tx, runningBalance }: { tx: Transaction; runningBalance?: numbe
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-[#F8FAFC]">{txLabel(tx.type)}</p>
-        <p className="text-[10px] text-[#64748B]">{fmtDate(tx.createdAt)}</p>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <p className="text-[12px] font-semibold text-[#F8FAFC] leading-tight">{txLabel(tx.type)}</p>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize shrink-0 leading-none"
+            style={{ background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}30` }}>
+            {tx.status}
+          </span>
+        </div>
+        <p className="text-[10px] text-[#64748B] mt-0.5 leading-tight">{fmtDate(tx.createdAt)}</p>
         {tx.reference && (
-          <p className="text-[10px] text-[#475569] font-mono truncate mt-0.5">{tx.reference}</p>
+          <p className="text-[9px] text-[#475569] font-mono truncate mt-0.5">{tx.reference}</p>
         )}
       </div>
       <div className="text-right shrink-0">
-        <p className="text-[13px] font-bold" style={{ color: credit ? '#00DFA9' : '#EF4444' }}>
-          {credit ? '+' : '-'}{fmtAmt(tx.amount)} USDT
+        <p className="text-[13px] font-bold leading-tight" style={{ color: credit ? '#00DFA9' : '#EF4444' }}>
+          {credit ? '+' : '-'}{fmtAmt(tx.amount)}
         </p>
+        <p className="text-[9px] text-[#64748B] leading-none mt-0.5">USDT</p>
         {runningBalance !== undefined && (
-          <p className="text-[9px] text-[#475569] font-mono mt-0.5">
-            bal: {runningBalance.toFixed(2)} USDT
+          <p className="text-[9px] text-[#334155] font-mono mt-0.5">
+            ≈{runningBalance.toFixed(2)}
           </p>
         )}
-        <p className="text-[10px] text-[#64748B] capitalize">{tx.status}</p>
       </div>
     </div>
   );
@@ -173,49 +184,52 @@ export function TransactionsPage() {
   }, [all]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-20">
       <h2 className="text-[16px] font-bold text-[#F8FAFC]">Transactions</h2>
 
       {/* Summary tiles */}
       {!loading && all.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           {[
-            { label: 'Total Deposited', value: totalDeposits,    color: '#00DFA9' },
-            { label: 'Total Withdrawn', value: totalWithdrawals, color: '#EF4444' },
-            { label: 'Total Winnings',  value: totalWinnings,    color: '#FACC15' },
+            { label: 'Deposited', value: totalDeposits,    color: '#00DFA9' },
+            { label: 'Withdrawn', value: totalWithdrawals, color: '#EF4444' },
+            { label: 'Winnings',  value: totalWinnings,    color: '#FACC15' },
           ].map(s => (
-            <div key={s.label} className="rounded-2xl p-3.5 border border-white/[0.07] bg-[#0E1520]">
-              <div className="h-[2px] rounded-full mb-3" style={{ background: s.color }} />
-              <p className="text-[16px] font-black" style={{ color: s.color }}>{s.value.toFixed(2)} USDT</p>
-              <p className="text-[10px] text-[#64748B] mt-0.5">{s.label}</p>
+            <div key={s.label} className="rounded-xl p-2.5 border border-white/[0.07] bg-[#0E1520]">
+              <div className="h-[2px] rounded-full mb-2" style={{ background: s.color }} />
+              <p className="text-[13px] font-black leading-none" style={{ color: s.color }}>{s.value.toFixed(2)}</p>
+              <p className="text-[9px] font-bold text-[#94A3B8] mt-0.5">USDT</p>
+              <p className="text-[9px] text-[#475569] mt-0.5 leading-tight">{s.label}</p>
             </div>
           ))}
         </div>
       )}
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+      <div className="space-y-1.5">
+        {/* Date range row */}
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
           {RANGES.map(r => (
             <button key={r.key} onClick={() => { setRange(r.key); setPage(1); }}
               className={cn(
-                'px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap border transition-all cursor-pointer',
+                'px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap border transition-all cursor-pointer shrink-0',
                 range === r.key
-                  ? 'bg-[#00DFA9]/12 text-[#00DFA9] border-[#00DFA9]/30'
-                  : 'bg-[#0E1520] text-[#94A3B8]/55 border-white/[0.06] hover:text-[#F8FAFC]'
+                  ? 'bg-[#00DFA9]/15 text-[#00DFA9] border-[#00DFA9]/35'
+                  : 'bg-[#0B0F14] text-[#64748B] border-white/[0.08] hover:text-[#F8FAFC] hover:border-white/15'
               )}>
               {r.label}
             </button>
           ))}
         </div>
-        <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+        {/* Type filter row */}
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
           {TYPE_FILTERS.map(f => (
             <button key={f.key} onClick={() => { setTypeFilter(f.key); setPage(1); }}
               className={cn(
-                'px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap border transition-all cursor-pointer',
+                'px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap border transition-all cursor-pointer shrink-0',
                 typeFilter === f.key
-                  ? 'bg-[#38BDF8]/12 text-[#38BDF8] border-[#38BDF8]/30'
-                  : 'bg-[#0E1520] text-[#94A3B8]/55 border-white/[0.06] hover:text-[#F8FAFC]'
+                  ? 'bg-[#38BDF8]/15 text-[#38BDF8] border-[#38BDF8]/35'
+                  : 'bg-[#0B0F14] text-[#64748B] border-white/[0.08] hover:text-[#F8FAFC] hover:border-white/15'
               )}>
               {f.label}
             </button>
