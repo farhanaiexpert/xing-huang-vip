@@ -301,6 +301,8 @@ export function PromoPopup() {
         @keyframes goldPulse   { 0%,100%{text-shadow:0 0 30px rgba(250,204,21,.5)} 50%{text-shadow:0 0 60px rgba(250,204,21,.9)} }
         @keyframes popIn       { 0%{transform:scale(0)} 70%{transform:scale(1.15)} 100%{transform:scale(1)} }
         @keyframes ringPulse   { 0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,.5)} 50%{box-shadow:0 0 0 18px rgba(250,204,21,0)} }
+        .promo-noscroll::-webkit-scrollbar { display:none }
+        .promo-noscroll { -ms-overflow-style:none; scrollbar-width:none }
       `}</style>
 
       {/* Backdrop */}
@@ -406,9 +408,10 @@ export function PromoPopup() {
 
       {/* ── MAIN MODAL ──────────────────────────────────────────────────── */}
       {!showCongrats && <div
-        className="relative w-full max-w-[860px] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
+        className="promo-noscroll relative w-full max-w-[860px] shadow-[0_40px_100px_rgba(0,0,0,0.95)]"
         style={{
-          borderRadius: '16px',
+          borderRadius: '20px',
+          overflow: 'hidden',
           background: 'linear-gradient(140deg,#0A0F16 0%,#0D1520 55%,#0A0F16 100%)',
           border: '1px solid rgba(0,223,169,0.2)',
           animation: closing ? 'pMOut .36s cubic-bezier(.4,0,1,1) forwards' : 'pMIn .44s cubic-bezier(.16,1,.3,1) forwards',
@@ -418,87 +421,86 @@ export function PromoPopup() {
         onClick={e => e.stopPropagation()}
       >
         {/* Top accent bar */}
-        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15] z-20" />
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-[#00DFA9] via-[#38BDF8] to-[#FACC15] z-30" />
 
-        {/* Close button — always at modal top-right regardless of layout */}
+        {/* Close button — pinned to modal top-right, always visible */}
         <button
           onClick={close}
-          className="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full flex items-center justify-center text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1E2A38] transition-all duration-150 cursor-pointer"
-          style={{ background: 'rgba(10,15,22,0.75)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)' }}
+          className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full flex items-center justify-center text-[#E2E8F0] hover:text-white transition-all duration-150 cursor-pointer active:scale-90"
+          style={{ background: 'rgba(8,12,18,0.82)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
         </button>
 
-        {/* Glow blobs */}
-        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle,rgba(0,223,169,0.13) 0%,transparent 70%)' }} />
-        <div className="absolute -bottom-24 right-32 w-72 h-72 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle,rgba(56,189,248,0.1) 0%,transparent 70%)' }} />
+        {/* Subtle glow blobs */}
+        <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle,rgba(0,223,169,0.11) 0%,transparent 70%)' }} />
+        <div className="absolute -bottom-20 right-24 w-64 h-64 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle,rgba(56,189,248,0.08) 0%,transparent 70%)' }} />
 
         <div className="flex flex-col md:flex-row md:items-stretch">
 
-          {/* ── LEFT: Celebrity images (crossfade) ── */}
+          {/* ── IMAGE SECTION ── */}
           <div
-            className="relative shrink-0 w-full md:w-[40%] overflow-hidden min-h-[110px] md:min-h-[260px]"
-            style={{ background: DOT_BG }}
+            className="relative shrink-0 w-full md:w-[40%] overflow-hidden"
+            style={{ background: DOT_BG, height: '190px', minHeight: '190px' }}
             onMouseEnter={() => { setHovered(true); setShowAlt(true); }}
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
           >
+            {/* md+: give it proper height */}
+            <style>{`@media(min-width:768px){.promo-img-wrap{height:auto!important;min-height:280px!important}}`}</style>
             {/* Original image */}
-            <img
-              src={IMG_ORIGINAL}
-              alt="CupBett Ambassador"
-              style={{ ...IMG_BASE, opacity: altVisible ? 0 : 1 }}
-            />
-            {/* Alt image (ronaldo) — shown on hover or auto-cycle */}
-            <img
-              src={IMG_ALT}
-              alt="CupBett Ambassador"
-              style={{ ...IMG_BASE, opacity: altVisible ? 1 : 0 }}
-            />
+            <img src={IMG_ORIGINAL} alt="CupBett Ambassador"
+              style={{ ...IMG_BASE, opacity: altVisible ? 0 : 1 }} />
+            {/* Alt image */}
+            <img src={IMG_ALT} alt="CupBett Ambassador"
+              style={{ ...IMG_BASE, opacity: altVisible ? 1 : 0 }} />
 
-            {/* Right-edge fade */}
+            {/* Desktop right-edge fade */}
             <div className="absolute inset-y-0 right-0 w-16 pointer-events-none hidden md:block"
               style={{ background: 'linear-gradient(to right,transparent,#0A0F16)' }} />
-            {/* Bottom fade mobile */}
-            <div className="absolute inset-x-0 bottom-0 h-10 pointer-events-none md:hidden"
-              style={{ background: 'linear-gradient(to top,#0A0F16,transparent)' }} />
+            {/* Mobile bottom gradient — blends into content pull-up */}
+            <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none md:hidden"
+              style={{ background: 'linear-gradient(to top,#0D1520 0%,rgba(13,21,32,0.6) 50%,transparent 100%)' }} />
 
             {/* LIVE badge */}
-            <div
-              className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-full px-2 py-1 border border-[#00DFA9]/30 pointer-events-none"
-              style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
-            >
+            <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 border border-[#00DFA9]/30 pointer-events-none"
+              style={{ background: 'rgba(0,0,0,0.68)', backdropFilter: 'blur(8px)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
               <span className="text-[9px] font-bold text-[#00DFA9] tracking-[0.12em] uppercase">Live Promo</span>
             </div>
 
-            {/* Star rating */}
-            <div
-              className="absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-full px-2 py-1 border border-[#FACC15]/20 pointer-events-none"
-              style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
-            >
-              {[1,2,3,4,5].map(s => <Star key={s} className="w-2 h-2 fill-[#FACC15] text-[#FACC15]" />)}
+            {/* Stars bottom-left */}
+            <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1 border border-[#FACC15]/20 pointer-events-none"
+              style={{ background: 'rgba(0,0,0,0.68)', backdropFilter: 'blur(8px)' }}>
+              {[1,2,3,4,5].map(s => <Star key={s} className="w-2.5 h-2.5 fill-[#FACC15] text-[#FACC15]" />)}
               <span className="text-[9px] text-[#FACC15] font-semibold ml-0.5">4.9</span>
             </div>
           </div>
 
-          {/* ── RIGHT: Content ── */}
-          <div className="relative flex flex-col flex-1 px-4 pt-3 pb-4 sm:px-7 sm:py-7">
+          {/* ── CONTENT — pulls up over image on mobile ── */}
+          <div
+            className="relative flex flex-col flex-1 px-4 pt-4 pb-4 sm:px-7 sm:py-6 -mt-5 md:mt-0 md:rounded-none"
+            style={{ borderRadius: '18px 18px 0 0', background: 'linear-gradient(160deg,#0D1520 0%,#0A0F16 100%)' }}
+          >
+            {/* Drag handle hint — mobile only */}
+            <div className="flex md:hidden justify-center mb-3">
+              <div className="w-8 h-1 rounded-full bg-[#2A3A4A]" />
+            </div>
 
             {/* Bonus pill */}
-            <div className="flex items-center mb-2 pr-8 md:pr-0">
+            <div className="flex items-center mb-2.5 pr-6">
               <div
-                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 border border-[#FACC15]/30"
+                className="flex items-center gap-1.5 rounded-full px-3 py-1 border border-[#FACC15]/30"
                 style={{ background: 'rgba(250,204,21,0.08)', animation: 'pPillPulse 2.2s ease-in-out infinite' }}
               >
                 <span className="text-[#FACC15] text-[10px]">✦</span>
-                <span className="text-[10px] sm:text-[12px] font-black text-[#FACC15] tracking-wide">WELCOME BONUS — FREE 120 USDT</span>
+                <span className="text-[11px] sm:text-[12px] font-black text-[#FACC15] tracking-wide">WELCOME BONUS — FREE 120 USDT</span>
               </div>
             </div>
 
             {/* Headline */}
-            <h2 className="text-[18px] sm:text-[24px] font-black text-[#F8FAFC] leading-[1.2] mb-1.5">
+            <h2 className="text-[20px] sm:text-[24px] font-black text-[#F8FAFC] leading-[1.18] mb-1.5">
               Sign Up &amp;{' '}
               <span style={{ background: 'linear-gradient(90deg,#00DFA9 0%,#38BDF8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Claim FREE
@@ -506,44 +508,38 @@ export function PromoPopup() {
               <span className="text-[#FACC15]">120 USDT</span>
             </h2>
 
-            <p className="text-[11px] sm:text-[13px] text-[#94A3B8] leading-relaxed mb-2.5">
-              Join thousands of winning players on{' '}
-              <span translate="no" className="text-[#00DFA9] font-semibold">CupBett Sports Trading</span>.
-              Instant deposits · real-time odds · provably fair.
+            {/* Subtext — shorter on mobile */}
+            <p className="text-[11px] sm:text-[13px] text-[#94A3B8] leading-snug mb-3">
+              <span className="md:hidden">
+                Instant crypto deposits · real-time odds · provably fair.
+              </span>
+              <span className="hidden md:inline">
+                Join thousands of winning players on{' '}
+                <span translate="no" className="text-[#00DFA9] font-semibold">CupBett Sports Trading</span>.
+                Instant deposits · real-time odds · provably fair.
+              </span>
             </p>
 
             {/* Social proof */}
-            <div
-              className="flex items-center gap-2 mb-3 p-2 rounded-xl border border-[#1E2A38]"
-              style={{ background: 'rgba(18,24,32,0.7)' }}
-            >
-              <div className="flex -space-x-1.5 shrink-0">
+            <div className="flex items-center gap-2.5 mb-3 px-2.5 py-2 rounded-2xl border border-[#1E2A38]"
+              style={{ background: 'rgba(15,20,28,0.9)' }}>
+              <div className="flex -space-x-2 shrink-0">
                 {AVATARS.map((src, i) => (
-                  <div
-                    key={i}
-                    className="w-7 h-7 rounded-full border-2 border-[#0A0F16] overflow-hidden shrink-0 relative"
-                    style={{ zIndex: AVATARS.length - i }}
-                  >
-                    <div
-                      className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#0B0F14]"
-                      style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
-                    >
+                  <div key={i} className="w-7 h-7 rounded-full border-[1.5px] border-[#0A0F16] overflow-hidden shrink-0 relative"
+                    style={{ zIndex: AVATARS.length - i }}>
+                    <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#0B0F14]"
+                      style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
                       {AVATAR_LETTERS[i % AVATAR_LETTERS.length]}
                     </div>
-                    <img
-                      src={src}
-                      alt="Player"
-                      className="absolute inset-0 w-full h-full object-cover"
-                      onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }}
-                    />
+                    <img src={src} alt="Player" className="absolute inset-0 w-full h-full object-cover"
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
                   </div>
                 ))}
               </div>
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold text-[#F8FAFC] leading-tight">
-                  <span className="text-[#00DFA9] font-black">+127 players</span> joined in the last hour
-                </div>
-                <div className="text-[9px] text-[#94A3B8] mt-0.5">50,000+ active players worldwide</div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[#00DFA9] font-black text-[11px]">+127 players</span>
+                <span className="text-[#CBD5E1] text-[11px]"> joined in the last hour</span>
+                <div className="text-[9px] text-[#64748B] mt-0.5 leading-none">50,000+ active players worldwide</div>
               </div>
             </div>
 
@@ -555,11 +551,11 @@ export function PromoPopup() {
             )}
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-2 mb-3">
+            <div className="flex flex-col gap-2 mb-3">
               <button
                 onClick={handleClaim}
                 disabled={claiming || alreadyClaimed}
-                className="relative flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-[13px] sm:text-[14px] text-[#071210] overflow-hidden transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                className="relative w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl font-black text-[14px] text-[#071210] overflow-hidden transition-transform duration-150 hover:scale-[1.015] active:scale-[0.975] disabled:opacity-60 cursor-pointer"
                 style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
               >
                 <Gift className="w-4 h-4 shrink-0" />
@@ -570,40 +566,22 @@ export function PromoPopup() {
 
               <button
                 onClick={close}
-                className="sm:shrink-0 sm:px-5 py-2.5 rounded-xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#121821] transition-all duration-150 cursor-pointer"
+                className="w-full py-2.5 rounded-2xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#0F1620] transition-all duration-150 cursor-pointer"
               >
                 Maybe Later
               </button>
             </div>
 
-            {/* Trust badges — hidden on mobile to save space */}
-            <div className="hidden sm:grid grid-cols-3 gap-2 pt-3 border-t border-[#1E2A38]">
+            {/* Trust strip — compact single row, always */}
+            <div className="flex items-center justify-center gap-4 pt-2.5 border-t border-[#1A2535]">
               {([
-                { icon: Users,      label: '50,000+',  sub: 'Active Players',     color: '#00DFA9' },
-                { icon: TrendingUp, label: 'Instant',  sub: 'Crypto Withdrawals', color: '#38BDF8' },
-                { icon: Shield,     label: 'Provably', sub: 'Fair Experience',    color: '#FACC15' },
-              ] as const).map(({ icon: Icon, label, sub, color }) => (
-                <div key={label} className="flex flex-col items-center gap-1 text-center">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-                    style={{ background: `${color}14`, border: `1px solid ${color}28` }}>
-                    <Icon className="w-3.5 h-3.5" style={{ color }} />
-                  </div>
-                  <span className="text-[11px] sm:text-[12px] font-bold text-[#E2E8F0] leading-none mt-0.5">{label}</span>
-                  <span className="text-[9px] sm:text-[10px] text-[#64748B] leading-tight">{sub}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Trust line — mobile only condensed replacement */}
-            <div className="flex sm:hidden items-center justify-center gap-3 pt-2 border-t border-[#1E2A38]">
-              {([
-                { icon: Users,      label: '50K+ Players', color: '#00DFA9' },
+                { icon: Users,      label: '50K+ Players',   color: '#00DFA9' },
                 { icon: TrendingUp, label: 'Instant Crypto', color: '#38BDF8' },
-                { icon: Shield,     label: 'Provably Fair', color: '#FACC15' },
+                { icon: Shield,     label: 'Provably Fair',  color: '#FACC15' },
               ] as const).map(({ icon: Icon, label, color }) => (
                 <div key={label} className="flex items-center gap-1">
                   <Icon className="w-3 h-3 shrink-0" style={{ color }} />
-                  <span className="text-[9px] font-semibold text-[#64748B]">{label}</span>
+                  <span className="text-[9px] font-semibold text-[#4A5A6A]">{label}</span>
                 </div>
               ))}
             </div>
