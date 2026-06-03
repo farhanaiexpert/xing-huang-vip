@@ -1,0 +1,47 @@
+Please improve only this Wallet page:
+
+https://gobet.mywebpage.pro/account/wallet
+
+I attached screenshots of the current mobile layout. As you can see, this page is not mobile-friendly enough right now. It feels too long, crowded, hard to understand, and difficult to use on mobile screens.
+
+Please make this Wallet page fully mobile responsive, user-friendly, modern, and easy to use.
+
+Main issues to fix:
+
+* The page requires too much scrolling.
+* Deposit method cards take too much vertical space.
+* The selected deposit form appears far below, so users have to scroll manually to find it.
+* Wallet balance cards feel crowded on small screens.
+* Some sections look too large and not optimized for mobile.
+* The overall page is not convenient for quick deposits.
+
+Required behavior:
+When a user selects any deposit method, the page should automatically take the user to that method’s form/section, or use a better UX solution so the user does not need to manually scroll.
+
+Best possible solutions:
+
+* Smooth auto-scroll to the selected deposit form.
+* Or expand the selected method as an accordion directly inside the selected card.
+* Or open the selected method in a mobile bottom sheet/modal.
+* Or place the selected form immediately below the selected method card.
+
+Please choose the best mobile-first solution.
+
+Mobile UI improvements needed:
+
+* Make the wallet balance section compact and clean.
+* Make Deposit / Withdraw / History tabs easy to tap and clearly active.
+* Make deposit method cards smaller, cleaner, and easier to compare.
+* Show key details clearly: method name, auto/manual status, networks, minimum deposit.
+* Reduce unnecessary spacing and oversized sections.
+* Keep important actions visible and easy to tap.
+* Make Recent Deposits compact and readable.
+* Ensure the bottom navigation does not cover page content.
+* Add proper bottom spacing for mobile.
+* Keep the CupBett dark neon design style.
+
+Please optimize for common mobile widths:
+320px, 360px, 375px, 390px, 414px, and tablet sizes.
+
+Important:
+Do not change the whole website. Only improve this Wallet page mobile layout and UX. Keep all existing deposit, withdrawal, wallet connection, and transaction functionality working.
