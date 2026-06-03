@@ -292,10 +292,10 @@ export function Header() {
           </nav>
 
           {/* Right */}
-          <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
+          <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
 
-            {/* Language picker — always visible */}
-            <div className="relative" ref={langRef}>
+            {/* Language picker — hidden on mobile (accessible via More menu), shown sm+ */}
+            <div className="hidden sm:block relative" ref={langRef}>
               <HeaderIconBtn aria-label="Language" onClick={() => setShowLang(v => !v)}>
                 <Globe className="h-4 w-4" style={{ color: '#00D9A6' }} />
               </HeaderIconBtn>
@@ -470,7 +470,7 @@ function HeaderIconBtn({ children, ...props }: React.ButtonHTMLAttributes<HTMLBu
   return (
     <button
       {...props}
-      className="relative p-2 rounded-lg text-[#94A3B8]/60 hover:text-[#F8FAFC] hover:bg-white/[0.06] transition-all duration-150"
+      className="relative p-1.5 sm:p-2 rounded-lg text-[#94A3B8]/60 hover:text-[#F8FAFC] hover:bg-white/[0.06] transition-all duration-150 cursor-pointer"
     >
       {children}
     </button>

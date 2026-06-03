@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  Home, Grid3X3, Receipt, Gift, MoreHorizontal,
+  Home, Grid3X3, Receipt, MoreHorizontal,
   History, HelpCircle, Star, FileText, ShieldCheck,
-  Landmark, ChevronRight, Wallet, X, Zap, Check,
-  TrendingUp, Share2, UserCircle, Radio,
+  Landmark, ChevronRight, Wallet, X, Check,
+  TrendingUp, Share2, UserCircle, Radio, ArrowDownLeft, Globe,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useBetHistory } from '../hooks/useBetHistory';
@@ -15,6 +15,39 @@ import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from './ui/draw
 import { BetSlip } from './BetSlip';
 import { SPORTS } from '../data/mockData';
 import { cn } from '../lib/utils';
+
+const LANGUAGES = [
+  { code: 'ar',    native: 'العربية',   flag: '🇸🇦', short: 'AR' },
+  { code: 'zh-CN', native: '中文',       flag: '🇨🇳', short: 'ZH' },
+  { code: 'en',    native: 'English',   flag: '🇬🇧', short: 'EN' },
+  { code: 'fr',    native: 'Français',  flag: '🇫🇷', short: 'FR' },
+  { code: 'de',    native: 'Deutsch',   flag: '🇩🇪', short: 'DE' },
+  { code: 'hi',    native: 'हिन्दी',     flag: '🇮🇳', short: 'HI' },
+  { code: 'ja',    native: '日本語',      flag: '🇯🇵', short: 'JP' },
+  { code: 'ko',    native: '한국어',      flag: '🇰🇷', short: 'KO' },
+  { code: 'pt',    native: 'Português', flag: '🇧🇷', short: 'PT' },
+  { code: 'ru',    native: 'Русский',   flag: '🇷🇺', short: 'RU' },
+  { code: 'es',    native: 'Español',   flag: '🇪🇸', short: 'ES' },
+  { code: 'th',    native: 'ไทย',        flag: '🇹🇭', short: 'TH' },
+];
+
+function triggerTranslateMobile(langCode: string) {
+  if (langCode === 'en') {
+    const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
+    if (select) { select.value = langCode; select.dispatchEvent(new Event('change')); }
+    document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    window.location.reload();
+    return;
+  }
+  const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
+  if (select) { select.value = langCode; select.dispatchEvent(new Event('change')); }
+  else {
+    document.cookie = `googtrans=/en/${langCode}; path=/`;
+    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${location.hostname}`;
+    window.location.reload();
+  }
+}
 
 const ODDS_FORMATS = [
   { value: 'decimal',     label: 'DEC',  desc: 'Decimal' },
@@ -45,9 +78,9 @@ export function MobileBottomNav() {
   const [location, setLocation] = useLocation();
   const { selections } = useBetSlip();
   const { openBetsCount } = useBetHistory();
-  const { isConnected, shortAddress, connect } = useWallet();
+  const { isConnected, shortAddress, balance, connect } = useWallet();
   const { format, setFormat } = useOddsFormat();
-  const { t } = useI18n();
+  const { t, lang: currentLang, setLang } = useI18n();
   const [betSlipOpen, setBetSlipOpen] = useState(false);
   const [sportsOpen,  setSportsOpen]  = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
@@ -209,67 +242,72 @@ export function MobileBottomNav() {
           </div>
 
           {/* ── Drag handle ── */}
-          <div className="flex items-center justify-center pt-2.5 pb-1.5 shrink-0">
-            <div className="w-9 h-[3px] rounded-full bg-[#253241]" />
+          <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
+            <div className="w-10 h-[3px] rounded-full bg-[#253241]" />
           </div>
 
-          {/* ── Header: brand + account ── */}
-          <div className="relative px-4 pt-2 pb-4 shrink-0 overflow-hidden">
-            {/* Subtle glow behind header */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#00DFA9]/4 to-transparent pointer-events-none" />
+          {/* ── Header row: logo + close ── */}
+          <div className="flex items-center justify-between px-4 pt-2 pb-3 shrink-0">
+            <img
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
+              alt="CupBett"
+              className="h-8 object-contain"
+            />
+            <button
+              onClick={() => setMoreOpen(false)}
+              className="w-9 h-9 rounded-xl bg-[#1A2333] border border-[#2A3A4E]/70 flex items-center justify-center text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#253241] active:scale-90 transition-all cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-            <div className="relative flex items-center justify-between">
-              {/* Logo */}
-              <img
-                src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
-                alt="CupBett"
-                className="h-7 object-contain"
-              />
-
-              {/* Close + wallet status */}
-              <div className="flex items-center gap-2">
-                {isConnected ? (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/20">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)]" />
-                    <span className="text-[11px] font-semibold text-[#00DFA9] font-mono tracking-tight">
-                      {shortAddress}
-                    </span>
+          {/* ── Wallet card ── */}
+          {isConnected ? (
+            <div className="mx-4 mb-4 p-4 rounded-2xl relative overflow-hidden shrink-0"
+              style={{ background: 'linear-gradient(135deg,#061510 0%,#0A1820 100%)', border: '1px solid rgba(0,223,169,0.22)' }}>
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full pointer-events-none"
+                style={{ background: 'radial-gradient(circle,rgba(0,223,169,0.13) 0%,transparent 70%)' }} />
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] animate-pulse shrink-0" />
+                <span className="text-[9px] font-bold text-[#00DFA9] uppercase tracking-widest">Wallet Connected</span>
+                <span className="ml-auto text-[10px] font-mono text-[#64748B]">{shortAddress}</span>
+              </div>
+              <div className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[9px] text-[#64748B] uppercase tracking-wider mb-1">Balance</p>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[26px] font-black text-[#F8FAFC] leading-none tabular-nums">{balance.toFixed(2)}</span>
+                    <span className="text-[12px] font-bold text-[#64748B]">USDT</span>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => { setMoreOpen(false); connect(''); }}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#00DFA9] text-[#0B0F14] text-[11px] font-bold shadow-[0_0_12px_rgba(0,223,169,0.3)] active:scale-95 transition-transform"
-                  >
-                    <Wallet className="h-3 w-3" />
-                    Connect
-                  </button>
-                )}
+                </div>
+                <Link href="/account/wallet" onClick={() => setMoreOpen(false)}
+                  className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-black text-[#071210] active:scale-95 transition-transform cursor-pointer"
+                  style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)' }}>
+                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                  Deposit
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="mx-4 mb-4 p-4 rounded-2xl shrink-0"
+              style={{ background: 'linear-gradient(135deg,#0D1520 0%,#0A1018 100%)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center shrink-0">
+                  <Wallet className="w-5 h-5 text-[#00DFA9]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-bold text-[#F8FAFC]">Connect Wallet</p>
+                  <p className="text-[10px] text-[#64748B] mt-0.5 leading-tight">Deposit crypto &amp; start betting</p>
+                </div>
                 <button
-                  onClick={() => setMoreOpen(false)}
-                  className="w-7 h-7 rounded-lg bg-[#1E2A38]/80 flex items-center justify-center text-[#94A3B8]/50 hover:text-[#F8FAFC] active:scale-90 transition-all"
-                >
-                  <X className="h-3.5 w-3.5" />
+                  onClick={() => { setMoreOpen(false); connect(''); }}
+                  className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-black text-[#071210] active:scale-95 transition-transform cursor-pointer"
+                  style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)' }}>
+                  Connect
                 </button>
               </div>
             </div>
-
-            {/* Connected strip */}
-            {isConnected && (
-              <div className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#121821] border border-[#253241]/60">
-                <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/10 flex items-center justify-center shrink-0">
-                  <Wallet className="h-3.5 w-3.5 text-[#00DFA9]" />
-                </div>
-                <div>
-                  <p className="text-[9px] uppercase tracking-[0.1em] text-[#94A3B8]/40 font-semibold">Wallet</p>
-                  <p className="text-[12px] font-bold text-[#F8FAFC] leading-none mt-0.5 font-mono">{shortAddress}</p>
-                </div>
-                <div className="ml-auto flex items-center gap-1 text-[#00DFA9]">
-                  <Zap className="h-3 w-3" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider">Active</span>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           <div className="flex-1 overflow-y-auto overscroll-contain">
 
@@ -351,6 +389,33 @@ export function MobileBottomNav() {
                     )}>
                       {opt.desc}
                     </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Language ── */}
+            <div className="px-4 pb-4">
+              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]/35 mb-2.5 flex items-center gap-1.5">
+                <Globe className="h-3 w-3" /> Language
+              </p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {LANGUAGES.map(lang => (
+                  <button
+                    key={lang.code}
+                    onClick={() => { setLang(lang.code); triggerTranslateMobile(lang.code); }}
+                    className={cn(
+                      'flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-all active:scale-95 cursor-pointer',
+                      currentLang === lang.code
+                        ? 'bg-[#00DFA9]/10 border-[#00DFA9]/30'
+                        : 'bg-[#121821] border-[#253241]/50 hover:border-[#253241]'
+                    )}
+                  >
+                    <span className="text-base leading-none">{lang.flag}</span>
+                    <span className={cn(
+                      'text-[9px] font-bold tracking-wider leading-none',
+                      currentLang === lang.code ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50'
+                    )}>{lang.short}</span>
                   </button>
                 ))}
               </div>
