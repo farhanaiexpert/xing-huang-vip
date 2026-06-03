@@ -76,7 +76,7 @@ export function OverviewPage() {
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
 
       {/* ── PROFILE CARD ─────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-white/[0.07]"
