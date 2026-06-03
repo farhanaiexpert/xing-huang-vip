@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useReferral } from '@/hooks/useReferral';
 import { usePublicClient, useBalance } from 'wagmi';
 import { useLocation } from 'wouter';
