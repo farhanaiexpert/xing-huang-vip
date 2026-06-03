@@ -39,21 +39,38 @@ export function useEvmWallet() {
   walletClientRef.current = walletClient;
 
   const connect = useCallback(async (): Promise<string | null> => {
+    console.log('[CupBett] useEvmWallet.connect() — isConnected:', isConnected, 'address:', address);
+
     // Already connected — return immediately so callers can proceed to signing.
-    if (isConnected && address) return address;
+    if (isConnected && address) {
+      console.log('[CupBett] Already connected:', address);
+      return address;
+    }
 
     // Open the AppKit modal (non-blocking: resolves before the user picks a wallet).
-    await open();
+    console.log('[CupBett] Calling AppKit open()…');
+    try {
+      await open();
+      console.log('[CupBett] AppKit open() resolved');
+    } catch (err) {
+      console.error('[CupBett] AppKit open() threw:', err);
+      throw new Error('APPKIT_OPEN_FAILED');
+    }
 
     // Poll the wagmi config store for a connected account.
     // We read wagmiConfig.state directly because the useAccount hook value
     // won't update inside an async closure after a re-render.
+    console.log('[CupBett] Polling for wallet connection (max 30 s)…');
     for (let i = 0; i < 60; i++) {
       await new Promise<void>(r => setTimeout(r, 500));
       const addr = getConnectedAddress();
-      if (addr) return addr;
+      if (addr) {
+        console.log('[CupBett] Wallet connected:', addr);
+        return addr;
+      }
     }
 
+    console.log('[CupBett] Poll timed out — user did not connect');
     return null;
   }, [open, isConnected, address]);
 

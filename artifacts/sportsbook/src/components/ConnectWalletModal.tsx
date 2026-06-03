@@ -134,6 +134,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   const [connecting, setConnecting] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [connectError, setConnectError] = useState('');
 
   // ── Fetch platform deposit addresses from backend ─────────────────────────────
   // Declared before useAutoDeposit so they're available in the options object.
@@ -178,16 +179,32 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
       : 'idle';
 
   function close() {
+    setConnectError('');
     onOpenChange?.(false);
     onClose?.();
   }
 
   async function handleConnectWallet() {
     if (!user) { setAuthOpen(true); return; }
-    close();
+    console.log('[CupBett] Connect Wallet button clicked');
+    setConnectError('');
     setConnecting(true);
-    await evmWallet.connect();
-    setConnecting(false);
+    try {
+      console.log('[CupBett] Calling evmWallet.connect()');
+      const addr = await evmWallet.connect();
+      console.log('[CupBett] evmWallet.connect() result:', addr);
+      // On success the modal stays open and shows the connected deposit UI automatically.
+    } catch (err) {
+      console.error('[CupBett] evmWallet.connect() error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'APPKIT_OPEN_FAILED') {
+        setConnectError('Could not open wallet selector. Please try opening this page in Chrome or Safari, or use your wallet\'s built-in browser (MetaMask → Browser, Trust Wallet → dApps).');
+      } else {
+        setConnectError(msg || 'Could not open wallet. Please try again.');
+      }
+    } finally {
+      setConnecting(false);
+    }
   }
 
   function handleDisconnect() {
@@ -1470,6 +1487,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         boxShadow: '0 0 24px rgba(0,223,169,0.06)',
                       }}
                     >
+
                       {depositPhase === 'success' && depositResult ? (
                         <div className="p-4 space-y-3">
                           <div className="flex items-center gap-3">
@@ -1801,6 +1819,26 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                           </button>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Mobile fallback — shown when AppKit fails to open */}
+                  {connectError && (
+                    <div
+                      className="rounded-2xl p-3.5 flex gap-3 items-start"
+                      style={{ background: 'rgba(251,113,133,0.08)', border: '1px solid rgba(251,113,133,0.25)' }}
+                    >
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-bold text-rose-400 mb-1">Wallet couldn't open</p>
+                        <p className="text-[11px] text-[#94A3B8] leading-relaxed">{connectError}</p>
+                        <button
+                          onClick={() => setConnectError('')}
+                          className="mt-2 text-[10px] font-bold text-[#64748B] hover:text-[#94A3B8] transition-colors"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
                     </div>
                   )}
 
