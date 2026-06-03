@@ -1,0 +1,84 @@
+Please improve the /account/overview page and make it feel like a premium sportsbook/crypto wallet dashboard.
+
+Current layout is functional, but it still feels crowded, basic, and not optimized enough for mobile users. The goal is to make this page the main "command center" for the user account.
+
+Suggested improvements:
+
+1. Better Account Summary
+
+* Make the profile card more premium.
+* Show username, verification status, member since date, and referral code in a cleaner layout.
+* Reduce wasted space while improving visual hierarchy.
+
+2. Wallet Balance Section
+
+* Make balance information the primary focus.
+* Clearly separate:
+
+  * Available Balance
+  * Active Bets
+  * Bonus Balance
+* Improve readability and spacing on mobile.
+
+3. Quick Actions
+
+* Deposit
+* Withdraw
+* My Bets
+* Promotions
+
+These are the most important actions. Make them larger, more prominent, and easier to tap with one hand.
+
+4. Reorganize Statistics
+   Current stats (Total Bets, Bets Won, Wagered) feel disconnected.
+
+Create a cleaner responsive stats section:
+
+* Total Bets
+* Win Rate
+* Bets Won
+* Total Wagered
+* Profit/Loss (if available)
+
+Make them easier to scan at a glance.
+
+5. Improve Quick Access Grid
+
+* Ensure all cards have equal height.
+* Perfect alignment on mobile.
+* Better spacing between cards.
+* Consistent icon sizing.
+* Optimize for thumb-friendly interaction.
+
+6. Reduce Scrolling
+   The most important information should be visible within the first screen or two screens on mobile.
+
+7. Mobile First Optimization
+   Test and optimize for:
+
+* 320px
+* 360px
+* 375px
+* 390px
+* 414px
+* Tablets
+
+8. Professional Dashboard Feel
+   Take inspiration from:
+
+* Binance
+* Stake
+* Bet365
+* DraftKings
+* Crypto.com
+
+Focus on:
+
+* Simplicity
+* Fast access to actions
+* Better information hierarchy
+* Clean spacing
+* Premium appearance
+
+Important:
+Do not change any functionality. Only improve layout, responsiveness, alignment, spacing, visual hierarchy, and overall mobile user experience.
