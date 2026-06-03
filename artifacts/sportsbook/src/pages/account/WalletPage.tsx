@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useReferral } from '@/hooks/useReferral';
 import { usePublicClient, useBalance } from 'wagmi';
 import { useLocation } from 'wouter';
@@ -12,7 +12,7 @@ import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
   Clock, XCircle, RefreshCw, Loader2, CircleDollarSign, Shield,
   AlertCircle, ExternalLink, Info, QrCode, Zap, CreditCard, Lock,
-  ChevronRight, ChevronDown, LogOut, RotateCcw, Users, Gift,
+  ChevronRight, ChevronDown, LogOut, RotateCcw, Users, Gift, X,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -148,6 +148,7 @@ export function WalletPage() {
     if (hint === 'plisio') return 'plisio';
     return 'wallet';
   });
+  const [showMethodPicker, setShowMethodPicker] = useState(false);
   const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20' | 'BSC' | 'POLYGON' | 'ARBITRUM' | 'OPTIMISM' | 'BASE' | 'SOLANA' | 'TON' | 'XRP' | 'BTC'>('TRC-20');
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>(() => {
     try {
@@ -243,16 +244,6 @@ export function WalletPage() {
   }, [isAuthenticated]);
 
   useEffect(() => { loadData(); }, [loadData]);
-
-  // ── Scroll to deposit form when method is selected ───────────────────────────
-  const formRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (tab !== 'deposit') return;
-    const t = setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 80);
-    return () => clearTimeout(t);
-  }, [depositMethod, tab]);
 
   // ── Recover any in-flight deposit that got orphaned by a page refresh ────────
   useEffect(() => {
@@ -754,137 +745,175 @@ export function WalletPage() {
         <div className="space-y-4">
 
           {/* ── Method selector ─────────────────────────────────────────── */}
-          <div className="space-y-2.5">
-            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider px-0.5">Choose Deposit Method</p>
 
-            {/* Web3 Wallet */}
-            {(() => {
-              const active = depositMethod === 'wallet';
-              return (
-                <button onClick={() => setDepositMethod('wallet')}
-                  className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
-                  style={active
-                    ? { background: 'linear-gradient(135deg, rgba(167,139,250,0.12) 0%, rgba(167,139,250,0.05) 100%)', border: '2px solid rgba(167,139,250,0.50)', boxShadow: '0 0 20px rgba(167,139,250,0.10)' }
-                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.30)' }}>
-                    <Wallet className="w-4 h-4 text-[#A78BFA]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[13px] font-bold text-[#F8FAFC]">Web3 Wallet</span>
-                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.22)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.40)' }}>⚡ Instant</span>
-                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.20)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.40)' }}>★ Best</span>
-                    </div>
-                    <p className="text-[10px] text-[#64748B] mt-0.5">MetaMask · Trust · ETH · BSC · TRC-20 · <span className="font-semibold text-[#A78BFA]">Min $10</span></p>
-                  </div>
-                  {active
-                    ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#A78BFA] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
-                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
-                </button>
-              );
-            })()}
-
-            {/* NOWPayments */}
-            {(() => {
-              const active = depositMethod === 'nowpayments';
-              return (
-                <button onClick={() => { setDepositMethod('nowpayments'); resetNpp(); }}
-                  className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
-                  style={active
-                    ? { background: 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.05) 100%)', border: '2px solid rgba(56,189,248,0.50)', boxShadow: '0 0 20px rgba(56,189,248,0.10)' }
-                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
-                    <Zap className="w-4 h-4 text-[#38BDF8]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[13px] font-bold text-[#F8FAFC]">NOWPayments</span>
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
-                    </div>
-                    <p className="text-[10px] text-[#64748B] mt-0.5">300+ cryptos · TRC-20 · BEP-20 · TON · <span className="font-semibold text-[#38BDF8]">Min $10</span></p>
-                  </div>
-                  {active
-                    ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#38BDF8] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
-                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
-                </button>
-              );
-            })()}
-
-            {/* Plisio */}
-            {(() => {
-              const active = depositMethod === 'plisio';
-              return (
-                <button onClick={() => { setDepositMethod('plisio'); resetPlisio(); }}
-                  className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
-                  style={active
-                    ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(168,85,247,0.05) 100%)', border: '2px solid rgba(168,85,247,0.50)', boxShadow: '0 0 20px rgba(168,85,247,0.10)' }
-                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.30)' }}>
-                    <CreditCard className="w-4 h-4 text-[#A855F7]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[13px] font-bold text-[#F8FAFC]">Plisio</span>
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
-                    </div>
-                    <p className="text-[10px] text-[#64748B] mt-0.5">USDT TRC-20 · ERC-20 · BTC · ETH · LTC · <span className="font-semibold text-[#A855F7]">Min $10</span></p>
-                  </div>
-                  {active
-                    ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#A855F7] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
-                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
-                </button>
-              );
-            })()}
-
-            {/* USDT Manual */}
-            {(() => {
-              const active = depositMethod === 'manual';
-              return (
-                <button onClick={() => setDepositMethod('manual')}
-                  className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
-                  style={active
-                    ? { background: 'linear-gradient(135deg, rgba(0,223,169,0.10) 0%, rgba(0,223,169,0.04) 100%)', border: '2px solid rgba(0,223,169,0.42)', boxShadow: '0 0 20px rgba(0,223,169,0.08)' }
-                    : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
-                    <QrCode className="w-4 h-4 text-[#00DFA9]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[13px] font-bold text-[#F8FAFC]">USDT Manual</span>
-                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(250,204,21,0.18)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.35)' }}>Most Popular</span>
-                    </div>
-                    <p className="text-[10px] text-[#64748B] mt-0.5">TRC-20 · ERC-20 · BTC · TON · 11 networks · <span className="font-semibold text-[#00DFA9]">Min $10</span></p>
-                  </div>
-                  {active
-                    ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
-                    : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
-                </button>
-              );
-            })()}
-
-            {/* Cryptomus — Coming Soon */}
-            <div className="w-full rounded-xl p-3 flex items-center gap-3 cursor-not-allowed"
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(0,223,169,0.18)', opacity: 0.45 }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.18)' }}>
-                <CircleDollarSign className="w-4 h-4 text-[#00DFA9]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] font-bold text-[#94A3B8]">Cryptomus</span>
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full text-[#64748B]" style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(100,116,139,0.28)' }}>Coming Soon</span>
+          {/* Compact selected-method bar — visible when picker is closed */}
+          {!showMethodPicker && (() => {
+            const cfg: Record<string, { name: string; bg: string; border: string; icon: React.ReactNode }> = {
+              wallet:      { name: 'Web3 Wallet',  bg: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.35)', icon: <Wallet className="w-4 h-4 text-[#A78BFA]" /> },
+              nowpayments: { name: 'NOWPayments',  bg: 'rgba(56,189,248,0.15)',  border: 'rgba(56,189,248,0.35)',  icon: <Zap className="w-4 h-4 text-[#38BDF8]" /> },
+              plisio:      { name: 'Plisio',       bg: 'rgba(168,85,247,0.15)',  border: 'rgba(168,85,247,0.35)',  icon: <CreditCard className="w-4 h-4 text-[#A855F7]" /> },
+              manual:      { name: 'USDT Manual',  bg: 'rgba(0,223,169,0.15)',   border: 'rgba(0,223,169,0.35)',   icon: <QrCode className="w-4 h-4 text-[#00DFA9]" /> },
+              cryptomus:   { name: 'Cryptomus',    bg: 'rgba(0,223,169,0.08)',   border: 'rgba(0,223,169,0.20)',   icon: <CircleDollarSign className="w-4 h-4 text-[#00DFA9]" /> },
+            };
+            const m = cfg[depositMethod];
+            return (
+              <button
+                onClick={() => setShowMethodPicker(true)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all hover:brightness-110 active:scale-[0.99]"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}
+              >
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: m.bg, border: `1px solid ${m.border}` }}>
+                  {m.icon}
                 </div>
-                <p className="text-[10px] text-[#475569] mt-0.5">TRC-20 · ERC-20 · Zero platform fee</p>
-              </div>
-              <Lock className="w-4 h-4 text-[#475569] shrink-0" />
-            </div>
-          </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-bold text-[#475569] uppercase tracking-wider">Deposit via</p>
+                  <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight">{m.name}</p>
+                </div>
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-[#38BDF8] shrink-0">
+                  Change <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              </button>
+            );
+          })()}
 
-          {/* Scroll anchor — jumped to when a deposit method is selected */}
-          <div ref={formRef} className="scroll-mt-2" />
+          {/* Full method picker — visible when user taps "Change" */}
+          {showMethodPicker && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-0.5">
+                <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Choose Deposit Method</p>
+                <button onClick={() => setShowMethodPicker(false)}
+                  className="flex items-center gap-1 text-[10px] font-semibold text-[#64748B] hover:text-[#F8FAFC] transition-colors">
+                  <X className="w-3 h-3" /> Close
+                </button>
+              </div>
+
+              {/* Web3 Wallet */}
+              {(() => {
+                const active = depositMethod === 'wallet';
+                return (
+                  <button onClick={() => { setDepositMethod('wallet'); setShowMethodPicker(false); }}
+                    className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
+                    style={active
+                      ? { background: 'linear-gradient(135deg, rgba(167,139,250,0.12) 0%, rgba(167,139,250,0.05) 100%)', border: '2px solid rgba(167,139,250,0.50)', boxShadow: '0 0 20px rgba(167,139,250,0.10)' }
+                      : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.30)' }}>
+                      <Wallet className="w-4 h-4 text-[#A78BFA]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[13px] font-bold text-[#F8FAFC]">Web3 Wallet</span>
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.22)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.40)' }}>⚡ Instant</span>
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.20)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.40)' }}>★ Best</span>
+                      </div>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">MetaMask · Trust · ETH · BSC · TRC-20 · <span className="font-semibold text-[#A78BFA]">Min $10</span></p>
+                    </div>
+                    {active
+                      ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#A78BFA] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
+                      : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
+                  </button>
+                );
+              })()}
+
+              {/* NOWPayments */}
+              {(() => {
+                const active = depositMethod === 'nowpayments';
+                return (
+                  <button onClick={() => { setDepositMethod('nowpayments'); resetNpp(); setShowMethodPicker(false); }}
+                    className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
+                    style={active
+                      ? { background: 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.05) 100%)', border: '2px solid rgba(56,189,248,0.50)', boxShadow: '0 0 20px rgba(56,189,248,0.10)' }
+                      : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.30)' }}>
+                      <Zap className="w-4 h-4 text-[#38BDF8]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[13px] font-bold text-[#F8FAFC]">NOWPayments</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
+                      </div>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">300+ cryptos · TRC-20 · BEP-20 · TON · <span className="font-semibold text-[#38BDF8]">Min $10</span></p>
+                    </div>
+                    {active
+                      ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#38BDF8] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
+                      : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
+                  </button>
+                );
+              })()}
+
+              {/* Plisio */}
+              {(() => {
+                const active = depositMethod === 'plisio';
+                return (
+                  <button onClick={() => { setDepositMethod('plisio'); resetPlisio(); setShowMethodPicker(false); }}
+                    className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
+                    style={active
+                      ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(168,85,247,0.05) 100%)', border: '2px solid rgba(168,85,247,0.50)', boxShadow: '0 0 20px rgba(168,85,247,0.10)' }
+                      : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.30)' }}>
+                      <CreditCard className="w-4 h-4 text-[#A855F7]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[13px] font-bold text-[#F8FAFC]">Plisio</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
+                      </div>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">USDT TRC-20 · ERC-20 · BTC · ETH · LTC · <span className="font-semibold text-[#A855F7]">Min $10</span></p>
+                    </div>
+                    {active
+                      ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#A855F7] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
+                      : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
+                  </button>
+                );
+              })()}
+
+              {/* USDT Manual */}
+              {(() => {
+                const active = depositMethod === 'manual';
+                return (
+                  <button onClick={() => { setDepositMethod('manual'); setShowMethodPicker(false); }}
+                    className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
+                    style={active
+                      ? { background: 'linear-gradient(135deg, rgba(0,223,169,0.10) 0%, rgba(0,223,169,0.04) 100%)', border: '2px solid rgba(0,223,169,0.42)', boxShadow: '0 0 20px rgba(0,223,169,0.08)' }
+                      : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
+                      <QrCode className="w-4 h-4 text-[#00DFA9]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[13px] font-bold text-[#F8FAFC]">USDT Manual</span>
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(250,204,21,0.18)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.35)' }}>Most Popular</span>
+                      </div>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">TRC-20 · ERC-20 · BTC · TON · 11 networks · <span className="font-semibold text-[#00DFA9]">Min $10</span></p>
+                    </div>
+                    {active
+                      ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
+                      : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
+                  </button>
+                );
+              })()}
+
+              {/* Cryptomus — Coming Soon */}
+              <div className="w-full rounded-xl p-3 flex items-center gap-3 cursor-not-allowed"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(0,223,169,0.18)', opacity: 0.45 }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.18)' }}>
+                  <CircleDollarSign className="w-4 h-4 text-[#00DFA9]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-bold text-[#94A3B8]">Cryptomus</span>
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full text-[#64748B]" style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(100,116,139,0.28)' }}>Coming Soon</span>
+                  </div>
+                  <p className="text-[10px] text-[#475569] mt-0.5">TRC-20 · ERC-20 · Zero platform fee</p>
+                </div>
+                <Lock className="w-4 h-4 text-[#475569] shrink-0" />
+              </div>
+            </div>
+          )}
 
           {/* Trust elements — desktop only to save mobile space */}
           <div className="hidden sm:grid sm:grid-cols-4 gap-2">
