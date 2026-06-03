@@ -294,8 +294,8 @@ export function Header() {
           {/* Right */}
           <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
 
-            {/* Language picker — hidden on mobile (accessible via More menu), shown sm+ */}
-            <div className="hidden sm:block relative" ref={langRef}>
+            {/* Language picker */}
+            <div className="relative" ref={langRef}>
               <HeaderIconBtn aria-label="Language" onClick={() => setShowLang(v => !v)}>
                 <Globe className="h-4 w-4" style={{ color: '#00D9A6' }} />
               </HeaderIconBtn>

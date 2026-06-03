@@ -4,7 +4,7 @@ import {
   Home, Grid3X3, Receipt, MoreHorizontal,
   History, HelpCircle, Star, FileText, ShieldCheck,
   Landmark, ChevronRight, Wallet, X, Check,
-  TrendingUp, Share2, UserCircle, Radio, ArrowDownLeft, Globe,
+  TrendingUp, Share2, UserCircle, Radio, ArrowDownLeft,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useBetHistory } from '../hooks/useBetHistory';
@@ -16,38 +16,6 @@ import { BetSlip } from './BetSlip';
 import { SPORTS } from '../data/mockData';
 import { cn } from '../lib/utils';
 
-const LANGUAGES = [
-  { code: 'ar',    native: 'العربية',   flag: '🇸🇦', short: 'AR' },
-  { code: 'zh-CN', native: '中文',       flag: '🇨🇳', short: 'ZH' },
-  { code: 'en',    native: 'English',   flag: '🇬🇧', short: 'EN' },
-  { code: 'fr',    native: 'Français',  flag: '🇫🇷', short: 'FR' },
-  { code: 'de',    native: 'Deutsch',   flag: '🇩🇪', short: 'DE' },
-  { code: 'hi',    native: 'हिन्दी',     flag: '🇮🇳', short: 'HI' },
-  { code: 'ja',    native: '日本語',      flag: '🇯🇵', short: 'JP' },
-  { code: 'ko',    native: '한국어',      flag: '🇰🇷', short: 'KO' },
-  { code: 'pt',    native: 'Português', flag: '🇧🇷', short: 'PT' },
-  { code: 'ru',    native: 'Русский',   flag: '🇷🇺', short: 'RU' },
-  { code: 'es',    native: 'Español',   flag: '🇪🇸', short: 'ES' },
-  { code: 'th',    native: 'ไทย',        flag: '🇹🇭', short: 'TH' },
-];
-
-function triggerTranslateMobile(langCode: string) {
-  if (langCode === 'en') {
-    const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
-    if (select) { select.value = langCode; select.dispatchEvent(new Event('change')); }
-    document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    window.location.reload();
-    return;
-  }
-  const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
-  if (select) { select.value = langCode; select.dispatchEvent(new Event('change')); }
-  else {
-    document.cookie = `googtrans=/en/${langCode}; path=/`;
-    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${location.hostname}`;
-    window.location.reload();
-  }
-}
 
 const ODDS_FORMATS = [
   { value: 'decimal',     label: 'DEC',  desc: 'Decimal' },
@@ -80,7 +48,7 @@ export function MobileBottomNav() {
   const { openBetsCount } = useBetHistory();
   const { isConnected, shortAddress, balance, connect } = useWallet();
   const { format, setFormat } = useOddsFormat();
-  const { t, lang: currentLang, setLang } = useI18n();
+  const { t } = useI18n();
   const [betSlipOpen, setBetSlipOpen] = useState(false);
   const [sportsOpen,  setSportsOpen]  = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
@@ -389,33 +357,6 @@ export function MobileBottomNav() {
                     )}>
                       {opt.desc}
                     </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* ── Language ── */}
-            <div className="px-4 pb-4">
-              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]/35 mb-2.5 flex items-center gap-1.5">
-                <Globe className="h-3 w-3" /> Language
-              </p>
-              <div className="grid grid-cols-4 gap-1.5">
-                {LANGUAGES.map(lang => (
-                  <button
-                    key={lang.code}
-                    onClick={() => { setLang(lang.code); triggerTranslateMobile(lang.code); }}
-                    className={cn(
-                      'flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-all active:scale-95 cursor-pointer',
-                      currentLang === lang.code
-                        ? 'bg-[#00DFA9]/10 border-[#00DFA9]/30'
-                        : 'bg-[#121821] border-[#253241]/50 hover:border-[#253241]'
-                    )}
-                  >
-                    <span className="text-base leading-none">{lang.flag}</span>
-                    <span className={cn(
-                      'text-[9px] font-bold tracking-wider leading-none',
-                      currentLang === lang.code ? 'text-[#00DFA9]' : 'text-[#94A3B8]/50'
-                    )}>{lang.short}</span>
                   </button>
                 ))}
               </div>
