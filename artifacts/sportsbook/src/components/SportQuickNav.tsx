@@ -53,7 +53,7 @@ export function SportQuickNav({ selectedId, liveCount = 0, onSelect }: Props) {
                 key={item.id}
                 onClick={() => onSelect(isActive ? null : item.id)}
                 className={cn(
-                  'relative group flex items-center gap-1.5 px-3.5 py-3 text-[12px] font-semibold whitespace-nowrap transition-all duration-150 select-none outline-none',
+                  'relative group flex items-center gap-1.5 px-3 sm:px-3.5 py-2 sm:py-3 text-[11px] sm:text-[12px] font-semibold whitespace-nowrap transition-all duration-150 select-none outline-none',
                   isActive
                     ? isFeat
                       ? 'text-[#FACC15]'

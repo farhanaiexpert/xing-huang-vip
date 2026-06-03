@@ -386,8 +386,8 @@ export function MainContent({
       >
         {/* ── Sticky controls ─────────────────────────────────────────── */}
         <div className="sticky top-0 z-20 bg-[#0B0F14]/97 backdrop-blur-md border-b border-[#253241]/60">
-          {/* Winners ticker */}
-          <WinnersTicker />
+          {/* Winners ticker — hidden on mobile to save ~38px of sticky height */}
+          <div className="hidden sm:block"><WinnersTicker /></div>
 
           {/* Quick sport navigation */}
           <SportQuickNav
@@ -397,18 +397,18 @@ export function MainContent({
           />
 
           {/* Search */}
-          <div className="px-4 pt-3.5 pb-2.5">
+          <div className="px-3 sm:px-4 pt-2 sm:pt-3.5 pb-1.5 sm:pb-2.5">
             <div className="relative group max-w-2xl">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/50 group-focus-within:text-[#00DFA9] transition-colors duration-200 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#94A3B8]/50 group-focus-within:text-[#00DFA9] transition-colors duration-200 pointer-events-none" />
               <Input
                 ref={searchRef}
-                className="w-full pl-9 pr-20 h-10 rounded-xl text-sm bg-[#121821] border border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-2 focus-visible:ring-[#00DFA9]/25 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
+                className="w-full pl-9 pr-10 sm:pr-20 h-8 sm:h-10 rounded-xl text-[13px] sm:text-sm bg-[#121821] border border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-2 focus-visible:ring-[#00DFA9]/25 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
                 placeholder="Search events, teams or leagues…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 data-testid="input-search"
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                 {search ? (
                   <button
                     onClick={clearSearch}
@@ -419,7 +419,7 @@ export function MainContent({
                     <X className="h-3.5 w-3.5" />
                   </button>
                 ) : (
-                  <kbd className="text-[9px] text-[#94A3B8]/40 bg-[#1E2A38] border border-[#253241] px-1.5 py-0.5 rounded font-mono pointer-events-none select-none">
+                  <kbd className="hidden sm:flex text-[9px] text-[#94A3B8]/40 bg-[#1E2A38] border border-[#253241] px-1.5 py-0.5 rounded font-mono pointer-events-none select-none">
                     ⌘K
                   </kbd>
                 )}
@@ -428,9 +428,9 @@ export function MainContent({
           </div>
 
           {/* Sport carousel */}
-          <div className="px-4 pb-2">
+          <div className="px-3 sm:px-4 pb-1 sm:pb-2">
             <ScrollArea className="w-full">
-              <div className="flex gap-1 w-max pb-1">
+              <div className="flex gap-0.5 sm:gap-1 w-max pb-1">
                 {CAROUSEL_SPORTS.map((sport) => {
                   const isActive = selectedSportId === sport.id;
                   const realCount = sportMatchCounts[sport.id] ?? 0;
@@ -444,16 +444,16 @@ export function MainContent({
                       }
                       data-testid={`sport-tab-${sport.id}`}
                       className={cn(
-                        "group flex flex-col items-center gap-1 py-2 px-2.5 rounded-xl min-w-[68px] transition-all duration-200 select-none",
+                        "group flex flex-col items-center gap-0.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl min-w-[54px] sm:min-w-[68px] transition-all duration-200 select-none",
                         isActive
                           ? "bg-[#18212B] ring-1 ring-[#00DFA9]/40 shadow-[0_0_16px_rgba(0,223,169,0.1)]"
                           : "hover:bg-[#121821]/80",
                       )}
                     >
-                      <span className="text-xl leading-none">{sport.icon}</span>
+                      <span className="text-[17px] sm:text-xl leading-none">{sport.icon}</span>
                       <span
                         className={cn(
-                          "text-[11px] font-medium leading-none transition-colors",
+                          "text-[10px] sm:text-[11px] font-medium leading-none transition-colors",
                           isActive
                             ? "text-[#00DFA9]"
                             : "text-[#94A3B8] group-hover:text-[#F8FAFC]",
@@ -463,7 +463,7 @@ export function MainContent({
                       </span>
                       <span
                         className={cn(
-                          "text-[9px] font-semibold leading-none tabular-nums transition-colors",
+                          "hidden sm:block text-[9px] font-semibold leading-none tabular-nums transition-colors",
                           realCount > 0
                             ? isActive
                               ? "text-[#00DFA9]/60"
@@ -482,7 +482,7 @@ export function MainContent({
           </div>
 
           {/* Filter bar */}
-          <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
+          <div className="px-3 sm:px-4 pb-2 sm:pb-3 flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <div className="flex items-center bg-[#121821] rounded-lg p-0.5 border border-[#253241] gap-0.5">
               {DATE_FILTERS.map((f) => (
                 <button
@@ -490,7 +490,7 @@ export function MainContent({
                   onClick={() => setDateFilter(f.id)}
                   data-testid={`filter-${f.id}`}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
+                    "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-all duration-150",
                     dateFilter === f.id
                       ? "bg-[#253241] text-[#F8FAFC] shadow-sm"
                       : "text-[#94A3B8]/60 hover:text-[#F8FAFC]",

@@ -1,0 +1,90 @@
+Please perform a complete mobile UX/UI audit of the entire CupBett platform and optimize every page specifically for mobile devices.
+
+Current issue:
+The website works on mobile, but many pages feel crowded, oversized, difficult to navigate, and not fully optimized for small screens. Some sections require excessive scrolling, certain cards consume too much vertical space, navigation can feel confusing, and important actions are not always easy to access.
+
+Goals:
+
+* Mobile-first experience.
+* Faster and easier navigation.
+* Better use of screen space.
+* Cleaner layouts.
+* Modern sportsbook/casino quality UI.
+* Improved usability for first-time users.
+
+Please review and improve:
+
+1. Header & Navigation
+
+* Optimize the mobile header layout.
+* Reduce wasted space.
+* Improve icon spacing and alignment.
+* Ensure important actions (Deposit, Wallet, Notifications, Profile) are easily accessible.
+* Make navigation feel fast and intuitive.
+
+2. Account & Dashboard Pages
+
+* Redesign cards for mobile.
+* Reduce oversized sections.
+* Improve information density.
+* Ensure balance, betting stats, bonuses, and account information are visible without excessive scrolling.
+* Make account tabs easier to navigate without horizontal scrolling.
+
+3. Betting Experience
+
+* Optimize bet slip layout.
+* Improve odds selection experience.
+* Reduce clutter.
+* Make placing bets easier with one hand.
+
+4. Deposit & Withdrawal Pages
+
+* Improve spacing and readability.
+* Make deposit methods easier to compare and select.
+* Ensure forms are simple and touch-friendly.
+* Reduce unnecessary scrolling.
+
+5. Sports & Match Pages
+
+* Improve mobile layouts for match listings.
+* Make odds easier to scan.
+* Improve league and event navigation.
+* Ensure users can browse quickly without feeling overwhelmed.
+
+6. Cards & Components
+
+* Standardize all card sizes.
+* Improve padding and spacing.
+* Reduce unnecessarily tall cards.
+* Create a consistent design system across the platform.
+
+7. Typography
+
+* Improve font sizes for mobile.
+* Improve readability.
+* Ensure important information stands out clearly.
+
+8. Touch Experience
+
+* Increase tap targets where needed.
+* Improve button placement.
+* Ensure all interactive elements are thumb-friendly.
+
+9. Mobile Performance
+
+* Remove unnecessary animations that affect performance.
+* Optimize rendering and scrolling.
+* Ensure smooth experience on lower-end Android devices.
+
+10. Responsive Testing
+    Please test and optimize for:
+
+* 320px width
+* 360px width
+* 375px width
+* 390px width
+* 414px width
+* 768px tablets
+
+Important:
+Do not simply resize existing elements. Re-think the mobile layouts from a mobile-first perspective and create the best possible user experience. Prioritize simplicity, accessibility, speed, discoverability, and ease of use while keeping the current CupBett branding and visual style.

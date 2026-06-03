@@ -457,7 +457,7 @@ function StatBar({ bets }: { bets: PlacedBet[] }) {
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-2 mb-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
       {stats.map(s => (
         <div key={s.label} className="rounded-xl border border-white/[0.06] bg-[#0A0F16] p-2.5">
           <div className="flex items-center gap-1.5 mb-1.5" style={{ color: s.color }}>
