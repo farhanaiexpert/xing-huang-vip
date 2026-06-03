@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { useAccount, useChainId, useDisconnect, useWalletClient, useSwitchChain } from 'wagmi';
+import { useAccount, useChainId, useDisconnect, useWalletClient, useSwitchChain, useConnect } from 'wagmi';
+import { injected } from 'wagmi/connectors';
 import { useAppKit } from '@reown/appkit/react';
 import { wagmiAdapter } from '../lib/reown';
 
@@ -29,6 +30,7 @@ export function useEvmWallet() {
   const chainId = useChainId();
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const { switchChain: wagmiSwitchChain } = useSwitchChain();
+  const { connectAsync } = useConnect();
   const { open } = useAppKit();
   const { data: walletClient } = useWalletClient();
 
@@ -42,7 +44,26 @@ export function useEvmWallet() {
     // Already connected — return immediately so callers can proceed to signing.
     if (isConnected && address) return address;
 
-    // Open the AppKit modal (non-blocking: resolves before the user picks a wallet).
+    // ── Path A: injected provider (MetaMask, Brave, Rabby, etc.) ─────────────
+    // Connect directly via the browser extension, bypassing WalletConnect and
+    // any domain-registration requirement on the Reown Cloud dashboard.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      try {
+        const result = await connectAsync({ connector: injected() });
+        return result.accounts[0] ?? null;
+      } catch (err) {
+        const msg = (err as Error)?.message ?? '';
+        // User explicitly rejected → surface immediately, don't fall through.
+        if (/reject|cancel|denied|user denied/i.test(msg)) {
+          throw new Error('Connection cancelled.');
+        }
+        // Any other error (locked wallet, wrong network prompt, etc.) →
+        // fall through to AppKit so user still has options.
+      }
+    }
+
+    // ── Path B: no injected provider → open AppKit modal (WalletConnect / QR) ─
     try {
       await open();
     } catch (err) {
@@ -60,7 +81,7 @@ export function useEvmWallet() {
     }
 
     return null;
-  }, [open, isConnected, address]);
+  }, [open, isConnected, address, connectAsync]);
 
   const disconnect = useCallback(() => {
     wagmiDisconnect();

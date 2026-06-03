@@ -101,9 +101,10 @@ export function Header() {
     }
     prevUserId.current = currentId;
   }, [user, setLocation]);
-  const [isAuthOpen,       setIsAuthOpen]       = useState(false);
-  const [showAddressMenu,  setShowAddressMenu]  = useState(false);
-  const [showSearch,       setShowSearch]       = useState(false);
+  const [isAuthOpen,         setIsAuthOpen]         = useState(false);
+  const [openDepositOnAuth,  setOpenDepositOnAuth]  = useState(false);
+  const [showAddressMenu,    setShowAddressMenu]    = useState(false);
+  const [showSearch,         setShowSearch]         = useState(false);
 
   const { lang: currentLang, setLang, t } = useI18n();
   const [showLang,         setShowLang]         = useState(false);
@@ -135,6 +136,14 @@ export function Header() {
     window.addEventListener('openLoginModal', handler);
     return () => window.removeEventListener('openLoginModal', handler);
   }, []);
+
+  // After successful sign-in: auto-open deposit modal if the user clicked Deposit while logged out
+  useEffect(() => {
+    if (user && openDepositOnAuth) {
+      setOpenDepositOnAuth(false);
+      setIsPaymentOpen(true);
+    }
+  }, [user, openDepositOnAuth]);
 
   // Focus search input when opened
   useEffect(() => {
@@ -441,10 +450,17 @@ export function Header() {
                     <span>Sign In</span>
                   </button>
                 )}
-                {/* Deposit / Connect Wallet — opens payment methods modal */}
+                {/* Deposit / Connect Wallet — opens payment methods modal (auth check first) */}
                 <button
                   data-testid="button-connect-wallet-header"
-                  onClick={() => setIsPaymentOpen(true)}
+                  onClick={() => {
+                    if (!user) {
+                      setOpenDepositOnAuth(true);
+                      setIsAuthOpen(true);
+                    } else {
+                      setIsPaymentOpen(true);
+                    }
+                  }}
                   className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
                   style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
                 >
