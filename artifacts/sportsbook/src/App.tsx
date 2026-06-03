@@ -34,9 +34,7 @@ import { useTransactionNotifications } from "@/hooks/useTransactionNotifications
 import { Link } from "wouter";
 
 function HomeOnlyOverlay() {
-  const [location] = useLocation();
-  if (location !== '/') return null;
-  return <OnboardingGuide />;
+  return null;
 }
 
 function TransactionNotifier() {
