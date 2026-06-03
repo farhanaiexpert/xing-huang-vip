@@ -46,7 +46,10 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
   // ── Place bet ──────────────────────────────────────────────────
   async function handlePlaceBet(skipDriftCheck = false) {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      window.dispatchEvent(new Event('openLoginModal'));
+      return;
+    }
 
     if (!skipDriftCheck && Object.keys(oddsChanges).length > 0) {
       setDriftPending(true);
@@ -494,7 +497,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               balance={totalBalance}
               canPlace={canPlaceSingle}
               isPlacing={isPlacing}
-              onConnectWallet={() => setDepositOpen(true)}
+              onConnectWallet={() => { if (!isAuthenticated) { window.dispatchEvent(new Event('openLoginModal')); } else { setDepositOpen(true); } }}
               onPlaceBet={handlePlaceBet}
             />
           ) : (
@@ -512,7 +515,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               canPlace={canPlaceAcca}
               readyToStake={readyToStake}
               isPlacing={isPlacing}
-              onConnectWallet={() => setDepositOpen(true)}
+              onConnectWallet={() => { if (!isAuthenticated) { window.dispatchEvent(new Event('openLoginModal')); } else { setDepositOpen(true); } }}
               onPlaceBet={handlePlaceBet}
             />
           )}
@@ -1034,6 +1037,7 @@ function ActionButton({
 // ────────────────────────────────────────────────────────────────
 function EmptyState() {
   const { isConnected, shortAddress, walletName } = useWallet();
+  const { isAuthenticated } = useAuth();
   const [connectOpen, setConnectOpen] = useState(false);
 
   return (
@@ -1065,7 +1069,7 @@ function EmptyState() {
         </div>
       ) : (
         <button
-          onClick={() => setConnectOpen(true)}
+          onClick={() => { if (!isAuthenticated) { window.dispatchEvent(new Event('openLoginModal')); } else { setConnectOpen(true); } }}
           className="w-full mb-4 flex items-center gap-2 bg-[#121821] border border-[#253241] rounded-lg px-3 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all"
         >
           <Wallet className="h-4 w-4 text-[#94A3B8]/50 shrink-0" />
