@@ -314,7 +314,14 @@ export function PromoPopup() {
         @keyframes ringPulse   { 0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,.5)} 50%{box-shadow:0 0 0 18px rgba(250,204,21,0)} }
         .promo-noscroll::-webkit-scrollbar { display:none }
         .promo-noscroll { -ms-overflow-style:none; scrollbar-width:none }
+        /* Mobile: fixed image section height */
+        .promo-img-wrap { height:190px; min-height:190px; }
         @media(max-width:767px){ .promo-celeb-img { top:20px!important; height:calc(100% - 20px)!important } }
+        /* Desktop: image section stretches full modal height, athlete fills the column */
+        @media(min-width:768px){
+          .promo-img-wrap { height:auto!important; min-height:480px!important; align-self:stretch; }
+          .promo-celeb-img { object-fit:cover!important; object-position:top center!important; transform:scale(1.06)!important; transform-origin:top center!important; top:0!important; height:100%!important; }
+        }
       `}</style>
 
       {/* Backdrop */}
@@ -454,13 +461,11 @@ export function PromoPopup() {
 
           {/* ── IMAGE SECTION ── */}
           <div
-            className="relative shrink-0 w-full md:w-[40%] overflow-hidden"
-            style={{ background: DOT_BG, height: '190px', minHeight: '190px' }}
+            className="promo-img-wrap relative shrink-0 w-full md:w-[44%] overflow-hidden"
+            style={{ background: DOT_BG }}
             onMouseEnter={() => { setHovered(true); setShowAlt(true); }}
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
           >
-            {/* md+: give it proper height */}
-            <style>{`@media(min-width:768px){.promo-img-wrap{height:auto!important;min-height:280px!important}}`}</style>
             {/* Original image */}
             <img src={IMG_ORIGINAL} alt="CupBett Ambassador" className="promo-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 0 : 1 }} />
@@ -492,7 +497,7 @@ export function PromoPopup() {
 
           {/* ── CONTENT — pulls up over image on mobile ── */}
           <div
-            className="relative flex flex-col flex-1 px-4 pt-4 pb-4 sm:px-7 sm:py-6 -mt-5 md:mt-0 md:rounded-none"
+            className="relative flex flex-col flex-1 px-4 pt-4 pb-4 sm:px-7 sm:py-6 md:px-9 md:py-8 md:justify-center -mt-5 md:mt-0 md:rounded-none"
             style={{ borderRadius: '18px 18px 0 0', background: 'linear-gradient(160deg,#0D1520 0%,#0A0F16 100%)' }}
           >
             {/* Drag handle hint — mobile only */}
