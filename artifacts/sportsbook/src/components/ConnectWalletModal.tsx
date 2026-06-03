@@ -186,16 +186,12 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   async function handleConnectWallet() {
     if (!user) { setAuthOpen(true); return; }
-    console.log('[CupBett] Connect Wallet button clicked');
     setConnectError('');
     setConnecting(true);
     try {
-      console.log('[CupBett] Calling evmWallet.connect()');
-      const addr = await evmWallet.connect();
-      console.log('[CupBett] evmWallet.connect() result:', addr);
+      await evmWallet.connect();
       // On success the modal stays open and shows the connected deposit UI automatically.
     } catch (err) {
-      console.error('[CupBett] evmWallet.connect() error:', err);
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'APPKIT_OPEN_FAILED') {
         setConnectError('Could not open wallet selector. Please try opening this page in Chrome or Safari, or use your wallet\'s built-in browser (MetaMask → Browser, Trust Wallet → dApps).');
@@ -217,7 +213,11 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     resetDeposit();
     evmWallet.disconnect();
     await new Promise(r => setTimeout(r, 200));
-    await evmWallet.connect();
+    try {
+      await evmWallet.connect();
+    } catch {
+      // Modal stays open; user can retry
+    }
   }
 
   useEffect(() => {

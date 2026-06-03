@@ -43,8 +43,8 @@ export const appkit = createAppKit({
   },
 });
 
-// Log AppKit lifecycle events (helps debug mobile issues)
-if (typeof window !== 'undefined') {
+// Log AppKit lifecycle events in dev — helps debug mobile wallet issues
+if (import.meta.env.DEV && typeof window !== 'undefined') {
   try {
     appkit.subscribeEvents(e => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
