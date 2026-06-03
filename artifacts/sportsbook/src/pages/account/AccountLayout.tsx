@@ -7,6 +7,7 @@ import { cn, userDisplayLabel, shortAddress, addressInitials } from '@/lib/utils
 import {
   LayoutDashboard, Wallet, Receipt, ArrowLeftRight,
   Users, Gift, Star, Trophy, Settings, LogOut, Shield, BarChart2,
+  LayoutGrid, X, ChevronDown,
 } from 'lucide-react';
 import { OverviewPage }              from './OverviewPage';
 import { WalletPage }               from './WalletPage';
@@ -23,18 +24,18 @@ import { MyStatsPage }              from './MyStatsPage';
 import { Crown } from 'lucide-react';
 
 const NAV = [
-  { id: 'overview',     label: 'Overview',           icon: LayoutDashboard },
-  { id: 'wallet',       label: 'Wallet',              icon: Wallet },
-  { id: 'bets',         label: 'My Bets',             icon: Receipt },
-  { id: 'stats',        label: 'My Stats',            icon: BarChart2 },
-  { id: 'transactions', label: 'Transactions',        icon: ArrowLeftRight },
-  { id: 'referrals',    label: 'Referrals',           icon: Users },
-  { id: 'promotions',   label: 'Promotions',          icon: Gift },
-  { id: 'vip',          label: 'VIP & Loyalty',       icon: Crown },
-  { id: 'winspin',      label: 'WinSpin',             icon: Star },
-  { id: 'pools',        label: 'Pools',               icon: Trophy },
-  { id: 'settings',     label: 'Settings',            icon: Settings },
-  { id: 'responsible',  label: 'Responsible Gaming',  icon: Shield },
+  { id: 'overview',     label: 'Overview',     shortLabel: 'Overview',   icon: LayoutDashboard },
+  { id: 'wallet',       label: 'Wallet',        shortLabel: 'Wallet',     icon: Wallet },
+  { id: 'bets',         label: 'My Bets',       shortLabel: 'My Bets',    icon: Receipt },
+  { id: 'stats',        label: 'My Stats',      shortLabel: 'Stats',      icon: BarChart2 },
+  { id: 'transactions', label: 'Transactions',  shortLabel: 'Transfers',  icon: ArrowLeftRight },
+  { id: 'referrals',   label: 'Referrals',     shortLabel: 'Referrals',  icon: Users },
+  { id: 'promotions',  label: 'Promotions',    shortLabel: 'Promos',     icon: Gift },
+  { id: 'vip',         label: 'VIP & Loyalty', shortLabel: 'VIP',        icon: Crown },
+  { id: 'winspin',     label: 'WinSpin',       shortLabel: 'WinSpin',    icon: Star },
+  { id: 'pools',       label: 'Pools',         shortLabel: 'Pools',      icon: Trophy },
+  { id: 'settings',    label: 'Settings',      shortLabel: 'Settings',   icon: Settings },
+  { id: 'responsible', label: 'Responsible',   shortLabel: 'Safe Play',  icon: Shield },
 ] as const;
 
 type SectionId = (typeof NAV)[number]['id'];
@@ -54,6 +55,22 @@ const PAGES: Record<SectionId, React.ComponentType> = {
   responsible:  ResponsibleGamblingPage,
 };
 
+// Accent colours per section for the icon tile active states
+const SECTION_COLOR: Record<SectionId, string> = {
+  overview:     '#00DFA9',
+  wallet:       '#00DFA9',
+  bets:         '#38BDF8',
+  stats:        '#38BDF8',
+  transactions: '#A78BFA',
+  referrals:    '#FACC15',
+  promotions:   '#F97316',
+  vip:          '#FACC15',
+  winspin:      '#EC4899',
+  pools:        '#10B981',
+  settings:     '#94A3B8',
+  responsible:  '#64748B',
+};
+
 function isSection(s: string): s is SectionId {
   return s in PAGES;
 }
@@ -70,93 +87,139 @@ export function AccountLayout() {
   const displayLabel = user ? userDisplayLabel(user) : 'Guest';
   const initials     = user ? addressInitials(displayLabel) : 'G';
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showLeftFade, setShowLeftFade]   = useState(false);
-  const [showRightFade, setShowRightFade] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Auto-scroll active chip into view whenever section changes
+  // Close menu when section changes (e.g. navigating via deep link)
+  const prevSection = useRef(section);
   useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const activeEl = container.querySelector<HTMLElement>('[data-active="true"]');
-    if (activeEl) {
-      activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if (prevSection.current !== section) {
+      setMenuOpen(false);
+      prevSection.current = section;
     }
-    // Small delay to let scroll settle before recalculating fades
-    const t = setTimeout(() => {
-      setShowLeftFade(container.scrollLeft > 8);
-      setShowRightFade(container.scrollLeft < container.scrollWidth - container.clientWidth - 8);
-    }, 350);
-    return () => clearTimeout(t);
   }, [section]);
 
-  // Initial fade state on mount
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    setShowRightFade(container.scrollWidth > container.clientWidth + 8);
-  }, []);
-
-  function handleChipScroll(e: React.UIEvent<HTMLDivElement>) {
-    const el = e.currentTarget;
-    setShowLeftFade(el.scrollLeft > 8);
-    setShowRightFade(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
-  }
+  const activeNav   = NAV.find(n => n.id === section)!;
+  const activeColor = SECTION_COLOR[section];
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-20 xl:pb-0">
       <Header />
 
-      {/* ── Mobile sticky section tab bar (12 account sections) ── */}
-      <div className="xl:hidden sticky top-0 z-30 bg-[#0B0F14]/95 backdrop-blur-sm border-b border-white/[0.06] px-3 py-2 space-y-2">
-        <div className="flex items-center gap-2.5">
+      {/* ══════════════════════════════════════════════════
+          Mobile account nav — collapsible icon-grid menu
+          Hidden on xl+ (desktop uses sidebar instead)
+          ══════════════════════════════════════════════════ */}
+      <div className="xl:hidden sticky top-0 z-30" style={{ background: 'rgba(11,15,20,0.97)', backdropFilter: 'blur(12px)' }}>
+
+        {/* ── Collapsed strip (always visible) ── */}
+        <div
+          className="flex items-center gap-3 px-3 py-2.5 border-b border-white/[0.06]"
+          style={{ borderBottomColor: menuOpen ? 'transparent' : undefined }}
+        >
+          {/* Avatar */}
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0">
             <span className="text-[9px] font-black text-[#00DFA9]">{initials}</span>
           </div>
-          <p className="text-[12px] font-bold text-[#F8FAFC] truncate">{displayLabel}</p>
-        </div>
-        {/* Chip scroll row with left/right fade affordance */}
-        <div className="relative">
-          {/* Left fade */}
-          {showLeftFade && (
-            <div
-              className="pointer-events-none absolute left-0 top-0 bottom-0 w-7 z-10"
-              style={{ background: 'linear-gradient(to right, #0B0F14, transparent)' }}
-            />
-          )}
-          {/* Right fade */}
-          {showRightFade && (
-            <div
-              className="pointer-events-none absolute right-0 top-0 bottom-0 w-7 z-10"
-              style={{ background: 'linear-gradient(to left, #0B0F14, transparent)' }}
-            />
-          )}
-          <div
-            ref={scrollRef}
-            className="flex gap-1.5 overflow-x-auto"
-            style={{ scrollbarWidth: 'none' }}
-            onScroll={handleChipScroll}
+
+          {/* Active section info */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#64748B]/60 leading-none mb-0.5">Account</p>
+            <div className="flex items-center gap-1.5">
+              <activeNav.icon className="h-3 w-3 shrink-0" style={{ color: activeColor }} />
+              <p className="text-[13px] font-bold text-[#F8FAFC] leading-none truncate">{activeNav.label}</p>
+            </div>
+          </div>
+
+          {/* Menu toggle */}
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-150 shrink-0"
+            style={{
+              background: menuOpen ? 'rgba(0,223,169,0.10)' : 'rgba(14,21,32,1)',
+              borderColor: menuOpen ? 'rgba(0,223,169,0.30)' : 'rgba(255,255,255,0.07)',
+            }}
           >
-            {NAV.map(item => {
-              const Icon = item.icon;
-              const isActive = section === item.id;
-              return (
-                <Link key={item.id} href={`/account/${item.id}`}>
-                  <div
-                    data-active={isActive ? 'true' : undefined}
-                    className={cn(
-                      'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap border transition-all duration-150 cursor-pointer',
-                      isActive
-                        ? 'bg-[#00DFA9]/12 text-[#00DFA9] border-[#00DFA9]/30'
-                        : 'bg-[#0E1520] text-[#94A3B8]/55 border-white/[0.06]',
-                    )}
-                  >
-                    <Icon className="h-3 w-3 shrink-0" />
-                    {item.label}
-                  </div>
-                </Link>
-              );
-            })}
+            {menuOpen
+              ? <X className="h-3.5 w-3.5 text-[#00DFA9]" />
+              : <LayoutGrid className="h-3.5 w-3.5 text-[#94A3B8]/60" />
+            }
+            <span className="text-[10px] font-semibold" style={{ color: menuOpen ? '#00DFA9' : 'rgba(148,163,184,0.55)' }}>
+              {menuOpen ? 'Close' : 'Menu'}
+            </span>
+            {!menuOpen && <ChevronDown className="h-3 w-3 text-[#64748B]/40" />}
+          </button>
+        </div>
+
+        {/* ── Expanded icon-grid ── */}
+        <div
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+          style={{
+            maxHeight: menuOpen ? '400px' : '0px',
+            opacity: menuOpen ? 1 : 0,
+          }}
+        >
+          <div className="px-2.5 pt-2 pb-3 border-b border-white/[0.06]">
+            {/* 4-column icon grid */}
+            <div className="grid grid-cols-4 gap-1.5">
+              {NAV.map(item => {
+                const Icon  = item.icon;
+                const active = section === item.id;
+                const color  = SECTION_COLOR[item.id];
+                const showBadge = item.id === 'bets' && openBetsCount > 0;
+                return (
+                  <Link key={item.id} href={`/account/${item.id}`}>
+                    <div
+                      onClick={() => setMenuOpen(false)}
+                      className="relative flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border cursor-pointer transition-all duration-150 active:scale-95"
+                      style={{
+                        background: active ? `${color}12` : 'rgba(14,21,32,0.85)',
+                        borderColor: active ? `${color}35` : 'rgba(255,255,255,0.05)',
+                      }}
+                    >
+                      {/* Top accent line when active */}
+                      {active && (
+                        <div
+                          className="absolute top-0 left-2 right-2 h-[1.5px] rounded-full"
+                          style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }}
+                        />
+                      )}
+                      {/* Icon */}
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center relative"
+                        style={{
+                          background: active ? `${color}20` : `${color}0D`,
+                          border: `1px solid ${active ? `${color}35` : `${color}18`}`,
+                          boxShadow: active ? `0 0 12px ${color}30` : 'none',
+                        }}
+                      >
+                        <Icon className="h-3.5 w-3.5" style={{ color: active ? color : `${color}99` }} />
+                        {showBadge && (
+                          <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full bg-[#38BDF8] text-white text-[8px] font-bold flex items-center justify-center px-1 tabular-nums">
+                            {openBetsCount > 9 ? '9+' : openBetsCount}
+                          </span>
+                        )}
+                      </div>
+                      {/* Label */}
+                      <span
+                        className="text-[9px] font-semibold text-center leading-tight"
+                        style={{ color: active ? color : 'rgba(148,163,184,0.55)' }}
+                      >
+                        {item.shortLabel}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Sign out row */}
+            <button
+              onClick={() => { logout(); setMenuOpen(false); }}
+              className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-white/[0.05] bg-[#0E1520]/80 text-[#64748B]/50 hover:text-[#EF4444] hover:border-[#EF4444]/20 hover:bg-[#EF4444]/5 transition-all duration-150 cursor-pointer"
+            >
+              <LogOut className="h-3 w-3" />
+              <span className="text-[10px] font-semibold">Sign Out</span>
+            </button>
           </div>
         </div>
       </div>
