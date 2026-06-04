@@ -302,15 +302,45 @@ async function setDbCachedOdds(sportKey: string, data: unknown[], ttlMinutes = 4
  * Returns the number of events cached (0 for off-season sports).
  * Empty sports are cached with a 6-hour TTL to avoid wasting credits.
  */
+/** Returns the extra market query string for a given sport key. */
+function getExtraMarkets(sportKey: string): string {
+  if (sportKey.startsWith('soccer_')) return ',totals,btts';
+  if (
+    sportKey.startsWith('americanfootball_') ||
+    sportKey.startsWith('basketball_') ||
+    sportKey.startsWith('baseball_') ||
+    sportKey.startsWith('icehockey_')
+  ) return ',totals,spreads';
+  return '';
+}
+
+/** Fetch from Odds API with automatic BTTS fallback if unsupported by the competition. */
+async function fetchOddsFromApi(sportKey: string, extraMarkets: string): Promise<unknown[] | null> {
+  const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
+  const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  if (response.ok) {
+    const data = await response.json() as unknown[];
+    return Array.isArray(data) ? data : null;
+  }
+  // Graceful fallback: if btts is not supported (API returns 400 or 422), retry with totals only
+  if ((response.status === 400 || response.status === 422) && extraMarkets.includes('btts')) {
+    const fallback = extraMarkets.replace(',btts', '');
+    const url2 = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${fallback}&oddsFormat=decimal&dateFormat=iso`;
+    const r2 = await fetch(url2, { signal: AbortSignal.timeout(15_000) });
+    if (r2.ok) {
+      const data2 = await r2.json() as unknown[];
+      return Array.isArray(data2) ? data2 : null;
+    }
+  }
+  return null;
+}
+
 export async function fetchAndCacheOdds(sportKey: string): Promise<number> {
   if (!ODDS_API_KEY) return 0;
   try {
-    const extraMarkets = sportKey.startsWith('soccer_') ? ',totals,btts' : '';
-    const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
-    const response = await fetch(url);
-    if (!response.ok) return 0; // skip non-existent / out-of-season sports silently
-    const data = await response.json() as unknown[];
-    if (!Array.isArray(data)) return 0;
+    const extraMarkets = getExtraMarkets(sportKey);
+    const data = await fetchOddsFromApi(sportKey, extraMarkets);
+    if (!data) return 0;
     // Empty sports (off-season) get a 6-hour TTL so we don't re-hit the API next cycle.
     // Active sports keep the normal 40-minute TTL.
     const ttlMinutes = data.length > 0 ? 40 : 360;
@@ -443,16 +473,11 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
     // Reuse an already in-flight fetch for this sport to avoid burst 429s
     if (!inFlight.has(sport)) {
       const promise = (async (): Promise<unknown[]> => {
-        const extraMarkets = sport.startsWith('soccer_') ? ',totals,btts' : '';
-        const url = `${ODDS_API_BASE}/sports/${sport}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          // Return sentinel to propagate HTTP error to all waiting callers
-          const body = await response.json().catch(() => ({})) as { status?: number };
-          return [{ __err: response.status, __body: body }] as unknown[];
+        const extraMarkets = getExtraMarkets(sport);
+        const arr = await fetchOddsFromApi(sport, extraMarkets);
+        if (arr === null) {
+          return [{ __err: 502, __body: { error: "Failed to fetch odds from upstream" } }] as unknown[];
         }
-        const data = await response.json() as unknown[];
-        const arr = Array.isArray(data) ? data : [];
         await setDbCachedOdds(sport, arr);
         await upsertSportControl(sport, formatLeagueName(sport));
         return arr;

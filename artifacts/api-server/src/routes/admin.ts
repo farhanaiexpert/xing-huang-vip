@@ -499,36 +499,50 @@ router.patch("/admin/bets/:id", async (req, res): Promise<void> => {
   if (bet.status !== "open") { res.status(400).json({ error: "Bet is already settled" }); return; }
 
   const { status } = parsed.data;
-  await db.update(betsTable).set({ status, settledAt: new Date() }).where(eq(betsTable.id, id));
 
-  // If won, credit the winnings; if void, refund the stake
-  if (status === "won") {
-    const winnings = parseFloat(bet.potentialReturn);
+  let payout = 0;
+  if (status === "won")  payout = parseFloat(bet.potentialReturn);
+  if (status === "void") payout = parseFloat(bet.stake);
+
+  await db.update(betsTable)
+    .set({ status, settledAt: new Date(), settledPayout: payout.toFixed(8) })
+    .where(eq(betsTable.id, id));
+
+  // Credit wallet and write ledger entry for won/void outcomes
+  if (payout > 0) {
+    const txType = status === "void" ? "refund" : "win";
+    const txNote = status === "void"
+      ? `Bet #${id} voided — stake refunded`
+      : `Bet #${id} won — payout ${payout.toFixed(2)} USDT`;
     await db.insert(transactionsTable).values({
       userId: bet.userId,
-      type: "credit",
-      amount: String(winnings),
+      type: txType,
+      amount: payout.toFixed(8),
       status: "completed",
-      notes: `Bet #${id} settled won`,
+      notes: txNote,
     });
     await db.update(walletsTable)
-      .set({ balanceUsdt: sql`balance_usdt + ${String(winnings)}` })
-      .where(eq(walletsTable.userId, bet.userId));
-  } else if (status === "void") {
-    const stake = parseFloat(bet.stake);
-    await db.insert(transactionsTable).values({
-      userId: bet.userId,
-      type: "credit",
-      amount: String(stake),
-      status: "completed",
-      notes: `Bet #${id} voided - stake refunded`,
-    });
-    await db.update(walletsTable)
-      .set({ balanceUsdt: sql`balance_usdt + ${String(stake)}` })
+      .set({ balanceUsdt: sql`balance_usdt + ${payout.toFixed(8)}` })
       .where(eq(walletsTable.userId, bet.userId));
   }
 
-  await logAdminAction(req.user!.userId, `settle_bet_${status}`, "bet", id, { status });
+  // Decrement market liability for all selections on this bet
+  const selections = await db.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, id));
+  for (const sel of selections) {
+    const selPayout = parseFloat(sel.odds) * parseFloat(bet.stake);
+    await db.execute(sql`
+      UPDATE market_liability
+      SET
+        total_stake      = GREATEST(0, total_stake - ${bet.stake}::numeric),
+        potential_payout = GREATEST(0, potential_payout - ${selPayout.toFixed(8)}::numeric),
+        bet_count        = GREATEST(0, bet_count - 1)
+      WHERE event_id    = ${sel.eventId}
+        AND market_type = ${sel.marketType}
+        AND selection   = ${sel.selection}
+    `);
+  }
+
+  await logAdminAction(req.user!.userId, `settle_bet_${status}`, "bet", id, { status, payout });
 
   const [updated] = await db.select().from(betsTable).where(eq(betsTable.id, id)).limit(1);
   res.json(updated);
@@ -1821,6 +1835,21 @@ router.post("/admin/settlement/settle", async (req, res): Promise<void> => {
       await tx.update(betsTable).set({ status: newStatus, settledAt: new Date(), settledPayout: String(payout.toFixed(8)) }).where(eq(betsTable.id, betId));
       totalSettled++;
 
+      // Decrement market liability for every selection in this bet
+      for (const sel of allSelections) {
+        const selPayout = parseFloat(String(sel.odds)) * parseFloat(String(bet.stake));
+        await tx.execute(sql`
+          UPDATE market_liability
+          SET
+            total_stake      = GREATEST(0, total_stake - ${String(bet.stake)}::numeric),
+            potential_payout = GREATEST(0, potential_payout - ${selPayout.toFixed(8)}::numeric),
+            bet_count        = GREATEST(0, bet_count - 1)
+          WHERE event_id    = ${sel.eventId}
+            AND market_type = ${sel.marketType}
+            AND selection   = ${sel.selection}
+        `);
+      }
+
       if (payout > 0) {
         totalPaidOut += payout;
         const txType = newStatus === "void" ? "refund" : "win";
@@ -2068,6 +2097,21 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
 
       await tx.update(betsTable).set({ status: newStatus, settledAt: new Date(), settledPayout: String(payout.toFixed(8)) }).where(eq(betsTable.id, betId));
       totalSettled++;
+
+      // Decrement market liability for every selection in this bet
+      for (const sel of allSelections) {
+        const selPayout = parseFloat(String(sel.odds)) * parseFloat(String(bet.stake));
+        await tx.execute(sql`
+          UPDATE market_liability
+          SET
+            total_stake      = GREATEST(0, total_stake - ${String(bet.stake)}::numeric),
+            potential_payout = GREATEST(0, potential_payout - ${selPayout.toFixed(8)}::numeric),
+            bet_count        = GREATEST(0, bet_count - 1)
+          WHERE event_id    = ${sel.eventId}
+            AND market_type = ${sel.marketType}
+            AND selection   = ${sel.selection}
+        `);
+      }
 
       if (payout > 0) {
         totalPaidOut += payout;

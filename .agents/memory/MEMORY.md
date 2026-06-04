@@ -2,3 +2,4 @@
 - [TON crypto Vite shim](ton-crypto-vite-shim.md) — @ton/core needs @ton/crypto peer dep (sha256_sync); create a browser shim + alias in vite.config.ts.
 - [TON deposit verifier fail-closed](ton-verifier-fail-closed.md) — isUsdtJetton and destinationMatches must return false (not true) when TONapi metadata is absent.
 - [Settlement market_type mismatch](settlement-market-type.md) — frontend stores display names ("Match Result") but worker checked API keys ("h2h"); always normalise before branching.
+- [BTTS fallback fix](btts-fallback-fix.md) — WC returns HTTP 422 for btts; fetchOddsFromApi auto-retries without btts on 400/422.

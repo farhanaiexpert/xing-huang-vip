@@ -328,45 +328,69 @@ export function mapSelectionOutcome(
   storedAway?: string,
 ): "won" | "lost" | "void" {
   if (outcome === "void") return "void";
-  const sel  = selection.toLowerCase().trim();
-  const home = homeTeam.toLowerCase().trim();
-  const away = awayTeam.toLowerCase().trim();
+  const sel  = normalizeTeam(selection);
+  const home = normalizeTeam(homeTeam);
+  const away = normalizeTeam(awayTeam);
   const sh   = storedHome ? normalizeTeam(storedHome) : "";
   const sa   = storedAway ? normalizeTeam(storedAway) : "";
 
-  const isHomeAlias = (s: string) =>
-    s === home || (sh && s === sh) || s === "1" || s === "home";
-  const isAwayAlias = (s: string) =>
-    s === away || (sa && s === sa) || s === "2" || s === "away";
+  // Build deduplicated word lists (length > 2) from API name + stored name
+  const homeWords = [...new Set([...home.split(" "), ...sh.split(" ")].filter(w => w.length > 2))];
+  const awayWords = [...new Set([...away.split(" "), ...sa.split(" ")].filter(w => w.length > 2))];
+
+  /**
+   * Returns true if `s` refers to the home team.
+   * Checks exact match, substring containment, and significant word overlap.
+   */
+  const isHomeAlias = (s: string): boolean => {
+    if (s === home || (sh && s === sh)) return true;
+    if (s === "1" || s === "home") return true;
+    // Substring: selection contains the full team name or vice-versa
+    if (home && (s.includes(home) || home.includes(s))) return true;
+    if (sh   && (s.includes(sh)   || sh.includes(s)))   return true;
+    // Word overlap: majority of significant words match
+    const matchCount = homeWords.filter(w => s.includes(w)).length;
+    if (homeWords.length > 0 && matchCount >= Math.max(1, Math.ceil(homeWords.length * 0.5))) return true;
+    return false;
+  };
+
+  const isAwayAlias = (s: string): boolean => {
+    if (s === away || (sa && s === sa)) return true;
+    if (s === "2" || s === "away") return true;
+    if (away && (s.includes(away) || away.includes(s))) return true;
+    if (sa   && (s.includes(sa)   || sa.includes(s)))   return true;
+    const matchCount = awayWords.filter(w => s.includes(w)).length;
+    if (awayWords.length > 0 && matchCount >= Math.max(1, Math.ceil(awayWords.length * 0.5))) return true;
+    return false;
+  };
+
+  // Detect ambiguity: if sel matches BOTH home and away (e.g. shared word like "city")
+  // prefer the more specific match (more words matched) before falling through
+  const homeMatchCount = homeWords.filter(w => sel.includes(w)).length;
+  const awayMatchCount = awayWords.filter(w => sel.includes(w)).length;
+
+  const selIsHome = isHomeAlias(sel);
+  const selIsAway = isAwayAlias(sel);
+
+  // Resolve ambiguity by word-overlap count
+  const resolvedHome = selIsHome && (!selIsAway || homeMatchCount >= awayMatchCount);
+  const resolvedAway = selIsAway && (!selIsHome || awayMatchCount >  homeMatchCount);
 
   if (outcome === "home") {
-    if (isHomeAlias(sel)) return "won";
-    if (isAwayAlias(sel)) return "lost";
+    if (resolvedHome) return "won";
+    if (resolvedAway) return "lost";
     if (sel === "draw" || sel === "x") return "lost";
   }
   if (outcome === "away") {
-    if (isAwayAlias(sel)) return "won";
-    if (isHomeAlias(sel)) return "lost";
+    if (resolvedAway) return "won";
+    if (resolvedHome) return "lost";
     if (sel === "draw" || sel === "x") return "lost";
   }
   if (outcome === "draw") {
     if (sel === "draw" || sel === "x") return "won";
+    // Any team selection loses on a draw
+    if (resolvedHome || resolvedAway) return "lost";
     return "lost";
-  }
-
-  // Fuzzy fallback — partial team name word match (API name + stored name)
-  const homeWords = [...home.split(" "), ...sh.split(" ")].filter(w => w.length > 2);
-  const awayWords = [...away.split(" "), ...sa.split(" ")].filter(w => w.length > 2);
-  const selMatchesHome = homeWords.some(w => sel.includes(w));
-  const selMatchesAway = awayWords.some(w => sel.includes(w));
-
-  if (outcome === "home") {
-    if (selMatchesHome) return "won";
-    if (selMatchesAway) return "lost";
-  }
-  if (outcome === "away") {
-    if (selMatchesAway) return "won";
-    if (selMatchesHome) return "lost";
   }
 
   return "void";
