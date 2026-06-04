@@ -155,18 +155,27 @@ function filterEvent(ev: BetsApiEventRaw): boolean {
  * Fetch all pages for one sport until the pager total is reached.
  * Per-page size is 50; hard ceiling is 500 events (10 pages) to avoid
  * runaway fetches on sports with thousands of events.
+ *
+ * Returns null when the API responds with a permission/auth error (4xx)
+ * so callers can use a shorter retry TTL instead of the 4-hour off-season TTL.
+ * Returns [] when the API succeeds but genuinely has no events (off-season).
  */
-export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEventRaw[]> {
+export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEventRaw[] | null> {
   if (!BETSAPI_KEY) return [];
 
   const PER_PAGE  = 50;
   const MAX_PAGES = 10; // ceiling: 500 events per sport
 
+  let permissionError = false;
+
   const fetchPage = async (page: number): Promise<{ events: BetsApiEventRaw[]; total: number }> => {
     try {
       const url = `${BETSAPI_BASE}/v1/bet365/upcoming?sport_id=${sportId}&token=${BETSAPI_KEY}&per_page=${PER_PAGE}&page=${page}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
-      if (!res.ok) return { events: [], total: 0 };
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) permissionError = true;
+        return { events: [], total: 0 };
+      }
       const json = await res.json() as BetsApiListResponse;
       if (json.success !== 1 || !Array.isArray(json.results)) return { events: [], total: 0 };
       const total = json.pager?.total ?? json.results.length;
@@ -178,6 +187,7 @@ export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEven
 
   // Page 1 always fetched — use pager.total to know full count
   const { events: page1, total } = await fetchPage(1);
+  if (permissionError) return null;
   const allEvents = [...page1];
 
   // Compute how many pages are needed, capped at MAX_PAGES

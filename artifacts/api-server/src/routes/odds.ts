@@ -358,6 +358,51 @@ router.get("/odds/all", async (_req, res): Promise<void> => {
   }
 });
 
+// ─── GET /odds/margin — read current global margin % ─────────────────────────
+// Must be registered BEFORE /odds/:sport or "margin" is treated as a sport key.
+router.get("/odds/margin", async (_req, res): Promise<void> => {
+  try {
+    const margin = await getGlobalMarginPct();
+    res.json({ margin });
+  } catch {
+    res.status(500).json({ error: "Failed to read margin setting" });
+  }
+});
+
+// ─── POST /odds/margin — update global margin % (admin convenience) ───────────
+router.post("/odds/margin", async (req, res): Promise<void> => {
+  const val = parseFloat(req.body?.margin ?? req.body?.value ?? "");
+  if (isNaN(val) || val < 0 || val > 100) {
+    res.status(400).json({ error: "margin must be a number between 0 and 100" });
+    return;
+  }
+  try {
+    await db.execute(sql`
+      INSERT INTO platform_settings (key, value)
+      VALUES ('global_margin_pct', ${String(val)})
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `);
+    res.json({ margin: val, updated: true });
+  } catch {
+    res.status(500).json({ error: "Failed to update margin setting" });
+  }
+});
+
+// ─── GET /odds/multiplier — per-sport multipliers summary ─────────────────────
+// Must be registered BEFORE /odds/:sport or "multiplier" is treated as a sport key.
+router.get("/odds/multiplier", async (_req, res): Promise<void> => {
+  try {
+    const controls = await db.select().from(sportControlsTable);
+    const multipliers = controls.map(c => ({
+      sportKey:   c.sportKey,
+      multiplier: parseFloat(c.oddsMultiplier),
+    }));
+    res.json({ multipliers });
+  } catch {
+    res.status(500).json({ error: "Failed to read multiplier settings" });
+  }
+});
+
 // ─── GET /odds/:sport ─────────────────────────────────────────────────────────
 router.get("/odds/:sport", async (req, res): Promise<void> => {
   const sport = Array.isArray(req.params.sport) ? req.params.sport[0] : req.params.sport;

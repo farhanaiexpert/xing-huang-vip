@@ -619,8 +619,24 @@ runMigrations().then(() => {
 
         const events = await fetchBetsApiUpcoming(sportId);
 
+        if (events === null) {
+          // Permission/auth error (403/401) — retry sooner (15 min) rather than locking
+          // out for 4 hours. This lets the cache recover quickly after a plan upgrade.
+          await db.execute(sql`
+            INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
+            VALUES (${String(sportId)}, '[]'::jsonb, NOW(), NOW() + INTERVAL '15 minutes')
+            ON CONFLICT (cache_key) DO UPDATE SET
+              data       = '[]'::jsonb,
+              fetched_at = NOW(),
+              expires_at = NOW() + INTERVAL '15 minutes'
+          `);
+          empty++;
+          await new Promise(r => setTimeout(r, 300));
+          continue;
+        }
+
         if (events.length === 0) {
-          // Cache empty result with 4-hour TTL to avoid hammering the API for off-season sports.
+          // Genuinely off-season / no events — cache for 4 hours to avoid wasting credits.
           await db.execute(sql`
             INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
             VALUES (${String(sportId)}, '[]'::jsonb, NOW(), NOW() + INTERVAL '4 hours')

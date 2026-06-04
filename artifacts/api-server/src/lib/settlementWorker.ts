@@ -84,10 +84,11 @@ const SPORT_KEY_EXPANSION: Record<string, string[]> = {
   rugbyunion:       ['rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
                      'rugbyunion_world_cup', 'rugbyunion_champions_cup'],
   mma:              ['mma_mixed_martial_arts'],
-  boxing:           ['boxing_boxing'],
+  boxing:           ['boxing_event'],
   aussierules:      ['aussierules_afl'],
 
   // ── Internal sp_ IDs ──────────────────────────────────────────────────────
+  sp_nba:               ['basketball_nba'],
   sp_basketball:        ['basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl'],
   sp_soccer:            ['soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a', 'soccer_france_ligue_one',
                          'soccer_germany_bundesliga', 'soccer_usa_mls', 'soccer_turkey_super_league',
@@ -111,7 +112,7 @@ const SPORT_KEY_EXPANSION: Record<string, string[]> = {
   sp_rugby_union:       ['rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
                          'rugbyunion_world_cup', 'rugbyunion_champions_cup'],
   sp_mma:               ['mma_mixed_martial_arts'],
-  sp_boxing:            ['boxing_boxing'],
+  sp_boxing:            ['boxing_event'],
   sp_aussie_rules:      ['aussierules_afl'],
   sp_horse_racing:      [],
 
@@ -127,7 +128,7 @@ const SPORT_KEY_EXPANSION: Record<string, string[]> = {
   betsapi_3:   ['cricket_ipl', 'cricket_international_t20', 'cricket_big_bash', 'cricket_psl', 'cricket_test_match'],
   betsapi_8:   ['rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
                 'rugbyunion_world_cup', 'rugbyunion_champions_cup'],
-  betsapi_9:   ['boxing_boxing'],
+  betsapi_9:   ['boxing_event'],
   betsapi_12:  ['americanfootball_nfl', 'americanfootball_ncaaf', 'americanfootball_ufl'],
   betsapi_13:  ['baseball_mlb', 'baseball_npb', 'baseball_kbo'],
   betsapi_14:  ['icehockey_nhl', 'icehockey_sweden_hockey_league'],
@@ -159,7 +160,7 @@ const UNKNOWN_SPORT_FALLBACK: string[] = [
   'tennis_atp_french_open', 'tennis_wta_french_open', 'tennis_atp_wimbledon',
   'tennis_wta_wimbledon', 'tennis_atp_us_open',
   'americanfootball_nfl', 'americanfootball_ncaaf',
-  'mma_mixed_martial_arts', 'boxing_boxing',
+  'mma_mixed_martial_arts', 'boxing_event',
   'cricket_ipl', 'cricket_international_t20',
 ];
 
