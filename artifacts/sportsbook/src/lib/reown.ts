@@ -47,6 +47,8 @@ export const appkit = createAppKit({
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   try {
     appkit.subscribeEvents(e => {
+      // Skip INITIALIZE — the SDK reconnects to the relay every ~10 s, creating noise
+      if (e.data.event === 'INITIALIZE') return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       console.log('[CupBett AppKit]', e.data.event, (e.data as any).properties ?? '');
     });

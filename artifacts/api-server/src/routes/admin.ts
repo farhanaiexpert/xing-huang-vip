@@ -542,6 +542,9 @@ router.patch("/admin/bets/:id", async (req, res): Promise<void> => {
     `);
   }
 
+  // BUG-01 fix: sync individual selection statuses to match the settled bet
+  await db.execute(sql`UPDATE bet_selections SET status = ${status} WHERE bet_id = ${id}`);
+
   await logAdminAction(req.user!.userId, `settle_bet_${status}`, "bet", id, { status, payout });
 
   const [updated] = await db.select().from(betsTable).where(eq(betsTable.id, id)).limit(1);
@@ -1807,10 +1810,23 @@ router.post("/admin/settlement/settle", async (req, res): Promise<void> => {
 
       const allSelections = await tx.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, betId));
 
-      // Only resolve if ALL selections are now settled
-      if (allSelections.some(s => s.status === "open")) continue;
+      const hasLost = allSelections.some(s => s.status === "lost");
+      const hasOpen = allSelections.some(s => s.status === "open");
 
-      const hasLost  = allSelections.some(s => s.status === "lost");
+      // BUG-02 fix: a confirmed lost leg busts an accumulator immediately.
+      // Void remaining open legs so we can resolve the bet now.
+      if (hasLost && hasOpen) {
+        await tx.execute(sql`
+          UPDATE bet_selections SET status = 'void'
+          WHERE bet_id = ${betId} AND status = 'open'
+        `);
+        const refreshed = await tx.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, betId));
+        allSelections.splice(0, allSelections.length, ...refreshed);
+      }
+
+      // Still waiting for other legs (no lost leg yet)
+      if (!hasLost && hasOpen) continue;
+
       const allVoid  = allSelections.every(s => s.status === "void");
       const wonLegs  = allSelections.filter(s => s.status === "won");
 

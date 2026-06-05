@@ -524,9 +524,23 @@ async function settleBetsForEvent(
       const allSelections = await tx.select().from(betSelectionsTable)
         .where(eq(betSelectionsTable.betId, betId));
 
-      if (allSelections.some(s => s.status === "open")) continue;
+      const hasLost = allSelections.some(s => s.status === "lost");
+      const hasOpen = allSelections.some(s => s.status === "open");
 
-      const hasLost  = allSelections.some(s => s.status === "lost");
+      // BUG-02 fix: if any leg is confirmed lost, bust the accumulator immediately.
+      // Void remaining open legs so we can resolve the bet now rather than waiting.
+      if (hasLost && hasOpen) {
+        await tx.execute(sql`
+          UPDATE bet_selections SET status = 'void'
+          WHERE bet_id = ${betId} AND status = 'open'
+        `);
+        const refreshed = await tx.select().from(betSelectionsTable).where(eq(betSelectionsTable.betId, betId));
+        allSelections.splice(0, allSelections.length, ...refreshed);
+      }
+
+      // Still waiting for other legs (no loss confirmed yet)
+      if (!hasLost && hasOpen) continue;
+
       const allVoid  = allSelections.every(s => s.status === "void");
       const wonLegs  = allSelections.filter(s => s.status === "won");
 
