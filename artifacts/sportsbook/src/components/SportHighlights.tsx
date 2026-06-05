@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ChevronRight, Flame, Clock, Bell, TrendingUp, Star } from 'lucide-react';
+import { ChevronRight, Flame, Clock, Bell, TrendingUp, Star, ArrowRight } from 'lucide-react';
+import { estimatedEndTime } from '../lib/matchTime';
 import { OddsButton } from './OddsButton';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { useOddsData } from '../hooks/useOddsData';
@@ -160,7 +161,17 @@ function FeaturedCard({ entry }: { entry: FeaturedEntry }) {
                 {match.liveMinute != null && <span className="text-[#EF4444]/70 ml-0.5">{match.liveMinute}'</span>}
               </span>
             ) : (
-              <span className="text-[10px] text-[#94A3B8]/50 font-semibold">{timeLabel}</span>
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="text-[11px] text-[#F8FAFC]/80 font-bold tabular-nums">{timeLabel}</span>
+                {(() => {
+                  const end = estimatedEndTime(match.commenceIso, match.sportId);
+                  return end ? (
+                    <span className="flex items-center gap-0.5 text-[9px] font-medium text-[#00DFA9]/55">
+                      <ArrowRight className="h-2 w-2" />~{end}
+                    </span>
+                  ) : null;
+                })()}
+              </div>
             )}
           </div>
         </div>

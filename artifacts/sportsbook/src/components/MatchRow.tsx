@@ -83,13 +83,13 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
             {(() => {
               const started = formatKickoffTime(match.commenceIso);
               return started ? (
-                <span className="text-[9px] text-[#475569] tabular-nums leading-none">{started}</span>
+                <span className="text-[10px] font-medium text-[#94A3B8] tabular-nums leading-none">{started}</span>
               ) : null;
             })()}
             {(() => {
               const end = estimatedEndTime(match.commenceIso, match.sportId);
               return end ? (
-                <span className="text-[9px] text-[#475569] tabular-nums leading-none">~{end}</span>
+                <span className="text-[10px] font-medium text-[#00DFA9]/60 tabular-nums leading-none">~{end}</span>
               ) : null;
             })()}
           </>
@@ -104,14 +104,14 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
               {dayPart}
             </span>
             {timePart && (
-              <span className="text-[11px] font-semibold text-[#94A3B8] tabular-nums leading-none">
+              <span className="text-[11px] font-semibold text-[#F8FAFC] tabular-nums leading-none">
                 {timePart}
               </span>
             )}
             {(() => {
               const end = estimatedEndTime(match.commenceIso, match.sportId);
               return end ? (
-                <span className="text-[9px] text-[#475569] tabular-nums leading-none">~{end}</span>
+                <span className="text-[10px] font-medium text-[#00DFA9]/60 tabular-nums leading-none">~{end}</span>
               ) : null;
             })()}
           </>

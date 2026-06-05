@@ -10,7 +10,8 @@
  */
 import { useMemo } from 'react';
 import { useLocation } from 'wouter';
-import { Flame, ChevronRight, Clock, Zap } from 'lucide-react';
+import { Flame, ChevronRight, Clock, Zap, ArrowRight } from 'lucide-react';
+import { estimatedEndTime } from '../lib/matchTime';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { TeamBadge } from './TeamBadge';
 import { JerseySilk } from './JerseySilk';
@@ -166,17 +167,27 @@ function MatchCard({ match, league }: MatchCardProps) {
           <span className="text-[10px] font-semibold text-[#94A3B8]/70 truncate leading-none">{league.name}</span>
         </div>
 
-        <div className={cn(
-          'shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider',
-          isToday
-            ? 'bg-[#00DFA9]/15 text-[#00DFA9]'
-            : isTomorrow
-              ? 'bg-[#38BDF8]/12 text-[#38BDF8]'
-              : 'bg-[#253241] text-[#94A3B8]'
-        )}>
-          {isToday && <span className="w-1 h-1 rounded-full bg-[#00DFA9] animate-pulse" />}
-          <Clock className="h-2.5 w-2.5" />
-          {timeText}
+        <div className="shrink-0 flex flex-col items-end gap-0.5">
+          <div className={cn(
+            'flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
+            isToday
+              ? 'bg-[#00DFA9]/15 text-[#00DFA9]'
+              : isTomorrow
+                ? 'bg-[#38BDF8]/12 text-[#38BDF8]'
+                : 'bg-[#253241] text-[#94A3B8]'
+          )}>
+            {isToday && <span className="w-1 h-1 rounded-full bg-[#00DFA9] animate-pulse" />}
+            <Clock className="h-2.5 w-2.5" />
+            {timeText}
+          </div>
+          {(() => {
+            const end = estimatedEndTime(match.commenceIso, match.sportId);
+            return end ? (
+              <span className="flex items-center gap-0.5 text-[9px] font-medium text-[#00DFA9]/55 pr-0.5">
+                <ArrowRight className="h-2 w-2" />~{end}
+              </span>
+            ) : null;
+          })()}
         </div>
       </div>
 
