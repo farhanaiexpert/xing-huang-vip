@@ -73,11 +73,12 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
     .from(commissionsTable)
     .where(eq(commissionsTable.status, "paid"));
 
-  // Gross gaming revenue = total stakes from settled bets − total winnings paid out
+  // Gross gaming revenue = total stakes from settled bets − actual payouts
+  // Use settled_payout (exact amount credited) not potential_return (pre-settlement estimate)
   const revenueRows = await db.execute(sql`
     SELECT
       COALESCE(SUM(stake), 0)::text AS total_stakes,
-      COALESCE(SUM(CASE WHEN status = 'won' THEN potential_return ELSE 0 END), 0)::text AS total_winnings
+      COALESCE(SUM(COALESCE(settled_payout, 0)) FILTER (WHERE status IN ('won', 'void')), 0)::text AS total_winnings
     FROM bets
     WHERE status IN ('won', 'lost', 'void')
   `);
@@ -165,7 +166,7 @@ router.get("/admin/stats/revenue-chart", async (req, res): Promise<void> => {
     SELECT
       to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'MM-DD') AS day,
       coalesce(sum(stake), 0)::text AS stakes,
-      coalesce(sum(CASE WHEN status = 'won' THEN potential_return ELSE 0 END), 0)::text AS payouts
+      coalesce(sum(COALESCE(settled_payout, 0)) FILTER (WHERE status IN ('won', 'void')), 0)::text AS payouts
     FROM bets
     WHERE created_at >= now() - interval '30 days'
     GROUP BY date_trunc('day', created_at AT TIME ZONE 'UTC')
@@ -1289,13 +1290,13 @@ router.get("/admin/reports/revenue-by-sport", async (_req, res): Promise<void> =
       COALESCE(bs.sport, 'Unknown') AS sport,
       COUNT(DISTINCT b.id)::int     AS bet_count,
       COALESCE(SUM(b.stake), 0)::text                                                          AS total_staked,
-      COALESCE(SUM(CASE WHEN b.status = 'won' THEN b.potential_return ELSE 0 END), 0)::text   AS total_paid_out,
-      COALESCE(SUM(b.stake) - SUM(CASE WHEN b.status = 'won' THEN b.potential_return ELSE 0 END), 0)::text AS net_revenue
+      COALESCE(SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void')), 0)::text   AS total_paid_out,
+      COALESCE(SUM(b.stake) - SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void')), 0)::text AS net_revenue
     FROM bets b
     JOIN bet_selections bs ON bs.bet_id = b.id
-    WHERE b.status IN ('won', 'lost')
+    WHERE b.status IN ('won', 'lost', 'void')
     GROUP BY bs.sport
-    ORDER BY (SUM(b.stake) - SUM(CASE WHEN b.status = 'won' THEN b.potential_return ELSE 0 END)) DESC
+    ORDER BY (SUM(b.stake) - SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void'))) DESC
   `);
   const mapped = (rows.rows as Array<Record<string, unknown>>).map(r => ({
     sport:       r.sport,
@@ -1407,9 +1408,9 @@ router.get("/admin/reports/daily-pnl", async (_req, res): Promise<void> => {
     SELECT
       to_char(date_trunc('day', b.created_at AT TIME ZONE 'UTC'), 'MM-DD') AS day,
       COALESCE(SUM(b.stake), 0)::text AS stakes,
-      COALESCE(SUM(CASE WHEN b.status = 'won' THEN b.potential_return ELSE 0 END), 0)::text AS payouts
+      COALESCE(SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void')), 0)::text AS payouts
     FROM bets b
-    WHERE b.status IN ('won', 'lost')
+    WHERE b.status IN ('won', 'lost', 'void')
       AND b.created_at >= now() - interval '30 days'
     GROUP BY date_trunc('day', b.created_at AT TIME ZONE 'UTC')
     ORDER BY date_trunc('day', b.created_at AT TIME ZONE 'UTC')
@@ -1492,7 +1493,7 @@ router.get("/admin/users/:id/profile", async (req, res): Promise<void> => {
       COUNT(*) FILTER (WHERE status = 'lost')::int AS lost,
       COUNT(*) FILTER (WHERE status IN ('void','voided','cancelled'))::int AS voided,
       COALESCE(SUM(stake), 0)::text AS total_staked,
-      COALESCE(SUM(CASE WHEN status = 'won' THEN potential_return ELSE 0 END), 0)::text AS total_returned
+      COALESCE(SUM(COALESCE(settled_payout, 0)) FILTER (WHERE status IN ('won', 'void')), 0)::text AS total_returned
     FROM bets WHERE user_id = ${id}
   `);
   const bs = betStatsRows.rows[0] as Record<string, unknown>;
@@ -1505,7 +1506,7 @@ router.get("/admin/users/:id/profile", async (req, res): Promise<void> => {
 
   const txStatsRows = await db.execute(sql`
     SELECT
-      COALESCE(SUM(amount) FILTER (WHERE type IN ('deposit','credit') AND status = 'completed'), 0)::text AS total_deposited,
+      COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'), 0)::text AS total_deposited,
       COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0)::text AS total_withdrawn,
       COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending')::int AS pending_deposits,
       COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending')::int AS pending_withdrawals
