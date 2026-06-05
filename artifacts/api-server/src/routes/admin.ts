@@ -1362,10 +1362,11 @@ router.get("/admin/reports/daily-metrics", async (req, res): Promise<void> => {
       GROUP BY 1
     ),
     win_loss AS (
+      -- House net = stakes taken in minus payouts made (won + void refunds)
       SELECT date_trunc('day', b.settled_at AT TIME ZONE 'UTC') AS d,
-             COALESCE(SUM(b.stake) - SUM(b.settled_payout), 0)::text AS net
+             COALESCE(SUM(b.stake) - SUM(COALESCE(b.settled_payout, 0)), 0)::text AS net
       FROM bets b, range_start rs, range_end re
-      WHERE b.status IN ('won', 'lost')
+      WHERE b.status IN ('won', 'lost', 'void')
         AND b.settled_at >= rs.ts AND b.settled_at < re.ts
       GROUP BY 1
     ),
@@ -1373,7 +1374,7 @@ router.get("/admin/reports/daily-metrics", async (req, res): Promise<void> => {
       SELECT date_trunc('day', t.created_at AT TIME ZONE 'UTC') AS d,
              COALESCE(SUM(t.amount), 0)::text AS total
       FROM transactions t, range_start rs, range_end re
-      WHERE t.type = 'deposit' AND t.status = 'approved'
+      WHERE t.type = 'deposit' AND t.status = 'completed'
         AND t.created_at >= rs.ts AND t.created_at < re.ts
       GROUP BY 1
     ),
@@ -1381,7 +1382,7 @@ router.get("/admin/reports/daily-metrics", async (req, res): Promise<void> => {
       SELECT date_trunc('day', t.created_at AT TIME ZONE 'UTC') AS d,
              COALESCE(SUM(t.amount), 0)::text AS total
       FROM transactions t, range_start rs, range_end re
-      WHERE t.type = 'withdrawal' AND t.status = 'approved'
+      WHERE t.type = 'withdrawal' AND t.status = 'completed'
         AND t.created_at >= rs.ts AND t.created_at < re.ts
       GROUP BY 1
     )
@@ -2237,6 +2238,86 @@ router.get("/admin/reports/book-balance", async (_req, res): Promise<void> => {
     openBySport:    openResult.rows,
     settledBySport: settledResult.rows,
   });
+});
+
+// ── GET /admin/reports/ledger-reconciliation ─────────────────────────────────
+// Per-user ledger balance vs wallet balance, flagging any discrepancy > 0.01 USDT.
+// Credits counted: deposit, win, refund, bonus, credit (status=completed only)
+// Debits counted:  bet, debit, bet_stake, withdrawal      (status=completed only)
+// Pending transactions are excluded — they have not yet affected the wallet.
+router.get("/admin/reports/ledger-reconciliation", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      u.id                                                                                       AS user_id,
+      u.username,
+      u.email,
+      w.balance_usdt::float                                                                      AS wallet_balance,
+      COALESCE(SUM(t.amount) FILTER (
+        WHERE t.type IN ('deposit','win','refund','bonus','credit') AND t.status = 'completed'
+      ), 0)::float                                                                               AS total_inflow,
+      COALESCE(SUM(t.amount) FILTER (
+        WHERE t.type IN ('bet','debit','bet_stake','withdrawal') AND t.status = 'completed'
+      ), 0)::float                                                                               AS total_outflow,
+      (COALESCE(SUM(t.amount) FILTER (
+          WHERE t.type IN ('deposit','win','refund','bonus','credit') AND t.status = 'completed'
+        ), 0)
+       - COALESCE(SUM(t.amount) FILTER (
+          WHERE t.type IN ('bet','debit','bet_stake','withdrawal') AND t.status = 'completed'
+        ), 0))::float                                                                            AS ledger_balance,
+      (w.balance_usdt
+       - (COALESCE(SUM(t.amount) FILTER (
+            WHERE t.type IN ('deposit','win','refund','bonus','credit') AND t.status = 'completed'
+          ), 0)
+          - COALESCE(SUM(t.amount) FILTER (
+            WHERE t.type IN ('bet','debit','bet_stake','withdrawal') AND t.status = 'completed'
+          ), 0)))::float                                                                         AS delta,
+      COUNT(t.id) FILTER (WHERE t.type = 'deposit' AND t.status = 'pending')::int               AS pending_deposits,
+      COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'deposit' AND t.status = 'pending'), 0)::float AS pending_deposit_amount
+    FROM users u
+    JOIN wallets w ON w.user_id = u.id
+    LEFT JOIN transactions t ON t.user_id = u.id
+    GROUP BY u.id, u.username, u.email, w.balance_usdt
+    ORDER BY ABS(
+      w.balance_usdt
+      - (COALESCE(SUM(t.amount) FILTER (
+            WHERE t.type IN ('deposit','win','refund','bonus','credit') AND t.status = 'completed'
+          ), 0)
+         - COALESCE(SUM(t.amount) FILTER (
+            WHERE t.type IN ('bet','debit','bet_stake','withdrawal') AND t.status = 'completed'
+          ), 0))
+    ) DESC
+  `);
+
+  type RecRow = {
+    user_id: number; username: string; email: string;
+    wallet_balance: number; total_inflow: number; total_outflow: number;
+    ledger_balance: number; delta: number;
+    pending_deposits: number; pending_deposit_amount: number;
+  };
+
+  const users = (rows.rows as RecRow[]).map(r => ({
+    userId:               r.user_id,
+    username:             r.username,
+    email:                r.email,
+    walletBalance:        r.wallet_balance,
+    totalInflow:          r.total_inflow,
+    totalOutflow:         r.total_outflow,
+    ledgerBalance:        r.ledger_balance,
+    delta:                r.delta,
+    discrepancy:          Math.abs(r.delta) > 0.01,
+    pendingDeposits:      r.pending_deposits,
+    pendingDepositAmount: r.pending_deposit_amount,
+  }));
+
+  const summary = {
+    totalUsers:        users.length,
+    usersWithMismatch: users.filter(u => u.discrepancy).length,
+    totalWalletFunds:  users.reduce((s, u) => s + u.walletBalance, 0),
+    totalLedgerFunds:  users.reduce((s, u) => s + u.ledgerBalance, 0),
+    totalDelta:        users.reduce((s, u) => s + u.delta, 0),
+  };
+
+  res.json({ summary, users });
 });
 
 router.get("/admin/liability", async (_req, res): Promise<void> => {
