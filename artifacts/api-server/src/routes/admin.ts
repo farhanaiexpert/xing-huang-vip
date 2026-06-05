@@ -49,38 +49,46 @@ async function logAdminAction(
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
 router.get("/admin/stats", async (req, res): Promise<void> => {
-  const [userCount] = await db.select({ count: count() }).from(usersTable);
+  // All platform-total stats exclude test accounts (is_test_account = true)
+  const [userCount] = await db.select({ count: count() }).from(usersTable)
+    .where(eq(usersTable.isTestAccount, false));
   const [betStats] = await db
     .select({ count: count(), volume: sum(betsTable.stake) })
-    .from(betsTable);
+    .from(betsTable)
+    .innerJoin(usersTable, and(eq(betsTable.userId, usersTable.id), eq(usersTable.isTestAccount, false)));
   const [pendingDeposits] = await db
     .select({ count: count() })
     .from(transactionsTable)
+    .innerJoin(usersTable, and(eq(transactionsTable.userId, usersTable.id), eq(usersTable.isTestAccount, false)))
     .where(and(eq(transactionsTable.type, "deposit"), eq(transactionsTable.status, "pending")));
   const [pendingWithdrawals] = await db
     .select({ count: count() })
     .from(transactionsTable)
+    .innerJoin(usersTable, and(eq(transactionsTable.userId, usersTable.id), eq(usersTable.isTestAccount, false)))
     .where(and(eq(transactionsTable.type, "withdrawal"), eq(transactionsTable.status, "pending")));
   const [openBets] = await db
     .select({ count: count() })
     .from(betsTable)
+    .innerJoin(usersTable, and(eq(betsTable.userId, usersTable.id), eq(usersTable.isTestAccount, false)))
     .where(eq(betsTable.status, "open"));
   const [walletStats] = await db
     .select({ totalBalance: sum(walletsTable.balanceUsdt) })
-    .from(walletsTable);
+    .from(walletsTable)
+    .innerJoin(usersTable, and(eq(walletsTable.userId, usersTable.id), eq(usersTable.isTestAccount, false)));
   const [commissionStats] = await db
     .select({ total: sum(commissionsTable.amount) })
     .from(commissionsTable)
+    .innerJoin(usersTable, and(eq(commissionsTable.userId, usersTable.id), eq(usersTable.isTestAccount, false)))
     .where(eq(commissionsTable.status, "paid"));
 
-  // Gross gaming revenue = total stakes from settled bets − actual payouts
-  // Use settled_payout (exact amount credited) not potential_return (pre-settlement estimate)
+  // Gross gaming revenue = total stakes from settled bets − actual payouts (non-test accounts only)
   const revenueRows = await db.execute(sql`
     SELECT
-      COALESCE(SUM(stake), 0)::text AS total_stakes,
-      COALESCE(SUM(COALESCE(settled_payout, 0)) FILTER (WHERE status IN ('won', 'void')), 0)::text AS total_winnings
-    FROM bets
-    WHERE status IN ('won', 'lost', 'void')
+      COALESCE(SUM(b.stake), 0)::text AS total_stakes,
+      COALESCE(SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void')), 0)::text AS total_winnings
+    FROM bets b
+    JOIN users u ON u.id = b.user_id AND u.is_test_account = false
+    WHERE b.status IN ('won', 'lost', 'void')
   `);
   const rev = revenueRows.rows[0] as { total_stakes: string; total_winnings: string };
   const grossRevenue = (Number(rev.total_stakes) - Number(rev.total_winnings)).toFixed(2);
@@ -164,13 +172,14 @@ router.get("/admin/stats/user-growth", async (req, res): Promise<void> => {
 router.get("/admin/stats/revenue-chart", async (req, res): Promise<void> => {
   const rows = await db.execute(sql`
     SELECT
-      to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'MM-DD') AS day,
-      coalesce(sum(stake), 0)::text AS stakes,
-      coalesce(sum(COALESCE(settled_payout, 0)) FILTER (WHERE status IN ('won', 'void')), 0)::text AS payouts
-    FROM bets
-    WHERE created_at >= now() - interval '30 days'
-    GROUP BY date_trunc('day', created_at AT TIME ZONE 'UTC')
-    ORDER BY date_trunc('day', created_at AT TIME ZONE 'UTC')
+      to_char(date_trunc('day', b.created_at AT TIME ZONE 'UTC'), 'MM-DD') AS day,
+      coalesce(sum(b.stake), 0)::text AS stakes,
+      coalesce(sum(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void')), 0)::text AS payouts
+    FROM bets b
+    JOIN users u ON u.id = b.user_id AND u.is_test_account = false
+    WHERE b.created_at >= now() - interval '30 days'
+    GROUP BY date_trunc('day', b.created_at AT TIME ZONE 'UTC')
+    ORDER BY date_trunc('day', b.created_at AT TIME ZONE 'UTC')
   `);
   res.json(rows.rows);
 });
@@ -303,6 +312,7 @@ router.get("/admin/users/:id", async (req, res): Promise<void> => {
 
 const PatchUserBody = z.object({
   isSuspended: z.boolean().optional(),
+  isTestAccount: z.boolean().optional(),
   role: z.string().optional(),
   kycStatus: z.string().optional(),
   balanceAdjustment: z.number().optional(),
@@ -313,7 +323,7 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const parsed = PatchUserBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
-  const { isSuspended, role, kycStatus, balanceAdjustment, balanceNote } = parsed.data;
+  const { isSuspended, isTestAccount, role, kycStatus, balanceAdjustment, balanceNote } = parsed.data;
 
   if (role !== undefined && (role === "admin" || role === "super_admin") && req.user?.role !== "super_admin") {
     res.status(403).json({ error: "Forbidden: only super admins can assign admin roles" });
@@ -322,6 +332,7 @@ router.patch("/admin/users/:id", async (req, res): Promise<void> => {
 
   const updates: Record<string, unknown> = {};
   if (isSuspended !== undefined) updates.isSuspended = isSuspended;
+  if (isTestAccount !== undefined) updates.isTestAccount = isTestAccount;
   if (role !== undefined) updates.role = role;
   if (kycStatus !== undefined) updates.kycStatus = kycStatus;
 
@@ -1293,6 +1304,7 @@ router.get("/admin/reports/revenue-by-sport", async (_req, res): Promise<void> =
       COALESCE(SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void')), 0)::text   AS total_paid_out,
       COALESCE(SUM(b.stake) - SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void')), 0)::text AS net_revenue
     FROM bets b
+    JOIN users u ON u.id = b.user_id AND u.is_test_account = false
     JOIN bet_selections bs ON bs.bet_id = b.id
     WHERE b.status IN ('won', 'lost', 'void')
     GROUP BY bs.sport
@@ -1315,7 +1327,7 @@ router.get("/admin/reports/top-bettors", async (_req, res): Promise<void> => {
       COUNT(b.id)::int       AS bet_count,
       COALESCE(SUM(b.stake), 0)::text AS total_staked
     FROM bets b
-    JOIN users u ON u.id = b.user_id
+    JOIN users u ON u.id = b.user_id AND u.is_test_account = false
     GROUP BY u.username
     ORDER BY SUM(b.stake) DESC
     LIMIT 20
@@ -1352,12 +1364,15 @@ router.get("/admin/reports/daily-metrics", async (req, res): Promise<void> => {
       SELECT date_trunc('day', u.created_at AT TIME ZONE 'UTC') AS d, COUNT(*)::int AS cnt
       FROM users u, range_start rs, range_end re
       WHERE u.created_at >= rs.ts AND u.created_at < re.ts
+        AND u.is_test_account = false
       GROUP BY 1
     ),
     bet_amounts AS (
       SELECT date_trunc('day', b.created_at AT TIME ZONE 'UTC') AS d,
              COALESCE(SUM(b.stake), 0)::text AS total
-      FROM bets b, range_start rs, range_end re
+      FROM bets b
+      JOIN users u ON u.id = b.user_id AND u.is_test_account = false,
+           range_start rs, range_end re
       WHERE b.created_at >= rs.ts AND b.created_at < re.ts
       GROUP BY 1
     ),
@@ -1365,7 +1380,9 @@ router.get("/admin/reports/daily-metrics", async (req, res): Promise<void> => {
       -- House net = stakes taken in minus payouts made (won + void refunds)
       SELECT date_trunc('day', b.settled_at AT TIME ZONE 'UTC') AS d,
              COALESCE(SUM(b.stake) - SUM(COALESCE(b.settled_payout, 0)), 0)::text AS net
-      FROM bets b, range_start rs, range_end re
+      FROM bets b
+      JOIN users u ON u.id = b.user_id AND u.is_test_account = false,
+           range_start rs, range_end re
       WHERE b.status IN ('won', 'lost', 'void')
         AND b.settled_at >= rs.ts AND b.settled_at < re.ts
       GROUP BY 1
@@ -1373,7 +1390,9 @@ router.get("/admin/reports/daily-metrics", async (req, res): Promise<void> => {
     deps AS (
       SELECT date_trunc('day', t.created_at AT TIME ZONE 'UTC') AS d,
              COALESCE(SUM(t.amount), 0)::text AS total
-      FROM transactions t, range_start rs, range_end re
+      FROM transactions t
+      JOIN users u ON u.id = t.user_id AND u.is_test_account = false,
+           range_start rs, range_end re
       WHERE t.type = 'deposit' AND t.status = 'completed'
         AND t.created_at >= rs.ts AND t.created_at < re.ts
       GROUP BY 1
@@ -1381,7 +1400,9 @@ router.get("/admin/reports/daily-metrics", async (req, res): Promise<void> => {
     wds AS (
       SELECT date_trunc('day', t.created_at AT TIME ZONE 'UTC') AS d,
              COALESCE(SUM(t.amount), 0)::text AS total
-      FROM transactions t, range_start rs, range_end re
+      FROM transactions t
+      JOIN users u ON u.id = t.user_id AND u.is_test_account = false,
+           range_start rs, range_end re
       WHERE t.type = 'withdrawal' AND t.status = 'completed'
         AND t.created_at >= rs.ts AND t.created_at < re.ts
       GROUP BY 1
@@ -1411,6 +1432,7 @@ router.get("/admin/reports/daily-pnl", async (_req, res): Promise<void> => {
       COALESCE(SUM(b.stake), 0)::text AS stakes,
       COALESCE(SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.status IN ('won', 'void')), 0)::text AS payouts
     FROM bets b
+    JOIN users u ON u.id = b.user_id AND u.is_test_account = false
     WHERE b.status IN ('won', 'lost', 'void')
       AND b.created_at >= now() - interval '30 days'
     GROUP BY date_trunc('day', b.created_at AT TIME ZONE 'UTC')
@@ -2180,7 +2202,7 @@ router.post("/admin/settlement/override", async (req, res): Promise<void> => {
 // ── GET /admin/reports/book-balance ── Book balance: open stakes vs payouts vs settled ──
 router.get("/admin/reports/book-balance", async (_req, res): Promise<void> => {
   const [openResult, settledResult, platformResult] = await Promise.all([
-    // Open bets: grouped by sport — scalar subquery avoids parlay double-counting
+    // Open bets: grouped by sport — non-test accounts only
     db.execute(sql`
       SELECT
         COALESCE(
@@ -2191,11 +2213,12 @@ router.get("/admin/reports/book-balance", async (_req, res): Promise<void> => {
         SUM(b.stake)::numeric                               AS total_staked,
         SUM(b.potential_return)::numeric                    AS potential_payout
       FROM bets b
+      JOIN users u ON u.id = b.user_id AND u.is_test_account = false
       WHERE b.status = 'open'
       GROUP BY 1
       ORDER BY total_staked DESC
     `),
-    // Settled bets: grouped by sport — scalar subquery avoids parlay double-counting
+    // Settled bets: grouped by sport — non-test accounts only
     db.execute(sql`
       SELECT
         COALESCE(
@@ -2208,18 +2231,20 @@ router.get("/admin/reports/book-balance", async (_req, res): Promise<void> => {
         SUM(b.stake)::numeric                                        AS total_staked,
         COALESCE(SUM(b.settled_payout), 0)::numeric                 AS total_paid_out
       FROM bets b
+      JOIN users u ON u.id = b.user_id AND u.is_test_account = false
       WHERE b.status IN ('won', 'lost', 'void')
       GROUP BY 1
       ORDER BY total_staked DESC
     `),
-    // Platform totals across all statuses
+    // Platform totals — non-test accounts only
     db.execute(sql`
       SELECT
-        COUNT(*) FILTER (WHERE status = 'open')::int                   AS open_bets,
-        COUNT(*) FILTER (WHERE status IN ('won','lost','void'))::int   AS settled_bets,
-        COALESCE(SUM(stake), 0)::numeric                               AS lifetime_staked,
-        COALESCE(SUM(settled_payout) FILTER (WHERE status IN ('won','void')), 0)::numeric AS lifetime_paid_out
-      FROM bets
+        COUNT(*) FILTER (WHERE b.status = 'open')::int                   AS open_bets,
+        COUNT(*) FILTER (WHERE b.status IN ('won','lost','void'))::int   AS settled_bets,
+        COALESCE(SUM(b.stake), 0)::numeric                               AS lifetime_staked,
+        COALESCE(SUM(b.settled_payout) FILTER (WHERE b.status IN ('won','void')), 0)::numeric AS lifetime_paid_out
+      FROM bets b
+      JOIN users u ON u.id = b.user_id AND u.is_test_account = false
     `),
   ]);
 
@@ -2251,6 +2276,7 @@ router.get("/admin/reports/ledger-reconciliation", async (_req, res): Promise<vo
       u.id                                                                                       AS user_id,
       u.username,
       u.email,
+      u.is_test_account,
       w.balance_usdt::float                                                                      AS wallet_balance,
       COALESCE(SUM(t.amount) FILTER (
         WHERE t.type IN ('deposit','win','refund','bonus','credit') AND t.status = 'completed'
@@ -2276,8 +2302,8 @@ router.get("/admin/reports/ledger-reconciliation", async (_req, res): Promise<vo
     FROM users u
     JOIN wallets w ON w.user_id = u.id
     LEFT JOIN transactions t ON t.user_id = u.id
-    GROUP BY u.id, u.username, u.email, w.balance_usdt
-    ORDER BY ABS(
+    GROUP BY u.id, u.username, u.email, u.is_test_account, w.balance_usdt
+    ORDER BY u.is_test_account ASC, ABS(
       w.balance_usdt
       - (COALESCE(SUM(t.amount) FILTER (
             WHERE t.type IN ('deposit','win','refund','bonus','credit') AND t.status = 'completed'
@@ -2289,16 +2315,17 @@ router.get("/admin/reports/ledger-reconciliation", async (_req, res): Promise<vo
   `);
 
   type RecRow = {
-    user_id: number; username: string; email: string;
+    user_id: number; username: string; email: string; is_test_account: boolean;
     wallet_balance: number; total_inflow: number; total_outflow: number;
     ledger_balance: number; delta: number;
     pending_deposits: number; pending_deposit_amount: number;
   };
 
-  const users = (rows.rows as RecRow[]).map(r => ({
+  const allUsers = (rows.rows as RecRow[]).map(r => ({
     userId:               r.user_id,
     username:             r.username,
     email:                r.email,
+    isTestAccount:        r.is_test_account,
     walletBalance:        r.wallet_balance,
     totalInflow:          r.total_inflow,
     totalOutflow:         r.total_outflow,
@@ -2309,15 +2336,23 @@ router.get("/admin/reports/ledger-reconciliation", async (_req, res): Promise<vo
     pendingDepositAmount: r.pending_deposit_amount,
   }));
 
+  const prodUsers = allUsers.filter(u => !u.isTestAccount);
+
   const summary = {
-    totalUsers:        users.length,
-    usersWithMismatch: users.filter(u => u.discrepancy).length,
-    totalWalletFunds:  users.reduce((s, u) => s + u.walletBalance, 0),
-    totalLedgerFunds:  users.reduce((s, u) => s + u.ledgerBalance, 0),
-    totalDelta:        users.reduce((s, u) => s + u.delta, 0),
+    totalUsers:        allUsers.length,
+    productionUsers:   prodUsers.length,
+    testUsers:         allUsers.length - prodUsers.length,
+    usersWithMismatch: allUsers.filter(u => u.discrepancy).length,
+    prodUsersWithMismatch: prodUsers.filter(u => u.discrepancy).length,
+    totalWalletFunds:  allUsers.reduce((s, u) => s + u.walletBalance, 0),
+    prodWalletFunds:   prodUsers.reduce((s, u) => s + u.walletBalance, 0),
+    totalLedgerFunds:  allUsers.reduce((s, u) => s + u.ledgerBalance, 0),
+    prodLedgerFunds:   prodUsers.reduce((s, u) => s + u.ledgerBalance, 0),
+    totalDelta:        allUsers.reduce((s, u) => s + u.delta, 0),
+    prodDelta:         prodUsers.reduce((s, u) => s + u.delta, 0),
   };
 
-  res.json({ summary, users });
+  res.json({ summary, users: allUsers });
 });
 
 router.get("/admin/liability", async (_req, res): Promise<void> => {

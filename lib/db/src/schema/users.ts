@@ -13,6 +13,7 @@ export const usersTable = pgTable("users", {
   kycStatus: text("kyc_status").notNull().default("pending"),
   country: text("country"),
   isSuspended: boolean("is_suspended").notNull().default(false),
+  isTestAccount: boolean("is_test_account").notNull().default(false),
   referralCode: text("referral_code").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
