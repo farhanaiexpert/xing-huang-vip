@@ -14,11 +14,11 @@ import { useAuth } from '@/contexts/AuthContext';
 type Filter = 'all' | 'open' | 'won' | 'lost' | 'void';
 
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all',  label: 'All'  },
-  { key: 'open', label: 'Open' },
-  { key: 'won',  label: 'Won'  },
-  { key: 'lost', label: 'Lost' },
-  { key: 'void', label: 'Void' },
+  { key: 'all',  label: 'All'      },
+  { key: 'open', label: 'Pending'  },
+  { key: 'won',  label: 'Won'      },
+  { key: 'lost', label: 'Lost'     },
+  { key: 'void', label: 'Refunded' },
 ];
 
 function statusKey(status?: string): Filter {
@@ -96,7 +96,7 @@ const STATUS_CFG = {
     bar:    'bg-[#38BDF8]',
     bg:     'bg-gradient-to-r from-[#38BDF8]/5 to-transparent',
     border: 'border-[#38BDF8]/20',
-    label:  'Open',
+    label:  'Pending',
     color:  '#38BDF8',
     icon:   null,
   },
@@ -120,7 +120,7 @@ const STATUS_CFG = {
     bar:    'bg-[#64748B]',
     bg:     'bg-gradient-to-r from-[#64748B]/5 to-transparent',
     border: 'border-[#64748B]/20',
-    label:  'Void',
+    label:  'Refunded',
     color:  '#64748B',
     icon:   Minus,
   },
@@ -144,7 +144,7 @@ function StatusBadge({ status }: { status?: string }) {
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
         style={{ color: '#38BDF8', background: 'rgba(56,189,248,0.10)', borderColor: 'rgba(56,189,248,0.25)' }}>
         <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8] animate-pulse" />
-        Open
+        Pending
       </span>
     );
   }
@@ -242,7 +242,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
               ? 'text-[#A78BFA] bg-[#A78BFA]/10 border-[#A78BFA]/25'
               : 'text-[#38BDF8] bg-[#38BDF8]/10 border-[#38BDF8]/25',
           )}>
-            {isAcca ? `${bet.selections.length}-Fold Acca` : 'Single'}
+            {isAcca ? `Multi · ${bet.selections.length} picks` : 'Single bet'}
           </span>
           <span className="text-[10px] font-mono text-[#64748B]">{bet.betId}</span>
           {isHighlighted && (
@@ -262,7 +262,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
             <p className="text-[15px] font-bold text-[#F8FAFC] leading-snug truncate">
               {mainSel?.matchName ?? '—'}
               {isAcca && bet.selections.length > 1 && (
-                <span className="text-[#94A3B8] font-normal"> +{bet.selections.length - 1} leg{bet.selections.length > 2 ? 's' : ''}</span>
+                <span className="text-[#94A3B8] font-normal"> +{bet.selections.length - 1} more pick{bet.selections.length > 2 ? 's' : ''}</span>
               )}
             </p>
             {mainSel?.leagueName && (
@@ -347,7 +347,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
               </>
             ) : (
               <>
-                <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Potential</p>
+                <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">To Return</p>
                 <p className="text-[15px] font-bold text-[#38BDF8] tabular-nums">
                   {bet.estimatedPayout.toFixed(2)}
                   <span className="text-[10px] text-[#38BDF8]/60 ml-0.5">USDT</span>
@@ -375,8 +375,8 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
           {isAcca && (
             <button className="flex items-center gap-1 text-[11px] font-semibold text-[#94A3B8] hover:text-[#00DFA9] transition-colors shrink-0">
               {open
-                ? <><ChevronUp className="h-3.5 w-3.5" /><span>Hide legs</span></>
-                : <><ChevronDown className="h-3.5 w-3.5" /><span>View {bet.selections.length} legs</span></>}
+                ? <><ChevronUp className="h-3.5 w-3.5" /><span>Hide picks</span></>
+                : <><ChevronDown className="h-3.5 w-3.5" /><span>View all {bet.selections.length} picks</span></>}
             </button>
           )}
         </div>
@@ -391,7 +391,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
           {/* Acca summary footer */}
           <div className="flex items-center justify-between py-2 border-t border-white/[0.05] mt-1">
             <span className="text-[10px] text-[#64748B]">
-              Combined odds: <span className="text-[#FACC15] font-bold">{formatOdds(bet.totalOdds, format)}</span>
+              Total odds: <span className="text-[#FACC15] font-bold">{formatOdds(bet.totalOdds, format)}</span>
             </span>
             <span className="text-[10px] text-[#64748B]">
               Stake: <span className="text-[#F8FAFC] font-semibold">{bet.stake.toFixed(2)} USDT</span>
@@ -436,16 +436,16 @@ function StatBar({ bets }: { bets: PlacedBet[] }) {
     },
     {
       icon: netPnL >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />,
-      label: 'Net P&L',
+      label: 'Profit / Loss',
       value: `${netPnL >= 0 ? '+' : ''}${netPnL.toFixed(2)}`,
-      sub: 'on settled bets',
+      sub: 'from settled bets',
       color: netPnL >= 0 ? '#00DFA9' : '#EF4444',
     },
     {
       icon: <Zap className="h-3.5 w-3.5" />,
-      label: 'Open Returns',
+      label: 'Pending Returns',
       value: openPot.toFixed(2),
-      sub: `${openBets.length} pending`,
+      sub: `${openBets.length} still running`,
       color: '#38BDF8',
     },
   ];
@@ -593,7 +593,9 @@ export function BetsPage() {
           </div>
           <div className="text-center">
             <p className="text-[14px] font-semibold text-[#94A3B8]/60">
-              {filter === 'all' ? 'No bets placed yet' : `No ${filter} bets`}
+              {filter === 'all'
+                ? 'No bets placed yet'
+                : `No ${FILTERS.find(f => f.key === filter)?.label.toLowerCase() ?? filter} bets`}
             </p>
             {!isAuthenticated && (
               <p className="text-[13px] text-[#64748B] mt-1">Sign in to view your bet history</p>
