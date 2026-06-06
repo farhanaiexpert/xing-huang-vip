@@ -137,13 +137,14 @@ export function Header() {
     return () => window.removeEventListener('openLoginModal', handler);
   }, []);
 
-  // After successful sign-in: auto-open deposit modal if the user clicked Deposit while logged out
+  // After successful sign-in: navigate to wallet deposit if user clicked Deposit while logged out
   useEffect(() => {
     if (user && openDepositOnAuth) {
       setOpenDepositOnAuth(false);
-      setIsPaymentOpen(true);
+      sessionStorage.setItem('cupbett_deposit_method', 'wallet');
+      setLocation('/account/wallet');
     }
-  }, [user, openDepositOnAuth]);
+  }, [user, openDepositOnAuth, setLocation]);
 
   // Focus search input when opened
   useEffect(() => {
@@ -377,7 +378,11 @@ export function Header() {
               <div className="flex items-center gap-1.5 sm:gap-2">
                 {/* Deposit button — always visible for logged-in users */}
                 <button
-                  onClick={() => setIsPaymentOpen(true)}
+                  onClick={() => {
+                    sessionStorage.setItem('cupbett_wallet_tab', 'deposit');
+                    sessionStorage.setItem('cupbett_deposit_method', 'wallet');
+                    setLocation('/account/wallet');
+                  }}
                   className="relative group flex items-center gap-1.5 h-8 px-3 rounded-xl text-[#0B0F14] text-xs font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
                   style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
                   title={pendingDeposit ? `Pending deposit: $${pendingDeposit.amount} USDT` : undefined}
@@ -454,11 +459,14 @@ export function Header() {
                 <button
                   data-testid="button-connect-wallet-header"
                   onClick={() => {
+                    sessionStorage.setItem('cupbett_deposit_method', 'wallet');
                     if (!user) {
+                      sessionStorage.setItem('cb_return_to', '/account/wallet');
                       setOpenDepositOnAuth(true);
                       setIsAuthOpen(true);
                     } else {
-                      setIsPaymentOpen(true);
+                      sessionStorage.setItem('cupbett_wallet_tab', 'deposit');
+                      setLocation('/account/wallet');
                     }
                   }}
                   className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
