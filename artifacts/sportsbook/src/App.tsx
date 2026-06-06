@@ -29,6 +29,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { OnboardingGuide } from "@/components/OnboardingGuide";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
+import { WorldCupCountdown } from "@/components/WorldCupCountdown";
 import { ProfileSetupModal } from "@/components/ProfileSetupModal";
 import { useTransactionNotifications } from "@/hooks/useTransactionNotifications";
 import { Link } from "wouter";
@@ -94,6 +95,7 @@ function App() {
                             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                               <Router />
                               <PromoPopup />
+                              <WorldCupCountdown />
                               <HomeOnlyOverlay />
                             </WouterRouter>
                             <MobileBottomNav />
