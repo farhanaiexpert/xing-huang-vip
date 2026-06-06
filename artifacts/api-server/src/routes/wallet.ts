@@ -2,7 +2,7 @@ import { Router } from "express";
 import { eq, desc, and, gt, or, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
-import { db, walletsTable, transactionsTable, userLimitsTable, selfExclusionsTable } from "@workspace/db";
+import { db, walletsTable, transactionsTable, userLimitsTable, selfExclusionsTable, usersTable } from "@workspace/db";
 import { checkDepositLimits, recordDepositUsage, isSelfExcludedFromDeposits } from "../lib/depositGuard.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { verifyTronDeposit } from "../lib/tronVerify.js";
@@ -145,14 +145,46 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
 
   logger.info({ txHash, verified: verification.verified, note: verification.note, network }, "Verification result");
 
+  // ── Sender binding (spec: "Sender must match connected user wallet") ──────────
+  // For EVM deposits the on-chain `from` address is authoritative. We require it to
+  // match the wallet address bound to this account at SIWE login, so a user cannot
+  // claim a txHash that originated from someone else's wallet. Scoped to EVM
+  // networks only (the Tron verifier also returns a `fromAddress`, but bound
+  // wallets are EVM-style). On mismatch (or when the account has no bound wallet)
+  // we do NOT auto-credit — the deposit is routed to manual review for an admin.
+  const EVM_NETWORKS = new Set(["ETH", "ERC-20", "BSC", "POLYGON", "ARBITRUM", "OPTIMISM", "BASE", "LINEA"]);
+  let senderMismatchNote: string | null = null;
+  const rawFrom = verification.verified && EVM_NETWORKS.has(network) && "fromAddress" in verification
+    ? verification.fromAddress
+    : undefined;
+  const onChainFrom = typeof rawFrom === "string" && rawFrom ? rawFrom.toLowerCase() : null;
+  if (onChainFrom) {
+    const [userRow] = await db
+      .select({ walletAddress: usersTable.walletAddress })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    const boundAddr = userRow?.walletAddress?.toLowerCase() ?? null;
+    if (!boundAddr) {
+      senderMismatchNote = "Deposit sender could not be matched to your account wallet — pending manual review.";
+    } else if (boundAddr !== onChainFrom) {
+      senderMismatchNote = "Deposit sender does not match your account wallet — pending manual review.";
+    }
+    if (senderMismatchNote) {
+      logger.warn({ txHash, userId, onChainFrom, boundAddr }, "EVM deposit sender mismatch — routing to manual review");
+    }
+  }
+
   // BTC/XRP amounts are in coin units — auto-credit not safe without price conversion
-  const autoVerified = verification.verified && !FORCE_MANUAL_NETWORKS.has(network);
+  const autoVerified = verification.verified && !FORCE_MANUAL_NETWORKS.has(network) && !senderMismatchNote;
 
   const newStatus = autoVerified ? "completed" : "pending";
-  const newVerified = autoVerified || (FORCE_MANUAL_NETWORKS.has(network) && verification.verified);
-  const newNote = (FORCE_MANUAL_NETWORKS.has(network) && verification.verified)
-    ? `${verification.note} — Awaiting admin USDT credit conversion.`
-    : verification.note;
+  const newVerified = autoVerified || (FORCE_MANUAL_NETWORKS.has(network) && verification.verified && !senderMismatchNote);
+  const newNote = senderMismatchNote
+    ? `${verification.note} — ${senderMismatchNote}`
+    : (FORCE_MANUAL_NETWORKS.has(network) && verification.verified)
+      ? `${verification.note} — Awaiting admin USDT credit conversion.`
+      : verification.note;
 
   // ── Atomic INSERT + wallet credit in a single DB transaction ─────────────────
   // The DB has a unique partial index on tx_hash (WHERE tx_hash IS NOT NULL) —
@@ -209,9 +241,10 @@ router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => 
     logger.info({ txHash, amount, network, userId }, "Native-coin deposit verified; pending admin credit conversion");
     res.status(201).json({ ...txn, autoVerified: false, reviewReason: "Admin will convert to USDT and credit within 30 min" });
   } else {
-    // ── MANUAL REVIEW: could not verify → pending for admin ──────────────────
-    logger.info({ txHash, amount, userId, reason: verification.note }, "Deposit pending manual review");
-    res.status(201).json({ ...txn, autoVerified: false, reviewReason: verification.note });
+    // ── MANUAL REVIEW: could not verify (or sender mismatch) → pending for admin ──
+    const reviewReason = senderMismatchNote ?? verification.note;
+    logger.info({ txHash, amount, userId, reason: reviewReason }, "Deposit pending manual review");
+    res.status(201).json({ ...txn, autoVerified: false, reviewReason });
   }
 });
 

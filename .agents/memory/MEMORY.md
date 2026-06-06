@@ -2,5 +2,6 @@
 - [TON crypto Vite shim](ton-crypto-vite-shim.md) — @ton/core needs @ton/crypto peer dep (sha256_sync); create a browser shim + alias in vite.config.ts.
 - [TON deposit verifier fail-closed](ton-verifier-fail-closed.md) — isUsdtJetton and destinationMatches must return false (not true) when TONapi metadata is absent.
 - [Settlement market_type mismatch](settlement-market-type.md) — frontend stores display names ("Match Result") but worker checked API keys ("h2h"); always normalise before branching.
+- [EVM deposit sender binding](deposit-sender-binding.md) — auto-credit must match on-chain `from` to user's SIWE wallet; scope by EVM network set, NOT fromAddress presence (Tron verifier also returns it).
 - [Wallet deposit UI gating](wallet-deposit-ui-gating.md) — connect/connected/success subviews must key on w3Connected first; reset deposit phase on disconnect or stale success card lingers; chainCfg drives supported-network detection.
 - [BTTS fallback fix](btts-fallback-fix.md) — WC returns HTTP 422 for btts; fetchOddsFromApi auto-retries without btts on 400/422.

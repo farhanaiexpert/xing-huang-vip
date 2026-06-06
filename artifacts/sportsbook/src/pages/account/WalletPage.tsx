@@ -1736,6 +1736,30 @@ export function WalletPage() {
                           )}
                         </div>
 
+                        {/* Receiving deposit address for the active chain */}
+                        {platformDepositAddr && (
+                          <div className="px-3 py-2.5 rounded-xl" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide mb-1">Receiving Address · {chainCfg.label}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="flex-1 min-w-0 text-[10px] font-mono text-[#CBD5E1] truncate">{platformDepositAddr}</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(platformDepositAddr);
+                                  setW3DepAddrCopied(true);
+                                  setTimeout(() => setW3DepAddrCopied(false), 1500);
+                                }}
+                                className="shrink-0 p-1.5 rounded-lg transition-all hover:bg-white/5"
+                                title="Copy address"
+                              >
+                                {w3DepAddrCopied
+                                  ? <Check className="w-3 h-3 text-[#00DFA9]" />
+                                  : <Copy className="w-3 h-3 text-[#64748B]" />}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Amount input */}
                         <div>
                           <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Amount (USDT)</label>
@@ -1757,10 +1781,11 @@ export function WalletPage() {
                         {/* Deposit button */}
                         {(() => {
                           const amt = parseFloat(walletDepAmount || '0');
+                          const belowMin = !(amt >= 10);
                           const insufficientUsdt = evmBalance !== null && amt > evmBalance;
                           const minGas = MIN_NATIVE_GAS[evmWallet.chainId] ?? 0.001;
                           const lowGas = gasBalance !== null && gasBalance < minGas;
-                          const isDisabled = walletProcessing || insufficientUsdt || lowGas;
+                          const isDisabled = walletProcessing || belowMin || insufficientUsdt || lowGas;
                           return (
                             <div className="space-y-2">
                               {lowGas && (
@@ -1781,12 +1806,14 @@ export function WalletPage() {
                                   <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Waiting for confirmation…</>
                                 ) : walletPhase === 'submitting' ? (
                                   <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Verifying on-chain…</>
+                                ) : belowMin ? (
+                                  <>Minimum Deposit is 10 USDT</>
                                 ) : insufficientUsdt ? (
                                   <>Insufficient USDT Balance</>
                                 ) : lowGas ? (
                                   <>Insufficient {chainCfg.nativeToken} for Gas</>
                                 ) : (
-                                  <>Deposit via {chainCfg.label} <ChevronRight className="w-4 h-4" /></>
+                                  <>Confirm Deposit · {amt} USDT <ChevronRight className="w-4 h-4" /></>
                                 )}
                               </button>
                             </div>
@@ -1819,6 +1846,24 @@ export function WalletPage() {
                       </p>
                     </div>
 
+                    {/* Amount + network + updated balance */}
+                    <div className="w-full grid grid-cols-2 gap-2">
+                      <div className="p-3 rounded-xl text-left" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide mb-0.5">Amount</p>
+                        <p className="text-[14px] font-black text-[#00DFA9]">${walletResult.amount} <span className="text-[10px] font-bold text-[#64748B]">USDT</span></p>
+                      </div>
+                      <div className="p-3 rounded-xl text-left" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide mb-0.5">Network</p>
+                        <p className="text-[14px] font-black text-[#F8FAFC]">{walletResult.network}</p>
+                      </div>
+                      {walletResult.autoVerified && (
+                        <div className="col-span-2 p-3 rounded-xl text-left" style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.2)' }}>
+                          <p className="text-[9px] font-bold text-[#64748B] uppercase tracking-wide mb-0.5">Updated Balance</p>
+                          <p className="text-[16px] font-black text-[#00DFA9]">${balance.toFixed(2)} <span className="text-[10px] font-bold text-[#64748B]">USDT</span></p>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Transaction hash + explorer link */}
                     <div className="w-full flex items-center gap-2 p-3 rounded-xl text-left" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div className="flex-1 min-w-0">
@@ -1849,18 +1894,28 @@ export function WalletPage() {
                     </div>
 
                     <div className="flex gap-2 w-full">
+                      {walletResult.autoVerified ? (
+                        <button
+                          onClick={() => { resetWalletDeposit(); navigate('/'); }}
+                          className="flex-1 py-2.5 rounded-xl text-[13px] font-black text-[#0B0F14]"
+                          style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
+                        >
+                          Start Betting →
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setTab('history')}
+                          className="flex-1 py-2.5 rounded-xl text-[13px] font-black text-[#0B0F14]"
+                          style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
+                        >
+                          View History →
+                        </button>
+                      )}
                       <button
                         onClick={resetWalletDeposit}
-                        className="flex-1 py-2.5 rounded-xl text-[13px] font-black text-[#0B0F14]"
-                        style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
-                      >
-                        Deposit More
-                      </button>
-                      <button
-                        onClick={() => setTab('history')}
                         className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-[#38BDF8] border border-[#38BDF8]/25 hover:bg-[#38BDF8]/10 transition-all"
                       >
-                        View History →
+                        Deposit More
                       </button>
                     </div>
                   </div>

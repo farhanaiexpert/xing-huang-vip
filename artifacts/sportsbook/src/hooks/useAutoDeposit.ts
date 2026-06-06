@@ -72,6 +72,10 @@ export type DepositPhase = 'idle' | 'sending' | 'confirming' | 'submitting' | 's
 export interface DepositResult {
   autoVerified: boolean;
   txHash: string;
+  /** Human-readable USDT amount that was deposited */
+  amount: number;
+  /** Network the deposit was made on (e.g. "Polygon", "BSC") */
+  network: string;
   /** Full block-explorer URL for the transaction (undefined for unsupported chains) */
   explorerUrl?: string;
 }
@@ -152,7 +156,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     setDepositPhase('submitting');
     try {
       const result = await api.post<{ autoVerified: boolean }>('/wallet/deposit', { txHash, amount, network });
-      const dr: DepositResult = { autoVerified: result.autoVerified, txHash };
+      const dr: DepositResult = { autoVerified: result.autoVerified, txHash, amount, network };
       setDepositResult(dr);
       setDepositPhase('success');
       await refreshBalance();
@@ -230,6 +234,8 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
       const dr: DepositResult = {
         autoVerified: result.autoVerified,
         txHash,
+        amount,
+        network: chainCfg.network,
         explorerUrl: `${chainCfg.explorerTx}${txHash}`,
       };
       setDepositResult(dr);
@@ -245,9 +251,9 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
       options?.onSuccess?.(dr);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes('user rejected') || msg.toLowerCase().includes('user denied') || msg.toLowerCase().includes('rejected')) {
+      if (msg.toLowerCase().includes('user rejected') || msg.toLowerCase().includes('user denied') || msg.toLowerCase().includes('rejected') || msg.toLowerCase().includes('cancel')) {
         localStorage.removeItem('cb_pending_evm_tx');
-        setDepositError('Transaction was rejected in your wallet.');
+        setDepositError('Transaction cancelled.');
       } else if (msg.toLowerCase().includes('insufficient')) {
         localStorage.removeItem('cb_pending_evm_tx');
         setDepositError('Insufficient USDT balance in your wallet for this amount.');
@@ -313,6 +319,8 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
       const dr: DepositResult = {
         autoVerified: result.autoVerified,
         txHash,
+        amount,
+        network: 'TRC-20',
         explorerUrl: `https://tronscan.org/#/transaction/${txHash}`,
       };
       setDepositResult(dr);

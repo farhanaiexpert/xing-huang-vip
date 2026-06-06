@@ -1,0 +1,115 @@
+Please implement Phase 2 only: Reown / WalletConnect EVM USDT deposit transaction flow.
+
+Do this only after Phase 1 wallet connection flow is verified.
+
+Goal:
+Connected Wallet → Enter Amount → Confirm USDT Transfer → Backend Verifies → User Balance Credited.
+
+Exact flow:
+
+1. Deposit form
+   When wallet is connected and network is supported, show:
+
+* connected network badge, e.g. “Polygon USDT”
+* our receiving deposit address for that chain
+* user USDT balance
+* gas token balance
+* amount input
+* MAX button
+* Confirm Deposit button
+
+2. Amount validation
+   Validate before enabling Confirm Deposit:
+
+* amount > 0
+* amount <= USDT balance
+* enough gas token
+* minimum deposit if configured
+* selected/connected chain is supported
+* wallet address is connected
+
+3. Confirm Deposit
+   Only after user clicks “Confirm Deposit”:
+
+* Create USDT transfer transaction from connected wallet to our deposit address on the connected chain.
+* User confirms transaction in wallet.
+* If user rejects, show “Transaction cancelled.”
+* If submitted, show pending state with txHash.
+* Show explorer link.
+
+4. Backend verification
+   After txHash exists:
+
+* Save pending deposit record.
+* Backend verifies transaction on-chain:
+
+  * correct chain
+  * correct USDT contract
+  * correct sender wallet
+  * correct receiver deposit address
+  * correct amount
+  * transaction success
+* Credit user only after backend verification.
+* Prevent duplicate credit for same txHash.
+
+5. Refresh recovery
+   Pending deposit must survive:
+
+* page refresh
+* browser close/reopen
+* user returning later
+
+If there is pending txHash:
+
+* show pending state
+* continue verification
+* credit only once
+
+6. Success state
+   After verified:
+   Show:
+
+* amount deposited
+* network
+* txHash / explorer link
+* updated platform balance
+* button: “Start Betting”
+
+7. Error handling
+   Handle:
+
+* user rejects transaction
+* transaction fails
+* backend verification fails
+* duplicate txHash
+* insufficient USDT
+* insufficient gas
+* wrong/unsupported network
+* balance loading failure
+
+8. Security rules
+
+* Never credit from frontend-only confirmation.
+* Backend must verify on-chain before credit.
+* Same txHash must never credit twice.
+* Receiver address must match our configured deposit address.
+* Token contract must match official USDT for that chain.
+* Sender must match connected user wallet.
+* Amount must match or exceed submitted deposit amount.
+
+Please test and report:
+
+* successful USDT deposit
+* user rejects transaction
+* duplicate txHash protection
+* backend verification success
+* backend verification failure
+* refresh during pending deposit
+* wrong chain rejection
+* insufficient USDT
+* insufficient gas
+* MAX button
+* explorer link
+* platform balance updates after verified credit
+
+Provide pass/fail results, remaining issues, deposit-flow score out of 100, and commit ID.
