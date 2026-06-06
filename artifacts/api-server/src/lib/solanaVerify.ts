@@ -14,12 +14,26 @@ import { logger } from "./logger.js";
 const USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 const TIMEOUT_MS = 15_000;
 
-// Public RPC endpoints tried in order. The first available response wins.
+// RPC endpoints tried in order. The first available response wins.
+// Alchemy (when ALCHEMY_API_KEY is set) is preferred for reliability, then
+// falls back through public endpoints.
 const SOLANA_RPCS = [
+  ...(process.env.ALCHEMY_API_KEY
+    ? [`https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`]
+    : []),
   "https://api.mainnet-beta.solana.com",
   "https://rpc.ankr.com/solana",
   "https://solana.drpc.org",
 ];
+
+// Log only the RPC host, never the full URL — Alchemy URLs embed the API key.
+function redactRpc(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "unknown-rpc";
+  }
+}
 
 export interface SolanaVerifyResult {
   verified: boolean;
@@ -76,7 +90,7 @@ async function getTransactionWithFallback(signature: string): Promise<unknown> {
         } catch { /* fall through to next endpoint */ }
       }
       // network / timeout / non-429 — fall through to next endpoint
-      logger.debug({ endpoint, err }, "Solana RPC endpoint failed, trying next");
+      logger.debug({ rpc: redactRpc(endpoint), err }, "Solana RPC endpoint failed, trying next");
     }
   }
 

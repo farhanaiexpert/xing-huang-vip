@@ -11,10 +11,11 @@ interface EvmNetworkConfig {
   label: string;
 }
 
-function alchemyOrFallback(alchemySlug: string, fallback: string): string[] {
+function alchemyOrFallback(alchemySlug: string, ...fallbacks: string[]): string[] {
   const key = process.env.ALCHEMY_API_KEY;
-  const urls = key ? [`https://${alchemySlug}.g.alchemy.com/v2/${key}`, fallback] : [fallback];
-  return urls;
+  return key
+    ? [`https://${alchemySlug}.g.alchemy.com/v2/${key}`, ...fallbacks]
+    : [...fallbacks];
 }
 
 const NETWORK_CONFIG: Record<string, EvmNetworkConfig> = {
@@ -27,7 +28,7 @@ const NETWORK_CONFIG: Record<string, EvmNetworkConfig> = {
   BSC: {
     contract: "0x55d398326f99059fF775485246999027B3197955",
     decimals: 18,
-    rpcUrls: ["https://bsc-dataseed.binance.org/", "https://bsc.drpc.org"],
+    rpcUrls: alchemyOrFallback("bnb-mainnet", "https://bsc-dataseed.binance.org/", "https://bsc.drpc.org"),
     label: "BNB Smart Chain",
   },
   POLYGON: {
@@ -113,6 +114,16 @@ async function rpcCall(rpcUrl: string, method: string, params: unknown[]): Promi
   }
 }
 
+// Log only the RPC host (e.g. "eth-mainnet.g.alchemy.com"), never the full URL —
+// Alchemy URLs embed the API key in the path segment after /v2/.
+function redactRpc(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "unknown-rpc";
+  }
+}
+
 function addressToTopic(addr: string): string {
   return "0x000000000000000000000000" + addr.replace(/^0x/, "").toLowerCase();
 }
@@ -145,7 +156,7 @@ export async function verifyEvmDeposit(
       if (receipt !== null) break;
     } catch (err) {
       lastErr = err instanceof Error ? err.message : String(err);
-      logger.warn({ err, txHash, network, rpcUrl }, "EVM RPC call failed, trying next");
+      logger.warn({ err, txHash, network, rpc: redactRpc(rpcUrl) }, "EVM RPC call failed, trying next");
     }
   }
 
