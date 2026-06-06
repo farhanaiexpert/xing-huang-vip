@@ -340,6 +340,27 @@ function AZSidebarItem({ title, iconUrl, isActive, isFavourite, matchCount, onFa
   onFavToggle?: () => void;
   onClick?: () => void;
 }) {
+  const isEmpty = !matchCount || matchCount <= 0;
+
+  // ── Empty state: no upcoming events for this sport right now ──────────────
+  // Render a disabled, greyed-out row with a "No events" label so it reads as
+  // intentional rather than broken. The full A–Z list still stays visible.
+  if (isEmpty) {
+    return (
+      <div aria-disabled="true" className="relative flex w-full items-center opacity-45 select-none">
+        <div className="flex flex-1 items-center gap-2.5 px-4 xl:px-5 py-2 text-left min-w-0 cursor-not-allowed">
+          <span className="w-5 h-5 flex items-center justify-center shrink-0 rounded opacity-50 grayscale">
+            <SportIconImg src={iconUrl} />
+          </span>
+          <span className="text-[13px] truncate flex-1 leading-none text-[#94A3B8]/60">{title}</span>
+          <span className="shrink-0 text-[9px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded-full leading-none bg-[#1B2530] text-[#94A3B8]/45">
+            No events
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn(
       'group relative flex w-full items-center transition-all duration-150',
@@ -364,21 +385,14 @@ function AZSidebarItem({ title, iconUrl, isActive, isFavourite, matchCount, onFa
 
         <span className="text-[13px] truncate flex-1 leading-none">{title}</span>
 
-        {matchCount && matchCount > 0 ? (
-          <span className={cn(
-            'shrink-0 text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-full leading-none',
-            isActive
-              ? 'bg-[#00DFA9]/20 text-[#00DFA9]'
-              : 'bg-[#253241] text-[#94A3B8]/70 group-hover:bg-[#2E3D50] group-hover:text-[#94A3B8]'
-          )}>
-            {matchCount}
-          </span>
-        ) : (
-          <ChevronRight className={cn(
-            'h-3 w-3 shrink-0 transition-all duration-150',
-            isActive ? 'text-[#00DFA9] opacity-100' : 'opacity-0 -translate-x-1 group-hover:opacity-40 group-hover:translate-x-0'
-          )} />
-        )}
+        <span className={cn(
+          'shrink-0 text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-full leading-none',
+          isActive
+            ? 'bg-[#00DFA9]/20 text-[#00DFA9]'
+            : 'bg-[#253241] text-[#94A3B8]/70 group-hover:bg-[#2E3D50] group-hover:text-[#94A3B8]'
+        )}>
+          {matchCount}
+        </span>
       </button>
 
       <button
