@@ -171,23 +171,23 @@ function LegRow({ sel, idx, total, format }: {
     <div className={cn('flex items-start gap-3 py-2.5', !isLast && 'border-b border-white/[0.04]')}>
       <div className="flex flex-col items-center shrink-0 mt-1">
         <div className="w-5 h-5 rounded-full bg-[#0B0F14] border border-[#253241] flex items-center justify-center">
-          <span className="text-[8px] font-bold text-[#64748B]">{idx + 1}</span>
+          <span className="text-[9px] font-bold text-[#64748B]">{idx + 1}</span>
         </div>
         {!isLast && <div className="w-px flex-1 bg-[#253241] mt-1 min-h-[8px]" />}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-semibold text-[#F8FAFC] leading-snug">{sel.selectionName || sel.selectionType}</p>
+        <p className="text-[13px] font-semibold text-[#F8FAFC] leading-snug">{sel.selectionName || sel.selectionType}</p>
         <p className="text-[10px] text-[#64748B] mt-0.5 leading-snug">
           {sel.matchName}
-          {sel.marketName ? <span className="text-[#475569]"> · {sel.marketName}</span> : null}
+          {sel.marketName ? <span className="text-[#64748B]"> · {sel.marketName}</span> : null}
           {sel.scoreAtPlacement ? <span className="text-[#EF4444]/70"> ({sel.scoreAtPlacement})</span> : null}
         </p>
-        {sel.leagueName ? <p className="text-[9px] text-[#475569] mt-0.5">{sel.leagueName}</p> : null}
+        {sel.leagueName ? <p className="text-[10px] text-[#64748B] mt-0.5">{sel.leagueName}</p> : null}
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">
-        <span className="text-[12px] font-bold text-[#FACC15]">{formatOdds(sel.odds, format)}</span>
+        <span className="text-[13px] font-bold text-[#FACC15]">{formatOdds(sel.odds, format)}</span>
         {sel.isLive && (
-          <span className="flex items-center gap-0.5 text-[9px] text-[#EF4444]/80 font-semibold">
+          <span className="flex items-center gap-0.5 text-[10px] text-[#EF4444]/80 font-semibold">
             <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
             LIVE
           </span>
@@ -238,16 +238,16 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
         {/* Row 1: type / ID / highlight tag / status */}
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           <span className={cn(
-            'px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide border',
+            'px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border',
             isAcca
               ? 'text-[#A78BFA] bg-[#A78BFA]/10 border-[#A78BFA]/25'
               : 'text-[#38BDF8] bg-[#38BDF8]/10 border-[#38BDF8]/25',
           )}>
             {isAcca ? `${bet.selections.length}-Fold Acca` : 'Single'}
           </span>
-          <span className="text-[10px] font-mono text-[#475569]">{bet.betId}</span>
+          <span className="text-[10px] font-mono text-[#64748B]">{bet.betId}</span>
           {isHighlighted && (
-            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-[#00DFA9]/15 text-[#00DFA9] border border-[#00DFA9]/30">
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-[#00DFA9]/15 text-[#00DFA9] border border-[#00DFA9]/30">
               ← from stats
             </span>
           )}
@@ -258,26 +258,26 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
 
         {/* Row 2: sport icon + match + live/kickoff */}
         <div className="flex items-start gap-2 mb-2">
-          <span className="text-base leading-none mt-0.5 shrink-0">{emoji}</span>
+          <span className="text-lg leading-none mt-0.5 shrink-0">{emoji}</span>
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-[#F8FAFC] leading-snug truncate">
+            <p className="text-[15px] font-bold text-[#F8FAFC] leading-snug truncate">
               {mainSel?.matchName ?? '—'}
               {isAcca && bet.selections.length > 1 && (
-                <span className="text-[#64748B] font-normal"> +{bet.selections.length - 1} leg{bet.selections.length > 2 ? 's' : ''}</span>
+                <span className="text-[#94A3B8] font-normal"> +{bet.selections.length - 1} leg{bet.selections.length > 2 ? 's' : ''}</span>
               )}
             </p>
             {mainSel?.leagueName && (
-              <p className="text-[10px] text-[#64748B] leading-none mt-0.5 truncate">{mainSel.leagueName}</p>
+              <p className="text-[11px] text-[#94A3B8] leading-none mt-1 truncate">{mainSel.leagueName}</p>
             )}
           </div>
           {/* Live / countdown badge */}
           {inPlay ? (
-            <span className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#EF4444]/12 border border-[#EF4444]/25 text-[#EF4444] text-[9px] font-bold">
+            <span className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#EF4444]/12 border border-[#EF4444]/25 text-[#EF4444] text-[10px] font-bold">
               <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
               LIVE
             </span>
           ) : cd ? (
-            <span className="shrink-0 flex items-center gap-1 text-[9px] text-[#FACC15]/70 font-semibold">
+            <span className="shrink-0 flex items-center gap-1 text-[10px] text-[#FACC15]/70 font-semibold">
               <Clock className="h-2.5 w-2.5" />
               {cd}
             </span>
@@ -287,12 +287,12 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
         {/* Row 3: selection name + market */}
         <div className="mb-3 pl-6">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <ArrowRight className="h-2.5 w-2.5 text-[#475569] shrink-0" />
-            <span className="text-[12px] font-semibold text-[#CBD5E1]">
+            <ArrowRight className="h-2.5 w-2.5 text-[#64748B] shrink-0" />
+            <span className="text-[13px] font-semibold text-[#CBD5E1]">
               {mainSel?.selectionName || mainSel?.selectionType || '—'}
             </span>
             {mainSel?.marketName && (
-              <span className="text-[10px] text-[#475569]">· {mainSel.marketName}</span>
+              <span className="text-[10px] text-[#64748B]">· {mainSel.marketName}</span>
             )}
             {mainSel?.scoreAtPlacement && (
               <span className="text-[10px] text-[#EF4444]/60">({mainSel.scoreAtPlacement})</span>
@@ -306,7 +306,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
           {/* Odds */}
           <div className="flex-1 text-center border-r border-white/[0.06]">
             <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Odds</p>
-            <p className="text-[13px] font-black text-[#FACC15] tabular-nums">
+            <p className="text-[15px] font-black text-[#FACC15] tabular-nums">
               {formatOdds(bet.totalOdds, format)}
             </p>
           </div>
@@ -314,9 +314,9 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
           {/* Stake */}
           <div className="flex-1 text-center border-r border-white/[0.06]">
             <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Stake</p>
-            <p className="text-[13px] font-bold text-[#F8FAFC] tabular-nums">
+            <p className="text-[15px] font-bold text-[#F8FAFC] tabular-nums">
               {bet.stake.toFixed(2)}
-              <span className="text-[9px] text-[#475569] ml-0.5">USDT</span>
+              <span className="text-[10px] text-[#64748B] ml-0.5">USDT</span>
             </p>
           </div>
 
@@ -325,33 +325,33 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
             {k === 'won' ? (
               <>
                 <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Won</p>
-                <p className="text-[13px] font-black tabular-nums" style={{ color: '#00DFA9' }}>
+                <p className="text-[15px] font-black tabular-nums" style={{ color: '#00DFA9' }}>
                   +{profit.toFixed(2)}
-                  <span className="text-[9px] ml-0.5" style={{ color: '#00DFA9', opacity: 0.7 }}>USDT</span>
+                  <span className="text-[10px] ml-0.5" style={{ color: '#00DFA9', opacity: 0.7 }}>USDT</span>
                 </p>
               </>
             ) : k === 'lost' ? (
               <>
                 <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Lost</p>
-                <p className="text-[13px] font-black text-[#EF4444] tabular-nums">
+                <p className="text-[15px] font-black text-[#EF4444] tabular-nums">
                   -{bet.stake.toFixed(2)}
-                  <span className="text-[9px] text-[#EF4444]/70 ml-0.5">USDT</span>
+                  <span className="text-[10px] text-[#EF4444]/70 ml-0.5">USDT</span>
                 </p>
               </>
             ) : k === 'void' ? (
               <>
                 <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Refund</p>
-                <p className="text-[13px] font-bold text-[#64748B] tabular-nums">
+                <p className="text-[15px] font-bold text-[#64748B] tabular-nums">
                   {bet.stake.toFixed(2)}
-                  <span className="text-[9px] text-[#475569] ml-0.5">USDT</span>
+                  <span className="text-[10px] text-[#64748B] ml-0.5">USDT</span>
                 </p>
               </>
             ) : (
               <>
                 <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Potential</p>
-                <p className="text-[13px] font-bold text-[#38BDF8] tabular-nums">
+                <p className="text-[15px] font-bold text-[#38BDF8] tabular-nums">
                   {bet.estimatedPayout.toFixed(2)}
-                  <span className="text-[9px] text-[#38BDF8]/60 ml-0.5">USDT</span>
+                  <span className="text-[10px] text-[#38BDF8]/60 ml-0.5">USDT</span>
                 </p>
               </>
             )}
@@ -371,7 +371,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
             onMouseEnter={() => setTooltip(true)}
             onMouseLeave={() => setTooltip(false)}
           >
-            <p className="text-[10px] text-[#475569]">{fmtDate(bet.placedAt)}</p>
+            <p className="text-[10px] text-[#64748B]">{fmtDate(bet.placedAt)}</p>
             {tooltip && (
               <div className="absolute bottom-full left-0 mb-1 px-2 py-1 rounded-lg bg-[#1E2A38] border border-[#253241] text-[10px] text-[#CBD5E1] whitespace-nowrap z-10 shadow-xl">
                 {fmtDateFull(bet.placedAt)}
@@ -379,7 +379,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
             )}
           </div>
           {isAcca && (
-            <button className="flex items-center gap-1 text-[10px] text-[#475569] hover:text-[#94A3B8] transition-colors">
+            <button className="flex items-center gap-1 text-[10px] text-[#64748B] hover:text-[#94A3B8] transition-colors">
               {open
                 ? <><ChevronUp className="h-3.5 w-3.5" /><span>Hide legs</span></>
                 : <><ChevronDown className="h-3.5 w-3.5" /><span>View {bet.selections.length} legs</span></>}
@@ -396,10 +396,10 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
           ))}
           {/* Acca summary footer */}
           <div className="flex items-center justify-between py-2 border-t border-white/[0.05] mt-1">
-            <span className="text-[10px] text-[#475569]">
+            <span className="text-[10px] text-[#64748B]">
               Combined odds: <span className="text-[#FACC15] font-bold">{formatOdds(bet.totalOdds, format)}</span>
             </span>
-            <span className="text-[10px] text-[#475569]">
+            <span className="text-[10px] text-[#64748B]">
               Stake: <span className="text-[#F8FAFC] font-semibold">{bet.stake.toFixed(2)} USDT</span>
             </span>
           </div>
@@ -459,15 +459,15 @@ function StatBar({ bets }: { bets: PlacedBet[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
       {stats.map(s => (
-        <div key={s.label} className="rounded-xl border border-white/[0.06] bg-[#0A0F16] p-2.5">
-          <div className="flex items-center gap-1.5 mb-1.5" style={{ color: s.color }}>
+        <div key={s.label} className="rounded-xl border border-white/[0.08] bg-[#0A0F16] p-3">
+          <div className="flex items-center gap-1.5 mb-2" style={{ color: s.color }}>
             {s.icon}
-            <span className="text-[9px] uppercase tracking-wider font-semibold text-[#475569]">{s.label}</span>
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#94A3B8]">{s.label}</span>
           </div>
-          <p className="text-[14px] font-black tabular-nums leading-none" style={{ color: s.color }}>
+          <p className="text-[20px] font-black tabular-nums leading-none" style={{ color: s.color }}>
             {s.value}
           </p>
-          <p className="text-[9px] text-[#475569] mt-0.5">{s.sub}</p>
+          <p className="text-[11px] text-[#64748B] mt-1">{s.sub}</p>
         </div>
       ))}
     </div>
@@ -534,7 +534,7 @@ export function BetsPage() {
         <div>
           <h2 className="text-[16px] font-bold text-[#F8FAFC]">My Bets</h2>
           {bets.length > 0 && (
-            <p className="text-[11px] text-[#475569] mt-0.5">{bets.length} bet{bets.length !== 1 ? 's' : ''} placed</p>
+            <p className="text-[11px] text-[#64748B] mt-0.5">{bets.length} bet{bets.length !== 1 ? 's' : ''} placed</p>
           )}
         </div>
         <button
@@ -568,17 +568,17 @@ export function BetsPage() {
               key={f.key}
               onClick={() => { setFilter(f.key); setPage(1); }}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold whitespace-nowrap border transition-all duration-150 cursor-pointer',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] font-semibold whitespace-nowrap border transition-all duration-150 cursor-pointer',
                 active ? 'bg-[#0E1520]' : 'bg-[#0A0F16] text-[#64748B] border-white/[0.06] hover:text-[#94A3B8]',
               )}
               style={active ? { color: col, borderColor: `${col}35` } : {}}
             >
               {f.label}
               <span
-                className="px-1.5 py-0.5 rounded-md text-[9px] font-bold"
+                className="px-1.5 py-0.5 rounded-md text-[10px] font-bold"
                 style={active
                   ? { color: col, background: `${col}20` }
-                  : { color: '#475569', background: 'rgba(255,255,255,0.05)' }}
+                  : { color: '#94A3B8', background: 'rgba(255,255,255,0.06)' }}
               >
                 {counts[f.key]}
               </span>
@@ -602,7 +602,7 @@ export function BetsPage() {
               {filter === 'all' ? 'No bets placed yet' : `No ${filter} bets`}
             </p>
             {!isAuthenticated && (
-              <p className="text-[12px] text-[#475569] mt-1">Sign in to view your bet history</p>
+              <p className="text-[13px] text-[#64748B] mt-1">Sign in to view your bet history</p>
             )}
           </div>
         </div>
@@ -624,15 +624,15 @@ export function BetsPage() {
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-[#94A3B8] border border-white/[0.08] disabled:opacity-30 hover:border-[#00DFA9]/40 hover:text-[#00DFA9] transition-all cursor-pointer disabled:cursor-not-allowed"
+            className="px-3 py-1.5 rounded-lg text-[13px] font-semibold text-[#94A3B8] border border-white/[0.08] disabled:opacity-30 hover:border-[#00DFA9]/40 hover:text-[#00DFA9] transition-all cursor-pointer disabled:cursor-not-allowed"
           >
             ← Prev
           </button>
-          <span className="text-[11px] text-[#475569] tabular-nums">{page} / {pages}</span>
+          <span className="text-[11px] text-[#64748B] tabular-nums">{page} / {pages}</span>
           <button
             onClick={() => setPage(p => Math.min(pages, p + 1))}
             disabled={page === pages}
-            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-[#94A3B8] border border-white/[0.08] disabled:opacity-30 hover:border-[#00DFA9]/40 hover:text-[#00DFA9] transition-all cursor-pointer disabled:cursor-not-allowed"
+            className="px-3 py-1.5 rounded-lg text-[13px] font-semibold text-[#94A3B8] border border-white/[0.08] disabled:opacity-30 hover:border-[#00DFA9]/40 hover:text-[#00DFA9] transition-all cursor-pointer disabled:cursor-not-allowed"
           >
             Next →
           </button>
@@ -641,7 +641,7 @@ export function BetsPage() {
 
       {/* ── Footer note ────────────────────────────────────────────────── */}
       {bets.length > 0 && (
-        <p className="text-center text-[10px] text-[#475569]/40 pt-2">
+        <p className="text-center text-[10px] text-[#64748B]/60 pt-2">
           All amounts in USDT · 18+ · Bet responsibly
         </p>
       )}
