@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useAccount, useChainId, useDisconnect, useWalletClient, useSwitchChain, useConnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { useAppKit } from '@reown/appkit/react';
+import { watchAccount } from '@wagmi/core';
 import { wagmiAdapter } from '../lib/reown';
 
 export interface EvmWalletState {
@@ -24,17 +25,6 @@ if (typeof window !== 'undefined') {
   });
   // Request all installed wallets to announce themselves now
   window.dispatchEvent(new Event('eip6963:requestProvider'));
-}
-
-function getConnectedAddress(): string | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cfg = wagmiAdapter.wagmiConfig as any;
-  const state = cfg?.state;
-  const current: string | undefined = state?.current;
-  if (!current) return undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const conn: any = state?.connections?.get(current);
-  return conn?.accounts?.[0] as string | undefined;
 }
 
 export function useEvmWallet() {
@@ -108,24 +98,39 @@ export function useEvmWallet() {
       throw new Error('APPKIT_OPEN_FAILED');
     }
 
-    for (let i = 0; i < 60; i++) {
-      await new Promise<void>(r => setTimeout(r, 500));
-      const addr = getConnectedAddress();
-      if (addr) return addr;
-    }
-
-    return null;
+    // Subscribe to account changes via the public wagmi/core API (no internal state access).
+    // Resolves as soon as an address is detected, or after 5 minutes.
+    return new Promise<string | null>((resolve) => {
+      const timer = setTimeout(() => { unwatch(); resolve(null); }, 5 * 60 * 1000);
+      const unwatch = watchAccount(wagmiAdapter.wagmiConfig, {
+        onChange(account: { address?: string }) {
+          if (account.address) {
+            clearTimeout(timer);
+            unwatch();
+            resolve(account.address);
+          }
+        },
+      });
+    });
   }, [open, isConnected, address, connectAsync]);
 
   const disconnect = useCallback(() => wagmiDisconnect(), [wagmiDisconnect]);
 
-  const switchChain = useCallback((targetChainId: number) => {
-    wagmiSwitchChain({ chainId: targetChainId });
+  /** Switch chain and surface rejections to the caller. */
+  const switchChain = useCallback(async (targetChainId: number): Promise<void> => {
+    try {
+      await wagmiSwitchChain({ chainId: targetChainId });
+    } catch (err) {
+      const msg = (err as Error)?.message ?? '';
+      if (/reject|cancel|denied|user denied/i.test(msg)) {
+        throw new Error('Chain switch cancelled.');
+      }
+      throw err;
+    }
   }, [wagmiSwitchChain]);
 
   const openNetworks = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    void (open as any)({ view: 'Networks' });
+    void open({ view: 'Networks' });
   }, [open]);
 
   const signMessage = useCallback(async (message: string): Promise<string> => {

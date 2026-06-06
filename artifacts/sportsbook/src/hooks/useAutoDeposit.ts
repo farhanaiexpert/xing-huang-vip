@@ -119,15 +119,19 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
   const [hasTon,      setHasTon]      = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tronWeb = (window as any).tronWeb;
-    setHasTronLink(!!tronWeb?.defaultAddress?.base58);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ph = (window as any).solana;
-    setHasPhantom(!!(ph?.isPhantom));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ton = (window as any).ton;
-    setHasTon(!!(ton?.send));
+    function detectExtensions() {
+      // TronLink: check for presence of window.tronWeb (not connected state).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setHasTronLink(!!(window as any).tronWeb);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setHasPhantom(!!(( window as any).solana?.isPhantom));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setHasTon(!!(( window as any).ton?.send));
+    }
+    detectExtensions();
+    // Re-check after 300 ms — some extensions inject asynchronously after page load.
+    const timer = setTimeout(detectExtensions, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   const chainCfg = EVM_CHAINS[chainId] ?? null;

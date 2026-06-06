@@ -52,9 +52,11 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
   // Wallet flow state
   const [walletStep,    setWalletStep]    = useState<WalletStep>('idle');
   const [walletError,   setWalletError]   = useState('');
-  const tronActive     = useRef(false);
-  const phantomActive  = useRef(false);
+  const tronActive      = useRef(false);
+  const phantomActive   = useRef(false);
   const tonWalletActive = useRef(false);
+  // Set to true while waiting for connection via the Reown/WalletConnect modal.
+  const wcPendingRef = useRef(false);
 
   // Auto-fill referral code from ?ref= URL param or sessionStorage
   useEffect(() => {
@@ -81,8 +83,17 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       setShowPw(false); setSubmitting(false); setDone(false);
       setWalletStep('idle'); setWalletError('');
       tronActive.current = false; phantomActive.current = false; tonWalletActive.current = false;
+      wcPendingRef.current = false;
     }
   }, [open, defaultTab]);
+
+  // When the Reown/WalletConnect modal delivers a connection, advance to signing.
+  useEffect(() => {
+    if (wcPendingRef.current && isConnected && address && walletStep === 'waiting_wallet') {
+      wcPendingRef.current = false;
+      void handleEvmSign(address);
+    }
+  }, [isConnected, address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Email / Password submit ────────────────────────────────────────────────
   async function handleEmailSubmit(e: React.FormEvent) {
@@ -167,6 +178,24 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
         else setWalletStep('idle');
       });
     }
+  }
+
+  /**
+   * WalletConnect path — always opens the Reown AppKit modal (QR / deep-link).
+   * Never falls back to an injected wallet even if MetaMask is installed.
+   * Connection is detected reactively via the useEffect above.
+   */
+  function handleWalletConnect() {
+    setWalletError('');
+    if (isConnected && address) { void handleEvmSign(address); return; }
+    setWalletStep('waiting_wallet');
+    wcPendingRef.current = true;
+    evmWallet.openWalletModal().catch((err: unknown) => {
+      wcPendingRef.current = false;
+      const msg = (err instanceof Error ? err.message : String(err)) ?? '';
+      if (msg !== 'APPKIT_OPEN_FAILED') setWalletError(msg || 'Could not open wallet selector. Try again.');
+      setWalletStep('idle');
+    });
   }
 
   async function handleTronLink() {
@@ -279,7 +308,8 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
 
   function handleWalletClick(name: string) {
     switch (name) {
-      case 'MetaMask': case 'WalletConnect': handleMetaMask(); break;
+      case 'MetaMask':      handleMetaMask();    break;
+      case 'WalletConnect': handleWalletConnect(); break;
       case 'TronLink':   void handleTronLink(); break;
       case 'Phantom':    void handlePhantom();  break;
       case 'TON Wallet': void handleTon();      break;

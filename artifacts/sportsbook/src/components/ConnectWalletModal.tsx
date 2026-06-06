@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'wouter';
+import { useAppKitState } from '@reown/appkit/react';
 import {
   X, QrCode, Zap, CreditCard, Wallet, ArrowRight, Lock,
   Shield, Clock, CheckCircle2,
@@ -133,6 +134,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   const { address, isConnected } = evmWallet;
   const { refreshBalance } = useWallet();
 
+  const { open: appkitModalOpen } = useAppKitState();
   const [connecting, setConnecting] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [connectError, setConnectError] = useState('');
@@ -191,6 +193,9 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     setConnecting(true);
     try {
       await evmWallet.openWalletModal();
+      // openWalletModal() resolves as soon as the modal opens, NOT when the user
+      // connects. Keep connecting=true — the effect below clears it when the modal
+      // closes or a wallet address is detected.
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'APPKIT_OPEN_FAILED') {
@@ -198,10 +203,17 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
       } else if (msg !== 'Connection cancelled.') {
         setConnectError(msg || 'Could not connect wallet. Please try again.');
       }
-    } finally {
       setConnecting(false);
     }
   }
+
+  // Clear the "connecting" spinner when the AppKit modal closes without a connection,
+  // or when a wallet address becomes available (connection success).
+  useEffect(() => {
+    if (!appkitModalOpen && connecting) {
+      setConnecting(false);
+    }
+  }, [appkitModalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleDisconnect() {
     evmWallet.disconnect();
@@ -214,7 +226,9 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     evmWallet.disconnect();
     await new Promise(r => setTimeout(r, 200));
     try {
-      await evmWallet.connect();
+      // Always open the Reown modal so the user can choose a different wallet,
+      // rather than silently reconnecting to the previously-used injected wallet.
+      await evmWallet.openWalletModal();
     } catch {
       // Modal stays open; user can retry
     }

@@ -614,6 +614,9 @@ importers:
       '@reown/appkit-adapter-wagmi':
         specifier: ^1.8.20
         version: 1.8.20(0c67f004177a4c8741008e743844aacf)
+      '@wagmi/core':
+        specifier: ^3.5.0
+        version: 3.5.0(@tanstack/query-core@5.100.9)(@types/react@19.2.14)(react@19.1.0)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.1.0))(viem@2.51.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))
       viem:
         specifier: ^2.51.3
         version: 2.51.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)
