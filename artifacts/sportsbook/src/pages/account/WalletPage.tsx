@@ -294,7 +294,11 @@ export function WalletPage() {
     recoverPending('cb_pending_evm_tx', (() => {
       const raw = localStorage.getItem('cb_pending_evm_tx');
       if (!raw) return 'ETH';
-      try { return (JSON.parse(raw) as { network?: string }).network || 'ETH'; } catch { return 'ETH'; }
+      try {
+        const VALID_NETWORKS = new Set(['ETH', 'BSC', 'POLYGON', 'ARBITRUM', 'OPTIMISM', 'BASE']);
+        const parsed = JSON.parse(raw) as { network?: string };
+        return (parsed.network && VALID_NETWORKS.has(parsed.network)) ? parsed.network : 'ETH';
+      } catch { return 'ETH'; }
     })());
     recoverPending('cb_pending_tron_tx', 'TRC-20');
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -307,8 +311,11 @@ export function WalletPage() {
   const [w3DropdownOpen, setW3DropdownOpen] = useState(false);
   const [w3CopiedAddr, setW3CopiedAddr]     = useState(false);
   const [w3DepAddrCopied, setW3DepAddrCopied] = useState(false);
-  const [evmBalanceError, setEvmBalanceError]   = useState(false);
-  const [tronBalanceError, setTronBalanceError] = useState(false);
+  const [evmBalanceError, setEvmBalanceError]     = useState(false);
+  const [tronBalanceError, setTronBalanceError]   = useState(false);
+  const [evmBalanceNonce, setEvmBalanceNonce]     = useState(0);
+  const [tronBalanceNonce, setTronBalanceNonce]   = useState(0);
+  const [tronBandwidth, setTronBandwidth]         = useState<number | null>(null);
   const {
     depositAmount: walletDepAmount, setDepositAmount: setWalletDepAmount,
     depositPhase: walletPhase, depositError: walletError, depositResult: walletResult,
@@ -353,7 +360,7 @@ export function WalletPage() {
       if (!cancelled) { clearTimeout(timeout); setEvmBalanceRaw(undefined); setEvmBalanceError(true); }
     });
     return () => { cancelled = true; clearTimeout(timeout); };
-  }, [publicClient, w3Address, w3Connected, chainCfg]);
+  }, [publicClient, w3Address, w3Connected, chainCfg, evmBalanceNonce]);
   const evmBalance = (evmBalanceRaw !== undefined && chainCfg)
     ? Number(evmBalanceRaw) / Math.pow(10, chainCfg.decimals)
     : null;
@@ -361,7 +368,7 @@ export function WalletPage() {
   // ── TronLink USDT balance ─────────────────────────────────────────────────
   const [tronBalance, setTronBalance] = useState<number | null>(null);
   useEffect(() => {
-    if (!hasTronLink) { setTronBalance(null); setTronBalanceError(false); return; }
+    if (!hasTronLink) { setTronBalance(null); setTronBandwidth(null); setTronBalanceError(false); return; }
     let cancelled = false;
     setTronBalanceError(false);
     const timeout = setTimeout(() => {
@@ -371,13 +378,21 @@ export function WalletPage() {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tronWeb = (window as any).tronWeb;
+        const addr = tronWeb.defaultAddress.base58 as string;
         const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
-        const raw = await contract.balanceOf(tronWeb.defaultAddress.base58).call();
-        if (!cancelled) { clearTimeout(timeout); setTronBalance(Number(raw) / 1_000_000); }
+        const [raw, bw] = await Promise.all([
+          contract.balanceOf(addr).call(),
+          tronWeb.trx.getBandwidth(addr).catch(() => 0),
+        ]);
+        if (!cancelled) {
+          clearTimeout(timeout);
+          setTronBalance(Number(raw) / 1_000_000);
+          setTronBandwidth(typeof bw === 'number' ? bw : 0);
+        }
       } catch { if (!cancelled) { clearTimeout(timeout); setTronBalance(null); setTronBalanceError(true); } }
     })();
     return () => { cancelled = true; clearTimeout(timeout); };
-  }, [hasTronLink]);
+  }, [hasTronLink, tronBalanceNonce]);
 
   // Sync selectedChain to the wallet's current connected chain
   useEffect(() => {
@@ -1688,7 +1703,7 @@ export function WalletPage() {
                               </p>
                               <button
                                 type="button"
-                                onClick={() => setWalletDepAmount(Math.floor(walletBalance).toString())}
+                                onClick={() => setWalletDepAmount(walletBalance.toFixed(2))}
                                 disabled={walletProcessing || walletBalance < 10}
                                 className="px-2 py-0.5 rounded-lg text-[9px] font-black transition-all disabled:opacity-40"
                                 style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.30)' }}
@@ -1701,7 +1716,15 @@ export function WalletPage() {
                               <span className="text-[10px] text-red-400">Failed to load</span>
                               <button
                                 type="button"
-                                onClick={() => { setEvmBalanceError(false); setTronBalanceError(false); }}
+                                onClick={() => {
+                                  if (selectedChain === 'trc20') {
+                                    setTronBalanceError(false);
+                                    setTronBalanceNonce(n => n + 1);
+                                  } else {
+                                    setEvmBalanceError(false);
+                                    setEvmBalanceNonce(n => n + 1);
+                                  }
+                                }}
                                 className="text-[9px] font-bold text-[#38BDF8] hover:underline"
                               >
                                 Retry ↺
@@ -1713,7 +1736,7 @@ export function WalletPage() {
                             </span>
                           )}
                         </div>
-                        {w3Connected && chainCfg && gasBalance !== null && (() => {
+                        {selectedChain !== 'trc20' && w3Connected && chainCfg && gasBalance !== null && (() => {
                           const minGas = MIN_NATIVE_GAS[evmWallet.chainId] ?? 0.001;
                           const isLow = gasBalance < minGas;
                           return (
@@ -1726,7 +1749,7 @@ export function WalletPage() {
                             </div>
                           );
                         })()}
-                        {w3Connected && chainCfg && gasBalance === null && (
+                        {selectedChain !== 'trc20' && w3Connected && chainCfg && gasBalance === null && (
                           <span className="text-[10px] text-[#64748B] flex items-center gap-1 shrink-0 ml-3">
                             <Loader2 className="w-2.5 h-2.5 animate-spin" />
                           </span>
@@ -1758,25 +1781,38 @@ export function WalletPage() {
                         hasTronLink ? (() => {
                           const amt = parseFloat(walletDepAmount || '0');
                           const insufficientTron = tronBalance !== null && amt > tronBalance;
+                          const MIN_TRON_BANDWIDTH = 300;
+                          const lowBandwidth = tronBandwidth !== null && tronBandwidth < MIN_TRON_BANDWIDTH;
+                          const isTronDisabled = walletProcessing || insufficientTron || lowBandwidth;
                           return (
-                            <button
-                              onClick={handleTronDeposit}
-                              disabled={walletProcessing || insufficientTron}
-                              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black transition-all hover:scale-[1.01] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
-                              style={{ background: walletProcessing ? 'rgba(255,255,255,0.05)' : 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.30)', color: '#00DFA9' }}
-                            >
-                              {walletPhase === 'sending' ? (
-                                <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Approve in TronLink…</>
-                              ) : walletPhase === 'confirming' ? (
-                                <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Waiting for confirmation…</>
-                              ) : walletPhase === 'submitting' ? (
-                                <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Verifying on-chain…</>
-                              ) : insufficientTron ? (
-                                <>Insufficient TRC-20 Balance</>
-                              ) : (
-                                <>Deposit via TronLink TRC-20 <ChevronRight className="w-4 h-4" /></>
+                            <>
+                              {lowBandwidth && (
+                                <div className="flex items-center gap-2 p-2.5 rounded-xl text-[10px]" style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)' }}>
+                                  <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                                  <span className="text-red-400">Insufficient TRX bandwidth/energy — top up TRX before depositing</span>
+                                </div>
                               )}
-                            </button>
+                              <button
+                                onClick={handleTronDeposit}
+                                disabled={isTronDisabled}
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black transition-all hover:scale-[1.01] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                                style={{ background: walletProcessing ? 'rgba(255,255,255,0.05)' : 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.30)', color: '#00DFA9' }}
+                              >
+                                {walletPhase === 'sending' ? (
+                                  <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Approve in TronLink…</>
+                                ) : walletPhase === 'confirming' ? (
+                                  <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Waiting for confirmation…</>
+                                ) : walletPhase === 'submitting' ? (
+                                  <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Verifying on-chain…</>
+                                ) : insufficientTron ? (
+                                  <>Insufficient TRC-20 Balance</>
+                                ) : lowBandwidth ? (
+                                  <>Insufficient TRX Bandwidth/Energy</>
+                                ) : (
+                                  <>Deposit via TronLink TRC-20 <ChevronRight className="w-4 h-4" /></>
+                                )}
+                              </button>
+                            </>
                           );
                         })() : (
                           <div className="flex flex-col items-center py-5 gap-3 text-center">

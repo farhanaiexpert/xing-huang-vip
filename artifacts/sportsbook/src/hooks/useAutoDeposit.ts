@@ -282,7 +282,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     let txHash: string | null = null;
     try {
       const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
-      const rawAmount = Number(toBaseUnits(amount, 6));
+      const rawAmount = toBaseUnits(amount, 6).toString();
       txHash = (await contract.transfer(trc20Addr, rawAmount).send({ feeLimit: 10_000_000, callValue: 0 })) as string;
 
       // Persist immediately — survives page refresh
