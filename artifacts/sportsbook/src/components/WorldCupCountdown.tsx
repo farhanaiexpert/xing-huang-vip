@@ -45,22 +45,41 @@ export function WorldCupCountdown() {
   const visibleRef = useRef(false);
 
   // Visibility cadence — toggle every CYCLE_MS (starts hidden, first shows at 20s).
+  // Re-check kickoff before each toggle so we never flash back on after it has passed.
   useEffect(() => {
-    if (closed) return;
+    if (closed || remaining.done) return;
     const id = setInterval(() => {
+      const next = getRemaining();
+      if (next.done) {
+        setRemaining(next);
+        return;
+      }
       visibleRef.current = !visibleRef.current;
       setVisible(visibleRef.current);
     }, CYCLE_MS);
     return () => clearInterval(id);
-  }, [closed]);
+  }, [closed, remaining.done]);
 
   // Tick the countdown only while the widget is on screen.
   useEffect(() => {
-    if (!visible || closed) return;
+    if (!visible || closed || remaining.done) return;
     setRemaining(getRemaining());
     const id = setInterval(() => setRemaining(getRemaining()), 1_000);
     return () => clearInterval(id);
-  }, [visible, closed]);
+  }, [visible, closed, remaining.done]);
+
+  // Fire exactly at kickoff (even while hidden) so the widget disappears permanently on time.
+  useEffect(() => {
+    if (closed || remaining.done) return;
+    const delay = KICKOFF_MS - Date.now();
+    if (delay <= 0) {
+      setRemaining(getRemaining());
+      return;
+    }
+    // setTimeout caps at ~24.8 days; our kickoff is well within range.
+    const id = setTimeout(() => setRemaining(getRemaining()), Math.min(delay, 2_147_483_000));
+    return () => clearTimeout(id);
+  }, [closed, remaining.done]);
 
   if (closed || remaining.done) return null;
 
@@ -73,8 +92,9 @@ export function WorldCupCountdown() {
       }`}
       role="dialog"
       aria-label="World Cup 2026 kickoff countdown"
+      aria-hidden={!visible}
     >
-      <div className="relative flex items-center gap-3 pl-2.5 pr-4 py-2.5 rounded-2xl border border-white/10 bg-[#0B0F14]/55 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] overflow-hidden">
+      <div className="relative flex items-center gap-3 pl-2.5 pr-7 py-2.5 rounded-2xl border border-white/10 bg-[#0B0F14]/55 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] overflow-hidden">
         {/* Soft brand glow */}
         <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-[#00DFA9]/12 via-transparent to-[#38BDF8]/12" />
         {/* Top sheen highlight */}

@@ -319,6 +319,33 @@ wcm-modal::part(backdrop) {
   scrollbar-color: rgba(0, 223, 169, 0.30) #0B0F14;
 }
 
+/* ── Sidebar scroll (more visible, user-friendly) ──────────────────────────── */
+.sidebar-scroll {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 223, 169, 0.28) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 223, 169, 0.22);
+  border-radius: 99px;
+  transition: background 0.2s ease;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 223, 169, 0.40);
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 223, 169, 0.70);
+}
+
 /* ── LiveScoresTicker infinite scroll ───────────────────────────────────────── */
 @keyframes tickerScroll {
   0%   { transform: translateX(0); }

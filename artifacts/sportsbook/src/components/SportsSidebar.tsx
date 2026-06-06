@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ScrollArea } from './ui/scroll-area';
 import { SPORTS } from '../data/mockData';
 import { useFavorites } from '../hooks/useFavorites';
 import { useOddsData } from '../hooks/useOddsData';
@@ -91,11 +90,15 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
 
   return (
     <aside className={cn(
-      'w-[220px] xl:w-[240px] 2xl:w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-0 hidden xl:flex',
+      'group/sidebar relative w-[220px] xl:w-[240px] 2xl:w-[260px] shrink-0 flex-col h-[calc(100vh-3.5rem)] sticky top-0 hidden xl:flex',
       'bg-[#0A0E13] border-r border-[#253241]',
       className
     )}>
-      <ScrollArea className="flex-1">
+      {/* Top fade — hints there is more content above */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-5 z-10 bg-gradient-to-b from-[#0A0E13] to-transparent" />
+      {/* Bottom fade — hints there is more content below */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 z-10 bg-gradient-to-t from-[#0A0E13] to-transparent" />
+      <div className="sidebar-scroll flex-1 overflow-y-auto overflow-x-hidden">
         <div className="py-3">
 
           {/* ── Live Now ─────────────────────────────────────────────────── */}
@@ -230,7 +233,7 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
           </div>
 
         </div>
-      </ScrollArea>
+      </div>
     </aside>
   );
 }
