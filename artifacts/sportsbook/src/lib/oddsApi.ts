@@ -1,6 +1,6 @@
 /**
  * THE ODDS API — CLIENT TYPES & FETCH HELPERS
- * All requests are proxied through the CupBett API server (/api/odds/:sport).
+ * All requests are proxied through the Xing Huang API server (/api/odds/:sport).
  * The Odds API key lives server-side only — it is never sent to the browser.
  */
 

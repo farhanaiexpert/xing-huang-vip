@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/admin/"
-title = "CupBett Admin"
+title = "Xing Huang Admin"
 version = "1.0.0"
 id = "artifacts/admin"
 router = "path"

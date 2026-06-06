@@ -226,7 +226,7 @@ export function PromoPopup() {
             <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
               Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 120 USDT</span>
             </p>
-            <p className="text-[10px] text-[#64748B]">Join 50,000+ players on <span translate="no">CupBett</span> Sports Trading</p>
+            <p className="text-[10px] text-[#64748B]">Join 50,000+ players on <span translate="no">Xing Huang</span> Sports Trading</p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
@@ -467,10 +467,10 @@ export function PromoPopup() {
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
           >
             {/* Original image */}
-            <img src={IMG_ORIGINAL} alt="CupBett Ambassador" className="promo-celeb-img"
+            <img src={IMG_ORIGINAL} alt="Xing Huang Ambassador" className="promo-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 0 : 1 }} />
             {/* Alt image */}
-            <img src={IMG_ALT} alt="CupBett Ambassador" className="promo-celeb-img"
+            <img src={IMG_ALT} alt="Xing Huang Ambassador" className="promo-celeb-img"
               style={{ ...IMG_BASE, opacity: altVisible ? 1 : 0 }} />
 
             {/* Desktop right-edge fade */}
@@ -532,7 +532,7 @@ export function PromoPopup() {
               </span>
               <span className="hidden md:inline">
                 Join thousands of winning players on{' '}
-                <span translate="no" className="text-[#00DFA9] font-semibold">CupBett Sports Trading</span>.
+                <span translate="no" className="text-[#00DFA9] font-semibold">Xing Huang Sports Trading</span>.
                 Instant deposits · real-time odds · provably fair.
               </span>
             </p>

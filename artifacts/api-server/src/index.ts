@@ -708,7 +708,7 @@ runMigrations().then(() => {
   }, 2 * 60 * 1000);
 
   const server = app.listen(PORT, "0.0.0.0", () => {
-    logger.info({ port: PORT }, "CupBett API server started");
+    logger.info({ port: PORT }, "Xing Huang API server started");
   });
 
   // ── Graceful shutdown on SIGTERM / SIGINT ──────────────────────────────────

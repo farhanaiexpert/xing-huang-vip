@@ -167,8 +167,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}>
           {!collapsed && (
             <img
-              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
-              alt="CupBett"
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp"
+              alt="Xing Huang"
               className="h-10 object-contain"
               onError={e => {
                 e.currentTarget.style.display = "none";

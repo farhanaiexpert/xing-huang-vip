@@ -1,4 +1,4 @@
-# CupBett
+# Xing Huang
 
 A premium frontend-only sportsbook dashboard built with React, Vite, and Tailwind CSS v4.
 
@@ -32,7 +32,7 @@ A premium frontend-only sportsbook dashboard built with React, Vite, and Tailwin
 
 ## Product
 
-CupBett is a sports trading / sportsbook UI with live odds, bet slip, WinSpin, promotions, affiliate dashboard, prediction pools, and bet history — all frontend-only.
+Xing Huang is a sports trading / sportsbook UI with live odds, bet slip, WinSpin, promotions, affiliate dashboard, prediction pools, and bet history — all frontend-only.
 
 ## User preferences
 

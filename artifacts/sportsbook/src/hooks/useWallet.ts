@@ -1,7 +1,7 @@
 /**
  * WALLET CONTEXT
- * Connected to the CupBett backend API.
- * isConnected = user is authenticated (CupBett account via wallet login).
+ * Connected to the Xing Huang backend API.
+ * isConnected = user is authenticated (Xing Huang account via wallet login).
  * Balance is fetched from /api/wallet/balance.
  */
 import {
@@ -76,7 +76,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Prefer walletAddress → displayName → username for display
   const fullAddress  = user?.walletAddress ?? null;
   const shortAddress = user ? (toShortAddr(user.walletAddress) || user.displayName || null) : null;
-  const walletName   = isAuthenticated ? 'CupBett Account' : null;
+  const walletName   = isAuthenticated ? 'Xing Huang Account' : null;
 
   // address field: full wallet address, or username fallback for legacy admin accounts
   const address = user?.walletAddress ?? user?.username ?? null;

@@ -134,9 +134,9 @@ const expectedTronAddr = evmToTronAddress(testAccount.address);
 console.log(`  ℹ️  Test EVM  address : ${testAccount.address}`);
 console.log(`  ℹ️  Expected TRON addr: ${expectedTronAddr}`);
 
-// Build a realistic CupBett nonce message for this address
+// Build a realistic Xing Huang nonce message for this address
 const nonce   = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
-const message = `Welcome to CupBett!\n\nSign this message to verify your wallet ownership.\n\nWallet: ${expectedTronAddr}\nNonce: ${nonce}\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
+const message = `Welcome to Xing Huang!\n\nSign this message to verify your wallet ownership.\n\nWallet: ${expectedTronAddr}\nNonce: ${nonce}\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
 
 // Sign the raw TRON message hash — this is exactly what TronLink's signMessageV2 does:
 //   hash = keccak256("\x19TRON Signed Message:\n" + len + message)
@@ -152,7 +152,7 @@ assert(
 );
 
 // Second message to confirm it's not a fluke
-const message2  = `Welcome to CupBett!\n\nSign this message to verify your wallet ownership.\n\nWallet: ${expectedTronAddr}\nNonce: deadbeef00112233deadbeef00112233deadbeef00112233deadbeef00112233\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
+const message2  = `Welcome to Xing Huang!\n\nSign this message to verify your wallet ownership.\n\nWallet: ${expectedTronAddr}\nNonce: deadbeef00112233deadbeef00112233deadbeef00112233deadbeef00112233\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
 const sig2      = await testAccount.sign({ hash: tronMessageHash(message2) });
 const recovered2 = await verifyTronSignature(message2, sig2);
 assert(

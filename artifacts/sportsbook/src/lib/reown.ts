@@ -24,10 +24,10 @@ export const appkit = createAppKit({
   networks,
   projectId,
   metadata: {
-    name: 'CupBett',
-    description: 'CupBett Sportsbook — Deposit USDT',
+    name: 'Xing Huang',
+    description: 'Xing Huang Sportsbook — Deposit USDT',
     url: siteUrl,
-    icons: ['https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp'],
+    icons: ['https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp'],
   },
   features: {
     analytics: false,
@@ -55,7 +55,7 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
       // Skip INITIALIZE — the SDK reconnects to the relay every ~10 s, creating noise
       if (e.data.event === 'INITIALIZE') return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      console.log('[CupBett AppKit]', e.data.event, (e.data as any).properties ?? '');
+      console.log('[Xing Huang AppKit]', e.data.event, (e.data as any).properties ?? '');
     });
   } catch { /* subscribeEvents may not exist on older SDK versions */ }
 }

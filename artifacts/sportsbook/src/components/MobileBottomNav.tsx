@@ -218,8 +218,8 @@ export function MobileBottomNav() {
           {/* ── Header row: logo + close ── */}
           <div className="flex items-center justify-between px-4 pt-2 pb-3 shrink-0">
             <img
-              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
-              alt="CupBett"
+              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp"
+              alt="Xing Huang"
               className="h-8 object-contain"
             />
             <button
@@ -402,7 +402,7 @@ export function MobileBottomNav() {
               {/* Version badge */}
               <div className="mt-4 flex items-center justify-center gap-1.5">
                 <div className="w-1 h-1 rounded-full bg-[#00DFA9]/40" />
-                <span className="text-[9px] text-[#94A3B8]/25 tracking-wider font-medium uppercase"><span translate="no">CupBett</span> v1.0 · 18+ · Gamble Responsibly</span>
+                <span className="text-[9px] text-[#94A3B8]/25 tracking-wider font-medium uppercase"><span translate="no">Xing Huang</span> v1.0 · 18+ · Gamble Responsibly</span>
                 <div className="w-1 h-1 rounded-full bg-[#00DFA9]/40" />
               </div>
             </div>

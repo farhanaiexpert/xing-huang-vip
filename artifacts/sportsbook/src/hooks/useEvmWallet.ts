@@ -94,7 +94,7 @@ export function useEvmWallet() {
     try {
       await open();
     } catch (err) {
-      console.error('[CupBett] AppKit open() failed:', err);
+      console.error('[Xing Huang] AppKit open() failed:', err);
       throw new Error('APPKIT_OPEN_FAILED');
     }
 
@@ -151,7 +151,7 @@ export function useEvmWallet() {
     try {
       await open();
     } catch (err) {
-      console.error('[CupBett] AppKit open() failed:', err);
+      console.error('[Xing Huang] AppKit open() failed:', err);
       throw new Error('APPKIT_OPEN_FAILED');
     }
   }, [open]);

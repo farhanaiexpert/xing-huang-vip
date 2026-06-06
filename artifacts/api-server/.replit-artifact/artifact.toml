@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/api"
-title = "CupBett API"
+title = "Xing Huang API"
 version = "1.0.0"
 id = "artifacts/api-server"
 router = "path"

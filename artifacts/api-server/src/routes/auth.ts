@@ -55,7 +55,7 @@ function generateNonce(): string {
 }
 
 function buildSignMessage(address: string, nonce: string): string {
-  return `Welcome to CupBett!\n\nSign this message to verify your wallet ownership.\n\nWallet: ${address}\nNonce: ${nonce}\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
+  return `Welcome to Xing Huang!\n\nSign this message to verify your wallet ownership.\n\nWallet: ${address}\nNonce: ${nonce}\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
 }
 
 function shortAddress(addr: string): string {

@@ -329,7 +329,7 @@ router.post("/wallet/deposit/nowpayments/create", authenticate, async (req, res)
       priceCurrency: "usd",
       payCurrency: currency,
       orderId: `cupbett-${req.user!.userId}-${Date.now()}`,
-      orderDescription: `CupBett deposit $${amount} USDT for user ${req.user!.userId}`,
+      orderDescription: `Xing Huang deposit $${amount} USDT for user ${req.user!.userId}`,
       ipnCallbackUrl,
     });
 

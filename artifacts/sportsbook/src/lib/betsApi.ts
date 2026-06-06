@@ -1,6 +1,6 @@
 /**
  * BetsAPI — client types & fetch helpers.
- * All requests go through the CupBett API server (/api/betsapi/*).
+ * All requests go through the Xing Huang API server (/api/betsapi/*).
  * The BetsAPI key is server-side only and never sent to the browser.
  */
 

@@ -547,7 +547,7 @@ export function Affiliate() {
                     </div>
                     <p className="text-[14px] font-bold text-[#F8FAFC] mb-1">No referrals yet</p>
                     <p className="text-[12px] text-[#64748B] max-w-[260px] leading-relaxed">
-                      When someone joins CupBett using your link, they appear here across all 3 levels.
+                      When someone joins Xing Huang using your link, they appear here across all 3 levels.
                     </p>
                   </div>
                 ) : (

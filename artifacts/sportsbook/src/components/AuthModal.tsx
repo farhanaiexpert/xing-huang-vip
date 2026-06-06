@@ -165,7 +165,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setWalletStep('done');
       toast.success(`Signed in as ${shortAddress(addr)}`, {
-        description: 'Welcome to CupBett',
+        description: 'Welcome to Xing Huang',
         duration: 4000,
         style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' },
       });
@@ -230,7 +230,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setWalletStep('done');
-      toast.success(`Signed in`, { description: 'Welcome to CupBett', duration: 4000, style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' } });
+      toast.success(`Signed in`, { description: 'Welcome to Xing Huang', duration: 4000, style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' } });
       setTimeout(onClose, 1300);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
@@ -264,7 +264,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setWalletStep('done');
-      toast.success('Signed in', { description: 'Welcome to CupBett', duration: 4000, style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' } });
+      toast.success('Signed in', { description: 'Welcome to Xing Huang', duration: 4000, style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' } });
       setTimeout(onClose, 1300);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
@@ -307,7 +307,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       setTokens(data.accessToken, data.refreshToken);
       loginWithWallet(data.accessToken, data.refreshToken, data.user);
       setWalletStep('done');
-      toast.success('Signed in', { description: 'Welcome to CupBett', duration: 4000, style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' } });
+      toast.success('Signed in', { description: 'Welcome to Xing Huang', duration: 4000, style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' } });
       setTimeout(onClose, 1300);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
@@ -392,7 +392,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
               </div>
               <div className="text-center">
                 <p className="text-[18px] font-black text-[#F8FAFC]">You're in!</p>
-                <p className="text-[13px] text-[#94A3B8]/55 mt-1">Welcome to CupBett Sports Trading</p>
+                <p className="text-[13px] text-[#94A3B8]/55 mt-1">Welcome to Xing Huang Sports Trading</p>
               </div>
             </div>
           )}
@@ -430,7 +430,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
                   {tab === 'login' ? 'Welcome back' : 'Create account'}
                 </h2>
                 <p className="text-[12px] text-[#94A3B8]/50 mt-1">
-                  {tab === 'login' ? 'Sign in to your CupBett account' : 'Start trading sports today'}
+                  {tab === 'login' ? 'Sign in to your Xing Huang account' : 'Start trading sports today'}
                 </p>
               </div>
 

@@ -1,5 +1,5 @@
 /**
- * Chinese (Simplified) translation overrides for CupBett.
+ * Chinese (Simplified) translation overrides for Xing Huang.
  *
  * HOW TO EDIT:
  *   - Find the English word/phrase on the LEFT side of the colon.
@@ -213,7 +213,7 @@ export const zh: Record<string, string> = {
 
 
   // ── Help page ─────────────────────────────────────────────────────────────
-  "How CupBett works":        "CupBett 使用指南",
+  "How Xing Huang works":        "Xing Huang 使用指南",
   "How Odds Work":            "赔率如何运作",
   "Selecting Odds":           "如何选择赔率",
   "Using the Bet Slip":       "如何使用投注单",
@@ -507,8 +507,8 @@ export const zh: Record<string, string> = {
     "足球、网球、篮球（NBA）、板球、电竞（CS2、LoL）、赛马、IPL、一级方程式、拳击、综合格斗、高尔夫、飞镖等已上线或即将推出。",
   "Yes. Click any odds button on the full event page to add it to your Bet Slip. All markets work the same way regardless of which page you're on.":
     "是的。点击完整赛事页面上的任意赔率按钮即可添加到投注单。无论在哪个页面，所有市场的操作方式相同。",
-  "CupBett · All odds subject to change · 18+":
-    "CupBett · 所有赔率可能随时变动 · 18岁以上",
+  "Xing Huang · All odds subject to change · 18+":
+    "Xing Huang · 所有赔率可能随时变动 · 18岁以上",
 
 
   // ── Promotions page — subtitles & descriptions ────────────────────────────

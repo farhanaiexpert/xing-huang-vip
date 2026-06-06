@@ -1571,7 +1571,7 @@ export function WalletPage() {
                           <div className="flex items-start gap-2">
                             <Info className="w-3.5 h-3.5 text-[#38BDF8] shrink-0 mt-0.5" />
                             <p className="text-[10px] text-[#94A3B8] leading-relaxed">
-                              On mobile? Open CupBett inside your wallet's in-app browser for one-tap deposits — or tap Connect Wallet above to link via WalletConnect.
+                              On mobile? Open Xing Huang inside your wallet's in-app browser for one-tap deposits — or tap Connect Wallet above to link via WalletConnect.
                             </p>
                           </div>
                           <div className="grid grid-cols-3 gap-1.5">

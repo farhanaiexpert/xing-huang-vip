@@ -43,8 +43,8 @@ export default function LoginPage() {
       <div className="w-full max-w-[360px] relative z-10">
         <div className="flex flex-col items-center gap-3 mb-7">
           <img
-            src="https://media.ourwebprojects.pro/wp-content/uploads/2026/05/cupbetlogo-1.webp"
-            alt="CupBett"
+            src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp"
+            alt="Xing Huang"
             className="h-11 object-contain"
             onError={e => { e.currentTarget.style.display = "none"; }}
           />
@@ -99,7 +99,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-[11px] text-[#1E293B] mt-5">
-          CupBett Admin · Restricted access
+          Xing Huang Admin · Restricted access
         </p>
       </div>
     </div>
