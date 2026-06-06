@@ -89,11 +89,11 @@ const FORCE_MANUAL_NETWORKS = new Set(["BTC", "XRP"]);
 const DepositBody = z.object({
   amount:  z.number().positive(),
   txHash:  z.string().min(10, "Please enter a valid transaction hash"),
-  // ETH | BSC | POLYGON | ARBITRUM | OPTIMISM | BASE = EVM auto-deposit (verified via evmVerify)
+  // ETH | BSC | POLYGON | ARBITRUM | OPTIMISM | BASE | LINEA = EVM auto-deposit (verified via evmVerify)
   // TRC-20 = TRON auto or manual deposit (verified via tronVerify)
   // ERC-20 = legacy manual form (falls through to EVM/ETH verifier)
   // SOLANA | TON | BTC | XRP = non-EVM chains (verified via dedicated libs)
-  network: z.enum(["TRC-20", "ERC-20", "ETH", "BSC", "POLYGON", "ARBITRUM", "OPTIMISM", "BASE", "SOLANA", "TON", "BTC", "XRP"]).default("TRC-20"),
+  network: z.enum(["TRC-20", "ERC-20", "ETH", "BSC", "POLYGON", "ARBITRUM", "OPTIMISM", "BASE", "LINEA", "SOLANA", "TON", "BTC", "XRP"]).default("TRC-20"),
 });
 
 router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => {

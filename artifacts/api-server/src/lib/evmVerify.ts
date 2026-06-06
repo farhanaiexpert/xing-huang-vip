@@ -54,6 +54,12 @@ const NETWORK_CONFIG: Record<string, EvmNetworkConfig> = {
     rpcUrls: alchemyOrFallback("base-mainnet", "https://mainnet.base.org"),
     label: "Base",
   },
+  LINEA: {
+    contract: "0xA219439258ca9da29E9Cc4cE5596924745e12B93",
+    decimals: 6,
+    rpcUrls: alchemyOrFallback("linea-mainnet", "https://rpc.linea.build"),
+    label: "Linea",
+  },
 };
 
 export interface EvmVerifyResult {
@@ -84,6 +90,7 @@ const MIN_CONFIRMATIONS: Record<string, number> = {
   ARBITRUM: 1,
   OPTIMISM: 1,
   BASE:     1,
+  LINEA:    1,
 };
 
 async function rpcCall(rpcUrl: string, method: string, params: unknown[]): Promise<unknown> {
