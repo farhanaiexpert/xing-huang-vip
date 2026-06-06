@@ -8,6 +8,7 @@ import {
   Copy, Check, ChevronRight, ExternalLink, AlertCircle, ChevronDown,
   RefreshCw, ArrowLeft, Sparkles,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { AuthModal } from './AuthModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useEvmWallet } from '../hooks/useEvmWallet';
@@ -231,6 +232,15 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
       await evmWallet.openWalletModal();
     } catch {
       // Modal stays open; user can retry
+    }
+  }
+
+  async function handleSwitchNetwork(chainId: number) {
+    try {
+      await evmWallet.switchChain(chainId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(msg || 'Chain switch rejected. Please approve in your wallet.');
     }
   }
 
@@ -1602,12 +1612,34 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                           </div>
 
                           {!chainCfg && !hasTronLink && (
-                            <div className="flex items-start gap-2 p-3 rounded-xl text-[11px]"
+                            <div className="flex flex-col gap-2 p-3 rounded-xl text-[11px]"
                               style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
-                              <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0 mt-0.5" />
-                              <p className="text-[#FACC15]">
-                                Your wallet is on an unsupported network. Switch to <strong>ETH, BSC, Polygon, Arbitrum, Optimism,</strong> or <strong>Base</strong> to deposit USDT.
-                              </p>
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0 mt-0.5" />
+                                <p className="text-[#FACC15]">
+                                  Unsupported network. Switch to a supported chain to deposit USDT.
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 pl-6">
+                                {([
+                                  { id: 1,     label: 'ETH' },
+                                  { id: 56,    label: 'BSC' },
+                                  { id: 137,   label: 'Polygon' },
+                                  { id: 42161, label: 'Arbitrum' },
+                                  { id: 10,    label: 'Optimism' },
+                                  { id: 8453,  label: 'Base' },
+                                ] as { id: number; label: string }[]).map(({ id, label }) => (
+                                  <button
+                                    key={id}
+                                    onClick={() => { void handleSwitchNetwork(id); }}
+                                    disabled={isProcessing}
+                                    className="px-2 py-1 rounded-lg text-[10px] font-bold transition-all hover:opacity-90 disabled:opacity-50"
+                                    style={{ background: 'rgba(250,204,21,0.15)', border: '1px solid rgba(250,204,21,0.30)', color: '#FACC15' }}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           )}
 
