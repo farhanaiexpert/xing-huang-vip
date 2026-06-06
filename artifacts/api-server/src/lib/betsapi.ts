@@ -173,11 +173,19 @@ export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEven
       const url = `${BETSAPI_BASE}/v1/bet365/upcoming?sport_id=${sportId}&token=${BETSAPI_KEY}&per_page=${PER_PAGE}&page=${page}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403) permissionError = true;
+        // 401/403 = bad token; 429 = rate limit / out of request volume.
+        // All are recoverable conditions — flag so the caller uses a short
+        // retry TTL instead of caching empty for 4 hours.
+        if (res.status === 401 || res.status === 403 || res.status === 429) permissionError = true;
         return { events: [], total: 0 };
       }
-      const json = await res.json() as BetsApiListResponse;
-      if (json.success !== 1 || !Array.isArray(json.results)) return { events: [], total: 0 };
+      const json = await res.json() as BetsApiListResponse & { error?: string };
+      if (json.success !== 1 || !Array.isArray(json.results)) {
+        // BetsAPI sometimes returns HTTP 200 with {success:0, error:"TOO_MANY_REQUESTS"}
+        // when the account is out of request volume — treat as recoverable too.
+        if (json.success !== 1 && typeof json.error === 'string') permissionError = true;
+        return { events: [], total: 0 };
+      }
       const total = json.pager?.total ?? json.results.length;
       return { events: json.results.filter(filterEvent), total };
     } catch {
@@ -203,6 +211,10 @@ export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEven
       allEvents.push(...results.flatMap(r => r.events));
     }
   }
+
+  // A 401/403/429 on any page (not just page 1) means the data is unreliable —
+  // discard the partial result so the caller uses the short retry TTL.
+  if (permissionError) return null;
 
   return allEvents;
 }

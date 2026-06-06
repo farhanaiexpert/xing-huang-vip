@@ -7,3 +7,4 @@
 - [EVM deposit sender binding](deposit-sender-binding.md) — auto-credit must match on-chain `from` to user's SIWE wallet; scope by EVM network set, NOT fromAddress presence (Tron verifier also returns it).
 - [Wallet deposit UI gating](wallet-deposit-ui-gating.md) — connect/connected/success subviews must key on w3Connected first; reset deposit phase on disconnect or stale success card lingers; chainCfg drives supported-network detection.
 - [BTTS fallback fix](btts-fallback-fix.md) — WC returns HTTP 422 for btts; fetchOddsFromApi auto-retries without btts on 400/422.
+- [BetsAPI out-of-volume 429](betsapi-volume-429.md) — valid key ≠ data; out-of-volume shows as 429 / 200 success:0 TOO_MANY_REQUESTS; treat as retryable (15min TTL), needs paid Volume Package.

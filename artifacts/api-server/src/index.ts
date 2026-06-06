@@ -620,8 +620,9 @@ runMigrations().then(() => {
         const events = await fetchBetsApiUpcoming(sportId);
 
         if (events === null) {
-          // Permission/auth error (403/401) — retry sooner (15 min) rather than locking
-          // out for 4 hours. This lets the cache recover quickly after a plan upgrade.
+          // Recoverable error (401/403 bad token, or 429 / out of request volume) —
+          // retry sooner (15 min) rather than locking out for 4 hours. This lets the
+          // cache recover quickly after a plan upgrade or volume top-up.
           await db.execute(sql`
             INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
             VALUES (${String(sportId)}, '[]'::jsonb, NOW(), NOW() + INTERVAL '15 minutes')
