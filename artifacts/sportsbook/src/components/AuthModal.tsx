@@ -4,6 +4,7 @@ import {
   Mail, Lock, Eye, EyeOff, Loader2, User,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAppKitState } from '@reown/appkit/react';
 import { useEvmWallet } from '../hooks/useEvmWallet';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import { api, setTokens } from '../lib/apiClient';
@@ -36,6 +37,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
   const { loginWithWallet } = useAuth();
   const evmWallet = useEvmWallet();
   const { address, isConnected } = evmWallet;
+  const { open: appkitModalOpen } = useAppKitState();
 
   const [tab, setTab] = useState<Tab>(defaultTab);
 
@@ -94,6 +96,14 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       void handleEvmSign(address);
     }
   }, [isConnected, address]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // If the user dismisses the Reown modal without connecting, unblock the UI.
+  useEffect(() => {
+    if (!appkitModalOpen && wcPendingRef.current) {
+      wcPendingRef.current = false;
+      setWalletStep('idle');
+    }
+  }, [appkitModalOpen]);
 
   // ── Email / Password submit ────────────────────────────────────────────────
   async function handleEmailSubmit(e: React.FormEvent) {
