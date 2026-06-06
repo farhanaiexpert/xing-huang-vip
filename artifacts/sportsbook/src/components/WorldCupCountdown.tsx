@@ -86,9 +86,9 @@ export function WorldCupCountdown() {
         <button
           onClick={() => setClosed(true)}
           aria-label="Close countdown"
-          className="absolute -top-2 -right-2 z-10 grid place-items-center w-5 h-5 rounded-full bg-[#0D1A26] border border-white/15 text-white/70 hover:text-white hover:border-[#00DFA9]/50 transition-colors"
+          className="absolute top-1 right-1 z-20 grid place-items-center w-5 h-5 rounded-full bg-white/10 border border-white/25 text-white/90 hover:text-white hover:bg-[#00DFA9]/30 hover:border-[#00DFA9] transition-colors"
         >
-          <X className="w-3 h-3" />
+          <X className="w-3 h-3" strokeWidth={2.5} />
         </button>
 
         {/* Logo */}
