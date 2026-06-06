@@ -5,8 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../lib/apiClient';
 
-const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/Promo-Banner.webp';
-const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/05/ronaldo11.webp';
+const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imgi_15_Promo-Banner-2.webp';
+const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ronaldo11.webp';
 
 const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
   id: i,

@@ -685,7 +685,7 @@ export function MainContent({
               {showFeatured && (
                 <div className="mb-5 rounded-2xl overflow-hidden shadow-2xl">
                   <img
-                    src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/cupBett-hero-banner-WC.webp"
+                    src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-hero-banner.webp"
                     alt="Xing Huang — Sports Betting"
                     className="w-full h-auto block"
                     draggable={false}
