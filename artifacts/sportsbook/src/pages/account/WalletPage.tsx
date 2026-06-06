@@ -367,6 +367,31 @@ export function WalletPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [w3Connected]);
 
+  // Change Wallet: fully disconnect first, then reopen the picker so the user can
+  // choose a different wallet instead of silently reconnecting the previous one.
+  const handleChangeWallet = useCallback(async () => {
+    resetWalletDeposit();
+    evmWallet.disconnect();
+    await new Promise(r => setTimeout(r, 200));
+    try {
+      await evmWallet.openWalletModal();
+    } catch {
+      /* modal did not open — user can retry */
+    }
+  }, [evmWallet, resetWalletDeposit]);
+
+  // Disconnect with explicit feedback so an accidental tap is noticeable.
+  const handleWalletDisconnect = useCallback(() => {
+    evmWallet.disconnect();
+    resetWalletDeposit();
+    toast({ title: 'Wallet disconnected' });
+  }, [evmWallet, resetWalletDeposit, toast]);
+
+  // Mobile heuristic — used to nudge users toward in-wallet dapp browsers where
+  // injected providers are unavailable.
+  const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const hasInjectedProvider = typeof window !== 'undefined' && !!(window as { ethereum?: unknown }).ethereum;
+
   // ── EVM USDT balance (wagmi publicClient — works with MetaMask AND WalletConnect) ──
   const publicClient = usePublicClient();
   const [evmBalanceRaw, setEvmBalanceRaw] = useState<bigint | undefined>(undefined);
@@ -1531,6 +1556,14 @@ export function WalletPage() {
                       <Wallet className="w-4 h-4" /> Connect Wallet <ChevronRight className="w-4 h-4" />
                     </button>
                     <p className="text-[10px] text-[#64748B]">Supports 300+ wallets · Ethereum · BSC · Polygon · Arbitrum · Optimism · Base · Linea</p>
+                    {isMobileDevice && !hasInjectedProvider && (
+                      <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-left max-w-xs" style={{ background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.20)' }}>
+                        <Info className="w-3.5 h-3.5 text-[#38BDF8] shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-[#94A3B8] leading-relaxed">
+                          On mobile? For one-tap deposits, open CupBett inside your wallet's in-app browser (MetaMask, Trust or OKX). Otherwise tap Connect Wallet to link via WalletConnect.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1576,15 +1609,17 @@ export function WalletPage() {
                     {/* Change Wallet / Disconnect */}
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => void evmWallet.openWalletModal()}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold text-[#A78BFA] transition-all hover:brightness-110"
+                        onClick={() => void handleChangeWallet()}
+                        disabled={walletProcessing}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold text-[#A78BFA] transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{ background: 'rgba(167,139,250,0.10)', border: '1px solid rgba(167,139,250,0.25)' }}
                       >
                         <RotateCcw className="w-3.5 h-3.5" /> Change Wallet
                       </button>
                       <button
-                        onClick={() => evmWallet.disconnect()}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold text-red-400 transition-all hover:brightness-110"
+                        onClick={handleWalletDisconnect}
+                        disabled={walletProcessing}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold text-red-400 transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)' }}
                       >
                         <LogOut className="w-3.5 h-3.5" /> Disconnect
@@ -1736,6 +1771,26 @@ export function WalletPage() {
                               placeholder="50"
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#A78BFA]">USDT</span>
+                          </div>
+                          {/* Quick amount presets */}
+                          <div className="grid grid-cols-5 gap-1.5 mt-2">
+                            {[25, 50, 100, 250, 500].map(v => {
+                              const active = parseFloat(walletDepAmount || '0') === v;
+                              return (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  onClick={() => setWalletDepAmount(String(v))}
+                                  disabled={walletProcessing}
+                                  className="py-1.5 rounded-lg text-[11px] font-black transition-all disabled:opacity-40"
+                                  style={active
+                                    ? { background: 'rgba(167,139,250,0.20)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.50)' }
+                                    : { background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid rgba(255,255,255,0.08)' }}
+                                >
+                                  ${v}
+                                </button>
+                              );
+                            })}
                           </div>
                           <p className="text-[10px] text-[#64748B] mt-1">Minimum: 10 USDT</p>
                         </div>
