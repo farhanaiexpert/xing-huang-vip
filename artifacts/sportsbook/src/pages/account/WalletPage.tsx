@@ -13,7 +13,7 @@ import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
   Clock, XCircle, RefreshCw, Loader2, CircleDollarSign, Shield,
   AlertCircle, ExternalLink, Info, QrCode, Zap, CreditCard, Lock,
-  ChevronRight, ChevronDown, LogOut, RotateCcw, Users, Gift, X,
+  ChevronRight, ChevronDown, LogOut, RotateCcw, Users, Gift,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -174,7 +174,6 @@ export function WalletPage() {
     return 'wallet';
   });
   const [selectedChain, setSelectedChain] = useState<ChainTabKey>('bsc');
-  const [showMethodPicker, setShowMethodPicker] = useState(false);
   const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20' | 'BSC' | 'POLYGON' | 'ARBITRUM' | 'OPTIMISM' | 'BASE' | 'SOLANA' | 'TON' | 'XRP' | 'BTC'>('TRC-20');
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>(() => {
     try {
@@ -854,53 +853,17 @@ export function WalletPage() {
 
           {/* ── Method selector ─────────────────────────────────────────── */}
 
-          {/* Compact selected-method bar — visible when picker is closed */}
-          {!showMethodPicker && (() => {
-            const cfg: Record<string, { name: string; bg: string; border: string; icon: React.ReactNode }> = {
-              wallet:      { name: 'Web3 Wallet',  bg: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.35)', icon: <Wallet className="w-4 h-4 text-[#A78BFA]" /> },
-              nowpayments: { name: 'NOWPayments',  bg: 'rgba(56,189,248,0.15)',  border: 'rgba(56,189,248,0.35)',  icon: <Zap className="w-4 h-4 text-[#38BDF8]" /> },
-              plisio:      { name: 'Plisio',       bg: 'rgba(168,85,247,0.15)',  border: 'rgba(168,85,247,0.35)',  icon: <CreditCard className="w-4 h-4 text-[#A855F7]" /> },
-              manual:      { name: 'USDT Manual',  bg: 'rgba(0,223,169,0.15)',   border: 'rgba(0,223,169,0.35)',   icon: <QrCode className="w-4 h-4 text-[#00DFA9]" /> },
-              cryptomus:   { name: 'Cryptomus',    bg: 'rgba(0,223,169,0.08)',   border: 'rgba(0,223,169,0.20)',   icon: <CircleDollarSign className="w-4 h-4 text-[#00DFA9]" /> },
-            };
-            const m = cfg[depositMethod];
-            return (
-              <button
-                onClick={() => setShowMethodPicker(true)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all hover:brightness-110 active:scale-[0.99]"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}
-              >
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: m.bg, border: `1px solid ${m.border}` }}>
-                  {m.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-bold text-[#475569] uppercase tracking-wider">Deposit via</p>
-                  <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight">{m.name}</p>
-                </div>
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-[#38BDF8] shrink-0">
-                  Change <ChevronRight className="w-3.5 h-3.5" />
-                </span>
-              </button>
-            );
-          })()}
-
-          {/* Full method picker — visible when user taps "Change" */}
-          {showMethodPicker && (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between px-0.5">
+          {/* Method picker — always visible: all deposit methods shown upfront */}
+          <div className="space-y-2.5">
+              <div className="px-0.5">
                 <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Choose Deposit Method</p>
-                <button onClick={() => setShowMethodPicker(false)}
-                  className="flex items-center gap-1 text-[10px] font-semibold text-[#64748B] hover:text-[#F8FAFC] transition-colors">
-                  <X className="w-3 h-3" /> Close
-                </button>
               </div>
 
               {/* Web3 Wallet */}
               {(() => {
                 const active = depositMethod === 'wallet';
                 return (
-                  <button onClick={() => { setDepositMethod('wallet'); setShowMethodPicker(false); }}
+                  <button onClick={() => { setDepositMethod('wallet'); }}
                     className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
                     style={active
                       ? { background: 'linear-gradient(135deg, rgba(167,139,250,0.12) 0%, rgba(167,139,250,0.05) 100%)', border: '2px solid rgba(167,139,250,0.50)', boxShadow: '0 0 20px rgba(167,139,250,0.10)' }
@@ -928,7 +891,7 @@ export function WalletPage() {
               {(() => {
                 const active = depositMethod === 'nowpayments';
                 return (
-                  <button onClick={() => { setDepositMethod('nowpayments'); resetNpp(); setShowMethodPicker(false); }}
+                  <button onClick={() => { setDepositMethod('nowpayments'); resetNpp(); }}
                     className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
                     style={active
                       ? { background: 'linear-gradient(135deg, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.05) 100%)', border: '2px solid rgba(56,189,248,0.50)', boxShadow: '0 0 20px rgba(56,189,248,0.10)' }
@@ -955,7 +918,7 @@ export function WalletPage() {
               {(() => {
                 const active = depositMethod === 'plisio';
                 return (
-                  <button onClick={() => { setDepositMethod('plisio'); resetPlisio(); setShowMethodPicker(false); }}
+                  <button onClick={() => { setDepositMethod('plisio'); resetPlisio(); }}
                     className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
                     style={active
                       ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(168,85,247,0.05) 100%)', border: '2px solid rgba(168,85,247,0.50)', boxShadow: '0 0 20px rgba(168,85,247,0.10)' }
@@ -982,7 +945,7 @@ export function WalletPage() {
               {(() => {
                 const active = depositMethod === 'manual';
                 return (
-                  <button onClick={() => { setDepositMethod('manual'); setShowMethodPicker(false); }}
+                  <button onClick={() => { setDepositMethod('manual'); }}
                     className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
                     style={active
                       ? { background: 'linear-gradient(135deg, rgba(0,223,169,0.10) 0%, rgba(0,223,169,0.04) 100%)', border: '2px solid rgba(0,223,169,0.42)', boxShadow: '0 0 20px rgba(0,223,169,0.08)' }
@@ -1021,7 +984,6 @@ export function WalletPage() {
                 <Lock className="w-4 h-4 text-[#475569] shrink-0" />
               </div>
             </div>
-          )}
 
           {/* Trust elements — desktop only to save mobile space */}
           <div className="hidden sm:grid sm:grid-cols-4 gap-2">
