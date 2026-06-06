@@ -1,10 +1,10 @@
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { mainnet, bsc, polygon, arbitrum, optimism, base, type AppKitNetwork } from '@reown/appkit/networks';
+import { mainnet, bsc, polygon, arbitrum, optimism, base, linea, type AppKitNetwork } from '@reown/appkit/networks';
 
 const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID as string) || '';
 
-const networks = [mainnet, bsc, polygon, arbitrum, optimism, base] as [AppKitNetwork, ...AppKitNetwork[]];
+const networks = [mainnet, bsc, polygon, arbitrum, optimism, base, linea] as [AppKitNetwork, ...AppKitNetwork[]];
 
 export const wagmiAdapter = new WagmiAdapter({
   networks,

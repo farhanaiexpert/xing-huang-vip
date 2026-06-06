@@ -48,6 +48,7 @@ export const EVM_CHAINS: Record<number, {
   42161: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6,  network: 'ARBITRUM', label: 'Arbitrum One',       color: '#28A0F0', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://arbiscan.io/tx/' },
   10:    { address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', decimals: 6,  network: 'OPTIMISM', label: 'Optimism',           color: '#FF0420', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://optimistic.etherscan.io/tx/' },
   8453:  { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', decimals: 6,  network: 'BASE',     label: 'Base',               color: '#0052FF', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://basescan.org/tx/' },
+  59144: { address: '0xA219439258ca9da29E9Cc4cE5596924745e12B93', decimals: 6,  network: 'LINEA',    label: 'Linea',              color: '#61DFFF', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://lineascan.build/tx/' },
 };
 
 /** Convert human USDT amount to BigInt base units, avoiding float precision loss */

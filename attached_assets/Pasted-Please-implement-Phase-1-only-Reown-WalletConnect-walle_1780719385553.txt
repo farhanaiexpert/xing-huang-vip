@@ -1,0 +1,99 @@
+Please implement Phase 1 only: Reown / WalletConnect wallet connection UX.
+
+Do not change deposit transaction logic yet.
+
+Goal:
+User clicks Deposit → goes to Wallet page → connects wallet through Reown → app detects wallet/network/balances correctly.
+
+Exact flow:
+
+1. Header Deposit button
+
+* Route user to `/account/wallet?tab=deposit` or `/account/wallet#deposit`.
+* Auto-scroll to Deposit section.
+* Highlight Deposit section briefly.
+
+2. Deposit section initial state
+
+* Show one clear primary button: “Connect Wallet”.
+* Do not ask user to select network before connecting.
+* Do not show Tron/TRC-20 in this Reown EVM flow.
+
+3. Connect Wallet
+
+* Clicking “Connect Wallet” must open Reown AppKit wallet selector.
+* It should support MetaMask, Trust Wallet, Coinbase Wallet, WalletConnect QR, and other EVM wallets.
+* Desktop installed wallets should open normally.
+* WalletConnect QR should open normally.
+* Mobile deep link/in-app browser behavior should work if possible.
+
+4. After connected
+   Show:
+
+* shortened wallet address
+* connected network name
+* USDT balance on connected chain
+* gas token balance
+* Change Wallet button
+* Disconnect button
+
+5. Network handling
+   Supported EVM networks:
+
+* Ethereum
+* BNB Smart Chain
+* Polygon
+* Arbitrum
+* Optimism
+* Base
+* Linea
+
+If connected network is supported:
+
+* Show “Network Ready”.
+* Show the deposit UI placeholder for that chain, but do not change transaction logic yet.
+
+If connected network is unsupported:
+
+* Show “Unsupported network”.
+* Show manual switch buttons for supported chains.
+* Network switch should only happen when user clicks a switch button.
+* If user rejects switch, show toast: “Network switch cancelled.”
+
+6. Change Wallet
+
+* Must always open Reown wallet selector again.
+* Must not silently reconnect the same wallet.
+
+7. Disconnect
+
+* Must fully disconnect wallet.
+* UI should return to “Connect Wallet” state.
+
+8. UX requirements
+
+* No stuck loading spinner.
+* No silent failures.
+* No wrong wallet opening.
+* Closing Reown modal without connecting should reset UI.
+* Mobile responsive.
+* Clean, modern sportsbook/exchange-style design.
+
+Please test and report:
+
+* Header Deposit routing/scroll
+* Reown selector opens
+* MetaMask connect
+* WalletConnect QR opens
+* Trust Wallet via WalletConnect if possible
+* User closes modal without connecting
+* Change Wallet
+* Disconnect/reconnect
+* Supported chain detection
+* Unsupported chain warning
+* Manual network switch success
+* Manual network switch rejection
+* USDT balance loading
+* Gas balance loading
+
+Provide pass/fail results, remaining issues, wallet score out of 100, and commit ID.
