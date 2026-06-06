@@ -305,7 +305,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
 
           {/* Odds */}
           <div className="flex-1 text-center border-r border-white/[0.06]">
-            <p className="text-[9px] text-[#475569] uppercase tracking-wider mb-0.5">Odds</p>
+            <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Odds</p>
             <p className="text-[13px] font-black text-[#FACC15] tabular-nums">
               {formatOdds(bet.totalOdds, format)}
             </p>
@@ -313,7 +313,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
 
           {/* Stake */}
           <div className="flex-1 text-center border-r border-white/[0.06]">
-            <p className="text-[9px] text-[#475569] uppercase tracking-wider mb-0.5">Stake</p>
+            <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Stake</p>
             <p className="text-[13px] font-bold text-[#F8FAFC] tabular-nums">
               {bet.stake.toFixed(2)}
               <span className="text-[9px] text-[#475569] ml-0.5">USDT</span>
@@ -324,7 +324,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
           <div className="flex-1 text-center">
             {k === 'won' ? (
               <>
-                <p className="text-[9px] text-[#475569] uppercase tracking-wider mb-0.5">Won</p>
+                <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Won</p>
                 <p className="text-[13px] font-black tabular-nums" style={{ color: '#00DFA9' }}>
                   +{profit.toFixed(2)}
                   <span className="text-[9px] ml-0.5" style={{ color: '#00DFA9', opacity: 0.7 }}>USDT</span>
@@ -332,7 +332,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
               </>
             ) : k === 'lost' ? (
               <>
-                <p className="text-[9px] text-[#475569] uppercase tracking-wider mb-0.5">Lost</p>
+                <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Lost</p>
                 <p className="text-[13px] font-black text-[#EF4444] tabular-nums">
                   -{bet.stake.toFixed(2)}
                   <span className="text-[9px] text-[#EF4444]/70 ml-0.5">USDT</span>
@@ -340,7 +340,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
               </>
             ) : k === 'void' ? (
               <>
-                <p className="text-[9px] text-[#475569] uppercase tracking-wider mb-0.5">Refund</p>
+                <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Refund</p>
                 <p className="text-[13px] font-bold text-[#64748B] tabular-nums">
                   {bet.stake.toFixed(2)}
                   <span className="text-[9px] text-[#475569] ml-0.5">USDT</span>
@@ -348,7 +348,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
               </>
             ) : (
               <>
-                <p className="text-[9px] text-[#475569] uppercase tracking-wider mb-0.5">Potential</p>
+                <p className="text-[10px] text-[#64748B] uppercase tracking-wider mb-1 font-semibold">Potential</p>
                 <p className="text-[13px] font-bold text-[#38BDF8] tabular-nums">
                   {bet.estimatedPayout.toFixed(2)}
                   <span className="text-[9px] text-[#38BDF8]/60 ml-0.5">USDT</span>
