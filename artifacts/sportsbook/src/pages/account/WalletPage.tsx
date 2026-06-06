@@ -343,6 +343,7 @@ export function WalletPage() {
   const {
     depositAmount: walletDepAmount, setDepositAmount: setWalletDepAmount,
     depositPhase: walletPhase, depositError: walletError, depositResult: walletResult,
+    confirmations: walletConfirmations, pendingTx: walletPendingTx,
     isProcessing: walletProcessing, hasTronLink, chainCfg,
     handleEvmDeposit, handleTronDeposit, resetDeposit: resetWalletDeposit,
   } = useAutoDeposit({
@@ -1626,40 +1627,45 @@ export function WalletPage() {
                       </button>
                     </div>
 
-                    {/* Network status */}
-                    {chainCfg ? (
-                      <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'rgba(0,223,169,0.06)', border: '1px solid rgba(0,223,169,0.18)' }}>
-                        <CheckCircle2 className="w-4 h-4 text-[#00DFA9] shrink-0" />
-                        <p className="text-[11px] font-bold text-[#00DFA9]">Network Ready · {chainCfg.label}</p>
+                    {/* Network selector — deposit on any supported chain */}
+                    <div className="p-3 rounded-xl space-y-2.5" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wide">Deposit Network</p>
+                        {chainCfg ? (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-[#00DFA9]">
+                            <CheckCircle2 className="w-3 h-3" /> {chainCfg.label} Ready
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-[#FACC15]">
+                            <AlertCircle className="w-3 h-3" /> Pick a network
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      <div className="p-3 rounded-xl space-y-2.5" style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
-                        <div className="flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-[11px] font-bold text-[#FACC15]">Unsupported Network</p>
-                            <p className="text-[10px] text-[#64748B] mt-0.5">Switch to one of the supported networks below to continue.</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {SUPPORTED_CHAIN_IDS.map(id => {
-                            const c = EVM_CHAINS[id];
-                            if (!c) return null;
-                            return (
-                              <button
-                                key={id}
-                                onClick={() => void handleNetworkSwitch(id)}
-                                className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-bold transition-all hover:brightness-125"
-                                style={{ background: `${c.color}18`, color: c.color, border: `1px solid ${c.color}40` }}
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.color }} />
-                                {c.network}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {SUPPORTED_CHAIN_IDS.map(id => {
+                          const c = EVM_CHAINS[id];
+                          if (!c) return null;
+                          const isActive = evmWallet.chainId === id;
+                          return (
+                            <button
+                              key={id}
+                              onClick={() => { if (!isActive) void handleNetworkSwitch(id); }}
+                              disabled={walletProcessing}
+                              className="flex items-center justify-center gap-1 py-2 rounded-lg text-[10px] font-bold transition-all hover:brightness-125 disabled:opacity-40 disabled:cursor-not-allowed"
+                              style={isActive
+                                ? { background: `${c.color}28`, color: c.color, border: `1.5px solid ${c.color}` }
+                                : { background: `${c.color}12`, color: c.color, border: `1px solid ${c.color}30` }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.color }} />
+                              {c.network}
+                            </button>
+                          );
+                        })}
                       </div>
-                    )}
+                      {!chainCfg && (
+                        <p className="text-[10px] text-[#64748B]">Your wallet is on an unsupported network. Tap a network above to switch and deposit USDT.</p>
+                      )}
+                    </div>
 
                     {/* Error banner */}
                     {walletPhase === 'error' && walletError && (
@@ -1794,6 +1800,41 @@ export function WalletPage() {
                           </div>
                           <p className="text-[10px] text-[#64748B] mt-1">Minimum: 10 USDT</p>
                         </div>
+
+                        {/* Confirmation progress */}
+                        {walletPhase === 'confirming' && walletConfirmations && (
+                          <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.20)' }}>
+                            <div className="flex items-center justify-between">
+                              <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#38BDF8]">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Confirming on-chain
+                              </span>
+                              <span className="text-[11px] font-black text-[#38BDF8] tabular-nums">
+                                {walletConfirmations.current} / {walletConfirmations.target}
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(56,189,248,0.15)' }}>
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${Math.min(100, (walletConfirmations.current / Math.max(1, walletConfirmations.target)) * 100)}%`,
+                                  background: '#38BDF8',
+                                }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] text-[#64748B]">Funds credit automatically once confirmed.</p>
+                              {walletPendingTx && (
+                                <a
+                                  href={walletPendingTx.explorerUrl}
+                                  target="_blank" rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-[10px] font-bold text-[#38BDF8] hover:underline shrink-0"
+                                >
+                                  <ExternalLink className="w-3 h-3" /> View Tx
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Deposit button */}
                         {(() => {

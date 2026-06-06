@@ -102,8 +102,13 @@ function encodeTransfer(to: string, amount: bigint): string {
   return '0xa9059cbb' + toHex + amtHex;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function waitForConfirmationsPublic(client: any, txHash: `0x${string}`, minConfirmations: number): Promise<void> {
+async function waitForConfirmationsPublic(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: any,
+  txHash: `0x${string}`,
+  minConfirmations: number,
+  onProgress?: (current: number) => void,
+): Promise<void> {
   for (let i = 0; i < 90; i++) {
     await new Promise(r => setTimeout(r, 1500));
     try {
@@ -111,6 +116,7 @@ async function waitForConfirmationsPublic(client: any, txHash: `0x${string}`, mi
       if (!receipt?.blockNumber) continue;
       const currentBlock = await client.getBlockNumber();
       const confirmations = Number(currentBlock) - Number(receipt.blockNumber) + 1;
+      onProgress?.(Math.max(0, confirmations));
       if (confirmations >= minConfirmations) return;
     } catch { /* keep polling */ }
   }
@@ -129,6 +135,8 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
   const [depositPhase, setDepositPhase] = useState<DepositPhase>('idle');
   const [depositError, setDepositError] = useState<string | null>(null);
   const [depositResult, setDepositResult] = useState<DepositResult | null>(null);
+  const [confirmations, setConfirmations] = useState<{ current: number; target: number } | null>(null);
+  const [pendingTx, setPendingTx] = useState<{ txHash: string; explorerUrl: string } | null>(null);
   const [hasTronLink, setHasTronLink] = useState(false);
   const [hasPhantom,  setHasPhantom]  = useState(false);
   const [hasTon,      setHasTon]      = useState(false);
@@ -215,16 +223,21 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
         txHash, amount, network: chainCfg.network, ts: Date.now(),
       }));
 
+      setPendingTx({ txHash, explorerUrl: `${chainCfg.explorerTx}${txHash}` });
+      setConfirmations({ current: 0, target: chainCfg.minConfirmations });
       setDepositPhase('confirming');
 
       // Wait for confirmations; if this times out we still submit to backend
       // (backend re-verifies on-chain independently — hash is never lost).
       if (publicClient) {
         try {
-          await waitForConfirmationsPublic(publicClient, txHash, chainCfg.minConfirmations);
+          await waitForConfirmationsPublic(publicClient, txHash, chainCfg.minConfirmations, (current) => {
+            setConfirmations({ current: Math.min(current, chainCfg.minConfirmations), target: chainCfg.minConfirmations });
+          });
         } catch { /* timeout — fall through and submit anyway */ }
       }
 
+      setConfirmations(null);
       const result = await (async () => {
         setDepositPhase('submitting');
         const r = await api.post<{ autoVerified: boolean }>('/wallet/deposit', { txHash, amount, network: chainCfg.network });
@@ -240,6 +253,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
       };
       setDepositResult(dr);
       setDepositPhase('success');
+      setPendingTx(null);
       localStorage.removeItem('cb_pending_evm_tx');
       await refreshBalance();
       toast({
@@ -262,6 +276,8 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
       } else {
         setDepositError(msg.length > 120 ? msg.slice(0, 120) + '…' : msg);
       }
+      setConfirmations(null);
+      setPendingTx(null);
       setDepositPhase('error');
     }
   }
@@ -352,16 +368,21 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     setDepositPhase('idle');
     setDepositError(null);
     setDepositResult(null);
+    setConfirmations(null);
+    setPendingTx(null);
   }
 
   function clearError() {
     setDepositError(null);
+    setConfirmations(null);
+    setPendingTx(null);
     if (depositPhase === 'error') setDepositPhase('idle');
   }
 
   return {
     depositAmount, setDepositAmount,
     depositPhase, depositError, depositResult,
+    confirmations, pendingTx,
     isProcessing, hasTronLink, hasPhantom, hasTon, chainCfg,
     handleEvmDeposit, handleTronDeposit,
     resetDeposit, clearError,

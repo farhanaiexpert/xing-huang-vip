@@ -4,6 +4,8 @@ import { AuthModal } from './AuthModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { NotificationBell } from './NotificationBell';
 import { useWallet } from '../hooks/useWallet';
+import { useEvmWallet } from '../hooks/useEvmWallet';
+import { EVM_CHAINS } from '../hooks/useAutoDeposit';
 import { useAuth } from '../contexts/AuthContext';
 import { useBetHistory } from '../hooks/useBetHistory';
 import { useState, useRef, useEffect } from 'react';
@@ -82,6 +84,8 @@ function triggerTranslate(langCode: string) {
 
 export function Header() {
   const { isConnected, shortAddress, fullAddress, walletName, balance } = useWallet();
+  const evmWallet = useEvmWallet();
+  const evmChain = evmWallet.isConnected ? EVM_CHAINS[evmWallet.chainId] ?? null : null;
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const { logout, user } = useAuth();
   const pendingDeposit = usePendingNppDeposit();
@@ -411,6 +415,16 @@ export function Header() {
                 >
                   <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] shrink-0" />
                   <span className="text-xs text-[#00DFA9] font-semibold">{shortAddress}</span>
+                  {evmChain && (
+                    <span
+                      className="hidden lg:flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0"
+                      style={{ background: `${evmChain.color}1f`, color: evmChain.color }}
+                      title={`Connected on ${evmChain.label}`}
+                    >
+                      <span className="w-1 h-1 rounded-full" style={{ background: evmChain.color }} />
+                      {evmChain.network}
+                    </span>
+                  )}
                   {balance > 0 && (
                     <span className="text-[10px] text-[#FACC15] font-bold bg-[#FACC15]/10 px-1.5 py-0.5 rounded-md">
                       {balance.toFixed(2)} USDT
