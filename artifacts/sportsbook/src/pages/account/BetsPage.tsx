@@ -200,8 +200,7 @@ function LegRow({ sel, idx, total, format }: {
 // ── BetCard ───────────────────────────────────────────────────────────────────
 
 function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boolean }) {
-  const [open,    setOpen]    = useState(isHighlighted ?? false);
-  const [tooltip, setTooltip] = useState(false);
+  const [open, setOpen] = useState(isHighlighted ?? false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { format } = useOddsFormat();
 
@@ -277,8 +276,8 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
               LIVE
             </span>
           ) : cd ? (
-            <span className="shrink-0 flex items-center gap-1 text-[10px] text-[#FACC15]/70 font-semibold">
-              <Clock className="h-2.5 w-2.5" />
+            <span className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FACC15]/10 border border-[#FACC15]/25 text-[#FACC15] text-[10px] font-bold">
+              <Clock className="h-3 w-3" />
               {cd}
             </span>
           ) : null}
@@ -361,25 +360,20 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
         {/* Footer: timestamp + expand */}
         <div
           className={cn(
-            'flex items-center justify-between pb-2.5 pt-1',
+            'flex items-center justify-between gap-2 border-t border-white/[0.05] -mx-3 px-3 py-2.5',
             isAcca && 'cursor-pointer',
           )}
           onClick={() => isAcca && setOpen(v => !v)}
         >
-          <div
-            className="relative"
-            onMouseEnter={() => setTooltip(true)}
-            onMouseLeave={() => setTooltip(false)}
-          >
-            <p className="text-[10px] text-[#64748B]">{fmtDate(bet.placedAt)}</p>
-            {tooltip && (
-              <div className="absolute bottom-full left-0 mb-1 px-2 py-1 rounded-lg bg-[#1E2A38] border border-[#253241] text-[10px] text-[#CBD5E1] whitespace-nowrap z-10 shadow-xl">
-                {fmtDateFull(bet.placedAt)}
-              </div>
-            )}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Clock className="h-3.5 w-3.5 text-[#64748B] shrink-0" />
+            <span className="text-[11px] font-semibold text-[#CBD5E1] truncate">
+              {fmtDateFull(bet.placedAt)}
+            </span>
+            <span className="text-[10px] text-[#64748B] shrink-0">· {fmtDate(bet.placedAt)}</span>
           </div>
           {isAcca && (
-            <button className="flex items-center gap-1 text-[10px] text-[#64748B] hover:text-[#94A3B8] transition-colors">
+            <button className="flex items-center gap-1 text-[11px] font-semibold text-[#94A3B8] hover:text-[#00DFA9] transition-colors shrink-0">
               {open
                 ? <><ChevronUp className="h-3.5 w-3.5" /><span>Hide legs</span></>
                 : <><ChevronDown className="h-3.5 w-3.5" /><span>View {bet.selections.length} legs</span></>}
