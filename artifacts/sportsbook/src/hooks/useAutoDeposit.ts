@@ -57,6 +57,16 @@ export function toBaseUnits(amount: number, decimals: number): bigint {
   return BigInt(whole + frac.padEnd(decimals, '0').slice(0, decimals));
 }
 
+/** String-safe base-unit conversion — no parseFloat, no IEEE-754 precision loss */
+export function toBaseUnitsFromString(amountStr: string, decimals: number): bigint {
+  const clean = amountStr.trim().replace(/[^0-9.]/g, '');
+  const dotIdx = clean.indexOf('.');
+  if (dotIdx === -1) return BigInt(clean || '0') * (10n ** BigInt(decimals));
+  const whole = clean.slice(0, dotIdx) || '0';
+  const frac  = clean.slice(dotIdx + 1).padEnd(decimals, '0').slice(0, decimals);
+  return BigInt(whole + frac);
+}
+
 export type DepositPhase = 'idle' | 'sending' | 'confirming' | 'submitting' | 'success' | 'error';
 export interface DepositResult {
   autoVerified: boolean;
@@ -282,7 +292,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
     let txHash: string | null = null;
     try {
       const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
-      const rawAmount = toBaseUnits(amount, 6).toString();
+      const rawAmount = toBaseUnitsFromString(depositAmount, 6).toString();
       txHash = (await contract.transfer(trc20Addr, rawAmount).send({ feeLimit: 10_000_000, callValue: 0 })) as string;
 
       // Persist immediately — survives page refresh

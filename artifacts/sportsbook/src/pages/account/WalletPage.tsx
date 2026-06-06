@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useReferral } from '@/hooks/useReferral';
 import { usePublicClient, useBalance } from 'wagmi';
 import { useLocation } from 'wouter';
@@ -154,6 +154,10 @@ export function WalletPage() {
   const [depError, setDepError]     = useState('');
   const [depSuccess, setDepSuccess] = useState(false);
   const [depAutoVerified, setDepAutoVerified] = useState(false);
+
+  // Capture deep-link intent BEFORE depositMethod initializer consumes the flag
+  const scrollHint = useRef(sessionStorage.getItem('cupbett_deposit_method') === 'wallet');
+  const depositSectionRef = useRef<HTMLDivElement>(null);
 
   // NOWPayments
   const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual' | 'wallet' | 'cryptomus' | 'plisio'>(() => {
@@ -406,6 +410,16 @@ export function WalletPage() {
 
   const selectedChainData = CHAIN_TABS.find(t => t.key === selectedChain);
   const isOnSelectedChain = selectedChainData?.chainId != null && evmWallet.chainId === selectedChainData.chainId;
+
+  // Scroll deposit section into view when arriving via header deep-link
+  useEffect(() => {
+    if (scrollHint.current && depositSectionRef.current) {
+      const el = depositSectionRef.current;
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      scrollHint.current = false;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Balance for the active selected chain
   const walletBalance = selectedChain === 'trc20'
@@ -1490,7 +1504,7 @@ export function WalletPage() {
 
           {/* ── Web3 Wallet auto-deposit ─────────────────────────────────── */}
           {depositMethod === 'wallet' && (
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A0F1E 0%, #0E1228 100%)', border: '1px solid rgba(167,139,250,0.20)' }}>
+            <div ref={depositSectionRef} className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A0F1E 0%, #0E1228 100%)', border: '1px solid rgba(167,139,250,0.20)' }}>
               <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(167,139,250,0.06) 0%, transparent 100%)' }}>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.30)' }}>
@@ -1559,7 +1573,7 @@ export function WalletPage() {
                   <div className="space-y-3">
 
                     {/* ── Wallet address row + dropdown ── */}
-                    {w3Connected && (
+                    {w3Connected && selectedChain !== 'trc20' && (
                       <div className="relative">
                         {w3DropdownOpen && (
                           <div className="fixed inset-0 z-10" onClick={() => setW3DropdownOpen(false)} />
@@ -1650,7 +1664,7 @@ export function WalletPage() {
                     )}
 
                     {/* TronLink status row */}
-                    {hasTronLink && !w3Connected && (
+                    {hasTronLink && selectedChain === 'trc20' && (
                       <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(0,223,169,0.05)', border: '1px solid rgba(0,223,169,0.15)' }}>
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-[#00DFA9]" />
@@ -1664,7 +1678,7 @@ export function WalletPage() {
                     )}
 
                     {/* Wrong network — full banner + switch button */}
-                    {w3Connected && !chainCfg && (
+                    {w3Connected && !chainCfg && selectedChain !== 'trc20' && (
                       <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.20)' }}>
                         <AlertCircle className="w-4 h-4 text-[#FACC15] shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -1704,7 +1718,7 @@ export function WalletPage() {
                               <button
                                 type="button"
                                 onClick={() => setWalletDepAmount(walletBalance.toFixed(2))}
-                                disabled={walletProcessing || walletBalance < 10}
+                                disabled={walletProcessing || walletBalance <= 0}
                                 className="px-2 py-0.5 rounded-lg text-[9px] font-black transition-all disabled:opacity-40"
                                 style={{ background: 'rgba(167,139,250,0.15)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.30)' }}
                               >
