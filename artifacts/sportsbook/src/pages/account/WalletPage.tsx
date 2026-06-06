@@ -343,7 +343,7 @@ export function WalletPage() {
   const {
     depositAmount: walletDepAmount, setDepositAmount: setWalletDepAmount,
     depositPhase: walletPhase, depositError: walletError, depositResult: walletResult,
-    confirmations: walletConfirmations, pendingTx: walletPendingTx,
+    confirmations: walletConfirmations, pendingTx: walletPendingTx, gasEstimate: walletGasEstimate,
     isProcessing: walletProcessing, hasTronLink, chainCfg,
     handleEvmDeposit, handleTronDeposit, resetDeposit: resetWalletDeposit,
   } = useAutoDeposit({
@@ -1557,14 +1557,39 @@ export function WalletPage() {
                       <Wallet className="w-4 h-4" /> Connect Wallet <ChevronRight className="w-4 h-4" />
                     </button>
                     <p className="text-[10px] text-[#64748B]">Supports 300+ wallets · Ethereum · BSC · Polygon · Arbitrum · Optimism · Base · Linea</p>
-                    {isMobileDevice && !hasInjectedProvider && (
-                      <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-left max-w-xs" style={{ background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.20)' }}>
-                        <Info className="w-3.5 h-3.5 text-[#38BDF8] shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-[#94A3B8] leading-relaxed">
-                          On mobile? For one-tap deposits, open CupBett inside your wallet's in-app browser (MetaMask, Trust or OKX). Otherwise tap Connect Wallet to link via WalletConnect.
-                        </p>
-                      </div>
-                    )}
+                    {isMobileDevice && !hasInjectedProvider && (() => {
+                      const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
+                      const hostPath = typeof window !== 'undefined' ? `${window.location.host}${window.location.pathname}` : '';
+                      const enc = encodeURIComponent(fullUrl);
+                      const deepLinks = [
+                        { name: 'MetaMask', href: `https://metamask.app.link/dapp/${hostPath}` },
+                        { name: 'Trust',    href: `https://link.trustwallet.com/open_url?url=${enc}` },
+                        { name: 'Coinbase', href: `https://go.cb-w.com/dapp?cb_url=${enc}` },
+                      ];
+                      return (
+                        <div className="flex flex-col gap-2 px-3 py-2.5 rounded-xl text-left max-w-xs" style={{ background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.20)' }}>
+                          <div className="flex items-start gap-2">
+                            <Info className="w-3.5 h-3.5 text-[#38BDF8] shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-[#94A3B8] leading-relaxed">
+                              On mobile? Open CupBett inside your wallet's in-app browser for one-tap deposits — or tap Connect Wallet above to link via WalletConnect.
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {deepLinks.map(({ name, href }) => (
+                              <a
+                                key={name}
+                                href={href}
+                                target="_blank" rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold text-[#38BDF8] transition-colors hover:bg-[rgba(56,189,248,0.12)]"
+                                style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.24)' }}
+                              >
+                                {name} <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -1846,6 +1871,17 @@ export function WalletPage() {
                           const isDisabled = walletProcessing || belowMin || insufficientUsdt || lowGas;
                           return (
                             <div className="space-y-2">
+                              {walletPhase === 'idle' && walletGasEstimate && !belowMin && !insufficientUsdt && (
+                                <div className="flex items-center justify-between px-3 py-2 rounded-xl text-[11px]" style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.16)' }}>
+                                  <span className="flex items-center gap-1.5 text-[#94A3B8]">
+                                    <Info className="w-3.5 h-3.5 text-[#38BDF8]" /> Est. network fee
+                                  </span>
+                                  <span className="font-bold text-[#CBD5E1] tabular-nums">
+                                    {walletGasEstimate.usd ? `~$${walletGasEstimate.usd}` : `~${walletGasEstimate.native} ${walletGasEstimate.symbol}`}
+                                    <span className="text-[#64748B] font-medium"> · {walletGasEstimate.native} {walletGasEstimate.symbol}</span>
+                                  </span>
+                                </div>
+                              )}
                               {lowGas && (
                                 <div className="flex items-center gap-2 p-2.5 rounded-xl text-[10px]" style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)' }}>
                                   <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />

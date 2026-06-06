@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatEther } from 'viem';
 import { useChainId, useWalletClient, usePublicClient } from 'wagmi';
 import { useWallet } from './useWallet';
 import { useToast } from './use-toast';
@@ -49,6 +50,13 @@ export const EVM_CHAINS: Record<number, {
   10:    { address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', decimals: 6,  network: 'OPTIMISM', label: 'Optimism',           color: '#FF0420', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://optimistic.etherscan.io/tx/' },
   8453:  { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', decimals: 6,  network: 'BASE',     label: 'Base',               color: '#0052FF', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://basescan.org/tx/' },
   59144: { address: '0xA219439258ca9da29E9Cc4cE5596924745e12B93', decimals: 6,  network: 'LINEA',    label: 'Linea',              color: '#61DFFF', minConfirmations: 1, nativeToken: 'ETH',   explorerTx: 'https://lineascan.build/tx/' },
+};
+
+/** Maps a chain's native gas token to its CoinGecko id, for best-effort USD fee display */
+const NATIVE_COINGECKO_ID: Record<string, string> = {
+  ETH:   'ethereum',
+  BNB:   'binancecoin',
+  MATIC: 'matic-network',
 };
 
 /** Convert human USDT amount to BigInt base units, avoiding float precision loss */
@@ -137,6 +145,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
   const [depositResult, setDepositResult] = useState<DepositResult | null>(null);
   const [confirmations, setConfirmations] = useState<{ current: number; target: number } | null>(null);
   const [pendingTx, setPendingTx] = useState<{ txHash: string; explorerUrl: string } | null>(null);
+  const [gasEstimate, setGasEstimate] = useState<{ native: string; usd: string | null; symbol: string } | null>(null);
   const [hasTronLink, setHasTronLink] = useState(false);
   const [hasPhantom,  setHasPhantom]  = useState(false);
   const [hasTon,      setHasTon]      = useState(false);
@@ -159,6 +168,65 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
 
   const chainCfg = EVM_CHAINS[chainId] ?? null;
   const isProcessing = depositPhase === 'sending' || depositPhase === 'confirming' || depositPhase === 'submitting';
+
+  // ── Network fee estimate (item 10) ──────────────────────────────────────────
+  // Estimate the gas cost of the USDT transfer BEFORE the user clicks deposit, so
+  // the wallet's signing dialog isn't a surprise. Debounced; best-effort USD via
+  // CoinGecko (falls back to native-token units if the price call fails).
+  // estimateGas reverts when the wallet can't actually perform the transfer
+  // (insufficient USDT/gas) — that case is surfaced by the button, so here we just
+  // hide the optional hint rather than showing an error.
+  const erc20AddrOpt = options?.platformAddresses?.addressErc20;
+  const bscAddrOpt = options?.platformAddresses?.addressBsc;
+  useEffect(() => {
+    if (depositPhase !== 'idle') return;
+    if (!chainCfg || !walletClient || !publicClient) { setGasEstimate(null); return; }
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount < 10) { setGasEstimate(null); return; }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const addrErc20 = erc20AddrOpt || ERC20_ADDRESS_ENV;
+        const addrBsc = bscAddrOpt || addrErc20;
+        const platformAddr = chainCfg.network === 'BSC' ? addrBsc : addrErc20;
+        if (!platformAddr || !/^0x[0-9a-fA-F]{40}$/.test(platformAddr)) { if (!cancelled) setGasEstimate(null); return; }
+        const account = walletClient.account?.address;
+        if (!account) { if (!cancelled) setGasEstimate(null); return; }
+
+        const rawAmount = toBaseUnits(amount, chainCfg.decimals);
+        const data = encodeTransfer(platformAddr, rawAmount) as `0x${string}`;
+        const [gasUnits, gasPrice] = await Promise.all([
+          publicClient.estimateGas({ account, to: chainCfg.address, data }),
+          publicClient.getGasPrice(),
+        ]);
+        const nativeNum = Number(formatEther(gasUnits * gasPrice));
+        const native = nativeNum < 0.0001
+          ? nativeNum.toExponential(2)
+          : nativeNum.toFixed(nativeNum < 0.01 ? 6 : 4);
+
+        let usd: string | null = null;
+        const cgId = NATIVE_COINGECKO_ID[chainCfg.nativeToken];
+        if (cgId) {
+          try {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 4000);
+            const resp = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd`, { signal: ctrl.signal });
+            clearTimeout(t);
+            if (resp.ok) {
+              const j = await resp.json() as Record<string, { usd?: number }>;
+              const price = j?.[cgId]?.usd;
+              if (typeof price === 'number' && price > 0) usd = (nativeNum * price).toFixed(2);
+            }
+          } catch { /* best-effort — native units only */ }
+        }
+        if (!cancelled) setGasEstimate({ native, usd, symbol: chainCfg.nativeToken });
+      } catch {
+        if (!cancelled) setGasEstimate(null);
+      }
+    }, 700);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [depositPhase, chainId, depositAmount, walletClient, publicClient, chainCfg, erc20AddrOpt, bscAddrOpt]);
 
   async function submitToBackend(txHash: string, amount: number, network: string) {
     setDepositPhase('submitting');
@@ -382,7 +450,7 @@ export function useAutoDeposit(options?: UseAutoDepositOptions) {
   return {
     depositAmount, setDepositAmount,
     depositPhase, depositError, depositResult,
-    confirmations, pendingTx,
+    confirmations, pendingTx, gasEstimate,
     isProcessing, hasTronLink, hasPhantom, hasTon, chainCfg,
     handleEvmDeposit, handleTronDeposit,
     resetDeposit, clearError,

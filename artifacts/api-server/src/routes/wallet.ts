@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { eq, desc, and, gt, or, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -16,6 +17,25 @@ import { createPayment as cryptomusCreatePayment, getPaymentStatus as cryptomusG
 import { logger } from "../lib/logger.js";
 
 const router = Router();
+
+// ── Per-user deposit submission rate limiter ──────────────────────────────────
+// The global walletLimiter (app.ts) caps requests per-IP. This adds a stricter
+// per-account cap on the deposit submit endpoint specifically, so a single
+// authenticated user can't flood on-chain verification (each call hits external
+// RPCs). Keyed by userId — runs AFTER `authenticate`, so req.user is populated.
+const depositLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Key by authenticated user; fall back to the IPv6-safe IP helper for the rare
+  // case where the limiter runs without a resolved user.
+  keyGenerator: (req): string => {
+    const uid = req.user?.userId;
+    return uid != null ? String(uid) : ipKeyGenerator(req.ip ?? "");
+  },
+  message: { error: "Too many deposit attempts — please wait a minute and try again" },
+});
 
 // ── Platform deposit config ───────────────────────────────────────────────────
 export const PLATFORM_DEPOSIT = {
@@ -96,7 +116,7 @@ const DepositBody = z.object({
   network: z.enum(["TRC-20", "ERC-20", "ETH", "BSC", "POLYGON", "ARBITRUM", "OPTIMISM", "BASE", "LINEA", "SOLANA", "TON", "BTC", "XRP"]).default("TRC-20"),
 });
 
-router.post("/wallet/deposit", authenticate, async (req, res): Promise<void> => {
+router.post("/wallet/deposit", authenticate, depositLimiter, async (req, res): Promise<void> => {
   const parsed = DepositBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });

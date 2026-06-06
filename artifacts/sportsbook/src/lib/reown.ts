@@ -31,8 +31,14 @@ export const appkit = createAppKit({
   },
   features: {
     analytics: false,
-    email: false,
-    socials: false,
+    // Embedded wallets: lets non-crypto-native users sign in with email or a
+    // social account (Reown provisions a self-custodial wallet behind the scenes).
+    // NOTE: requires "Embedded Wallets" to be enabled for this project in the
+    // Reown Cloud dashboard (cloud.reown.com) — the toggle here is necessary but
+    // not sufficient on its own.
+    email: true,
+    socials: ['google', 'x'],
+    emailShowWallets: true,
   },
   themeMode: 'dark',
   themeVariables: {
