@@ -470,8 +470,8 @@ export function Header() {
                   <Wallet className="h-3.5 w-3.5 shrink-0" />
                   <span className="whitespace-nowrap">Connect<span className="hidden sm:inline"> Wallet</span></span>
                 </button>
-                {/* Sign In button — opens email/password auth modal */}
-                {!user && (
+                {/* Sign In button — opens email/password auth modal (hidden for now) */}
+                {false && !user && (
                   <button
                     onClick={() => setIsAuthOpen(true)}
                     className="hidden sm:flex items-center gap-1.5 h-9 px-4 rounded-xl border text-sm font-bold tracking-tight transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] cursor-pointer"
