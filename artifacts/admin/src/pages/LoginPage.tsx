@@ -66,7 +66,7 @@ export default function LoginPage() {
               <input
                 type="email" required value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="admin@cupbett.com"
+                placeholder="admin@xinghuang.vip"
                 className="w-full bg-white/4 border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9]/60 focus:bg-white/5 transition-all"
               />
             </div>
