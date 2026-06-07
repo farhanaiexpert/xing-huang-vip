@@ -2,6 +2,7 @@ import { Link, useLocation } from 'wouter';
 import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft, Clock } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
+import { WalletPickerModal } from './WalletPickerModal';
 import { NotificationBell } from './NotificationBell';
 import { useWallet } from '../hooks/useWallet';
 import { useEvmWallet } from '../hooks/useEvmWallet';
@@ -106,6 +107,7 @@ export function Header() {
     prevUserId.current = currentId;
   }, [user, setLocation]);
   const [isAuthOpen,         setIsAuthOpen]         = useState(false);
+  const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
   const [openDepositOnAuth,  setOpenDepositOnAuth]  = useState(false);
   const [showAddressMenu,    setShowAddressMenu]    = useState(false);
   const [showSearch,         setShowSearch]         = useState(false);
@@ -452,6 +454,22 @@ export function Header() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
+                {/* Connect Wallet button — opens wallet-picker popup */}
+                <button
+                  data-testid="button-wallet-picker-header"
+                  onClick={() => setIsWalletPickerOpen(true)}
+                  className="flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-xl border text-sm font-bold tracking-tight transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] cursor-pointer"
+                  style={{
+                    borderColor: 'rgba(56,189,248,0.35)',
+                    color: '#38BDF8',
+                    background: 'rgba(56,189,248,0.06)',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.6)'; e.currentTarget.style.background = 'rgba(56,189,248,0.10)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.35)'; e.currentTarget.style.background = 'rgba(56,189,248,0.06)'; }}
+                >
+                  <Wallet className="h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Connect<span className="hidden sm:inline"> Wallet</span></span>
+                </button>
                 {/* Sign In button — opens email/password auth modal */}
                 {!user && (
                   <button
@@ -500,6 +518,7 @@ export function Header() {
 
       <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <ConnectWalletModal open={isPaymentOpen} onOpenChange={setIsPaymentOpen} />
+      <WalletPickerModal open={isWalletPickerOpen} onClose={() => setIsWalletPickerOpen(false)} />
     </>
   );
 }
