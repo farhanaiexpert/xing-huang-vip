@@ -487,23 +487,7 @@ export function Header() {
                     <span>Sign In</span>
                   </button>
                 )}
-                {/* Deposit / Connect Wallet — opens payment methods modal (auth check first) */}
-                <button
-                  data-testid="button-connect-wallet-header"
-                  onClick={() => {
-                    sessionStorage.setItem('cupbett_deposit_method', 'wallet');
-                    sessionStorage.setItem('cupbett_wallet_tab', 'deposit');
-                    setLocation('/account/wallet');
-                  }}
-                  className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
-                  style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
-                >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
-                  <Wallet className="relative h-3.5 w-3.5 shrink-0" />
-                  <span className="relative hidden sm:inline whitespace-nowrap">Deposit</span>
-                  <span className="relative sm:hidden">Deposit</span>
-                </button>
+                {/* Deposit is gated behind an active wallet connection — hidden when not connected */}
               </div>
             )}
           </div>

@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect } from 'react';
-import { Link, useParams } from 'wouter';
+import { Link, useParams, Redirect } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/hooks/useWallet';
+import { useToast } from '@/hooks/use-toast';
 import { useBetHistory } from '@/hooks/useBetHistory';
 import { Header } from '@/components/Header';
 import { cn, userDisplayLabel, shortAddress, addressInitials } from '@/lib/utils';
@@ -76,13 +78,24 @@ function isSection(s: string): s is SectionId {
 }
 
 export function AccountLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
+  const { isConnected } = useWallet();
+  const { toast } = useToast();
   const { openBetsCount } = useBetHistory();
   const params = useParams<{ section?: string }>();
 
   const raw = params.section ?? 'overview';
   const section: SectionId = isSection(raw) ? raw : 'overview';
   const PageComponent = PAGES[section];
+
+  // Wallet page is gated behind an active wallet connection.
+  // Wait for auth restore (isLoading) so a connected user isn't bounced on refresh/deep-link.
+  const walletBlocked = !isLoading && section === 'wallet' && !isConnected;
+  useEffect(() => {
+    if (walletBlocked) {
+      toast({ title: 'Please connect your wallet first to access the wallet page.' });
+    }
+  }, [walletBlocked, toast]);
 
   const displayLabel = user ? userDisplayLabel(user) : 'Guest';
   const initials     = user ? addressInitials(displayLabel) : 'G';
@@ -100,6 +113,10 @@ export function AccountLayout() {
 
   const activeNav   = NAV.find(n => n.id === section)!;
   const activeColor = SECTION_COLOR[section];
+
+  if (walletBlocked) {
+    return <Redirect to="/" />;
+  }
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-20 xl:pb-0">

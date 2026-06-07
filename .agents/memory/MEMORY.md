@@ -9,3 +9,4 @@
 - [BTTS fallback fix](btts-fallback-fix.md) — WC returns HTTP 422 for btts; fetchOddsFromApi auto-retries without btts on 400/422.
 - [BetsAPI out-of-volume 429](betsapi-volume-429.md) — valid key ≠ data; out-of-volume shows as 429 / 200 success:0 TOO_MANY_REQUESTS; treat as retryable (15min TTL), needs paid Volume Package.
 - [Referral→wallet verify coupling](referral-sessionstorage-coupling.md) — wallet verify reads referral from sessionStorage 'cb_ref', not React state; referral inputs must persist there or codes silently drop.
+- [Route guard auth restore](route-guard-auth-restore.md) — client redirect guards must gate on `!isLoading` or they bounce genuinely-connected users to home on refresh/deep-link before session restores.
