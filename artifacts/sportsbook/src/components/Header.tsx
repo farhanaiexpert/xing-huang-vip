@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'wouter';
 import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft, Clock } from 'lucide-react';
-import { AuthModal } from './AuthModal';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { WalletPickerModal } from './WalletPickerModal';
 import { NotificationBell } from './NotificationBell';
@@ -107,7 +106,6 @@ export function Header() {
     }
     prevUserId.current = currentId;
   }, [user, setLocation]);
-  const [isAuthOpen,         setIsAuthOpen]         = useState(false);
   const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
   const [openDepositOnAuth,  setOpenDepositOnAuth]  = useState(false);
   const [showAddressMenu,    setShowAddressMenu]    = useState(false);
@@ -137,9 +135,11 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Listen for external login-modal open requests (e.g. from AccountLayout auth guard)
+  // Listen for external login/signup prompts (e.g. AccountLayout guard, bet-slip,
+  // promo "Sign Up & Claim"). These open the same wallet picker as the header
+  // Connect Wallet button — wallet connect is the only auth method.
   useEffect(() => {
-    function handler() { setIsAuthOpen(true); }
+    function handler() { setIsWalletPickerOpen(true); }
     window.addEventListener('openLoginModal', handler);
     return () => window.removeEventListener('openLoginModal', handler);
   }, []);
@@ -478,10 +478,10 @@ export function Header() {
                   <Wallet className="h-3.5 w-3.5 shrink-0" />
                   <span className="whitespace-nowrap">Connect<span className="hidden sm:inline"> Wallet</span></span>
                 </button>
-                {/* Sign In button — opens email/password auth modal (hidden for now) */}
+                {/* Sign In button — opens the wallet picker (hidden for now) */}
                 {false && !user && (
                   <button
-                    onClick={() => setIsAuthOpen(true)}
+                    onClick={() => setIsWalletPickerOpen(true)}
                     className="hidden sm:flex items-center gap-1.5 h-9 px-4 rounded-xl border text-sm font-bold tracking-tight transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] cursor-pointer"
                     style={{
                       borderColor: 'rgba(0,223,169,0.35)',
@@ -514,7 +514,6 @@ export function Header() {
         </div>
       </header>
 
-      <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       <ConnectWalletModal open={isPaymentOpen} onOpenChange={setIsPaymentOpen} />
       <WalletPickerModal open={isWalletPickerOpen} onClose={() => setIsWalletPickerOpen(false)} />
     </>

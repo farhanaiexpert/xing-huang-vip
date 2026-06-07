@@ -1,24 +1,23 @@
 ---
-name: Two distinct wallet-connect popups
-description: The sportsbook has TWO separate "connect wallet" modals triggered by different events — easy to confuse.
+name: Wallet connect is the only auth entrypoint
+description: Sportsbook auth = wallet connect; WalletPickerModal is the single canonical login/signup popup.
 ---
 
-# Two distinct wallet-connect popups (sportsbook)
+# Wallet connect is the only auth entrypoint (sportsbook)
 
-There are two different wallet-connect surfaces, opened by different mechanisms:
+Wallet connect is the **only** authentication method (`isAuthenticated === isConnected`).
+There is one canonical popup for connecting/signing in/signing up: **WalletPickerModal**,
+the one tied to the header "Connect Wallet" button.
 
-- **AuthModal** — opened by the `openLoginModal` window event (used by the
-  AccountLayout auth guard, bet-slip place-bet, promo claim, etc.).
-- **WalletPickerModal** — the popup tied to the **header "Connect Wallet" button**
-  (`setIsWalletPickerOpen`). This is the one most "connect first" UX should open.
+**Why:** A previous AuthModal (a second, separate connect popup) caused confusion —
+features asked for "the same popup as the header Connect Wallet button," which is
+WalletPickerModal, not AuthModal. AuthModal has been removed entirely.
 
-**Why:** A feature asked the deposit "connect first" alert to open "the same popup
-as the header Connect Wallet button" — that is WalletPickerModal, NOT AuthModal.
-Reaching for the familiar `openLoginModal` event would have opened the wrong modal.
-
-**How to apply:** Deposit CTAs route through `lib/depositGate.ts`
-(`requestDeposit` / `promptConnectFirst` / `openWalletPicker`) using window events
-`cb:connect-first` (→ global ConnectFirstDialog in App) and `cb:open-wallet-picker`
-(→ Header opens WalletPickerModal). Header is mounted on all main routes, so the
-picker listener is available app-wide. When you need the header's picker from
-elsewhere, dispatch `cb:open-wallet-picker`; do not reuse `openLoginModal`.
+**How to apply:** Any "you must connect / sign in / sign up" prompt must open
+WalletPickerModal, never a bespoke modal. Two routes do this:
+- Dispatch the `openLoginModal` window event — the Header listener opens the picker.
+- Call `openWalletPicker()` from `lib/depositGate.ts` (dispatches `cb:open-wallet-picker`,
+  also handled by the Header).
+Deposit CTAs route through `lib/depositGate.ts` (`requestDeposit` / `promptConnectFirst`
+/ `openWalletPicker`). The Header is mounted on all main routes, so these listeners are
+available app-wide. Do not reintroduce a separate auth modal.

@@ -21,7 +21,7 @@ interface AuthState {
   isNewUser: boolean;
   /** Dismiss the profile-setup prompt */
   clearNewUser: () => void;
-  /** Called by AuthModal after successful wallet verify — stores tokens + user */
+  /** Called by WalletPickerModal after successful wallet verify — stores tokens + user */
   loginWithWallet: (accessToken: string, refreshToken: string, user: AuthUser) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;

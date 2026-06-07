@@ -9,7 +9,7 @@ import {
   RefreshCw, ArrowLeft, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { AuthModal } from './AuthModal';
+import { openWalletPicker } from '../lib/depositGate';
 import { useAuth } from '../contexts/AuthContext';
 import { useEvmWallet } from '../hooks/useEvmWallet';
 import { useAutoDeposit } from '../hooks/useAutoDeposit';
@@ -128,7 +128,6 @@ const PLISIO_PENDING_KEY = 'plisio_pending_deposit';
 
 export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: ConnectWalletModalProps) {
   const isVisible = open ?? isOpen ?? false;
-  const [authOpen, setAuthOpen] = useState(false);
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const evmWallet = useEvmWallet();
@@ -173,8 +172,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     },
   });
 
-  function handleEvmDeposit() { if (!user) { setAuthOpen(true); return; } runEvmDeposit(); }
-  function handleTronDeposit() { if (!user) { setAuthOpen(true); return; } runTronDeposit(); }
+  function handleEvmDeposit() { if (!user) { openWalletPicker(); return; } runEvmDeposit(); }
+  function handleTronDeposit() { if (!user) { openWalletPicker(); return; } runTronDeposit(); }
 
   const reownStep: 'idle' | 'connecting' | 'connected' = isConnected && address
     ? 'connected'
@@ -189,7 +188,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   }
 
   async function handleConnectWallet() {
-    if (!user) { setAuthOpen(true); return; }
+    if (!user) { openWalletPicker(); return; }
     setConnectError('');
     setConnecting(true);
     try {
@@ -268,7 +267,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   }
 
   function handleNppClick() {
-    if (!user) { setAuthOpen(true); return; }
+    if (!user) { openWalletPicker(); return; }
     setNppError('');
     setView('npp-form');
   }
@@ -292,7 +291,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   }
 
   function handlePlisioClick() {
-    if (!user) { setAuthOpen(true); return; }
+    if (!user) { openWalletPicker(); return; }
     setPlisioError('');
     setView('plisio-form');
   }
@@ -634,7 +633,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     }
   }, [isVisible]);
 
-  if (!isVisible && !authOpen) return null;
+  if (!isVisible) return null;
 
   const NPP_META: Record<string, { label: string; color: string }> = {
     usdttrc20:   { label: 'TRC-20 (Tron)',    color: '#00DFA9' },
@@ -1891,7 +1890,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
                   {/* ── PHANTOM (Solana USDT SPL) ── */}
                   <button
-                    onClick={() => { if (!user) { setAuthOpen(true); return; } setView('phantom-form'); }}
+                    onClick={() => { if (!user) { openWalletPicker(); return; } setView('phantom-form'); }}
                     className="w-full text-left rounded-2xl overflow-hidden p-3 sm:p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
                     style={{
                       background: 'linear-gradient(135deg, rgba(153,69,255,0.11) 0%, rgba(123,47,190,0.05) 100%)',
@@ -1931,7 +1930,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
                   {/* ── TON USDT (Jetton) ── */}
                   <button
-                    onClick={() => { if (!user) { setAuthOpen(true); return; } setView('ton-form'); }}
+                    onClick={() => { if (!user) { openWalletPicker(); return; } setView('ton-form'); }}
                     className="w-full text-left rounded-2xl overflow-hidden p-3 sm:p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
                     style={{
                       background: 'linear-gradient(135deg, rgba(0,152,234,0.11) 0%, rgba(0,120,185,0.05) 100%)',
@@ -2095,7 +2094,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
                   {/* ── OPTION 4: Manual ── */}
                   <button
-                    onClick={() => { close(); if (user) { navigate('/account/wallet'); sessionStorage.setItem('cupbett_deposit_method', 'manual'); } else { setAuthOpen(true); } }}
+                    onClick={() => { close(); if (user) { navigate('/account/wallet'); sessionStorage.setItem('cupbett_deposit_method', 'manual'); } else { openWalletPicker(); } }}
                     className="w-full text-left rounded-2xl overflow-hidden p-3 sm:p-4 transition-all hover:scale-[1.005] active:scale-[0.995] cursor-pointer group"
                     style={{
                       background: 'linear-gradient(135deg, rgba(0,223,169,0.08) 0%, rgba(0,196,154,0.04) 100%)',
@@ -2175,13 +2174,6 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
         </div>
       )}
 
-      {authOpen && (
-        <AuthModal
-          open={authOpen}
-          onClose={() => setAuthOpen(false)}
-          defaultTab="login"
-        />
-      )}
     </>,
     document.body
   );
