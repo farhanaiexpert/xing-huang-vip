@@ -1,0 +1,50 @@
+Please update only the access/visibility logic for Deposit and Wallet page.
+
+Important:
+Do not touch or modify the existing Wallet Connect popup/modal in the header. It is already working correctly. Do not redesign it, do not replace it, and do not add anything inside it.
+
+Required behavior:
+
+1. Header Wallet Connect button
+
+* Keep the existing Wallet Connect button and popup exactly as it is.
+* This popup is already responsible for wallet connection/login.
+* Do not change its UI or flow.
+
+2. Deposit button visibility
+
+* The Deposit button in the header should be hidden by default.
+* Show the Deposit button only after the user has successfully connected/logged in through the existing Wallet Connect button.
+* If wallet is disconnected or user logs out, hide the Deposit button again.
+
+3. Wallet page access protection
+
+* User should not be able to access `/account/wallet` unless they are connected/logged in through the Wallet Connect flow.
+* If a non-wallet-connected user tries to open `/account/wallet` directly, block access and redirect them to the home page or show a message:
+  “Please connect your wallet first to access the wallet page.”
+
+4. Deposit access protection
+
+* User should only be allowed to deposit funds if wallet connection/login is active.
+* Do not allow deposit flow for users who have not connected through the Wallet Connect button.
+* Deposit button and deposit page must depend on the wallet-connected/authenticated state.
+
+5. State logic
+   Use the existing wallet/auth state if available.
+   The condition should be based on something like:
+
+* user is authenticated
+* walletAddress exists
+* wallet connection/login is active
+
+Example behavior:
+
+* Not connected: show Wallet Connect button, hide Deposit button, block `/account/wallet`.
+* Connected: show wallet/account info, show Deposit button, allow `/account/wallet`.
+* Disconnected: return to not connected state.
+
+Please implement only this logic and provide:
+
+* files changed
+* what condition is used to detect wallet-connected user
+* test results for connected and disconnected states

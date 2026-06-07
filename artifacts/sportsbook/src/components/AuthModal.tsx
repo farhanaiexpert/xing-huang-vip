@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  X, Wallet, AlertCircle, CheckCircle2, Check,
-  Mail, Lock, Eye, EyeOff, Loader2, User,
+  X, Wallet, AlertCircle, CheckCircle2, User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppKitState } from '@reown/appkit/react';
@@ -16,7 +15,6 @@ interface AuthModalProps {
   defaultTab?: 'login' | 'register';
 }
 
-type Tab = 'login' | 'register';
 type WalletStep = 'idle' | 'waiting_wallet' | 'signing' | 'verifying' | 'done';
 
 interface AuthResponse {
@@ -33,23 +31,14 @@ const WALLET_OPTS = [
   { name: 'TON Wallet',    short: 'TON', color: '#0098EA', bg: 'rgba(0,152,234,0.1)',   border: 'rgba(0,152,234,0.22)' },
 ];
 
-export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProps) {
+export function AuthModal({ open, onClose }: AuthModalProps) {
   const { loginWithWallet } = useAuth();
   const evmWallet = useEvmWallet();
   const { address, isConnected } = evmWallet;
   const { open: appkitModalOpen } = useAppKitState();
 
-  const [tab, setTab] = useState<Tab>(defaultTab);
-
-  // Email/password form state
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm,  setConfirm]  = useState('');
-  const [refCode,  setRefCode]  = useState('');
-  const [showPw,   setShowPw]   = useState(false);
-  const [formErr,  setFormErr]  = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  // Referral code (optional) — applied to wallet login
+  const [refCode, setRefCode] = useState('');
 
   // Wallet flow state
   const [walletStep,    setWalletStep]    = useState<WalletStep>('idle');
@@ -79,15 +68,12 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
   // Reset on open/close
   useEffect(() => {
     if (!open) {
-      setTab(defaultTab);
-      setEmail(''); setPassword(''); setConfirm(''); setFormErr('');
       setRefCode('');
-      setShowPw(false); setSubmitting(false); setDone(false);
       setWalletStep('idle'); setWalletError('');
       tronActive.current = false; phantomActive.current = false; tonWalletActive.current = false;
       wcPendingRef.current = false;
     }
-  }, [open, defaultTab]);
+  }, [open]);
 
   // When the Reown/WalletConnect modal delivers a connection, advance to signing.
   useEffect(() => {
@@ -104,47 +90,6 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
       setWalletStep('idle');
     }
   }, [appkitModalOpen]);
-
-  // ── Email / Password submit ────────────────────────────────────────────────
-  async function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setFormErr('');
-
-    if (!email.trim()) { setFormErr('Email is required'); return; }
-    if (!password)     { setFormErr('Password is required'); return; }
-    if (tab === 'register') {
-      if (password.length < 8)      { setFormErr('Password must be at least 8 characters'); return; }
-      if (password !== confirm)     { setFormErr('Passwords do not match'); return; }
-    }
-
-    setSubmitting(true);
-    try {
-      const endpoint = tab === 'register' ? '/auth/register' : '/auth/login';
-      const body = tab === 'register'
-        ? { email: email.trim().toLowerCase(), password, ...(refCode ? { referralCode: refCode } : {}) }
-        : { email: email.trim().toLowerCase(), password };
-      const data = await api.post<AuthResponse>(endpoint, body);
-      setTokens(data.accessToken, data.refreshToken);
-      loginWithWallet(data.accessToken, data.refreshToken, data.user);
-      setDone(true);
-
-      const displayName = data.user.email ?? 'you';
-      toast.success(tab === 'register' ? 'Account created!' : `Welcome back!`, {
-        description: tab === 'register'
-          ? `Signed in as ${displayName}`
-          : `Signed in as ${displayName}`,
-        duration: 4000,
-        style: { background: '#0D1A26', border: '1px solid rgba(0,223,169,0.22)', color: '#F8FAFC' },
-      });
-
-      setTimeout(onClose, 1300);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong';
-      setFormErr(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   // ── Wallet helpers ────────────────────────────────────────────────────────
   async function handleEvmSign(addr: string) {
@@ -329,7 +274,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
   if (!open) return null;
 
   const isWalletWorking = walletStep === 'waiting_wallet' || walletStep === 'signing' || walletStep === 'verifying';
-  const isBlocked       = submitting || isWalletWorking;
+  const isBlocked       = isWalletWorking;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center sm:p-4">
@@ -384,7 +329,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
         <div className="px-6 sm:px-7 pt-6 pb-6 flex flex-col gap-5">
 
           {/* ── SUCCESS STATE ── */}
-          {done && (
+          {walletStep === 'done' && (
             <div className="flex flex-col items-center gap-4 py-6">
               <div className="w-20 h-20 rounded-full flex items-center justify-center"
                 style={{ background: 'radial-gradient(circle,rgba(0,223,169,0.14) 0%,transparent 70%)', border: '1px solid rgba(0,223,169,0.22)', animation: 'amCheckIn 0.5s cubic-bezier(0.16,1,0.3,1)' }}>
@@ -398,7 +343,7 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
           )}
 
           {/* ── WALLET WORKING STATE ── */}
-          {!done && isWalletWorking && (
+          {isWalletWorking && (
             <div className="flex flex-col items-center gap-4 py-6">
               <div className="relative">
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -422,152 +367,16 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
           )}
 
           {/* ── MAIN FORM ── */}
-          {!done && !isWalletWorking && (
+          {walletStep !== 'done' && !isWalletWorking && (
             <>
               {/* Header */}
               <div className="text-center">
                 <h2 className="text-[20px] font-black text-[#F8FAFC] tracking-tight">
-                  {tab === 'login' ? 'Welcome back' : 'Create account'}
+                  Connect your wallet
                 </h2>
                 <p className="text-[12px] text-[#94A3B8]/50 mt-1">
-                  {tab === 'login' ? 'Sign in to your Xing Huang account' : 'Start trading sports today'}
+                  Sign in to Xing Huang with your wallet
                 </p>
-              </div>
-
-              {/* Tab switcher */}
-              <div className="flex rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                {(['login', 'register'] as Tab[]).map(t => (
-                  <button
-                    key={t}
-                    onClick={() => { setTab(t); setFormErr(''); }}
-                    className="flex-1 h-8 rounded-lg text-[12px] font-bold transition-all duration-200"
-                    style={tab === t
-                      ? { background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', color: '#031A10', boxShadow: '0 2px 8px rgba(0,223,169,0.25)' }
-                      : { color: 'rgba(148,163,184,0.6)' }}
-                  >
-                    {t === 'login' ? 'Sign In' : 'Register'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Form */}
-              <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3">
-
-                {/* Email */}
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/35 pointer-events-none" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={e => { setEmail(e.target.value); setFormErr(''); }}
-                    placeholder="Email address"
-                    autoComplete="email"
-                    required
-                    className="w-full h-11 pl-10 pr-4 rounded-xl text-[13px] text-[#F8FAFC] placeholder:text-[#94A3B8]/35 outline-none transition-all duration-150"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.09)',
-                    }}
-                    onFocus={e => { e.currentTarget.style.border = '1px solid rgba(0,223,169,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,223,169,0.08)'; }}
-                    onBlur={e  => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow = 'none'; }}
-                  />
-                </div>
-
-                {/* Password */}
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/35 pointer-events-none" />
-                  <input
-                    type={showPw ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setFormErr(''); }}
-                    placeholder={tab === 'register' ? 'Password (min. 8 characters)' : 'Password'}
-                    autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-                    required
-                    className="w-full h-11 pl-10 pr-10 rounded-xl text-[13px] text-[#F8FAFC] placeholder:text-[#94A3B8]/35 outline-none transition-all duration-150"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
-                    onFocus={e => { e.currentTarget.style.border = '1px solid rgba(0,223,169,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,223,169,0.08)'; }}
-                    onBlur={e  => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow = 'none'; }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#94A3B8]/35 hover:text-[#94A3B8] transition-colors"
-                  >
-                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-
-                {/* Confirm password (register only) */}
-                {tab === 'register' && (
-                  <>
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/35 pointer-events-none" />
-                      <input
-                        type={showPw ? 'text' : 'password'}
-                        value={confirm}
-                        onChange={e => { setConfirm(e.target.value); setFormErr(''); }}
-                        placeholder="Confirm password"
-                        autoComplete="new-password"
-                        required
-                        className="w-full h-11 pl-10 pr-4 rounded-xl text-[13px] text-[#F8FAFC] placeholder:text-[#94A3B8]/35 outline-none transition-all duration-150"
-                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
-                        onFocus={e => { e.currentTarget.style.border = '1px solid rgba(0,223,169,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,223,169,0.08)'; }}
-                        onBlur={e  => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow = 'none'; }}
-                      />
-                    </div>
-                    <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/35 pointer-events-none" />
-                      <input
-                        type="text"
-                        value={refCode}
-                        onChange={e => setRefCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16))}
-                        placeholder="Referral code (optional)"
-                        autoComplete="off"
-                        className="w-full h-11 pl-10 pr-4 rounded-xl text-[13px] text-[#00DFA9] font-mono tracking-widest placeholder:text-[#94A3B8]/35 placeholder:tracking-normal placeholder:font-sans outline-none transition-all duration-150"
-                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
-                        onFocus={e => { e.currentTarget.style.border = '1px solid rgba(0,223,169,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,223,169,0.08)'; }}
-                        onBlur={e  => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow = 'none'; }}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {/* Error */}
-                {formErr && (
-                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                    <AlertCircle className="h-3.5 w-3.5 text-[#EF4444] shrink-0" />
-                    <p className="text-[12px] text-[#EF4444]">{formErr}</p>
-                  </div>
-                )}
-
-                {/* Submit */}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="relative h-11 rounded-xl text-[#031A10] text-[13px] font-black tracking-tight transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden cursor-pointer"
-                  style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)', boxShadow: '0 4px 20px rgba(0,223,169,0.2)' }}
-                >
-                  {submitting
-                    ? <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                    : tab === 'login' ? 'Sign In' : 'Create Account'
-                  }
-                </button>
-
-                {/* Switch tab link */}
-                <p className="text-center text-[12px] text-[#94A3B8]/45">
-                  {tab === 'login' ? "Don't have an account? " : 'Already have an account? '}
-                  <button type="button" onClick={() => { setTab(tab === 'login' ? 'register' : 'login'); setFormErr(''); }}
-                    className="text-[#00DFA9] font-semibold hover:underline">
-                    {tab === 'login' ? 'Register' : 'Sign In'}
-                  </button>
-                </p>
-              </form>
-
-              {/* ── Divider ── */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-                <span className="text-[11px] font-medium text-[#94A3B8]/35 whitespace-nowrap">or sign in with wallet</span>
-                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
               </div>
 
               {/* Wallet error */}
@@ -577,6 +386,26 @@ export function AuthModal({ open, onClose, defaultTab = 'login' }: AuthModalProp
                   <p className="text-[12px] text-[#EF4444]">{walletError}</p>
                 </div>
               )}
+
+              {/* Referral code (optional) */}
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/35 pointer-events-none" />
+                <input
+                  type="text"
+                  value={refCode}
+                  onChange={e => {
+                    const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+                    setRefCode(v);
+                    if (v) sessionStorage.setItem('cb_ref', v); else sessionStorage.removeItem('cb_ref');
+                  }}
+                  placeholder="Referral code (optional)"
+                  autoComplete="off"
+                  className="w-full h-11 pl-10 pr-4 rounded-xl text-[13px] text-[#00DFA9] font-mono tracking-widest placeholder:text-[#94A3B8]/35 placeholder:tracking-normal placeholder:font-sans outline-none transition-all duration-150"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
+                  onFocus={e => { e.currentTarget.style.border = '1px solid rgba(0,223,169,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,223,169,0.08)'; }}
+                  onBlur={e  => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow = 'none'; }}
+                />
+              </div>
 
               {/* ── Wallet buttons ── */}
               <div className="grid grid-cols-5 gap-2">
