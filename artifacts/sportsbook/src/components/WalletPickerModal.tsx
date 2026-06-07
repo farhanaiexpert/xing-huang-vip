@@ -24,8 +24,8 @@ const WALLETS: WalletOption[] = [
   { name: 'MetaMask',    icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/MetaMask.svg',                                  tag: 'dapp' },
 ];
 
-/** Number of wallets shown in the collapsed state (the "Full Support" group). */
-const COLLAPSED_COUNT = 3;
+/** Number of wallets shown in the collapsed state before "Show more". */
+const COLLAPSED_COUNT = 4;
 
 interface WalletPickerModalProps {
   open: boolean;
