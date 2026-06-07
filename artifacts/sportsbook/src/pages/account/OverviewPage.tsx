@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { requestDeposit } from '@/lib/depositGate';
 import { useWallet } from '@/hooks/useWallet';
 import { useBetHistory } from '@/hooks/useBetHistory';
 import { useReferral } from '@/hooks/useReferral';
@@ -28,6 +29,7 @@ function fmtUSDT(n: number): string {
 
 export function OverviewPage() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const { balance, bonusBalance } = useWallet();
   const { bets } = useBetHistory();
   const ref = useReferral();
@@ -206,8 +208,8 @@ export function OverviewPage() {
 
       {/* ── QUICK ACTIONS ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {ACTIONS.map(({ label, Icon, href, color, bg, border, glow }) => (
-          <Link key={label} href={href}>
+        {ACTIONS.map(({ label, Icon, href, color, bg, border, glow }) => {
+          const inner = (
             <div className="relative flex items-center sm:flex-col sm:items-center gap-3 sm:gap-2 px-4 sm:px-2 py-3.5 sm:py-4 rounded-xl border cursor-pointer active:scale-[0.96] transition-all overflow-hidden"
               style={{ background: bg, borderColor: border }}>
               <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px]"
@@ -218,8 +220,16 @@ export function OverviewPage() {
               </div>
               <span className="text-[13px] sm:text-[11px] font-bold text-[#F8FAFC] sm:text-center leading-tight">{label}</span>
             </div>
-          </Link>
-        ))}
+          );
+          if (label === 'Deposit') {
+            return (
+              <div key={label} onClick={() => requestDeposit(!!user, navigate)}>
+                {inner}
+              </div>
+            );
+          }
+          return <Link key={label} href={href}>{inner}</Link>;
+        })}
       </div>
 
       {/* ── STATS GRID ───────────────────────────────────────────────────── */}

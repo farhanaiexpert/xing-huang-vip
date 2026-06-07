@@ -14,6 +14,7 @@ import { cn } from '../lib/utils';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 import { useI18n } from '../contexts/I18nContext';
+import { promptConnectFirst, OPEN_WALLET_PICKER_EVENT } from '../lib/depositGate';
 
 const NPP_PENDING_KEY = 'npp_pending_deposit';
 
@@ -141,6 +142,13 @@ export function Header() {
     function handler() { setIsAuthOpen(true); }
     window.addEventListener('openLoginModal', handler);
     return () => window.removeEventListener('openLoginModal', handler);
+  }, []);
+
+  // Listen for wallet-picker open requests (e.g. from the connect-first deposit alert)
+  useEffect(() => {
+    function handler() { setIsWalletPickerOpen(true); }
+    window.addEventListener(OPEN_WALLET_PICKER_EVENT, handler);
+    return () => window.removeEventListener(OPEN_WALLET_PICKER_EVENT, handler);
   }, []);
 
   // After successful sign-in: navigate to wallet deposit if user clicked Deposit while logged out
@@ -487,7 +495,19 @@ export function Header() {
                     <span>Sign In</span>
                   </button>
                 )}
-                {/* Deposit is gated behind an active wallet connection — hidden when not connected */}
+                {/* Deposit — when logged out, prompts the connect-wallet-first alert */}
+                <button
+                  data-testid="button-deposit-header"
+                  onClick={() => promptConnectFirst()}
+                  className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
+                  style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
+                  <Wallet className="relative h-3.5 w-3.5 shrink-0" />
+                  <span className="relative hidden sm:inline whitespace-nowrap">Deposit</span>
+                  <span className="relative sm:hidden">Deposit</span>
+                </button>
               </div>
             )}
           </div>

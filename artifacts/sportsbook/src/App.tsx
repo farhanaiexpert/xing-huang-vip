@@ -31,6 +31,7 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PromoPopup } from "@/components/PromoPopup";
 import { WorldCupCountdown } from "@/components/WorldCupCountdown";
 import { ProfileSetupModal } from "@/components/ProfileSetupModal";
+import { ConnectFirstDialog } from "@/components/ConnectFirstDialog";
 import { useTransactionNotifications } from "@/hooks/useTransactionNotifications";
 import { Link } from "wouter";
 
@@ -101,6 +102,7 @@ function App() {
                             <MobileBottomNav />
                             <TransactionNotifier />
                             <ProfileSetupModal />
+                            <ConnectFirstDialog />
                             <Toaster />
                             <SonnerToaster
                               position="top-left"

@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "../contexts/AuthContext";
+import { requestDeposit } from "../lib/depositGate";
 import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { LeagueSection } from "./LeagueSection";
 import { PopularBets } from "./PopularBets";
@@ -214,6 +216,8 @@ export function MainContent({
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [depositOpen, setDepositOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
   const [leagueVisibleCount, setLeagueVisibleCount] = useState(5);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -693,7 +697,7 @@ export function MainContent({
                 </div>
               )}
               {showFeatured && <LiveEventsBanner />}
-              {showFeatured && <USDTDepositBanner onDeposit={() => setDepositOpen(true)} />}
+              {showFeatured && <USDTDepositBanner onDeposit={() => requestDeposit(isAuthenticated, navigate)} />}
               {showFeatured && <PopularBets />}
               {showFeatured && (
                 <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />

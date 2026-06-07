@@ -6,6 +6,7 @@ import { useWallet } from '@/hooks/useWallet';
 import { useReferral, COMMISSION_RATES } from '@/hooks/useReferral';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { promptConnectFirst } from '@/lib/depositGate';
 import {
   ArrowLeft, Copy, Check, Users, Wallet, Share2,
   Clock, CheckCircle2, CircleDollarSign, Pencil,
@@ -618,7 +619,7 @@ export function Affiliate() {
                 <p className="text-[13px] text-[#64748B] mb-6 max-w-sm mx-auto leading-relaxed">
                   Connect your wallet to lock in a permanent referral code and start earning USDT commissions.
                 </p>
-                <button onClick={() => setModalOpen(true)}
+                <button onClick={() => promptConnectFirst()}
                   className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-[15px] font-bold text-[#0B0F14] cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.97]"
                   style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', boxShadow: '0 0 32px rgba(0,223,169,0.4)' }}>
                   <Wallet className="w-4 h-4" /> Deposit Funds
