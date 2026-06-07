@@ -492,14 +492,8 @@ export function Header() {
                   data-testid="button-connect-wallet-header"
                   onClick={() => {
                     sessionStorage.setItem('cupbett_deposit_method', 'wallet');
-                    if (!user) {
-                      sessionStorage.setItem('cb_return_to', '/account/wallet');
-                      setOpenDepositOnAuth(true);
-                      setIsAuthOpen(true);
-                    } else {
-                      sessionStorage.setItem('cupbett_wallet_tab', 'deposit');
-                      setLocation('/account/wallet');
-                    }
+                    sessionStorage.setItem('cupbett_wallet_tab', 'deposit');
+                    setLocation('/account/wallet');
                   }}
                   className="relative group flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
                   style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
