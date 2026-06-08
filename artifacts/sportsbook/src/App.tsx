@@ -34,6 +34,52 @@ import { ProfileSetupModal } from "@/components/ProfileSetupModal";
 import { ConnectFirstDialog } from "@/components/ConnectFirstDialog";
 import { useTransactionNotifications } from "@/hooks/useTransactionNotifications";
 import { Link } from "wouter";
+import { MessageCircle } from "lucide-react";
+
+function LiveChatButton() {
+  function openLiveChat() {
+    const w = window as any;
+    if (!w.__lc_xh_loaded) {
+      w.__lc = w.__lc || {};
+      w.__lc.license = 19768913;
+      w.__lc.integration_name = 'manual_channels';
+      w.__lc.product_name = 'livechat';
+      w.__lc_xh_loaded = true;
+      (function(n: any, t: Document, c: any) {
+        function i(n: any) { return e._h ? e._h.apply(null, n) : e._q.push(n); }
+        const e: any = {
+          _q: [], _h: null, _v: '2.0',
+          on:   function() { i(['on',   c.call(arguments)]); },
+          once: function() { i(['once', c.call(arguments)]); },
+          off:  function() { i(['off',  c.call(arguments)]); },
+          get:  function() { if (!e._h) throw new Error("[LiveChatWidget] You can't use getters before load."); return i(['get', c.call(arguments)]); },
+          call: function() { i(['call', c.call(arguments)]); },
+          init: function() { const s = t.createElement('script'); s.async = true; s.type = 'text/javascript'; s.src = 'https://cdn.livechatinc.com/tracking.js'; t.head.appendChild(s); },
+        };
+        if (!n.__lc.asyncInit) e.init();
+        n.LiveChatWidget = n.LiveChatWidget || e;
+      })(window, document, [].slice);
+      w.LiveChatWidget.on('ready', () => w.LiveChatWidget.call('maximize'));
+    } else {
+      w.LiveChatWidget?.call('maximize');
+    }
+  }
+
+  return (
+    <button
+      onClick={openLiveChat}
+      className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 pl-4 pr-5 py-3 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(0,223,169,0.25)] transition-all duration-200 hover:scale-105 hover:shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_0_1px_rgba(0,223,169,0.50)]"
+      style={{ background: 'linear-gradient(135deg,#0D1E2B 0%,#0A1A26 100%)', border: '1px solid rgba(0,223,169,0.30)' }}
+      title="Live Chat Support"
+    >
+      <span className="relative shrink-0">
+        <MessageCircle className="h-5 w-5 text-[#00DFA9]" />
+        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.9)] animate-pulse" />
+      </span>
+      <span className="text-[13px] font-bold text-[#F8FAFC] leading-none">Live Chat</span>
+    </button>
+  );
+}
 
 function HomeOnlyOverlay() {
   return null;
@@ -103,6 +149,7 @@ function App() {
                             <TransactionNotifier />
                             <ProfileSetupModal />
                             <ConnectFirstDialog />
+                            <LiveChatButton />
                             <Toaster />
                             <SonnerToaster
                               position="top-left"
