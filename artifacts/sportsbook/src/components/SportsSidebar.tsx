@@ -6,8 +6,36 @@ import { useOddsData } from '../hooks/useOddsData';
 import { cn } from '../lib/utils';
 import {
   TrendingUp, Star, AlignLeft, ChevronRight,
-  Clock, Heart, HeartOff,
+  Clock, Heart, HeartOff, MessageCircle,
 } from 'lucide-react';
+
+function openLiveChat() {
+  const w = window as any;
+  if (!w.__lc_xh_loaded) {
+    w.__lc = w.__lc || {};
+    w.__lc.license = 19768913;
+    w.__lc.integration_name = 'manual_channels';
+    w.__lc.product_name = 'livechat';
+    w.__lc_xh_loaded = true;
+    (function(n: any, t: Document, c: any) {
+      function i(n: any) { return e._h ? e._h.apply(null, n) : e._q.push(n); }
+      const e: any = {
+        _q: [], _h: null, _v: '2.0',
+        on: function() { i(['on', c.call(arguments)]); },
+        once: function() { i(['once', c.call(arguments)]); },
+        off: function() { i(['off', c.call(arguments)]); },
+        get: function() { if (!e._h) throw new Error("[LiveChatWidget] You can't use getters before load."); return i(['get', c.call(arguments)]); },
+        call: function() { i(['call', c.call(arguments)]); },
+        init: function() { const s = t.createElement('script'); s.async = true; s.type = 'text/javascript'; s.src = 'https://cdn.livechatinc.com/tracking.js'; t.head.appendChild(s); },
+      };
+      if (!n.__lc.asyncInit) e.init();
+      n.LiveChatWidget = n.LiveChatWidget || e;
+    })(window, document, [].slice);
+    w.LiveChatWidget.on('ready', () => w.LiveChatWidget.call('maximize'));
+  } else {
+    w.LiveChatWidget?.call('maximize');
+  }
+}
 
 interface SportsSidebarProps {
   selectedSportId: string;
@@ -231,6 +259,23 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
           </div>
 
         </div>
+      </div>
+
+      {/* ── Live Chat button ────────────────────────────────────────── */}
+      <div className="shrink-0 px-3 py-2.5 border-t border-[#253241]/60">
+        <button
+          onClick={openLiveChat}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#121821] transition-all duration-150 group"
+        >
+          <span className="relative shrink-0">
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_4px_rgba(0,223,169,0.8)]" />
+          </span>
+          <span className="text-[11px] font-medium">Live Chat</span>
+          <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#00DFA9]/10 text-[#00DFA9] border border-[#00DFA9]/20 leading-none">
+            Online
+          </span>
+        </button>
       </div>
     </aside>
   );
