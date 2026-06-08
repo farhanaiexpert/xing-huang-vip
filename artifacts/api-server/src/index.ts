@@ -547,7 +547,7 @@ runMigrations().then(() => {
     isOddsRefreshing = true;
     nextIntervalMs = (100 + Math.floor(Math.random() * 21)) * 60 * 1000;
     logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length, nextIntervalMin: Math.round(nextIntervalMs / 60000) }, "Odds refresh cron: starting batch");
-    let fetched = 0, skipped = 0, empty = 0;
+    let fetched = 0, skipped = 0, empty = 0, quotaHalt = false;
     try {
       for (const sportKey of ALL_ODDS_SPORT_KEYS) {
         // Skip if the existing cache entry still has >30 min remaining.
@@ -556,13 +556,26 @@ runMigrations().then(() => {
         if (remainingMs > 30 * 60 * 1000) { skipped++; continue; }
 
         const count = await fetchAndCacheOdds(sportKey);
+
+        // -1 means the Odds API returned 429 (quota exhausted).
+        // Stop the batch immediately — don't burn any remaining credits.
+        // Existing DB cache keeps serving stale-but-present odds until quota resets.
+        if (count === -1) {
+          quotaHalt = true;
+          nextIntervalMs = 15 * 60 * 1000; // 15-min cooldown before retrying
+          logger.error({ fetched, skipped, empty, cooldownMin: 15 }, "Odds cron: 429 quota exhausted — batch halted, 15-min cooldown");
+          break;
+        }
+
         if (count === 0) empty++; else fetched++;
 
         // 300ms gap between requests to avoid rate-limit bursts
         await new Promise(r => setTimeout(r, 300));
       }
       lastOddsRefreshAt = Date.now();
-      logger.info({ fetched, skipped, empty }, "Odds refresh cron: batch complete");
+      if (!quotaHalt) {
+        logger.info({ fetched, skipped, empty }, "Odds refresh cron: batch complete");
+      }
     } catch (err) {
       logger.error({ err }, "Odds refresh cron: unhandled error");
     } finally {

@@ -287,23 +287,60 @@ function getExtraMarkets(sportKey: string): string {
   return '';
 }
 
-/** Fetch from Odds API — single EU region to minimise credit usage. */
-async function fetchOddsFromApi(sportKey: string, extraMarkets: string): Promise<unknown[] | null> {
+// ─── Typed result for Odds API fetch ─────────────────────────────────────────
+type OddsApiResult =
+  | { data: unknown[] }        // success
+  | { quota: true }            // 429 — quota exhausted, caller should halt
+  | { fetchError: true };      // other non-ok response
+
+/** Fetch from Odds API — single EU region to minimise credit usage.
+ *  Reads x-requests-remaining header after every call for quota visibility.
+ *  Returns a typed discriminated union so callers can distinguish 429 from other errors. */
+async function fetchOddsFromApi(sportKey: string, extraMarkets: string): Promise<OddsApiResult> {
   const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
   const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+
+  // ── Credit visibility ────────────────────────────────────────────────────
+  const remaining = Number(response.headers.get('x-requests-remaining') ?? -1);
+  const used      = Number(response.headers.get('x-requests-used') ?? 0);
+  if (remaining >= 0) {
+    if (remaining < 50) {
+      logger.error({ sportKey, remaining, used }, 'Odds API: CRITICAL — credits nearly exhausted');
+    } else if (remaining < 200) {
+      logger.warn({ sportKey, remaining, used }, 'Odds API: credits running low');
+    } else {
+      logger.debug({ sportKey, remaining, used }, 'Odds API: credits ok');
+    }
+  }
+
+  // ── 429: quota exhausted ─────────────────────────────────────────────────
+  if (response.status === 429) {
+    logger.error({ sportKey }, 'Odds API: 429 quota exhausted — caller should halt batch');
+    return { quota: true };
+  }
+
   if (response.ok) {
     const data = await response.json() as unknown[];
-    return Array.isArray(data) ? data : null;
+    return { data: Array.isArray(data) ? data : [] };
   }
-  return null;
+
+  logger.warn({ sportKey, status: response.status }, 'Odds API: non-ok response');
+  return { fetchError: true };
 }
 
+/** Fetch one sport's odds and persist to DB cache.
+ *  Returns event count (≥0 on success) or -1 if the API returned 429 (quota exhausted).
+ *  Callers that receive -1 should halt the current batch to avoid wasting remaining credits. */
 export async function fetchAndCacheOdds(sportKey: string): Promise<number> {
   if (!ODDS_API_KEY) return 0;
   try {
     const extraMarkets = getExtraMarkets(sportKey);
-    const data = await fetchOddsFromApi(sportKey, extraMarkets);
-    if (!data) return 0;
+    const result = await fetchOddsFromApi(sportKey, extraMarkets);
+
+    if ('quota' in result) return -1;          // signal to halt batch
+    if ('fetchError' in result) return 0;      // non-quota error, keep going
+
+    const { data } = result;
     // Empty sports (off-season) get a 6-hour TTL so we don't re-hit the API next cycle.
     // Active sports use a 120-minute TTL (2 h) — reduces refresh frequency ~3× vs old 40 min.
     const ttlMinutes = data.length > 0 ? 120 : 360;
@@ -437,13 +474,16 @@ router.get("/odds/:sport", async (req, res): Promise<void> => {
     if (!inFlight.has(sport)) {
       const promise = (async (): Promise<unknown[]> => {
         const extraMarkets = getExtraMarkets(sport);
-        const arr = await fetchOddsFromApi(sport, extraMarkets);
-        if (arr === null) {
+        const result = await fetchOddsFromApi(sport, extraMarkets);
+        if ('quota' in result) {
+          return [{ __err: 429, __body: { error: "Odds API quota exhausted" } }] as unknown[];
+        }
+        if ('fetchError' in result) {
           return [{ __err: 502, __body: { error: "Failed to fetch odds from upstream" } }] as unknown[];
         }
-        await setDbCachedOdds(sport, arr);
+        await setDbCachedOdds(sport, result.data);
         await upsertSportControl(sport, formatLeagueName(sport));
-        return arr;
+        return result.data;
       })();
       inFlight.set(sport, promise);
       promise.finally(() => inFlight.delete(sport));
@@ -546,43 +586,78 @@ router.get("/live/events", async (_req, res): Promise<void> => {
 });
 
 // ─── GET /live/scores ─────────────────────────────────────────────────────────
-// Cached for 3 minutes — each request fans out to all active sports on Odds API,
-// so a short-but-not-too-short TTL keeps scores reasonably fresh without burning credits.
-const LIVE_SCORES_TTL = 3 * 60 * 1000; // 3 minutes
+// Per-sport DB cache with 10-minute TTL (persists across server restarts).
+// 30-second in-memory short-circuit avoids DB round-trips on every request.
+// Each sport is fetched independently — only expired entries hit the Odds API.
+// This cuts score API calls from ~1,100/hour (old 3-min fan-out) to ~6/hour per sport.
+const LIVE_SCORES_DB_TTL_MIN = 10;    // 10-minute DB cache per sport
+const LIVE_SCORES_MEM_TTL    = 30 * 1000; // 30-second in-memory short-circuit
 
 router.get("/live/scores", async (_req, res): Promise<void> => {
   if (!ODDS_API_KEY) {
     res.status(503).json({ error: "Odds API not configured" }); return;
   }
 
-  const cacheKey = "live_scores";
-  const cached   = liveCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    res.json(cached.data); return;
+  // 30-second in-memory short-circuit — serves all users hitting the endpoint within
+  // the same 30-second window without any DB or API traffic.
+  const memKey = "live_scores";
+  const memHit = liveCache.get(memKey);
+  if (memHit && memHit.expiresAt > Date.now()) {
+    res.json(memHit.data); return;
   }
 
   try {
     const activeSports = await getActiveLiveSports();
-    const results = await Promise.allSettled(
-      activeSports.map(async (sportKey) => {
+
+    // Per-sport: check DB cache first; only call Odds API for expired entries.
+    const sportResults = await Promise.allSettled(
+      activeSports.map(async (sportKey): Promise<Record<string, unknown>[]> => {
+        const dbKey = `scores:${sportKey}`;
+
+        // DB cache hit — no API call needed
+        const dbHit = await getDbCachedOdds(dbKey);
+        if (dbHit !== null) return dbHit as Record<string, unknown>[];
+
+        // DB cache miss — fetch from Odds API
         const url = `${ODDS_API_BASE}/sports/${sportKey}/scores?apiKey=${ODDS_API_KEY}&daysFrom=1&dateFormat=iso`;
-        const response = await fetch(url);
-        if (!response.ok) return [];
-        const data = (await response.json()) as Record<string, unknown>[];
-        if (!Array.isArray(data)) return [];
-        return data
+        const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+
+        // Log credit usage from scores calls too
+        const remaining = Number(response.headers.get('x-requests-remaining') ?? -1);
+        if (remaining >= 0 && remaining < 200) {
+          logger.warn({ sportKey, remaining }, 'Odds API (scores): credits running low');
+        }
+
+        if (!response.ok) {
+          // Cache empty array so we don't re-hit this sport next request
+          await setDbCachedOdds(dbKey, [], LIVE_SCORES_DB_TTL_MIN);
+          return [];
+        }
+
+        const raw = (await response.json()) as Record<string, unknown>[];
+        if (!Array.isArray(raw)) {
+          await setDbCachedOdds(dbKey, [], LIVE_SCORES_DB_TTL_MIN);
+          return [];
+        }
+
+        const liveScores = raw
           .filter(ev => !ev.completed && Array.isArray(ev.scores) && (ev.scores as unknown[]).length > 0)
           .map(ev => ({ ...ev, sport_key: sportKey }));
+
+        // Cache filtered results in DB — persists across restarts
+        await setDbCachedOdds(dbKey, liveScores, LIVE_SCORES_DB_TTL_MIN);
+        return liveScores;
       })
     );
 
     const scores: Record<string, unknown>[] = [];
-    for (const result of results) {
+    for (const result of sportResults) {
       if (result.status === "fulfilled") scores.push(...result.value);
     }
 
-    const payload = { scores, count: scores.length, cached: false };
-    liveCache.set(cacheKey, { data: payload, expiresAt: Date.now() + LIVE_SCORES_TTL });
+    const payload = { scores, count: scores.length, cached: true };
+    // Short-circuit in-memory cache so concurrent requests don't all hit DB
+    liveCache.set(memKey, { data: payload, expiresAt: Date.now() + LIVE_SCORES_MEM_TTL });
     res.json(payload);
   } catch {
     res.status(500).json({ error: "Failed to fetch live scores" });
