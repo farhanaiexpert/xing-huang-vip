@@ -33,8 +33,10 @@ export const zh: Record<string, string> = {
 
 
   // ── Header buttons ────────────────────────────────────────────────────────
-  "Deposit":          "存款",
-  "+ Deposit":        "+ 存款",
+  "Deposit":          "充值",
+  "+ Deposit":        "+ 充值",
+  "Top Up":           "充值",
+  "+ Top Up":         "+ 充值",
   "Sign In":          "登录",
   "Sign Out":         "退出登录",
   "My Account":       "我的账户",
@@ -49,7 +51,6 @@ export const zh: Record<string, string> = {
   "Accumulator":      "串关",
   "Acca":             "串关",
   "Place Bet":        "下注",
-  "Top Up":           "充值",
   "Max":              "最大",
 
 
@@ -135,19 +136,32 @@ export const zh: Record<string, string> = {
 
 
   // ── Sport names ───────────────────────────────────────────────────────────
-  "Soccer":       "足球",
-  "Tennis":       "网球",
-  "Basketball":   "篮球",
-  "Cricket":      "板球",
-  "Esports":      "电竞",
-  "Horse Racing": "赛马",
-  "Formula 1":    "一级方程式",
-  "Boxing":       "拳击",
-  "Golf":         "高尔夫",
-  "Darts":        "飞镖",
-  "Ice Hockey":   "冰球",
-  "MMA":          "综合格斗",
-  "NFL":          "美式足球",
+  "Soccer":                   "足球",
+  "Football":                 "足球",
+  "Tennis":                   "网球",
+  "Basketball":               "篮球",
+  "Cricket":                  "板球",
+  "Esports":                  "电竞",
+  "Horse Racing":             "赛马",
+  "Formula 1":                "一级方程式",
+  "Boxing":                   "拳击",
+  "Golf":                     "高尔夫",
+  "Darts":                    "飞镖",
+  "Ice Hockey":               "冰球",
+  "MMA":                      "综合格斗",
+  "American Football":        "美式橄榄球",
+  "NFL":                      "美式橄榄球",
+  "Australian Rules":         "澳式橄榄球",
+  "Baseball":                 "棒球",
+  "Greyhounds":               "赛狗",
+  "Handball":                 "手球",
+  "Rugby League":             "联盟式橄榄球",
+  "Rugby Union":              "联合会式橄榄球",
+  "Snooker":                  "斯诺克",
+  "Table Tennis":             "乒乓球",
+  "UEFA Champions League":    "欧洲冠军联赛",
+  "Champions League":         "欧洲冠军联赛",
+  "Volleyball":               "排球",
 
 
   // ── Match / event labels ──────────────────────────────────────────────────
@@ -266,7 +280,6 @@ export const zh: Record<string, string> = {
   "Top Predictors":           "顶级预测达人",
   "Correct":                  "命中",
   "Winnings":                 "已赢奖金",
-  "Football":                 "足球",
   "Special":                  "特设盘口",
 
 

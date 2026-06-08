@@ -12,7 +12,7 @@ import {
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
 
-const getOrigin = () => { try { return window.location.origin; } catch { return 'https://cupbett.com'; } };
+const getOrigin = () => { try { return window.location.origin; } catch { return 'https://xinghuang.vip'; } };
 
 function AnimatedNumber({ value, decimals = 0 }: { value: number; decimals?: number }) {
   const [display, setDisplay] = useState(0);

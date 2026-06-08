@@ -18,7 +18,7 @@ const fmtDate  = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
 const fmtUSDT  = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const getOrigin = () => { try { return window.location.origin; } catch { return 'https://cupbett.com'; } };
+const getOrigin = () => { try { return window.location.origin; } catch { return 'https://xinghuang.vip'; } };
 
 // ─── Animated counter ────────────────────────────────────────────────────────
 function AnimatedNumber({ value, decimals = 0 }: { value: number; decimals?: number }) {

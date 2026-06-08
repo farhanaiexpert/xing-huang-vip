@@ -404,7 +404,7 @@ export function Header() {
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{ boxShadow: '0 0 16px rgba(0,223,169,0.5)' }} />
-                  <span className="relative">+ Deposit</span>
+                  <span className="relative">+ Top Up</span>
                   {pendingDeposit && (
                     <span className="relative flex items-center gap-1 pl-1 border-l border-[#0B0F14]/20">
                       <Clock className="w-3 h-3" />
@@ -453,7 +453,7 @@ export function Header() {
                     </div>
                     <div className="py-1">
                       <MenuAction href="/account" icon={<User className="h-3.5 w-3.5" />} label="My Account" onClick={() => setShowAddressMenu(false)} />
-                      <MenuAction href="/account/wallet" icon={<ArrowDownLeft className="h-3.5 w-3.5" />} label="Deposit" onClick={() => setShowAddressMenu(false)} />
+                      <MenuAction href="/account/wallet" icon={<ArrowDownLeft className="h-3.5 w-3.5" />} label="Top Up" onClick={() => setShowAddressMenu(false)} />
                       <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Address'} onClick={handleCopy} />
                       <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Disconnect" onClick={handleDisconnect} danger />
                     </div>
@@ -506,8 +506,8 @@ export function Header() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
                   <Wallet className="relative h-3.5 w-3.5 shrink-0" />
-                  <span className="relative hidden sm:inline whitespace-nowrap">Deposit</span>
-                  <span className="relative sm:hidden">Deposit</span>
+                  <span className="relative hidden sm:inline whitespace-nowrap">Top Up</span>
+                  <span className="relative sm:hidden">Top Up</span>
                 </button>
               </div>
             )}

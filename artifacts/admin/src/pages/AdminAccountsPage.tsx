@@ -337,7 +337,7 @@ function CreateAdminModal({ onClose }: { onClose: () => void }) {
               type="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              placeholder="admin@cupbett.com"
+              placeholder="admin@xinghuang.vip"
             />
           </div>
           <div>
