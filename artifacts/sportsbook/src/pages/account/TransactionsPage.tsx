@@ -49,7 +49,7 @@ function fmtDate(iso: string) {
 
 function txLabel(type: string) {
   const m: Record<string, string> = {
-    deposit:    'Deposit',
+    deposit:    'Top Up',
     withdrawal: 'Withdrawal',
     bet:        'Bet Placed',
     debit:      'Bet Placed',

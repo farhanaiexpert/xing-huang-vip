@@ -868,7 +868,7 @@ export function WalletPage() {
                 ? 'bg-[#00DFA9] text-[#0B0F14] shadow-[0_0_16px_rgba(0,223,169,0.25)]'
                 : 'text-[#64748B] hover:text-[#94A3B8]'
             )}>
-            {t === 'deposit' ? '↓ Deposit' : t === 'withdraw' ? '↑ Withdraw' : '📋 History'}
+            {t === 'deposit' ? '↓ Top Up' : t === 'withdraw' ? '↑ Withdraw' : '📋 History'}
           </button>
         ))}
       </div>
@@ -882,7 +882,7 @@ export function WalletPage() {
           {/* Method picker — always visible: all deposit methods shown upfront */}
           <div className="space-y-2.5">
               <div className="px-0.5">
-                <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Choose Deposit Method</p>
+                <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Choose Top Up Method</p>
               </div>
 
               {/* Web3 Wallet */}
@@ -1036,7 +1036,7 @@ export function WalletPage() {
                     <Zap className="h-4 w-4 text-[#38BDF8]" />
                   </div>
                   <div>
-                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Deposit via NOWPayments</p>
+                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Top Up via NOWPayments</p>
                     <p className="text-[11px] text-[#64748B] mt-0.5">Enter amount → get unique address → pay → auto-credited</p>
                   </div>
                 </div>
@@ -1254,7 +1254,7 @@ export function WalletPage() {
                       </div>
                     </div>
                     <div>
-                      <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Credited! ⚡</p>
+                      <p className="text-[18px] font-black text-[#F8FAFC]">Top Up Credited! ⚡</p>
                       <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
                         Your payment was confirmed and <span className="text-[#00DFA9] font-semibold">automatically credited</span> to your account.
                       </p>
@@ -1304,7 +1304,7 @@ export function WalletPage() {
                     <CreditCard className="h-4 w-4 text-[#A855F7]" />
                   </div>
                   <div>
-                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Deposit via Plisio</p>
+                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Top Up via Plisio</p>
                     <p className="text-[11px] text-[#64748B] mt-0.5">Enter amount → choose network → get unique address → auto-credited</p>
                   </div>
                 </div>
@@ -1442,7 +1442,7 @@ export function WalletPage() {
 
                     {/* Address */}
                     <div>
-                      <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">Deposit Address</p>
+                      <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">Top Up Address</p>
                       <div className="flex items-center gap-2 rounded-xl px-4 py-3" style={{ background: '#0B0F14', border: '1px solid rgba(168,85,247,0.25)' }}>
                         <p className="text-[12px] font-mono text-[#F8FAFC] flex-1 break-all leading-relaxed">{plisioInvoice.walletHash}</p>
                         <button onClick={copyPlisioAddress} className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all"
@@ -1484,7 +1484,7 @@ export function WalletPage() {
                       <CheckCircle2 className="w-10 h-10 text-[#00DFA9]" />
                     </div>
                     <div>
-                      <p className="text-[20px] font-black text-[#00DFA9]">Deposit Confirmed!</p>
+                      <p className="text-[20px] font-black text-[#00DFA9]">Top Up Confirmed!</p>
                       <p className="text-[13px] text-[#64748B] mt-1">
                         {plisioInvoice ? `$${plisioInvoice.amount} USDT` : 'Your deposit'} has been credited to your account
                       </p>
@@ -1492,7 +1492,7 @@ export function WalletPage() {
                     <button onClick={resetPlisio}
                       className="px-8 py-3 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01]"
                       style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 20px rgba(0,223,169,0.25)' }}>
-                      Deposit Again
+                      Top Up Again
                     </button>
                   </div>
                 )}
@@ -1530,7 +1530,7 @@ export function WalletPage() {
                     <Wallet className="h-4 w-4 text-[#A78BFA]" />
                   </div>
                   <div>
-                    <p className="text-[14px] font-bold text-[#F8FAFC]">Web3 Wallet Deposit</p>
+                    <p className="text-[14px] font-bold text-[#F8FAFC]">Web3 Wallet Top Up</p>
                     <p className="text-[11px] text-[#64748B] mt-0.5">Send USDT in one click — no TxHash needed</p>
                   </div>
                 </div>
@@ -1655,7 +1655,7 @@ export function WalletPage() {
                     {/* Network selector — deposit on any supported chain */}
                     <div className="p-3 rounded-xl space-y-2.5" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wide">Deposit Network</p>
+                        <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wide">Top Up Network</p>
                         {chainCfg ? (
                           <span className="flex items-center gap-1 text-[10px] font-bold text-[#00DFA9]">
                             <CheckCircle2 className="w-3 h-3" /> {chainCfg.label} Ready
@@ -1901,13 +1901,13 @@ export function WalletPage() {
                                 ) : walletPhase === 'submitting' ? (
                                   <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Verifying on-chain…</>
                                 ) : belowMin ? (
-                                  <>Minimum Deposit is 10 USDT</>
+                                  <>Minimum Top Up is 10 USDT</>
                                 ) : insufficientUsdt ? (
                                   <>Insufficient USDT Balance</>
                                 ) : lowGas ? (
                                   <>Insufficient {chainCfg.nativeToken} for Gas</>
                                 ) : (
-                                  <>Confirm Deposit · {amt} USDT <ChevronRight className="w-4 h-4" /></>
+                                  <>Confirm Top Up · {amt} USDT <ChevronRight className="w-4 h-4" /></>
                                 )}
                               </button>
                             </div>
@@ -1931,7 +1931,7 @@ export function WalletPage() {
                     </div>
                     <div>
                       <p className="text-[18px] font-black text-[#F8FAFC]">
-                        {walletResult.autoVerified ? 'Deposit Verified! ⚡' : 'Deposit Submitted!'}
+                        {walletResult.autoVerified ? 'Top Up Verified! ⚡' : 'Top Up Submitted!'}
                       </p>
                       <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
                         {walletResult.autoVerified
@@ -2009,7 +2009,7 @@ export function WalletPage() {
                         onClick={resetWalletDeposit}
                         className="flex-1 py-2.5 rounded-xl text-[13px] font-bold text-[#38BDF8] border border-[#38BDF8]/25 hover:bg-[#38BDF8]/10 transition-all"
                       >
-                        Deposit More
+                        Top Up More
                       </button>
                     </div>
                   </div>
@@ -2027,7 +2027,7 @@ export function WalletPage() {
                     <CircleDollarSign className="h-4 w-4 text-[#00DFA9]" />
                   </div>
                   <div>
-                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Deposit via Cryptomus</p>
+                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Top Up via Cryptomus</p>
                     <p className="text-[11px] text-[#64748B] mt-0.5">USDT TRC-20 or ERC-20 — auto-credited on confirmation</p>
                   </div>
                 </div>
@@ -2239,7 +2239,7 @@ export function WalletPage() {
                       </div>
                     </div>
                     <div>
-                      <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Credited! ⚡</p>
+                      <p className="text-[18px] font-black text-[#F8FAFC]">Top Up Credited! ⚡</p>
                       <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
                         Your Cryptomus payment was confirmed and <span className="text-[#00DFA9] font-semibold">automatically credited</span> to your account.
                       </p>
@@ -2500,14 +2500,14 @@ export function WalletPage() {
                         <div>
                           {depAutoVerified ? (
                             <>
-                              <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Credited! ⚡</p>
+                              <p className="text-[18px] font-black text-[#F8FAFC]">Top Up Credited! ⚡</p>
                               <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
                                 Your transaction was <span className="text-[#00DFA9] font-semibold">verified on-chain instantly</span>. Balance updated.
                               </p>
                             </>
                           ) : (
                             <>
-                              <p className="text-[18px] font-black text-[#F8FAFC]">Deposit Submitted!</p>
+                              <p className="text-[18px] font-black text-[#F8FAFC]">Top Up Submitted!</p>
                               <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
                                 Under manual review — credited within <span className="text-[#38BDF8] font-semibold">5–30 minutes</span>.
                               </p>
@@ -2603,7 +2603,7 @@ export function WalletPage() {
                           className="w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                           style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.25)' }}>
                           <CheckCircle2 className="h-4 w-4" />
-                          Confirm Deposit
+                          Confirm Top Up
                         </button>
 
                         <p className="text-center text-[10px] text-[#334155]">
@@ -3066,7 +3066,7 @@ export function WalletPage() {
                             {/* Row 1: type + network + status */}
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-[13px] font-bold text-[#F8FAFC]">
-                                {isDeposit ? 'Deposit' : tx.type === 'withdrawal' ? 'Withdrawal' : tx.type}
+                                {isDeposit ? 'Top Up' : tx.type === 'withdrawal' ? 'Withdrawal' : tx.type}
                               </p>
                               {tx.network && (
                                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"

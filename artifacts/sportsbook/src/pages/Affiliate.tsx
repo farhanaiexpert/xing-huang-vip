@@ -622,7 +622,7 @@ export function Affiliate() {
                 <button onClick={() => promptConnectFirst()}
                   className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-[15px] font-bold text-[#0B0F14] cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.97]"
                   style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', boxShadow: '0 0 32px rgba(0,223,169,0.4)' }}>
-                  <Wallet className="w-4 h-4" /> Deposit Funds
+                  <Wallet className="w-4 h-4" /> Top Up Funds
                 </button>
               </div>
             </div>

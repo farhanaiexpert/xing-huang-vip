@@ -60,7 +60,7 @@ export function OverviewPage() {
   ];
 
   const ACTIONS = [
-    { label: 'Deposit',  Icon: ArrowDownLeft, href: '/account/wallet',     color: '#00DFA9', bg: 'rgba(0,223,169,0.08)',  border: 'rgba(0,223,169,0.25)',  glow: 'rgba(0,223,169,0.20)' },
+    { label: 'Top Up',   Icon: ArrowDownLeft, href: '/account/wallet',     color: '#00DFA9', bg: 'rgba(0,223,169,0.08)',  border: 'rgba(0,223,169,0.25)',  glow: 'rgba(0,223,169,0.20)' },
     { label: 'Withdraw', Icon: ArrowUpRight,  href: '/account/wallet',     color: '#38BDF8', bg: 'rgba(56,189,248,0.08)', border: 'rgba(56,189,248,0.25)', glow: 'rgba(56,189,248,0.16)' },
     { label: 'My Bets',  Icon: Receipt,       href: '/account/bets',       color: '#FACC15', bg: 'rgba(250,204,21,0.08)', border: 'rgba(250,204,21,0.25)', glow: 'rgba(250,204,21,0.16)' },
     { label: 'Promos',   Icon: Gift,          href: '/account/promotions', color: '#F97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.25)', glow: 'rgba(249,115,22,0.16)' },
@@ -221,7 +221,7 @@ export function OverviewPage() {
               <span className="text-[13px] sm:text-[11px] font-bold text-[#F8FAFC] sm:text-center leading-tight">{label}</span>
             </div>
           );
-          if (label === 'Deposit') {
+          if (label === 'Top Up') {
             return (
               <div key={label} onClick={() => requestDeposit(!!user, navigate)}>
                 {inner}

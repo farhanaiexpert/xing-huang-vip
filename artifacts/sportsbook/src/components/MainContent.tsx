@@ -122,7 +122,7 @@ function USDTDepositBanner({ onDeposit }: { onDeposit: () => void }) {
               <span className="text-[9px] font-black uppercase tracking-[0.15em] text-[#00DFA9] whitespace-nowrap">Live Offer</span>
             </div>
             <p className="text-[14px] font-black leading-tight text-white tracking-tight">
-              Deposit{" "}
+              Top Up{" "}
               <span style={{ background: "linear-gradient(90deg,#00DFA9 0%,#FACC15 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 USDT
               </span>{" "}
@@ -152,7 +152,7 @@ function USDTDepositBanner({ onDeposit }: { onDeposit: () => void }) {
               onClick={onDeposit}
               className="shrink-0 px-4 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 active:scale-95 whitespace-nowrap"
               style={{ background: "linear-gradient(135deg,#00DFA9 0%,#00C98A 100%)" }}>
-              Deposit Now →
+              Top Up Now →
             </button>
           </div>
         </div>
@@ -168,7 +168,7 @@ function USDTDepositBanner({ onDeposit }: { onDeposit: () => void }) {
           {/* Main text */}
           <div className="flex-1 min-w-0">
             <p className="text-[14px] font-black leading-tight text-white tracking-tight">
-              Deposit{" "}
+              Top Up{" "}
               <span style={{ background: "linear-gradient(90deg,#00DFA9 0%,#FACC15 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 USDT
               </span>{" "}
@@ -200,7 +200,7 @@ function USDTDepositBanner({ onDeposit }: { onDeposit: () => void }) {
             onClick={onDeposit}
             className="shrink-0 px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wide text-[#071510] transition-all duration-150 hover:brightness-110 hover:scale-105 active:scale-95 hover:shadow-[0_0_20px_rgba(0,223,169,0.5)] whitespace-nowrap"
             style={{ background: "linear-gradient(135deg,#00DFA9 0%,#00C98A 100%)" }}>
-            Deposit Now →
+            Top Up Now →
           </button>
         </div>
       </div>

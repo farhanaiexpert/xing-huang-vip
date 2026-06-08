@@ -253,7 +253,7 @@ export function MobileBottomNav() {
                   className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-black text-[#071210] active:scale-95 transition-transform cursor-pointer"
                   style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)' }}>
                   <ArrowDownLeft className="w-3.5 h-3.5" />
-                  Deposit
+                  Top Up
                 </Link>
               </div>
             </div>
@@ -266,7 +266,7 @@ export function MobileBottomNav() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[14px] font-bold text-[#F8FAFC]">Connect Wallet</p>
-                  <p className="text-[10px] text-[#64748B] mt-0.5 leading-tight">Deposit crypto &amp; start betting</p>
+                  <p className="text-[10px] text-[#64748B] mt-0.5 leading-tight">Top Up &amp; start betting</p>
                 </div>
                 <button
                   onClick={() => { setMoreOpen(false); connect(''); }}

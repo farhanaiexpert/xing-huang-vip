@@ -659,16 +659,16 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
   const headerConfig: Record<ModalView, { title: string; subtitle: string; showBack: boolean; onBack?: () => void }> = {
     'methods':        { title: 'Add Funds',          subtitle: 'Choose how you want to deposit USDT',           showBack: false },
-    'npp-form':       { title: 'Crypto Deposit',     subtitle: 'Generate a unique payment address',             showBack: true  },
+    'npp-form':       { title: 'Crypto Top Up',      subtitle: 'Generate a unique payment address',             showBack: true  },
     'npp-invoice':    { title: 'Awaiting Payment',   subtitle: 'Send exactly the amount shown below',           showBack: false },
-    'npp-success':    { title: 'Deposit Confirmed',  subtitle: 'Balance updated successfully',                  showBack: false },
+    'npp-success':    { title: 'Top Up Confirmed',   subtitle: 'Balance updated successfully',                  showBack: false },
     'npp-failed':     { title: 'Payment Expired',    subtitle: 'This invoice is no longer valid',               showBack: true  },
     'plisio-form':    { title: 'Pay via Plisio',     subtitle: 'Generate a unique Plisio address',              showBack: true  },
     'plisio-invoice': { title: 'Awaiting Payment',   subtitle: 'Send exactly the amount shown below',           showBack: false },
-    'plisio-success': { title: 'Deposit Confirmed',  subtitle: 'Balance updated successfully',                  showBack: false },
+    'plisio-success': { title: 'Top Up Confirmed',   subtitle: 'Balance updated successfully',                  showBack: false },
     'plisio-failed':  { title: 'Invoice Expired',    subtitle: 'This invoice is no longer valid',               showBack: true  },
-    'phantom-form':   { title: 'Phantom Deposit',    subtitle: 'Send Solana USDT directly from Phantom',        showBack: true, onBack: resetPhantom },
-    'ton-form':       { title: 'TON Deposit',        subtitle: 'Send USDT Jetton directly from Tonkeeper',      showBack: true, onBack: resetTon     },
+    'phantom-form':   { title: 'Phantom Top Up',     subtitle: 'Send Solana USDT directly from Phantom',        showBack: true, onBack: resetPhantom },
+    'ton-form':       { title: 'TON Top Up',         subtitle: 'Send USDT Jetton directly from Tonkeeper',      showBack: true, onBack: resetTon     },
   };
   const hdr = headerConfig[view];
 
@@ -735,7 +735,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         </div>
                         <div>
                           <p className="text-[20px] font-black text-[#00DFA9]">
-                            {phantomVerified ? 'Deposit Verified!' : 'Deposit Submitted!'}
+                            {phantomVerified ? 'Top Up Verified!' : 'Top Up Submitted!'}
                           </p>
                           <p className="text-[13px] text-[#64748B] mt-1">
                             {phantomVerified ? 'Your balance has been credited instantly.' : 'Under review — usually credited within 5–30 min.'}
@@ -832,7 +832,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                         </div>
                         <div>
                           <p className="text-[20px] font-black text-[#00DFA9]">
-                            {tonVerified ? 'Deposit Verified!' : 'Deposit Submitted!'}
+                            {tonVerified ? 'Top Up Verified!' : 'Top Up Submitted!'}
                           </p>
                           <p className="text-[13px] text-[#64748B] mt-1">
                             {tonVerified ? 'Your balance has been credited instantly.' : 'Under review — usually credited within 5–30 min.'}
@@ -1123,7 +1123,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                       <CheckCircle2 className="w-8 h-8 text-[#00DFA9]" />
                     </div>
                     <div>
-                      <p className="text-[20px] font-black text-[#00DFA9]">Deposit Confirmed!</p>
+                      <p className="text-[20px] font-black text-[#00DFA9]">Top Up Confirmed!</p>
                       <p className="text-[13px] text-[#64748B] mt-1">
                         {nppPayment ? `$${nppPayment.priceAmount.toFixed(2)} USDT` : 'Your deposit'} has been credited to your account
                       </p>
@@ -1378,7 +1378,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                       <CheckCircle2 className="w-8 h-8 text-[#00DFA9]" />
                     </div>
                     <div>
-                      <p className="text-[20px] font-black text-[#00DFA9]">Deposit Confirmed!</p>
+                      <p className="text-[20px] font-black text-[#00DFA9]">Top Up Confirmed!</p>
                       <p className="text-[13px] text-[#64748B] mt-1">
                         {plisioInvoice ? `$${plisioInvoice.amount} USDT` : 'Your deposit'} has been credited to your account
                       </p>
@@ -1535,7 +1535,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             </div>
                             <div>
                               <p className="text-[14px] font-black text-[#00DFA9]">
-                                {depositResult.autoVerified ? 'Deposit Verified!' : 'Deposit Submitted!'}
+                                {depositResult.autoVerified ? 'Top Up Verified!' : 'Top Up Submitted!'}
                               </p>
                               <p className="text-[11px] text-[#64748B]">
                                 {depositResult.autoVerified
@@ -1561,7 +1561,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               className="px-4 py-2 rounded-xl text-[11px] font-bold text-[#64748B] hover:text-[#94A3B8] transition-all"
                               style={{ background: 'rgba(255,255,255,0.05)' }}
                             >
-                              Deposit more
+                              Top Up more
                             </button>
                           </div>
                           <button
@@ -1699,7 +1699,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                                     ) : depositPhase === 'submitting' ? (
                                       <><span className="w-4 h-4 border-2 border-[#0B0F14]/30 border-t-[#0B0F14] rounded-full animate-spin" /> Verifying on-chain…</>
                                     ) : (
-                                      <>Deposit via {chainCfg.label}<ChevronRight className="w-4 h-4" /></>
+                                      <>Top Up via {chainCfg.label}<ChevronRight className="w-4 h-4" /></>
                                     )}
                                   </button>
                                 )}
@@ -1724,7 +1724,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                                     ) : depositPhase === 'submitting' ? (
                                       <><span className="w-4 h-4 border-2 border-[#00DFA9]/30 border-t-[#00DFA9] rounded-full animate-spin" /> Verifying on-chain…</>
                                     ) : (
-                                      <>Deposit via TronLink TRC-20<ChevronRight className="w-4 h-4" /></>
+                                      <>Top Up via TronLink TRC-20<ChevronRight className="w-4 h-4" /></>
                                     )}
                                   </button>
                                 )}
@@ -1738,7 +1738,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                               className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold text-[#A78BFA] transition-colors hover:text-[#C4B5FD]"
                               style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)' }}
                             >
-                              <ExternalLink className="w-3 h-3" /> Go to full Deposit page
+                              <ExternalLink className="w-3 h-3" /> Go to full Top Up page
                             </button>
                           </div>
 
@@ -1786,7 +1786,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             </div>
                             <div>
                               <p className="text-[14px] font-black text-[#00DFA9]">
-                                {depositResult.autoVerified ? 'Deposit Verified!' : 'Deposit Submitted!'}
+                                {depositResult.autoVerified ? 'Top Up Verified!' : 'Top Up Submitted!'}
                               </p>
                               <p className="text-[11px] text-[#64748B]">
                                 {depositResult.autoVerified
@@ -1822,7 +1822,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                                   TRC-20
                                 </span>
                               </div>
-                              <p className="text-[10px] text-[#64748B]">Deposit USDT directly from your TRON wallet</p>
+                              <p className="text-[10px] text-[#64748B]">Top Up USDT directly from your TRON wallet</p>
                             </div>
                           </div>
 
@@ -1874,7 +1874,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                             ) : depositPhase === 'submitting' ? (
                               <><span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> Verifying on-chain…</>
                             ) : (
-                              <>Deposit via TronLink TRC-20 <ChevronRight className="w-4 h-4" /></>
+                              <>Top Up via TronLink TRC-20 <ChevronRight className="w-4 h-4" /></>
                             )}
                           </button>
                         </div>
@@ -1996,7 +1996,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-[13px] sm:text-[15px] font-black text-[#F8FAFC]">Crypto Deposit</span>
+                          <span className="text-[13px] sm:text-[15px] font-black text-[#F8FAFC]">Crypto Top Up</span>
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                             style={{ background: 'rgba(56,189,248,0.15)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.30)' }}>
                             NOWPayments
@@ -2025,7 +2025,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
                         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-[#0B0F14] transition-all w-fit group-hover:scale-[1.02]"
                           style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)' }}>
-                          {user ? 'Deposit with Crypto' : 'Sign In to Deposit'}
+                          {user ? 'Top Up with Crypto' : 'Sign In to Top Up'}
                           <ArrowRight className="w-3.5 h-3.5" />
                         </div>
                       </div>
@@ -2054,7 +2054,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-[13px] sm:text-[15px] font-black text-[#F8FAFC]">Crypto Deposit</span>
+                          <span className="text-[13px] sm:text-[15px] font-black text-[#F8FAFC]">Crypto Top Up</span>
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                             style={{ background: 'rgba(168,85,247,0.15)', color: '#A855F7', border: '1px solid rgba(168,85,247,0.30)' }}>
                             Plisio
@@ -2079,7 +2079,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
 
                         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-white transition-all w-fit group-hover:scale-[1.02]"
                           style={{ background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)' }}>
-                          {user ? 'Deposit via Plisio' : 'Sign In to Deposit'}
+                          {user ? 'Top Up via Plisio' : 'Sign In to Top Up'}
                           <ArrowRight className="w-3.5 h-3.5" />
                         </div>
                       </div>
@@ -2108,7 +2108,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[13px] sm:text-[14px] font-bold text-[#F8FAFC]">Manual USDT Deposit</span>
+                          <span className="text-[13px] sm:text-[14px] font-bold text-[#F8FAFC]">Manual USDT Top Up</span>
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                             style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.28)' }}>
                             Live

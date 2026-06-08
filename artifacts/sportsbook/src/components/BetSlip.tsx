@@ -1076,7 +1076,7 @@ function EmptyState() {
           className="w-full mb-4 flex items-center gap-2 bg-[#121821] border border-[#253241] rounded-lg px-3 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#18212B] hover:text-[#F8FAFC] hover:border-[#2E3D50] transition-all"
         >
           <Wallet className="h-4 w-4 text-[#94A3B8]/50 shrink-0" />
-          Deposit to place bets
+          Top Up to place bets
         </button>
       )}
       <ConnectWalletModal open={connectOpen} onOpenChange={setConnectOpen} />

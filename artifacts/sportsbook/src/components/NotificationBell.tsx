@@ -205,7 +205,7 @@ export function NotificationBell() {
                 <div className="text-center">
                   <p className="text-[13px] font-semibold text-[#94A3B8]/50">No notifications yet</p>
                   <p className="text-[11px] text-[#475569] mt-1 leading-snug">
-                    Deposit approvals, withdrawals &amp;<br />bet results will appear here
+                    Top Up approvals, withdrawals &amp;<br />bet results will appear here
                   </p>
                 </div>
               </div>
