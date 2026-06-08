@@ -524,13 +524,13 @@ async function runMigrations() {
 }
 
 runMigrations().then(() => {
-  // ── Auto-settlement cron: every 1 minute ──────────────────────────────────
-  cron.schedule("*/1 * * * *", () => {
+  // ── Auto-settlement cron: every 5 minutes (reduced from 1 min to save score-check credits)
+  cron.schedule("*/5 * * * *", () => {
     runSettlementWorker().catch((err) =>
       logger.error({ err }, "Settlement cron: unhandled error"),
     );
   });
-  logger.info("Auto-settlement cron started (every 1 minute — Odds API, ID-first matching)");
+  logger.info("Auto-settlement cron started (every 5 minutes — Odds API, ID-first matching)");
 
   // ── Odds refresh cron: every 5 min check, batch fires every 100-120 min ──
   // Credit-saving optimisations (June 2026):
