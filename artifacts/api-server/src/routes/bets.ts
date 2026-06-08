@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { eq, desc, inArray, and, gt, or, sql, isNull } from "drizzle-orm";
+import { eq, desc, inArray, and, gt, or, sql, isNull, gte, count } from "drizzle-orm";
 import { z } from "zod";
 import {
   db, betsTable, betSelectionsTable, walletsTable, transactionsTable,
   sportControlsTable, marketLiabilityTable, userLimitsTable, selfExclusionsTable,
-  platformSettingsTable,
+  platformSettingsTable, riskFlagsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { nextResetAt } from "../lib/depositGuard.js";
@@ -137,6 +137,31 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
   const totalOdds = selections.reduce((acc, s) => acc * s.odds, 1);
   const potentialReturn = stake * totalOdds;
 
+  // ── Max-win-per-day cap ────────────────────────────────────────────────────
+  const capRow = await db.select().from(platformSettingsTable)
+    .where(eq(platformSettingsTable.key, "max_win_per_day")).limit(1).then(r => r[0]);
+  const maxWinPerDay = capRow ? parseFloat(capRow.value) : 10000;
+
+  if (maxWinPerDay > 0) {
+    const midnightUtc = new Date();
+    midnightUtc.setUTCHours(0, 0, 0, 0);
+    const todayWon = await db.execute(sql`
+      SELECT COALESCE(SUM(settled_payout), 0)::float AS total
+      FROM bets
+      WHERE user_id = ${userId}
+        AND status = 'won'
+        AND updated_at >= ${midnightUtc}
+    `);
+    const todayTotal = (todayWon.rows[0] as { total: number }).total ?? 0;
+    if (todayTotal + potentialReturn > maxWinPerDay) {
+      res.status(403).json({
+        error: `This bet would exceed your daily win limit of ${maxWinPerDay.toLocaleString()} USDT. You have ${Math.max(0, maxWinPerDay - todayTotal).toFixed(2)} USDT remaining today.`,
+        code: "MAX_WIN_PER_DAY",
+      });
+      return;
+    }
+  }
+
   // ── Atomic bet placement: lock wallet → check balance → insert bet + selections
   // → deduct via subtractive SQL → ledger entry. All in one DB transaction so
   // concurrent bets from the same session cannot race past the balance check.
@@ -218,6 +243,31 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     }
     throw err;
   }
+
+  // ── Bet velocity flag (fire-and-forget, non-blocking) ─────────────────────
+  void (async () => {
+    try {
+      const [wRow, lRow] = await Promise.all([
+        db.select().from(platformSettingsTable).where(eq(platformSettingsTable.key, "bet_velocity_window_minutes")).limit(1).then(r => r[0]),
+        db.select().from(platformSettingsTable).where(eq(platformSettingsTable.key, "bet_velocity_limit")).limit(1).then(r => r[0]),
+      ]);
+      const windowMinutes = wRow ? parseInt(wRow.value, 10) : 5;
+      const velocityLimit = lRow ? parseInt(lRow.value, 10) : 20;
+      const since = new Date(Date.now() - windowMinutes * 60_000);
+      const [row] = await db.select({ total: count() }).from(betsTable)
+        .where(and(eq(betsTable.userId, userId), gte(betsTable.createdAt, since)));
+      const recentBets = Number(row?.total ?? 0);
+      if (recentBets >= velocityLimit) {
+        await db.insert(riskFlagsTable).values({
+          userId,
+          type: "BET_VELOCITY",
+          detail: `${recentBets} bets placed in the last ${windowMinutes} minutes (limit: ${velocityLimit}).`,
+        });
+      }
+    } catch {
+      // Non-blocking — ignore errors
+    }
+  })();
 
   // ── Upsert market liability ────────────────────────────────────────────────
   const liabilityThresholdRow = await db.select().from(platformSettingsTable)

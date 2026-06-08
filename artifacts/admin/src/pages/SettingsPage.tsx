@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, PlatformSetting } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Settings, Save, AlertTriangle, ToggleLeft, ToggleRight, DollarSign, Shield } from "lucide-react";
+import { Settings, Save, AlertTriangle, ToggleLeft, ToggleRight, DollarSign, Shield, ShieldAlert } from "lucide-react";
 
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
 
@@ -26,11 +26,14 @@ const SETTING_CONFIGS: SettingConfig[] = [
   { key: "max_daily_bet_count",      label: "Max Daily Bets Per User",   description: "Maximum number of bets a player can place in one day.",                 type: "number",  section: "Betting"   },
   { key: "min_deposit_amount",       label: "Min Deposit (USDT)",        description: "Minimum deposit amount a player can request.",                          type: "number",  section: "Finance"   },
   { key: "min_withdrawal_amount",    label: "Min Withdrawal (USDT)",     description: "Minimum withdrawal amount a player can request.",                       type: "number",  section: "Finance"   },
-  { key: "global_margin_pct",        label: "Global Margin %",           description: "House margin applied to all odds globally (0–20%). Per-sport overrides take precedence.", type: "number", section: "Odds & Risk" },
-  { key: "liability_threshold_usdt", label: "Liability Threshold (USDT)",description: "Auto-suspend a market when its open payout exposure exceeds this amount.", type: "number", section: "Odds & Risk" },
+  { key: "global_margin_pct",           label: "Global Margin %",                  description: "House margin applied to all odds globally (0–20%). Per-sport overrides take precedence.", type: "number", section: "Odds & Risk" },
+  { key: "liability_threshold_usdt",    label: "Liability Threshold (USDT)",        description: "Auto-suspend a market when its open payout exposure exceeds this amount.", type: "number", section: "Odds & Risk" },
+  { key: "max_win_per_day",             label: "Max Win Per Day (USDT)",            description: "Maximum total winnings a player can receive in one calendar day. Bets that would exceed this cap are rejected.", type: "number", section: "Risk Controls" },
+  { key: "bet_velocity_limit",          label: "Bet Velocity Limit",               description: "If a player places this many bets within the velocity window, their account is flagged for review (bet still goes through).", type: "number", section: "Risk Controls" },
+  { key: "bet_velocity_window_minutes", label: "Velocity Window (minutes)",        description: "Rolling time window in minutes used for the bet velocity check.", type: "number", section: "Risk Controls" },
 ];
 
-const SECTIONS = ["Platform", "Features", "Betting", "Finance", "Odds & Risk"];
+const SECTIONS = ["Platform", "Features", "Betting", "Finance", "Odds & Risk", "Risk Controls"];
 
 function BooleanToggle({ value, onChange, danger }: { value: boolean; onChange: (v: boolean) => void; danger?: boolean }) {
   return (
@@ -161,7 +164,8 @@ export default function SettingsPage() {
               {section === "Features"    && <ToggleRight className="w-4 h-4 text-[#38BDF8]" />}
               {section === "Betting"     && <DollarSign className="w-4 h-4 text-[#FACC15]" />}
               {section === "Finance"     && <DollarSign className="w-4 h-4 text-[#00DFA9]" />}
-              {section === "Odds & Risk" && <Shield     className="w-4 h-4 text-[#00DFA9]" />}
+              {section === "Odds & Risk"    && <Shield      className="w-4 h-4 text-[#00DFA9]" />}
+              {section === "Risk Controls" && <ShieldAlert className="w-4 h-4 text-[#EF4444]" />}
               <span className="text-sm font-semibold text-white">{section}</span>
             </div>
             <div className="divide-y divide-white/5">

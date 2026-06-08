@@ -17,3 +17,4 @@ export * from "./responsible_gambling";
 export * from "./price_boosts";
 export * from "./loyalty";
 export * from "./nonces";
+export * from "./risk_flags";

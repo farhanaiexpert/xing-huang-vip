@@ -13,7 +13,7 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, RefreshCw,
   MessageSquare, Trash2, Shield, Zap, Gift, Users, Clock, TrendingUp,
   AlertTriangle, Star, Flag, Headphones, Info, CheckCheck, Wallet, Copy, Check,
-  ShieldCheck, ShieldX, RotateCcw, Network,
+  ShieldCheck, ShieldX, RotateCcw, Network, ShieldAlert, X,
 } from "lucide-react";
 
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
@@ -533,6 +533,73 @@ function NotesTab({ userId }: { userId: number }) {
   );
 }
 
+// ─── Risk Flags Tab ──────────────────────────────────────────────────────────
+interface RiskFlag { id: number; type: string; detail: string | null; createdAt: string; }
+
+const FLAG_CFG: Record<string, { label: string; color: string }> = {
+  REFERRAL_DUPLICATE: { label: "Referral Farming",   color: "#FACC15" },
+  BET_VELOCITY:       { label: "Bet Velocity",        color: "#F97316" },
+  MAX_WIN_CAP:        { label: "Max Win Cap Hit",      color: "#EF4444" },
+};
+
+function RiskFlagsTab({ userId }: { userId: number }) {
+  const qc = useQueryClient();
+  const { data: flags = [], isLoading } = useQuery<RiskFlag[]>({
+    queryKey: ["risk-flags", userId],
+    queryFn: () => api.get(`/admin/users/${userId}/risk-flags`),
+  });
+
+  const dismissMut = useMutation({
+    mutationFn: (flagId: number) => api.delete(`/admin/users/${userId}/risk-flags/${flagId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["risk-flags", userId] });
+      toast.success("Flag dismissed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (isLoading) return <div className="py-8 text-center text-[#475569] text-sm">Loading…</div>;
+
+  if (!flags.length) {
+    return (
+      <div className="py-10 text-center">
+        <ShieldCheck className="w-8 h-8 text-[#00DFA9] mx-auto mb-2 opacity-50" />
+        <p className="text-sm text-[#475569]">No risk flags — this account looks clean.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-[#475569] mb-3">{flags.length} flag{flags.length !== 1 ? "s" : ""} · click ✕ to dismiss</p>
+      {flags.map(flag => {
+        const cfg = FLAG_CFG[flag.type] ?? { label: flag.type, color: "#64748B" };
+        return (
+          <div key={flag.id}
+            className="flex items-start gap-3 px-4 py-3 rounded-xl border"
+            style={{ borderColor: `${cfg.color}30`, background: `${cfg.color}08` }}>
+            <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" style={{ color: cfg.color }} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xs font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
+                <span className="text-[10px] text-[#334155]">{fmtDate(flag.createdAt)}</span>
+              </div>
+              <p className="text-xs text-[#94A3B8]">{flag.detail ?? "—"}</p>
+            </div>
+            <button
+              onClick={() => dismissMut.mutate(flag.id)}
+              disabled={dismissMut.isPending}
+              title="Dismiss flag"
+              className="p-1 rounded text-[#475569] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors shrink-0">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Main Profile Page ───────────────────────────────────────────────────────
 const TABS = [
   { id: "bets",         label: "Bets",         icon: TrendingUp  },
@@ -542,6 +609,7 @@ const TABS = [
   { id: "referrals",    label: "Referrals",     icon: Users       },
   { id: "sessions",     label: "Sessions",      icon: Clock       },
   { id: "notes",        label: "Notes",         icon: MessageSquare },
+  { id: "risk",         label: "Risk Flags",    icon: ShieldAlert },
 ];
 
 export default function UserProfilePage() {
@@ -824,6 +892,7 @@ export default function UserProfilePage() {
           {activeTab === "referrals"    && <ReferralsTab    userId={userId} />}
           {activeTab === "sessions"     && <SessionsTab     userId={userId} />}
           {activeTab === "notes"        && <NotesTab        userId={userId} />}
+          {activeTab === "risk"         && <RiskFlagsTab    userId={userId} />}
         </div>
       </div>
     </div>

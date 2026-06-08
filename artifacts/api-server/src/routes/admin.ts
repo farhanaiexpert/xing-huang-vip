@@ -27,6 +27,7 @@ import {
   marketLiabilityTable,
   userLimitsTable,
   selfExclusionsTable,
+  riskFlagsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -2579,6 +2580,29 @@ router.patch("/admin/rg/exclusions/:id", async (req, res): Promise<void> => {
   }
 
   res.status(400).json({ error: "Invalid action" });
+});
+
+// ─── Risk flags ───────────────────────────────────────────────────────────────
+router.get("/admin/users/:id/risk-flags", async (req, res): Promise<void> => {
+  const userId = parseInt(req.params.id as string);
+  if (isNaN(userId)) { res.status(400).json({ error: "Invalid user ID" }); return; }
+
+  const flags = await db.select().from(riskFlagsTable)
+    .where(eq(riskFlagsTable.userId, userId))
+    .orderBy(desc(riskFlagsTable.createdAt));
+
+  res.json(flags);
+});
+
+router.delete("/admin/users/:id/risk-flags/:flagId", async (req, res): Promise<void> => {
+  const userId = parseInt(req.params.id as string);
+  const flagId = parseInt(req.params.flagId as string);
+  if (isNaN(userId) || isNaN(flagId)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  await db.delete(riskFlagsTable)
+    .where(and(eq(riskFlagsTable.id, flagId), eq(riskFlagsTable.userId, userId)));
+  await logAdminAction(req.user!.userId, "risk_flag_dismissed", "risk_flags", flagId, { userId });
+  res.status(204).end();
 });
 
 export default router;

@@ -1,15 +1,42 @@
 import { Router } from "express";
-import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { verifyMessage, isAddress, getAddress } from "viem";
 import { randomBytes, verify as cryptoVerify, createPublicKey, createHash } from "crypto";
-import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable, noncesTable } from "@workspace/db";
+import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable, noncesTable, riskFlagsTable } from "@workspace/db";
 import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken } from "../lib/auth.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { isTronAddress, verifyTronSignature } from "../lib/tronUtils.js";
 
 const router = Router();
+
+// ── Referral velocity flag (fire-and-forget) ─────────────────────────────────
+// If a referral code is used by 3+ new accounts in 24 hours, flag the newest
+// account as a possible farming duplicate. Non-blocking.
+async function checkReferralVelocity(newUserId: number, referrerId: number): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [row] = await db
+      .select({ total: count() })
+      .from(referralsTable)
+      .where(and(
+        eq(referralsTable.referrerId, referrerId),
+        eq(referralsTable.tier, 1),
+        gt(referralsTable.createdAt, since),
+      ));
+    const recentCount = Number(row?.total ?? 0);
+    if (recentCount >= 3) {
+      await db.insert(riskFlagsTable).values({
+        userId: newUserId,
+        type: "REFERRAL_DUPLICATE",
+        detail: `Referrer ID ${referrerId} has ${recentCount} new referrals in the last 24 hours — possible farming.`,
+      });
+    }
+  } catch {
+    // Non-blocking — never let this break registration
+  }
+}
 
 // ── Referral chain creation helper ───────────────────────────────────────────
 // Called at every registration path (email + all wallet types).
@@ -181,7 +208,10 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
         .from(usersTable)
         .where(eq(usersTable.referralCode, parsed.data.referralCode.toUpperCase()))
         .limit(1);
-      if (ref) await createReferralChain(user.id, ref.id);
+      if (ref) {
+        await createReferralChain(user.id, ref.id);
+        void checkReferralVelocity(user.id, ref.id);
+      }
     }
   } else if (network && user.walletNetwork !== network) {
     // Update network if it changed or was never set
@@ -335,7 +365,10 @@ router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
         .from(usersTable)
         .where(eq(usersTable.referralCode, parsed.data.referralCode.toUpperCase()))
         .limit(1);
-      if (ref) await createReferralChain(user.id, ref.id);
+      if (ref) {
+        await createReferralChain(user.id, ref.id);
+        void checkReferralVelocity(user.id, ref.id);
+      }
     }
   } else if (user.walletNetwork !== "TRON") {
     await db.update(usersTable).set({ walletNetwork: "TRON" }).where(eq(usersTable.id, user.id));
@@ -528,7 +561,10 @@ router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
         .from(usersTable)
         .where(eq(usersTable.referralCode, parsed.data.referralCode.toUpperCase()))
         .limit(1);
-      if (ref) await createReferralChain(user.id, ref.id);
+      if (ref) {
+        await createReferralChain(user.id, ref.id);
+        void checkReferralVelocity(user.id, ref.id);
+      }
     }
   } else if (user.walletNetwork !== "SOLANA") {
     await db.update(usersTable).set({ walletNetwork: "SOLANA" }).where(eq(usersTable.id, user.id));
