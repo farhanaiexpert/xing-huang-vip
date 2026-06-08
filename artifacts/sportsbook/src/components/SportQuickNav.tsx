@@ -1,6 +1,35 @@
 import { useRef } from 'react';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { cn } from '../lib/utils';
+import { MessageCircle } from 'lucide-react';
+
+function openLiveChat() {
+  const w = window as any;
+  if (!w.__lc_xh_loaded) {
+    w.__lc = w.__lc || {};
+    w.__lc.license = 19768913;
+    w.__lc.integration_name = 'manual_channels';
+    w.__lc.product_name = 'livechat';
+    w.__lc_xh_loaded = true;
+    (function(n: any, t: Document, c: any) {
+      function i(n: any) { return e._h ? e._h.apply(null, n) : e._q.push(n); }
+      const e: any = {
+        _q: [], _h: null, _v: '2.0',
+        on:   function() { i(['on',   c.call(arguments)]); },
+        once: function() { i(['once', c.call(arguments)]); },
+        off:  function() { i(['off',  c.call(arguments)]); },
+        get:  function() { if (!e._h) throw new Error("[LiveChatWidget] You can't use getters before load."); return i(['get', c.call(arguments)]); },
+        call: function() { i(['call', c.call(arguments)]); },
+        init: function() { const s = t.createElement('script'); s.async = true; s.type = 'text/javascript'; s.src = 'https://cdn.livechatinc.com/tracking.js'; t.head.appendChild(s); },
+      };
+      if (!n.__lc.asyncInit) e.init();
+      n.LiveChatWidget = n.LiveChatWidget || e;
+    })(window, document, [].slice);
+    w.LiveChatWidget.on('ready', () => w.LiveChatWidget.call('maximize'));
+  } else {
+    w.LiveChatWidget?.call('maximize');
+  }
+}
 
 interface NavItem {
   id: string;
@@ -31,16 +60,11 @@ export function SportQuickNav({ selectedId, liveCount = 0, onSelect }: Props) {
 
   return (
     <div
-      className="relative border-b border-[#253241]/50"
+      className="relative flex items-stretch border-b border-[#253241]/50"
       style={{ background: 'linear-gradient(180deg, #0E1520 0%, #0B0F14 100%)' }}
     >
-      {/* Right-edge fade hint */}
-      <div
-        className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 z-10"
-        style={{ background: 'linear-gradient(to left, #0B0F14 0%, transparent 100%)' }}
-      />
-
-      <ScrollArea className="w-full">
+      {/* Scrollable tabs — takes all remaining space */}
+      <ScrollArea className="flex-1 min-w-0">
         <div ref={scrollRef} className="flex items-stretch gap-0 px-3 w-max min-w-full">
           {NAV_ITEMS.map(item => {
             const isActive = selectedId === item.id;
@@ -121,6 +145,21 @@ export function SportQuickNav({ selectedId, liveCount = 0, onSelect }: Props) {
         </div>
         <ScrollBar orientation="horizontal" className="invisible" />
       </ScrollArea>
+
+      {/* Pinned Live Chat button — always visible at right edge */}
+      <div className="shrink-0 flex items-center pl-1 pr-2" style={{ borderLeft: '1px solid rgba(37,50,65,0.6)' }}>
+        <button
+          onClick={openLiveChat}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[#64748B] hover:text-[#00DFA9] hover:bg-[#00DFA9]/6 transition-all duration-150 group"
+          title="Live Chat Support"
+        >
+          <span className="relative shrink-0">
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_4px_rgba(0,223,169,0.9)] animate-pulse" />
+          </span>
+          <span className="text-[11px] font-semibold hidden sm:inline whitespace-nowrap">Live Chat</span>
+        </button>
+      </div>
     </div>
   );
 }
