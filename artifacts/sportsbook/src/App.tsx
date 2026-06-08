@@ -68,7 +68,7 @@ function LiveChatButton() {
   return (
     <button
       onClick={openLiveChat}
-      className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 pl-4 pr-5 py-3 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(0,223,169,0.25)] transition-all duration-200 hover:scale-105 hover:shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_0_1px_rgba(0,223,169,0.50)]"
+      className="fixed bottom-6 left-6 z-[9999] flex items-center gap-2.5 pl-4 pr-5 py-3 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(0,223,169,0.25)] transition-all duration-200 hover:scale-105 hover:shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_0_1px_rgba(0,223,169,0.50)]"
       style={{ background: 'linear-gradient(135deg,#0D1E2B 0%,#0A1A26 100%)', border: '1px solid rgba(0,223,169,0.30)' }}
       title="Live Chat Support"
     >
