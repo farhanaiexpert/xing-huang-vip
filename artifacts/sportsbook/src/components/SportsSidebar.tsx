@@ -222,7 +222,7 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
             <button
               onClick={() => setShowAllAZ(!showAllAZ)}
               data-testid="toggle-az-sports"
-              className="w-full text-center text-[11px] font-medium text-[#38BDF8] py-2 rounded-md hover:bg-[#38BDF8]/8 transition-colors duration-150"
+              className="w-full text-center text-[11px] font-semibold text-[#38BDF8] py-2 rounded-md bg-[#38BDF8]/8 border border-[#38BDF8]/20 hover:bg-[#38BDF8]/15 hover:border-[#38BDF8]/35 transition-colors duration-150"
             >
               {showAllAZ
                 ? `↑ Show less`
