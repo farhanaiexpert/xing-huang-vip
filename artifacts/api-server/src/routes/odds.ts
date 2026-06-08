@@ -18,127 +18,100 @@ const LIVE_CACHE_TTL = 30 * 1000;
 const inFlight = new Map<string, Promise<unknown[]>>();
 
 // ─── All sport keys the server cron will refresh ──────────────────────────────
+// Trimmed to sports active in June–July 2026 to minimise Odds API credit usage.
+// Off-season keys (NFL, NCAAF, NCAAB, Euroleague, NBL, AO/USO tennis, Big Bash,
+// PSL, Swedish hockey, rugby futures, handball, snooker, etc.) removed until in-season.
 export const ALL_ODDS_SPORT_KEYS: string[] = [
-  // Soccer
+  // Soccer — FIFA World Cup 2026 (June–July 2026, top priority)
+  'soccer_fifa_world_cup', 'soccer_fifa_world_cup_winner',
+  // Soccer — year-round / summer leagues (active now)
+  'soccer_usa_mls', 'soccer_conmebol_copa_libertadores',
+  'soccer_conmebol_copa_sudamericana', 'soccer_brazil_campeonato',
+  'soccer_brazil_serie_b', 'soccer_chile_campeonato',
+  'soccer_mexico_ligamx', 'soccer_argentina_primera_division',
+  'soccer_korea_kleague1', 'soccer_japan_j_league', 'soccer_australia_aleague',
+  // Soccer — Nordic summer leagues (May–Nov)
+  'soccer_sweden_allsvenskan', 'soccer_norway_eliteserien',
+  'soccer_denmark_superliga', 'soccer_finland_veikkausliiga',
+  // Soccer — major European leagues (kept for breadth; mostly post-season)
   'soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a',
   'soccer_france_ligue_one', 'soccer_germany_bundesliga',
   'soccer_uefa_champs_league', 'soccer_uefa_europa_league',
-  'soccer_usa_mls', 'soccer_turkey_super_league',
-  'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato',
-  'soccer_mexico_ligamx', 'soccer_efl_champ', 'soccer_scotland_premiership',
+  'soccer_efl_champ', 'soccer_scotland_premiership',
   'soccer_portugal_primeira_liga', 'soccer_belgium_first_div',
-  'soccer_argentina_primera_division', 'soccer_conmebol_copa_libertadores',
-  'soccer_korea_kleague1', 'soccer_japan_j_league', 'soccer_australia_aleague',
-  // American Football
-  'americanfootball_nfl', 'americanfootball_ncaaf', 'americanfootball_ufl',
-  // Aussie Rules
+  'soccer_turkey_super_league', 'soccer_netherlands_eredivisie',
+  'soccer_spain_segunda_division', 'soccer_england_league1', 'soccer_england_league2',
+  'soccer_china_superleague', 'soccer_india_superleague',
+  // American Football — UFL (May–June); NFL/NCAAF off until Aug/Sep
+  'americanfootball_ufl',
+  // Aussie Rules — AFL (March–September)
   'aussierules_afl',
-  // Basketball
-  'basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl',
-  // Tennis — Grand Slams + hard-court swing
+  // Basketball — NBA Finals (June 2026) + WNBA season; NCAAB/Euroleague/NBL off-season
+  'basketball_nba', 'basketball_wnba',
+  // Tennis — French Open (early June) + Wimbledon (late June–July)
   'tennis_atp_french_open', 'tennis_wta_french_open',
   'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
-  'tennis_atp_us_open', 'tennis_wta_us_open',
-  'tennis_atp_australian_open', 'tennis_wta_australian_open',
-  // Cricket
-  'cricket_ipl', 'cricket_international_t20', 'cricket_big_bash',
-  'cricket_psl', 'cricket_test_match',
-  // Baseball
+  // Cricket — T20 internationals, Test matches, IPL wrap-up
+  'cricket_ipl', 'cricket_international_t20', 'cricket_test_match',
+  // Baseball — MLB, NPB, KBO (all in season)
   'baseball_mlb', 'baseball_npb', 'baseball_kbo',
-  // Ice Hockey
-  'icehockey_nhl', 'icehockey_sweden_hockey_league', 'icehockey_nhl_championship_winner',
-  // Rugby League
-  'rugbyleague_nrl', 'rugbyleague_super_league', 'rugbyleague_nrl_premiership_winner',
-  // Rugby Union
-  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
-  'rugbyunion_world_cup', 'rugbyunion_champions_cup',
-  // Golf
-  'golf_masters_tournament_winner', 'golf_pga_championship_winner',
+  // Ice Hockey — NHL Finals (June 2026); Swedish league off-season removed
+  'icehockey_nhl',
+  // Rugby League — NRL + Super League (both active)
+  'rugbyleague_nrl', 'rugbyleague_super_league',
+  // Rugby Union — Premiership + Super Rugby (active)
+  'rugbyunion_premiership', 'rugbyunion_super_rugby',
+  // Golf — US Open (June) + The Open Championship (July) + PGA Tour
   'golf_us_open_winner', 'golf_the_open_championship_winner', 'golf_pga_tour_winner',
-  // Handball
-  'handball_ehf_champions_league',
-  // Volleyball
-  'volleyball_brazil_superliga',
-  // Darts
-  'darts_betway_premier_league', 'darts_world_championship',
-  // Boxing
-  'boxing_event',
-  // MMA
-  'mma_mixed_martial_arts',
-  // Snooker
-  'snooker_world_championship', 'snooker_premier_league',
-  // Basketball — WNBA
-  'basketball_wnba',
-  // Soccer — Nordic + more European leagues
-  'soccer_sweden_allsvenskan', 'soccer_norway_eliteserien', 'soccer_denmark_superliga',
-  'soccer_finland_veikkausliiga', 'soccer_spain_segunda_division',
-  'soccer_england_league1', 'soccer_england_league2',
-  'soccer_china_superleague', 'soccer_india_superleague',
-  'soccer_conmebol_copa_america', 'soccer_uefa_nations_league',
-  // Soccer — FIFA World Cup 2026 + currently active leagues (June 2026)
-  'soccer_fifa_world_cup', 'soccer_fifa_world_cup_winner',
-  'soccer_brazil_serie_b', 'soccer_chile_campeonato',
-  'soccer_conmebol_copa_sudamericana',
+  // MMA & Boxing
+  'mma_mixed_martial_arts', 'boxing_event',
+  // Darts — Premier League (wrapping up)
+  'darts_betway_premier_league',
 ];
 
-// Live sports (in-play events polling) — all newly wired sports included
+// Live sports (in-play events polling) — kept in sync with ALL_ODDS_SPORT_KEYS
+// Futures/outright-winner keys excluded (no in-play match events).
 const LIVE_SPORTS = [
-  // Soccer
+  // Soccer — World Cup + year-round leagues
+  'soccer_fifa_world_cup',
+  'soccer_usa_mls', 'soccer_conmebol_copa_libertadores',
+  'soccer_conmebol_copa_sudamericana', 'soccer_brazil_campeonato',
+  'soccer_brazil_serie_b', 'soccer_chile_campeonato',
+  'soccer_mexico_ligamx', 'soccer_argentina_primera_division',
+  'soccer_korea_kleague1', 'soccer_japan_j_league', 'soccer_australia_aleague',
+  'soccer_sweden_allsvenskan', 'soccer_norway_eliteserien',
+  'soccer_denmark_superliga', 'soccer_finland_veikkausliiga',
   'soccer_epl', 'soccer_spain_la_liga', 'soccer_italy_serie_a',
   'soccer_france_ligue_one', 'soccer_germany_bundesliga',
   'soccer_uefa_champs_league', 'soccer_uefa_europa_league',
-  'soccer_usa_mls', 'soccer_turkey_super_league',
-  'soccer_netherlands_eredivisie', 'soccer_brazil_campeonato',
-  'soccer_mexico_ligamx', 'soccer_efl_champ', 'soccer_scotland_premiership',
+  'soccer_efl_champ', 'soccer_scotland_premiership',
   'soccer_portugal_primeira_liga', 'soccer_belgium_first_div',
-  'soccer_argentina_primera_division', 'soccer_conmebol_copa_libertadores',
-  'soccer_korea_kleague1', 'soccer_japan_j_league', 'soccer_australia_aleague',
+  'soccer_turkey_super_league', 'soccer_netherlands_eredivisie',
+  'soccer_spain_segunda_division', 'soccer_england_league1', 'soccer_england_league2',
+  'soccer_china_superleague', 'soccer_india_superleague',
   // American Football
-  'americanfootball_nfl', 'americanfootball_ncaaf', 'americanfootball_ufl',
+  'americanfootball_ufl',
   // Aussie Rules
   'aussierules_afl',
   // Basketball
-  'basketball_nba', 'basketball_ncaab', 'basketball_euroleague', 'basketball_nbl',
-  // Tennis — Grand Slams + hard-court swing
+  'basketball_nba', 'basketball_wnba',
+  // Tennis
   'tennis_atp_french_open', 'tennis_wta_french_open',
   'tennis_atp_wimbledon', 'tennis_wta_wimbledon',
-  'tennis_atp_us_open', 'tennis_wta_us_open',
-  'tennis_atp_australian_open', 'tennis_wta_australian_open',
   // Cricket
-  'cricket_ipl', 'cricket_international_t20', 'cricket_big_bash',
-  'cricket_psl', 'cricket_test_match',
+  'cricket_ipl', 'cricket_international_t20', 'cricket_test_match',
   // Baseball
   'baseball_mlb', 'baseball_npb', 'baseball_kbo',
   // Ice Hockey
-  'icehockey_nhl', 'icehockey_sweden_hockey_league',
+  'icehockey_nhl',
   // Rugby League
   'rugbyleague_nrl', 'rugbyleague_super_league',
   // Rugby Union
-  'rugbyunion_premiership', 'rugbyunion_super_rugby', 'rugbyunion_six_nations',
-  'rugbyunion_world_cup', 'rugbyunion_champions_cup',
-  // Futures/outright-winner keys (icehockey_nhl_championship_winner,
-  // rugbyleague_nrl_premiership_winner, golf_*_winner) are intentionally
-  // excluded — they have no in-play match events, only pre-tournament markets.
-  // Handball
-  'handball_ehf_champions_league',
-  // Volleyball
-  'volleyball_brazil_superliga',
+  'rugbyunion_premiership', 'rugbyunion_super_rugby',
+  // MMA & Boxing
+  'mma_mixed_martial_arts', 'boxing_event',
   // Darts
-  'darts_betway_premier_league', 'darts_world_championship',
-  // Boxing & MMA
-  'boxing_event', 'mma_mixed_martial_arts',
-  // Snooker
-  'snooker_world_championship', 'snooker_premier_league',
-  // Basketball — WNBA
-  'basketball_wnba',
-  // Soccer — Nordic + more European leagues
-  'soccer_sweden_allsvenskan', 'soccer_norway_eliteserien', 'soccer_denmark_superliga',
-  'soccer_finland_veikkausliiga', 'soccer_spain_segunda_division',
-  'soccer_england_league1', 'soccer_england_league2',
-  'soccer_china_superleague', 'soccer_india_superleague',
-  'soccer_conmebol_copa_america', 'soccer_uefa_nations_league',
-  'soccer_fifa_world_cup', 'soccer_brazil_serie_b',
-  'soccer_chile_campeonato', 'soccer_conmebol_copa_sudamericana',
+  'darts_betway_premier_league',
 ];
 
 // ─── Returns the merged set of live sport keys (seed + DB-enabled) ────────────
@@ -304,7 +277,7 @@ async function setDbCachedOdds(sportKey: string, data: unknown[], ttlMinutes = 4
  */
 /** Returns the extra market query string for a given sport key. */
 function getExtraMarkets(sportKey: string): string {
-  if (sportKey.startsWith('soccer_')) return ',totals,btts';
+  if (sportKey.startsWith('soccer_')) return ',totals';
   if (
     sportKey.startsWith('americanfootball_') ||
     sportKey.startsWith('basketball_') ||
@@ -314,23 +287,13 @@ function getExtraMarkets(sportKey: string): string {
   return '';
 }
 
-/** Fetch from Odds API with automatic BTTS fallback if unsupported by the competition. */
+/** Fetch from Odds API — single EU region to minimise credit usage. */
 async function fetchOddsFromApi(sportKey: string, extraMarkets: string): Promise<unknown[] | null> {
-  const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
+  const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
   const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   if (response.ok) {
     const data = await response.json() as unknown[];
     return Array.isArray(data) ? data : null;
-  }
-  // Graceful fallback: if btts is not supported (API returns 400 or 422), retry with totals only
-  if ((response.status === 400 || response.status === 422) && extraMarkets.includes('btts')) {
-    const fallback = extraMarkets.replace(',btts', '');
-    const url2 = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=uk,eu,us&markets=h2h${fallback}&oddsFormat=decimal&dateFormat=iso`;
-    const r2 = await fetch(url2, { signal: AbortSignal.timeout(15_000) });
-    if (r2.ok) {
-      const data2 = await r2.json() as unknown[];
-      return Array.isArray(data2) ? data2 : null;
-    }
   }
   return null;
 }
@@ -342,8 +305,8 @@ export async function fetchAndCacheOdds(sportKey: string): Promise<number> {
     const data = await fetchOddsFromApi(sportKey, extraMarkets);
     if (!data) return 0;
     // Empty sports (off-season) get a 6-hour TTL so we don't re-hit the API next cycle.
-    // Active sports keep the normal 40-minute TTL.
-    const ttlMinutes = data.length > 0 ? 40 : 360;
+    // Active sports use a 120-minute TTL (2 h) — reduces refresh frequency ~3× vs old 40 min.
+    const ttlMinutes = data.length > 0 ? 120 : 360;
     await setDbCachedOdds(sportKey, data, ttlMinutes);
     await upsertSportControl(sportKey, formatLeagueName(sportKey));
     return data.length;

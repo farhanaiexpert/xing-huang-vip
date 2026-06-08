@@ -532,27 +532,28 @@ runMigrations().then(() => {
   });
   logger.info("Auto-settlement cron started (every 1 minute — Odds API, ID-first matching)");
 
-  // ── Odds refresh cron: every 5 min check, batch fires every 55-70 min ────
-  // Key optimisations vs the old 25-35 min cycle:
-  //  1. Skip sports whose DB cache still has >12 min of life (avoids redundant calls).
+  // ── Odds refresh cron: every 5 min check, batch fires every 100-120 min ──
+  // Credit-saving optimisations (June 2026):
+  //  1. Skip sports whose DB cache still has >30 min of life (avoids redundant calls).
   //  2. Empty / off-season sports get a 6-hour TTL so they're never re-fetched each cycle.
-  //  3. Longer base interval (55-70 min) — still well within the 40-min active-sport TTL.
+  //  3. Active-sport TTL raised to 120 min; batch interval 100-120 min matches.
+  //  4. Single EU region + no btts market reduces credits ~3× per call vs previous config.
   let isOddsRefreshing = false;
   let lastOddsRefreshAt = 0;
-  let nextIntervalMs = (55 + Math.floor(Math.random() * 16)) * 60 * 1000; // 55-70 min
+  let nextIntervalMs = (100 + Math.floor(Math.random() * 21)) * 60 * 1000; // 100-120 min
 
   async function runOddsBatch() {
     if (isOddsRefreshing) return;
     isOddsRefreshing = true;
-    nextIntervalMs = (55 + Math.floor(Math.random() * 16)) * 60 * 1000;
+    nextIntervalMs = (100 + Math.floor(Math.random() * 21)) * 60 * 1000;
     logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length, nextIntervalMin: Math.round(nextIntervalMs / 60000) }, "Odds refresh cron: starting batch");
     let fetched = 0, skipped = 0, empty = 0;
     try {
       for (const sportKey of ALL_ODDS_SPORT_KEYS) {
-        // Skip if the existing cache entry still has >12 min remaining.
+        // Skip if the existing cache entry still has >30 min remaining.
         // This prevents re-fetching sports already warmed mid-cycle or by an on-demand request.
         const remainingMs = await getDbCacheRemainingMs(sportKey);
-        if (remainingMs > 12 * 60 * 1000) { skipped++; continue; }
+        if (remainingMs > 30 * 60 * 1000) { skipped++; continue; }
 
         const count = await fetchAndCacheOdds(sportKey);
         if (count === 0) empty++; else fetched++;
@@ -574,7 +575,7 @@ runMigrations().then(() => {
     if (now - lastOddsRefreshAt < nextIntervalMs) return;
     runOddsBatch().catch((err) => logger.error({ err }, "Odds refresh cron: unhandled error"));
   });
-  logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron started (every 55-70 minutes — skip-if-fresh, 6h TTL for empty sports)");
+  logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron started (every 100-120 minutes — 1 region, no btts, 2h active TTL, 6h empty TTL)");
 
   // ── Warm the cache immediately on startup (non-blocking) ─────────────────
   setImmediate(() => {
