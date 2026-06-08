@@ -533,6 +533,23 @@ function NotesTab({ userId }: { userId: number }) {
   );
 }
 
+// ─── Possible Duplicate Badge (profile header) ───────────────────────────────
+function DuplicateBadge({ userId }: { userId: number }) {
+  const { data: flags = [] } = useQuery<{ id: number; type: string }[]>({
+    queryKey: ["risk-flags", userId],
+    queryFn: () => api.get(`/admin/users/${userId}/risk-flags`),
+    staleTime: 60_000,
+  });
+  const hasDuplicate = flags.some(f => f.type === "REFERRAL_DUPLICATE");
+  if (!hasDuplicate) return null;
+  return (
+    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border font-semibold bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20">
+      <ShieldAlert className="w-3 h-3" />
+      Possible Duplicate
+    </span>
+  );
+}
+
 // ─── Risk Flags Tab ──────────────────────────────────────────────────────────
 interface RiskFlag { id: number; type: string; detail: string | null; createdAt: string; }
 
@@ -712,6 +729,8 @@ export default function UserProfilePage() {
                 isSuspended ? "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20" : "bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/20")}>
                 {isSuspended ? "Suspended" : "Active"}
               </span>
+              {/* Possible Duplicate badge — shown when a REFERRAL_DUPLICATE flag exists */}
+              <DuplicateBadge userId={userId} />
               <span className="px-2 py-0.5 rounded-full text-[11px] border bg-white/5 text-[#94A3B8] border-white/10 capitalize">
                 {user.role.replace(/_/g, " ")}
               </span>

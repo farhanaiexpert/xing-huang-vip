@@ -1308,9 +1308,12 @@ router.patch("/admin/settings", async (req, res): Promise<void> => {
   const results: unknown[] = [];
   for (const [key, value] of Object.entries(body)) {
     const [row] = await db
-      .update(platformSettingsTable)
-      .set({ value: String(value), updatedAt: new Date() })
-      .where(eq(platformSettingsTable.key, key))
+      .insert(platformSettingsTable)
+      .values({ key, value: String(value) })
+      .onConflictDoUpdate({
+        target: platformSettingsTable.key,
+        set: { value: String(value), updatedAt: new Date() },
+      })
       .returning();
     if (row) results.push(row);
   }

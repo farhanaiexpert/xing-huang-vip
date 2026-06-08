@@ -521,6 +521,21 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v28 skipped");
   }
+
+  try {
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_ip TEXT`);
+    await db.execute(sql`
+      INSERT INTO platform_settings (key, value, description)
+      VALUES
+        ('max_win_per_day',             '10000', 'Maximum winnable USDT per user per day (0 = disabled)'),
+        ('bet_velocity_limit',          '20',    'Maximum bets per user in the velocity window before flagging'),
+        ('bet_velocity_window_minutes', '5',     'Sliding window in minutes for bet velocity check')
+      ON CONFLICT (key) DO NOTHING
+    `);
+    logger.info("DB migration v29 applied (users.registration_ip + risk platform_settings seed)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v29 skipped");
+  }
 }
 
 runMigrations().then(() => {

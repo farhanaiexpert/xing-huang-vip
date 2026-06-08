@@ -257,7 +257,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
       const [row] = await db.select({ total: count() }).from(betsTable)
         .where(and(eq(betsTable.userId, userId), gte(betsTable.createdAt, since)));
       const recentBets = Number(row?.total ?? 0);
-      if (recentBets >= velocityLimit) {
+      if (recentBets > velocityLimit) {
         await db.insert(riskFlagsTable).values({
           userId,
           type: "BET_VELOCITY",

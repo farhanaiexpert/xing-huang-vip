@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq, gt, isNull, ne, or, count } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { verifyMessage, isAddress, getAddress } from "viem";
@@ -11,26 +11,28 @@ import { isTronAddress, verifyTronSignature } from "../lib/tronUtils.js";
 
 const router = Router();
 
-// ── Referral velocity flag (fire-and-forget) ─────────────────────────────────
-// If a referral code is used by 3+ new accounts in 24 hours, flag the newest
-// account as a possible farming duplicate. Non-blocking.
-async function checkReferralVelocity(newUserId: number, referrerId: number): Promise<void> {
+// ── Referral duplicate check (fire-and-forget) ───────────────────────────────
+// Flags a new account if its registration IP already exists among accounts
+// previously referred by the same referrer — strong signal of duplicate farming.
+async function checkReferralDuplicate(newUserId: number, referrerId: number, registrationIp: string | null): Promise<void> {
   try {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const [row] = await db
-      .select({ total: count() })
-      .from(referralsTable)
-      .where(and(
-        eq(referralsTable.referrerId, referrerId),
-        eq(referralsTable.tier, 1),
-        gt(referralsTable.createdAt, since),
-      ));
-    const recentCount = Number(row?.total ?? 0);
-    if (recentCount >= 3) {
+    if (!registrationIp) return; // cannot check without IP
+    const existing = await db.execute(sql`
+      SELECT u.id
+      FROM   users u
+      JOIN   referrals r ON r.referred_id = u.id
+      WHERE  r.referrer_id = ${referrerId}
+        AND  r.tier        = 1
+        AND  u.registration_ip = ${registrationIp}
+        AND  u.id != ${newUserId}
+      LIMIT  1
+    `);
+    if (existing.rows.length > 0) {
+      const matchId = (existing.rows[0] as { id: number }).id;
       await db.insert(riskFlagsTable).values({
         userId: newUserId,
         type: "REFERRAL_DUPLICATE",
-        detail: `Referrer ID ${referrerId} has ${recentCount} new referrals in the last 24 hours — possible farming.`,
+        detail: `Registration IP ${registrationIp} matches existing account #${matchId} referred by the same referrer (ID ${referrerId}).`,
       });
     }
   } catch {
@@ -198,11 +200,12 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
       walletNetwork: network,
       referralCode,
       role: "user",
+      registrationIp: req.ip ?? null,
     }).returning();
     user = created;
     // Initialise wallet balance
     await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
-    // Referral chain
+    // Referral chain + duplicate IP check
     if (parsed.data.referralCode) {
       const [ref] = await db.select({ id: usersTable.id })
         .from(usersTable)
@@ -210,7 +213,7 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
         .limit(1);
       if (ref) {
         await createReferralChain(user.id, ref.id);
-        void checkReferralVelocity(user.id, ref.id);
+        void checkReferralDuplicate(user.id, ref.id, req.ip ?? null);
       }
     }
   } else if (network && user.walletNetwork !== network) {
@@ -357,6 +360,7 @@ router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
       walletNetwork: "TRON",
       referralCode,
       role: "user",
+      registrationIp: req.ip ?? null,
     }).returning();
     user = created;
     await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
@@ -367,7 +371,7 @@ router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
         .limit(1);
       if (ref) {
         await createReferralChain(user.id, ref.id);
-        void checkReferralVelocity(user.id, ref.id);
+        void checkReferralDuplicate(user.id, ref.id, req.ip ?? null);
       }
     }
   } else if (user.walletNetwork !== "TRON") {
@@ -553,6 +557,7 @@ router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
       walletNetwork: "SOLANA",
       referralCode,
       role: "user",
+      registrationIp: req.ip ?? null,
     }).returning();
     user = created;
     await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
@@ -563,7 +568,7 @@ router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
         .limit(1);
       if (ref) {
         await createReferralChain(user.id, ref.id);
-        void checkReferralVelocity(user.id, ref.id);
+        void checkReferralDuplicate(user.id, ref.id, req.ip ?? null);
       }
     }
   } else if (user.walletNetwork !== "SOLANA") {
