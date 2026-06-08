@@ -1,3 +1,4 @@
+import "./env.js"; // must be first — loads .env before any module reads process.env
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { db } from "@workspace/db";
