@@ -3,7 +3,7 @@ import { api, AdminStats, BetsChartRow, UsersChartRow, RevenueChartRow, RecentAc
 import { fmt, fmtDate } from "@/lib/utils";
 import {
   Users, Receipt, CreditCard, Wallet, TrendingUp, Clock, Banknote,
-  ShieldCheck, Activity,
+  ShieldCheck, Activity, Zap,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
@@ -66,8 +66,91 @@ const ChartTooltip = ({ active, payload, label, prefix = "" }: {
   );
 };
 
-function activityIcon(item: RecentActivityItem) {
+function activityIcon(_item: RecentActivityItem) {
   return <ShieldCheck className="w-3.5 h-3.5 text-[#38BDF8]" />;
+}
+
+interface OddsCredits {
+  remaining: number | null;
+  updatedAt: string | null;
+  status: 'ok' | 'warning' | 'low' | 'critical' | 'unknown';
+}
+
+function OddsCreditsWidget() {
+  const { data, isLoading } = useQuery<OddsCredits>({
+    queryKey: ["admin-odds-credits"],
+    queryFn: () => api.get<OddsCredits>("/admin/odds-credits"),
+    refetchInterval: 60_000,
+  });
+
+  const statusCfg = {
+    ok:       { color: "#00DFA9", bg: "rgba(0,223,169,0.10)", label: "Healthy" },
+    warning:  { color: "#FACC15", bg: "rgba(250,204,21,0.10)", label: "Getting low" },
+    low:      { color: "#F97316", bg: "rgba(249,115,22,0.10)", label: "Low" },
+    critical: { color: "#EF4444", bg: "rgba(239,68,68,0.12)", label: "CRITICAL" },
+    unknown:  { color: "#64748B", bg: "rgba(100,116,139,0.10)", label: "No data yet" },
+  };
+
+  const cfg = statusCfg[data?.status ?? "unknown"];
+  const pct = data?.remaining != null ? Math.min(100, Math.round((data.remaining / 10000) * 100)) : null;
+
+  const updatedAgo = data?.updatedAt
+    ? (() => {
+        const diffMs = Date.now() - new Date(data.updatedAt).getTime();
+        const diffMin = Math.round(diffMs / 60000);
+        return diffMin < 2 ? "just now" : `${diffMin}m ago`;
+      })()
+    : null;
+
+  return (
+    <div
+      className="rounded-xl p-5 border"
+      style={{ background: "#0D1117", borderColor: `${cfg.color}28` }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-xs font-medium text-[#64748B] uppercase tracking-wide">
+          Odds API Credits
+        </span>
+        <div className="p-2 rounded-lg" style={{ background: cfg.bg }}>
+          <Zap className="w-3.5 h-3.5" style={{ color: cfg.color }} />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="h-7 bg-white/5 rounded w-24 animate-pulse mb-2" />
+      ) : (
+        <>
+          <div className="text-2xl font-bold tracking-tight" style={{ color: cfg.color }}>
+            {data?.remaining != null ? data.remaining.toLocaleString() : "—"}
+          </div>
+          <div className="text-xs mt-1.5 flex items-center gap-1.5" style={{ color: cfg.color + "99" }}>
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full"
+              style={{
+                background: cfg.color,
+                boxShadow: `0 0 5px ${cfg.color}`,
+                animation: data?.status === 'critical' ? 'pulse 1s infinite' : undefined,
+              }}
+            />
+            {cfg.label}
+            {updatedAgo && <span className="text-[#334155] ml-1">· updated {updatedAgo}</span>}
+          </div>
+
+          {pct !== null && (
+            <div className="mt-3 h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${pct}%`, background: cfg.color }}
+              />
+            </div>
+          )}
+          {pct !== null && (
+            <div className="text-[10px] text-[#334155] mt-1">{pct}% of 10,000 monthly quota remaining</div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function OverviewPage() {
@@ -146,6 +229,11 @@ export default function OverviewPage() {
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
           : kpiCards.map(card => <StatCard key={card.label} {...card} />)
         }
+      </div>
+
+      {/* Odds API credits monitor */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <OddsCreditsWidget />
       </div>
 
       {/* Row 1: Bets area + New users line */}

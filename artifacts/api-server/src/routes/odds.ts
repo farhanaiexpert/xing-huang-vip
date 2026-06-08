@@ -311,6 +311,18 @@ async function fetchOddsFromApi(sportKey: string, extraMarkets: string): Promise
     } else {
       logger.debug({ sportKey, remaining, used }, 'Odds API: credits ok');
     }
+    // Persist to DB so the admin panel can display it (fire-and-forget)
+    const now = new Date().toISOString();
+    db.execute(sql`
+      INSERT INTO platform_settings (key, value)
+      VALUES ('odds_credits_remaining', ${String(remaining)})
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `).catch(() => {});
+    db.execute(sql`
+      INSERT INTO platform_settings (key, value)
+      VALUES ('odds_credits_updated_at', ${now})
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `).catch(() => {});
   }
 
   // ── 429: quota exhausted ─────────────────────────────────────────────────

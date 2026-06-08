@@ -47,6 +47,30 @@ async function logAdminAction(
   await db.insert(adminLogsTable).values({ adminId, action, entityType, entityId, details: details ?? null });
 }
 
+// ─── Odds API credit status ───────────────────────────────────────────────────
+router.get("/admin/odds-credits", async (_req, res): Promise<void> => {
+  try {
+    const rows = await db.select().from(platformSettingsTable)
+      .where(inArray(platformSettingsTable.key, [
+        'odds_credits_remaining',
+        'odds_credits_updated_at',
+      ]));
+    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    const remaining = map.odds_credits_remaining != null ? Number(map.odds_credits_remaining) : null;
+    res.json({
+      remaining,
+      updatedAt: map.odds_credits_updated_at ?? null,
+      status: remaining === null ? 'unknown'
+        : remaining < 50  ? 'critical'
+        : remaining < 200 ? 'low'
+        : remaining < 500 ? 'warning'
+        : 'ok',
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to read odds credits' });
+  }
+});
+
 // ─── Stats ───────────────────────────────────────────────────────────────────
 router.get("/admin/stats", async (req, res): Promise<void> => {
   // All platform-total stats exclude test accounts (is_test_account = true)
