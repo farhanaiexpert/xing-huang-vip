@@ -147,17 +147,23 @@ export function SportQuickNav({ selectedId, liveCount = 0, onSelect }: Props) {
       </ScrollArea>
 
       {/* Pinned Live Chat button — always visible at right edge */}
-      <div className="shrink-0 flex items-center pl-1 pr-2" style={{ borderLeft: '1px solid rgba(37,50,65,0.6)' }}>
+      <div className="shrink-0 flex items-center px-2.5" style={{ borderLeft: '1px solid rgba(37,50,65,0.6)' }}>
         <button
           onClick={openLiveChat}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[#64748B] hover:text-[#00DFA9] hover:bg-[#00DFA9]/6 transition-all duration-150 group"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all duration-150 hover:scale-[1.04] active:scale-[0.97]"
+          style={{
+            background: 'linear-gradient(135deg, rgba(0,223,169,0.18) 0%, rgba(0,223,169,0.08) 100%)',
+            border: '1px solid rgba(0,223,169,0.35)',
+            color: '#00DFA9',
+            boxShadow: '0 0 12px rgba(0,223,169,0.15)',
+          }}
           title="Live Chat Support"
         >
           <span className="relative shrink-0">
             <MessageCircle className="h-3.5 w-3.5" />
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_4px_rgba(0,223,169,0.9)] animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,1)] animate-pulse" />
           </span>
-          <span className="text-[11px] font-semibold hidden sm:inline whitespace-nowrap">Live Chat</span>
+          <span className="text-[11px] hidden sm:inline whitespace-nowrap">Live Chat</span>
         </button>
       </div>
     </div>
