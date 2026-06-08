@@ -523,6 +523,18 @@ async function runMigrations() {
   }
 
   try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS risk_flags (
+        id           SERIAL PRIMARY KEY,
+        user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type         TEXT NOT NULL,
+        detail       TEXT,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_risk_flags_user_id      ON risk_flags (user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_risk_flags_user_type     ON risk_flags (user_id, type)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_risk_flags_created_at    ON risk_flags (created_at)`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_ip TEXT`);
     await db.execute(sql`
       INSERT INTO platform_settings (key, value, description)
@@ -532,7 +544,7 @@ async function runMigrations() {
         ('bet_velocity_window_minutes', '5',     'Sliding window in minutes for bet velocity check')
       ON CONFLICT (key) DO NOTHING
     `);
-    logger.info("DB migration v29 applied (users.registration_ip + risk platform_settings seed)");
+    logger.info("DB migration v29 applied (risk_flags table + users.registration_ip + risk platform_settings seed)");
   } catch (err) {
     logger.warn({ err }, "Migration v29 skipped");
   }

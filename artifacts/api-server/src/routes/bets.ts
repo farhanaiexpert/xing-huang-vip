@@ -150,7 +150,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
       FROM bets
       WHERE user_id = ${userId}
         AND status = 'won'
-        AND updated_at >= ${midnightUtc}
+        AND settled_at >= ${midnightUtc}
     `);
     const todayTotal = (todayWon.rows[0] as { total: number }).total ?? 0;
     if (todayTotal + potentialReturn > maxWinPerDay) {
