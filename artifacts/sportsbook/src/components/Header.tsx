@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'wouter';
+import { API_BASE } from '@/lib/apiBase';
 import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft, Clock } from 'lucide-react';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { WalletPickerModal } from './WalletPickerModal';
@@ -595,8 +596,8 @@ function LiveNavItem() {
     async function refresh() {
       try {
         const [oddsRes, betsRes] = await Promise.allSettled([
-          fetch('/api/live/events'),
-          fetch('/api/betsapi/live'),
+          fetch(`${API_BASE}/api/live/events`),
+          fetch(`${API_BASE}/api/betsapi/live`),
         ]);
         if (cancelled) return;
 

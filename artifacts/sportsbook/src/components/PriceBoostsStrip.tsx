@@ -3,6 +3,7 @@ import { Zap, Clock } from 'lucide-react';
 import { useBetSlip } from '@/hooks/useBetSlip';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { API_BASE } from '@/lib/apiBase';
 
 interface PriceBoost {
   id: number;
@@ -112,7 +113,7 @@ export function PriceBoostsStrip() {
   const [boosts, setBoosts] = useState<PriceBoost[]>([]);
 
   useEffect(() => {
-    fetch('/api/boosts/active')
+    fetch(`${API_BASE}/api/boosts/active`)
       .then(r => r.ok ? r.json() : [])
       .then(setBoosts)
       .catch(() => {});

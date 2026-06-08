@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { api, setTokens, clearTokens, getRefreshToken, getAccessToken } from '../lib/apiClient';
+import { API_BASE } from '../lib/apiBase';
 
 export interface AuthUser {
   id: number;
@@ -67,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const res = await fetch('/api/auth/refresh', {
+        const res = await fetch(`${API_BASE}/api/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken: refresh }),

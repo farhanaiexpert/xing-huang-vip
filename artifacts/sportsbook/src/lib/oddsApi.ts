@@ -4,6 +4,8 @@
  * The Odds API key lives server-side only — it is never sent to the browser.
  */
 
+import { API_BASE } from './apiBase';
+
 // ─── Raw API response shapes ──────────────────────────────────────────────────
 
 export interface OddsApiOutcome {
@@ -183,7 +185,7 @@ interface ServerErrorResponse {
 export async function fetchSportOdds(
   sportKey: string,
 ): Promise<OddsApiEvent[]> {
-  const res = await fetch(`/api/odds/${sportKey}`);
+  const res = await fetch(`${API_BASE}/api/odds/${sportKey}`);
 
   if (res.status === 503) throw new Error('Odds API not configured on server');
   if (res.status === 401) {
@@ -204,7 +206,7 @@ export async function fetchSportOdds(
  * The server reads from PostgreSQL cache only; no Odds API calls are made.
  */
 export async function fetchAllOdds(): Promise<Record<string, OddsApiEvent[]>> {
-  const res = await fetch('/api/odds/all');
+  const res = await fetch(`${API_BASE}/api/odds/all`);
 
   if (res.status === 503) throw new Error('Odds API not configured on server');
   if (res.status === 401) {

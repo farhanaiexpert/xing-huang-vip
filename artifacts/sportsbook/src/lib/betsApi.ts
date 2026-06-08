@@ -4,6 +4,8 @@
  * The BetsAPI key is server-side only and never sent to the browser.
  */
 
+import { API_BASE } from './apiBase';
+
 // ─── Raw event shape (mirrored from server) ───────────────────────────────────
 
 export interface BetsApiEvent {
@@ -58,7 +60,7 @@ interface LiveResponse {
 
 /** Fetch all upcoming/pre-match events from server cache */
 export async function fetchBetsApiUpcoming(): Promise<AllResponse> {
-  const res = await fetch('/api/betsapi/all');
+  const res = await fetch(`${API_BASE}/api/betsapi/all`);
   if (res.status === 503) throw new Error('BetsAPI not configured');
   if (!res.ok) throw new Error(`BetsAPI HTTP ${res.status}`);
   const json = await res.json() as AllResponse;
@@ -69,7 +71,7 @@ export async function fetchBetsApiUpcoming(): Promise<AllResponse> {
 
 /** Fetch live inplay events */
 export async function fetchBetsApiLive(): Promise<BetsApiEvent[]> {
-  const res = await fetch('/api/betsapi/live');
+  const res = await fetch(`${API_BASE}/api/betsapi/live`);
   if (res.status === 503) return [];
   if (!res.ok) throw new Error(`BetsAPI live HTTP ${res.status}`);
   const json = await res.json() as LiveResponse;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Crown, Star, TrendingUp, Award, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { API_BASE } from '@/lib/apiBase';
 
 interface Tier {
   name: string;
@@ -82,8 +83,8 @@ export function VIPPage() {
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     Promise.all([
-      fetch('/api/loyalty/summary', { headers }).then(r => r.ok ? r.json() : null),
-      fetch('/api/loyalty/leaderboard', { headers }).then(r => r.ok ? r.json() : []),
+      fetch(`${API_BASE}/api/loyalty/summary`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/api/loyalty/leaderboard`, { headers }).then(r => r.ok ? r.json() : []),
     ]).then(([s, l]) => {
       setSummary(s);
       setLeaderboard(l);

@@ -7,6 +7,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchBetsApiLive, type BetsApiEvent } from '../lib/betsApi';
+import { API_BASE } from '../lib/apiBase';
 
 // ─── Raw Odds API response shapes ─────────────────────────────────────────────
 
@@ -405,8 +406,8 @@ export function useLiveOdds(): UseLiveOddsResult {
     try {
       // Fetch from both sources in parallel
       const [eventsRes, scoresRes, betsApiLive] = await Promise.all([
-        fetch('/api/live/events'),
-        fetch('/api/live/scores'),
+        fetch(`${API_BASE}/api/live/events`),
+        fetch(`${API_BASE}/api/live/scores`),
         fetchBetsApiLive().catch(() => [] as BetsApiEvent[]),
       ]);
 

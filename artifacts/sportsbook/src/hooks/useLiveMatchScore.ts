@@ -13,6 +13,7 @@
  *   - Exposes nextRefreshIn countdown (60 → 0)
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { API_BASE } from '../lib/apiBase';
 import { fetchBetsApiLive, type BetsApiEvent } from '../lib/betsApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ export function useLiveMatchScore({
     setIsPolling(true);
     try {
       const [scoresResult, betsApiResult] = await Promise.allSettled([
-        fetch('/api/live/scores').then(r =>
+        fetch(`${API_BASE}/api/live/scores`).then(r =>
           r.ok ? (r.json() as Promise<OddsApiScoresResponse>) : Promise.reject(r.status)
         ),
         fetchBetsApiLive(),
