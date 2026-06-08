@@ -83,72 +83,103 @@ function OddsCreditsWidget() {
     refetchInterval: 60_000,
   });
 
+  const MONTHLY_QUOTA = 10_000;
+
   const statusCfg = {
-    ok:       { color: "#00DFA9", bg: "rgba(0,223,169,0.10)", label: "Healthy" },
-    warning:  { color: "#FACC15", bg: "rgba(250,204,21,0.10)", label: "Getting low" },
-    low:      { color: "#F97316", bg: "rgba(249,115,22,0.10)", label: "Low" },
-    critical: { color: "#EF4444", bg: "rgba(239,68,68,0.12)", label: "CRITICAL" },
-    unknown:  { color: "#64748B", bg: "rgba(100,116,139,0.10)", label: "No data yet" },
+    ok:       { color: "#00DFA9", pillBg: "rgba(0,223,169,0.12)",   pillText: "#00DFA9", badge: "✓ Good",    hint: "Odds data is refreshing normally." },
+    warning:  { color: "#FACC15", pillBg: "rgba(250,204,21,0.12)",  pillText: "#FACC15", badge: "⚠ Low",     hint: "Consider topping up before month end." },
+    low:      { color: "#F97316", pillBg: "rgba(249,115,22,0.12)",  pillText: "#F97316", badge: "! Very Low", hint: "Odds refreshes may slow down soon." },
+    critical: { color: "#EF4444", pillBg: "rgba(239,68,68,0.14)",   pillText: "#EF4444", badge: "✕ Critical", hint: "Upgrade your plan — odds may go stale!" },
+    unknown:  { color: "#475569", pillBg: "rgba(71,85,105,0.12)",   pillText: "#64748B", badge: "— No data",  hint: "Data will appear after the next odds refresh." },
   };
 
-  const cfg = statusCfg[data?.status ?? "unknown"];
-  const pct = data?.remaining != null ? Math.min(100, Math.round((data.remaining / 10000) * 100)) : null;
+  const status = data?.status ?? "unknown";
+  const cfg    = statusCfg[status];
+  const rem    = data?.remaining ?? null;
+  const used   = rem !== null ? Math.max(0, MONTHLY_QUOTA - rem) : null;
+  const pct    = rem !== null ? Math.min(100, Math.round((rem / MONTHLY_QUOTA) * 100)) : null;
 
   const updatedAgo = data?.updatedAt
     ? (() => {
-        const diffMs = Date.now() - new Date(data.updatedAt).getTime();
-        const diffMin = Math.round(diffMs / 60000);
-        return diffMin < 2 ? "just now" : `${diffMin}m ago`;
+        const mins = Math.round((Date.now() - new Date(data.updatedAt).getTime()) / 60000);
+        return mins < 2 ? "just now" : `${mins}m ago`;
       })()
     : null;
 
   return (
-    <div
-      className="rounded-xl p-5 border"
-      style={{ background: "#0D1117", borderColor: `${cfg.color}28` }}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <span className="text-xs font-medium text-[#64748B] uppercase tracking-wide">
-          Odds API Credits
-        </span>
-        <div className="p-2 rounded-lg" style={{ background: cfg.bg }}>
-          <Zap className="w-3.5 h-3.5" style={{ color: cfg.color }} />
+    <div className="rounded-xl border overflow-hidden" style={{ background: "#0D1117", borderColor: "rgba(255,255,255,0.07)" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg" style={{ background: `${cfg.color}18` }}>
+            <Zap className="w-3.5 h-3.5" style={{ color: cfg.color }} />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-white">Odds API Credits</div>
+            <div className="text-[11px] text-[#475569]">Monthly quota — resets each billing cycle</div>
+          </div>
         </div>
+        {/* Status badge */}
+        <span
+          className="text-[11px] font-bold px-2.5 py-1 rounded-full"
+          style={{ background: cfg.pillBg, color: cfg.pillText }}
+        >
+          {cfg.badge}
+        </span>
       </div>
 
-      {isLoading ? (
-        <div className="h-7 bg-white/5 rounded w-24 animate-pulse mb-2" />
-      ) : (
-        <>
-          <div className="text-2xl font-bold tracking-tight" style={{ color: cfg.color }}>
-            {data?.remaining != null ? data.remaining.toLocaleString() : "—"}
+      {/* Body */}
+      <div className="px-5 pb-5">
+        {isLoading ? (
+          <div className="space-y-2 animate-pulse">
+            <div className="h-8 bg-white/5 rounded w-32" />
+            <div className="h-3 bg-white/5 rounded w-full" />
           </div>
-          <div className="text-xs mt-1.5 flex items-center gap-1.5" style={{ color: cfg.color + "99" }}>
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full"
-              style={{
-                background: cfg.color,
-                boxShadow: `0 0 5px ${cfg.color}`,
-                animation: data?.status === 'critical' ? 'pulse 1s infinite' : undefined,
-              }}
-            />
-            {cfg.label}
-            {updatedAgo && <span className="text-[#334155] ml-1">· updated {updatedAgo}</span>}
-          </div>
-
-          {pct !== null && (
-            <div className="mt-3 h-1.5 rounded-full bg-white/5 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${pct}%`, background: cfg.color }}
-              />
+        ) : (
+          <>
+            {/* Big numbers */}
+            <div className="flex items-end gap-3 mb-4">
+              <div>
+                <div className="text-3xl font-bold tracking-tight" style={{ color: cfg.color }}>
+                  {rem !== null ? rem.toLocaleString() : "—"}
+                </div>
+                <div className="text-xs text-[#475569] mt-0.5">credits remaining this month</div>
+              </div>
+              {used !== null && (
+                <div className="mb-0.5 text-right ml-auto">
+                  <div className="text-base font-semibold text-[#94A3B8]">{used.toLocaleString()}</div>
+                  <div className="text-xs text-[#475569]">used so far</div>
+                </div>
+              )}
             </div>
-          )}
-          {pct !== null && (
-            <div className="text-[10px] text-[#334155] mt-1">{pct}% of 10,000 monthly quota remaining</div>
-          )}
-        </>
-      )}
+
+            {/* Progress bar */}
+            {pct !== null && (
+              <div className="mb-3">
+                <div className="flex justify-between text-[11px] text-[#475569] mb-1.5">
+                  <span>0</span>
+                  <span className="font-medium" style={{ color: cfg.color }}>{pct}% remaining</span>
+                  <span>{MONTHLY_QUOTA.toLocaleString()} total</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%`, background: cfg.color }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Hint + timestamp */}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5 mt-2">
+              <span className="text-[11px]" style={{ color: cfg.color + "BB" }}>{cfg.hint}</span>
+              {updatedAgo && (
+                <span className="text-[10px] text-[#334155] shrink-0">Updated {updatedAgo}</span>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
