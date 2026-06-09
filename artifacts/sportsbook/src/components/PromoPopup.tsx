@@ -251,41 +251,6 @@ export function PromoPopup() {
         </div>
       </div>
 
-      {/* ── Mobile (below xl): slim top notice just below the header ── */}
-      <div
-        className="xl:hidden fixed top-14 left-0 right-0 z-[9998] flex items-center justify-between gap-2 px-3 py-2"
-        style={{
-          background: 'linear-gradient(90deg,rgba(6,26,20,0.97) 0%,rgba(9,24,32,0.97) 100%)',
-          borderBottom: '1px solid rgba(0,223,169,0.18)',
-          backdropFilter: 'blur(10px)',
-          transform: barVisible ? 'translateY(0)' : 'translateY(-110%)',
-          opacity: barVisible ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(.16,1,.3,1), opacity 0.35s ease',
-          pointerEvents: barVisible ? 'all' : 'none',
-        }}
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <Gift className="w-3.5 h-3.5 text-[#00DFA9] shrink-0" />
-          <p className="text-[11px] font-semibold text-[#F8FAFC] leading-none truncate">
-            Claim <span className="text-[#FACC15] font-black">FREE 188 USDT</span> welcome bonus
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={handleClaim}
-            disabled={claiming || alreadyClaimed}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold text-[#0B0F14] bg-[#00DFA9] hover:brightness-110 active:scale-95 transition-all disabled:opacity-60 cursor-pointer"
-          >
-            {alreadyClaimed ? 'Claimed ✓' : claiming ? '…' : 'Claim'}
-          </button>
-          <button
-            onClick={dismissBar}
-            className="flex items-center justify-center w-6 h-6 rounded-lg text-[#64748B] hover:text-[#94A3B8] transition-colors cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
     </>
   ) : null;
 
