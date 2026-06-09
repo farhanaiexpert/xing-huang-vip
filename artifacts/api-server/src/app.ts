@@ -3,6 +3,9 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import { logger } from "./lib/logger.js";
 import apiRouter from "./routes/index.js";
 
@@ -21,7 +24,12 @@ app.set("trust proxy", 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
-    contentSecurityPolicy: false, // API-only server; no HTML to protect
+    // CSP intentionally disabled: this service also serves the web3 sportsbook /
+    // admin frontends, whose wallet connectors (WalletConnect/Reown, injected
+    // providers) rely on inline/eval and many third-party origins. A strict CSP
+    // breaks those flows, matching how the static sites were previously served
+    // (nginx/Vercel applied no CSP either).
+    contentSecurityPolicy: false,
   }),
 );
 
@@ -113,5 +121,48 @@ app.get(`${BASE}/healthz`, (_req, res) => {
 });
 
 app.use(BASE, apiRouter);
+
+// Unknown API routes return JSON (not the Express default plain-text 404), so
+// clients always get a consistent shape. Scoped to BASE so it never catches
+// frontend routes handled by the SPA fallback below.
+app.use(BASE, (_req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+// ── Serve built frontends (single-service production deploy) ──────────────────
+// In production we run ONE service: this server also serves the built sportsbook
+// (at /) and admin (at /admin) static files. The frontends are built WITHOUT
+// VITE_API_BASE_URL, so they call this same origin at /api — no CORS needed.
+// The static files only exist after `pnpm --filter @workspace/<app> run build`,
+// so each block is guarded and simply skipped when its build is absent (e.g. dev).
+const here = path.dirname(fileURLToPath(import.meta.url));
+const sportsbookDist = path.resolve(here, "../../sportsbook/dist/public");
+const adminDist = path.resolve(here, "../../admin/dist/public");
+const hasAdmin = existsSync(path.join(adminDist, "index.html"));
+const hasSportsbook = existsSync(path.join(sportsbookDist, "index.html"));
+
+if (hasAdmin) {
+  app.use("/admin", express.static(adminDist));
+}
+if (hasSportsbook) {
+  app.use(express.static(sportsbookDist));
+}
+
+// SPA fallback — any non-API GET returns the matching index.html so client-side
+// routing and page refreshes work. API paths fall through to the JSON 404 handler.
+if (hasAdmin || hasSportsbook) {
+  app.use((req, res, next) => {
+    if (req.method !== "GET") return next();
+    if (req.path === BASE || req.path.startsWith(`${BASE}/`)) return next();
+    if (hasAdmin && (req.path === "/admin" || req.path.startsWith("/admin/"))) {
+      return res.sendFile(path.join(adminDist, "index.html"));
+    }
+    if (hasSportsbook) {
+      return res.sendFile(path.join(sportsbookDist, "index.html"));
+    }
+    return next();
+  });
+  logger.info({ hasSportsbook, hasAdmin }, "Static frontend serving enabled");
+}
 
 export default app;
