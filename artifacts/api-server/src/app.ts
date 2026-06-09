@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import { logger } from "./lib/logger.js";
@@ -11,6 +12,18 @@ const app = express();
 // so that express-rate-limit reads the real client IP from X-Forwarded-For
 // instead of treating every request as coming from the proxy's IP.
 app.set("trust proxy", 1);
+
+// ── HTTP security headers (Helmet) ─────────────────────────────────────────
+// Sets X-Content-Type-Options, X-Frame-Options, X-XSS-Protection,
+// Strict-Transport-Security, Referrer-Policy, and more.
+// crossOriginResourcePolicy: false — our API is consumed cross-origin by the
+// sportsbook / admin frontends, so we must not block cross-origin reads.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false, // API-only server; no HTML to protect
+  }),
+);
 
 // ── Rate limiters ──────────────────────────────────────────────────────────────
 // Auth endpoints: 20 attempts per 15-minute window per IP (brute-force protection)
