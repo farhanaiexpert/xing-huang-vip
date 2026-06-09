@@ -193,7 +193,7 @@ export function Header() {
     { label: 'Promotions',      href: '/promotions' },
     { label: 'Predict & Win',   href: '/prediction-pools' },
     { label: 'Bet History',     href: '/account/bets' },
-    { label: 'Refer & Earn',     href: '/account/referrals' },
+    // { label: 'Refer & Earn',     href: '/account/referrals' }, // hidden
     { label: 'Help & Rules',    href: '/help' },
     { label: 'Soccer',          href: '/' },
     { label: 'Tennis',          href: '/' },
@@ -311,7 +311,7 @@ export function Header() {
             <NavItem href="/prediction-pools"   label={t('Predict & Win')} />
             <BetHistoryNavItem />
             <NavItem href="/help"               label={t('Help')}          />
-            <NavItem href="/account/referrals"  label={t('Refer & Earn')}  />
+            {/* <NavItem href="/account/referrals"  label={t('Refer & Earn')}  /> */}{/* hidden */}
             <WinSpinNavItem />
             <LiveNavItem />
           </nav>

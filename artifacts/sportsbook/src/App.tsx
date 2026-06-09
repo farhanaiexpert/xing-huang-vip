@@ -66,9 +66,7 @@ function Router() {
       <Route path="/my-bets">
         {() => <Redirect to="/account/bets" />}
       </Route>
-      <Route path="/affiliate">
-        {() => <Redirect to="/account/referrals" />}
-      </Route>
+      {/* <Route path="/affiliate">{() => <Redirect to="/account/referrals" />}</Route> */}{/* hidden */}
       {/* Account dashboard */}
       <Route path="/account"           component={AccountLayout}   />
       <Route path="/account/:section"  component={AccountLayout}   />

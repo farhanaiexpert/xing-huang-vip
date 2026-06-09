@@ -115,7 +115,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         { href: "/deposits",     icon: ArrowDownCircle, label: "Deposits",     badge: depositBadge },
         { href: "/withdrawals",  icon: ArrowUpCircle,   label: "Withdrawals",  badge: withdrawalBadge },
         { href: "/transactions", icon: CreditCard,      label: "Transactions", badge: 0 },
-        { href: "/referrals",    icon: Share2,          label: "Referrals",    badge: 0 },
+        // { href: "/referrals",    icon: Share2,          label: "Referrals",    badge: 0 }, // hidden
         { href: "/promotions",   icon: Gift,            label: "Promotions",   badge: 0 },
       ],
     },

@@ -15,7 +15,7 @@ import { OverviewPage }              from './OverviewPage';
 import { WalletPage }               from './WalletPage';
 import { BetsPage }                 from './BetsPage';
 import { TransactionsPage }         from './TransactionsPage';
-import { ReferralsPage }            from './ReferralsPage';
+// import { ReferralsPage }            from './ReferralsPage'; // hidden
 import { PromotionsPage }           from './PromotionsPage';
 import { WinSpinHistoryPage }       from './WinSpinHistoryPage';
 import { PoolsPage }                from './PoolsPage';
@@ -31,7 +31,7 @@ const NAV = [
   { id: 'bets',         label: 'My Bets',       shortLabel: 'My Bets',    icon: Receipt },
   { id: 'stats',        label: 'My Stats',      shortLabel: 'Stats',      icon: BarChart2 },
   { id: 'transactions', label: 'Transactions',  shortLabel: 'Transfers',  icon: ArrowLeftRight },
-  { id: 'referrals',   label: 'Referrals',     shortLabel: 'Referrals',  icon: Users },
+  // { id: 'referrals',   label: 'Referrals',     shortLabel: 'Referrals',  icon: Users }, // hidden
   { id: 'promotions',  label: 'Promotions',    shortLabel: 'Promos',     icon: Gift },
   { id: 'vip',         label: 'VIP & Loyalty', shortLabel: 'VIP',        icon: Crown },
   { id: 'winspin',     label: 'WinSpin',       shortLabel: 'WinSpin',    icon: Star },
@@ -48,7 +48,7 @@ const PAGES: Record<SectionId, React.ComponentType> = {
   bets:         BetsPage,
   stats:        MyStatsPage,
   transactions: TransactionsPage,
-  referrals:    ReferralsPage,
+  // referrals:    ReferralsPage, // hidden
   promotions:   PromotionsPage,
   vip:          VIPPage,
   winspin:      WinSpinHistoryPage,
@@ -64,7 +64,7 @@ const SECTION_COLOR: Record<SectionId, string> = {
   bets:         '#38BDF8',
   stats:        '#38BDF8',
   transactions: '#A78BFA',
-  referrals:    '#FACC15',
+  // referrals:    '#FACC15', // hidden
   promotions:   '#F97316',
   vip:          '#FACC15',
   winspin:      '#EC4899',
@@ -261,12 +261,7 @@ export function AccountLayout() {
                   )}
                 </div>
               </div>
-              {user?.referralCode && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#00DFA9]/6 border border-[#00DFA9]/15">
-                  <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-widest">REF</span>
-                  <span className="text-[11px] font-black text-[#00DFA9] font-mono tracking-wider">{user.referralCode}</span>
-                </div>
-              )}
+              {/* referral code badge hidden */}
             </div>
 
             {/* Nav */}
