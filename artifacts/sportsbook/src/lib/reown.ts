@@ -52,8 +52,10 @@ export const appkit = createAppKit({
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   try {
     appkit.subscribeEvents(e => {
-      // Skip INITIALIZE — the SDK reconnects to the relay every ~10 s, creating noise
-      if (e.data.event === 'INITIALIZE') return;
+      // Skip relay-maintenance events — the SDK fires these every ~10 s and they
+      // are not user-initiated actions, just SDK keep-alive/reconnect noise.
+      const RELAY_NOISE = new Set(['INITIALIZE', 'CONNECT_SUCCESS']);
+      if (RELAY_NOISE.has(e.data.event)) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       console.log('[Xing Huang AppKit]', e.data.event, (e.data as any).properties ?? '');
     });
