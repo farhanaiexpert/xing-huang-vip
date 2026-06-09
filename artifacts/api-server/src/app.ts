@@ -6,6 +6,9 @@ import pinoHttp from "pino-http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
+import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
 import { logger } from "./lib/logger.js";
 import apiRouter from "./routes/index.js";
 
@@ -118,6 +121,34 @@ app.get(`${BASE}/health`, (_req, res) => {
 });
 app.get(`${BASE}/healthz`, (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// ── One-time admin bootstrap (only active when ADMIN_INIT_TOKEN env var is set) ─
+// Visit GET /api/init-admin?token=<ADMIN_INIT_TOKEN> to create/reset the admin
+// account. Remove ADMIN_INIT_TOKEN from Render env vars once done.
+app.get(`${BASE}/init-admin`, async (req, res): Promise<void> => {
+  const initToken = process.env.ADMIN_INIT_TOKEN;
+  if (!initToken || req.query.token !== initToken) {
+    res.status(403).json({ error: "Forbidden — set ADMIN_INIT_TOKEN env var and pass ?token=<value>" });
+    return;
+  }
+  const ADMIN_EMAIL    = "admin@xinghuang.vip";
+  const ADMIN_PASSWORD = "XingAdmin2026!";
+  const hash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const existing = await db.select({ id: usersTable.id })
+    .from(usersTable).where(eq(usersTable.email, ADMIN_EMAIL)).limit(1);
+  if (existing.length > 0) {
+    await db.update(usersTable)
+      .set({ passwordHash: hash, role: "super_admin" })
+      .where(eq(usersTable.email, ADMIN_EMAIL));
+  } else {
+    await db.insert(usersTable).values({
+      email: ADMIN_EMAIL, passwordHash: hash, role: "super_admin",
+      referralCode: "ADMIN0001",
+    });
+  }
+  logger.info("Admin bootstrap: admin@xinghuang.vip created/updated");
+  res.json({ ok: true, message: "Admin account ready. Email: admin@xinghuang.vip — use the password you configured." });
 });
 
 app.use(BASE, apiRouter);
