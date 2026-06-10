@@ -100,13 +100,24 @@ docker compose logs -f     # tail live logs
 
 ### 6. Create the admin account (first time only)
 
-```
-http://YOUR_VPS_IP:3000/api/init-admin?token=xh2026
-```
-
-After success, remove `ADMIN_INIT_TOKEN` from `.env` and restart:
+First, set `ADMIN_INIT_TOKEN` in your `.env` to any random string you choose:
 
 ```bash
+# Generate a secure token
+openssl rand -hex 16
+```
+
+Then visit this URL (replace `<your_token>` with the value you set):
+
+```
+http://YOUR_VPS_IP:3000/api/init-admin?token=<your_token>
+```
+
+You should see: `{ "ok": true }`. After that, **remove `ADMIN_INIT_TOKEN`** from
+`.env` immediately and restart the container — leaving it active is a security risk:
+
+```bash
+nano .env   # delete the ADMIN_INIT_TOKEN line
 docker compose restart xinghuang
 ```
 
