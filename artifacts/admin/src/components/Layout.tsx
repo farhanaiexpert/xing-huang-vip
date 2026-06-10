@@ -262,11 +262,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2.5 px-3 py-2 mb-1 rounded-lg bg-white/3">
               <div className="w-7 h-7 rounded-full bg-[#00DFA9]/15 flex items-center justify-center shrink-0">
                 <span className="text-[#00DFA9] text-xs font-bold uppercase">
-                  {storedUser.username.slice(0, 1)}
+                  {(storedUser.username ?? storedUser.email ?? "A").slice(0, 1)}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-white truncate">{storedUser.username}</div>
+                <div className="text-xs font-medium text-white truncate">{storedUser.username ?? storedUser.email}</div>
                 <div className="text-[10px] text-[#475569] capitalize">{storedUser.role.replace(/_/g, " ")}</div>
               </div>
             </div>
