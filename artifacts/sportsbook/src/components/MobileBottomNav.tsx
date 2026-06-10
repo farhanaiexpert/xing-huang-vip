@@ -12,6 +12,7 @@ import { useBetHistory } from '../hooks/useBetHistory';
 import { useWallet } from '../hooks/useWallet';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { useI18n } from '../contexts/I18nContext';
+import { SportName } from './SportName';
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from './ui/drawer';
 import { BetSlip } from './BetSlip';
 import { SPORTS } from '../data/mockData';
@@ -191,7 +192,7 @@ export function MobileBottomNav() {
                 <button key={sport.id} onClick={() => handleSelectSport(sport.id)}
                   className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#00DFA9]/30 hover:bg-[#18212B] active:scale-95 transition-all duration-150">
                   <span className="text-2xl">{sport.icon}</span>
-                  <span className="text-[11px] font-medium text-[#94A3B8] text-center leading-tight">{sport.name}</span>
+                  <span className="text-[11px] font-medium text-[#94A3B8] text-center leading-tight"><SportName name={sport.name} /></span>
                 </button>
               ))}
             </div>

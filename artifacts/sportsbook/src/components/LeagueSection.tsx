@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { League } from '../types';
 import { MatchRow } from './MatchRow';
+import { SportName } from './SportName';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -34,7 +35,7 @@ export function LeagueSection({ league }: { league: League }) {
         )}
 
         {/* Name */}
-        <span className="font-semibold text-[#CBD5E1] text-[12px] truncate flex-1 text-left">{league.name}</span>
+        <span className="font-semibold text-[#CBD5E1] text-[12px] truncate flex-1 text-left"><SportName name={league.name} /></span>
 
         {/* Live badge */}
         {liveCount > 0 && (

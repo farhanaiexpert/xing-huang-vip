@@ -15,6 +15,7 @@ import { estimatedEndTime } from '../lib/matchTime';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { TeamBadge } from './TeamBadge';
 import { JerseySilk } from './JerseySilk';
+import { SportName } from './SportName';
 import { cn } from '../lib/utils';
 import { useOddsData } from '../hooks/useOddsData';
 import { useBetSlip } from '../hooks/useBetSlip';
@@ -164,7 +165,7 @@ function MatchCard({ match, league }: MatchCardProps) {
           {theme.icon.startsWith('http')
             ? <img src={theme.icon} alt={theme.label} className="h-3.5 w-3.5 object-contain shrink-0" loading="lazy" />
             : <span className="text-[13px] leading-none shrink-0">{theme.icon}</span>}
-          <span className="text-[10px] font-semibold text-[#94A3B8]/70 truncate leading-none">{league.name}</span>
+          <span className="text-[10px] font-semibold text-[#94A3B8]/70 truncate leading-none"><SportName name={league.name} /></span>
         </div>
 
         <div className="shrink-0 flex flex-col items-end gap-0.5">

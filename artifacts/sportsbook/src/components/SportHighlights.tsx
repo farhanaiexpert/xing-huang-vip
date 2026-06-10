@@ -590,7 +590,7 @@ function CountdownCard({ entry }: { entry: ComingSoonEntry }) {
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-1.5">
             <span className="text-[14px] leading-none">{bucket.emoji}</span>
-            <span className="text-[9px] text-[#94A3B8]/45 truncate max-w-[90px]">{league.name}</span>
+            <span className="text-[9px] text-[#94A3B8]/45 truncate max-w-[90px]"><SportName name={league.name} /></span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-2.5 w-2.5 text-[#94A3B8]/30" />

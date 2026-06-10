@@ -337,7 +337,7 @@ function InPlaySection({ items }: { items: NonNullable<typeof import('../data/sp
             className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#EF4444]/25 cursor-pointer transition-all duration-150"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse shrink-0" />
-            <span className="flex-1 text-[13px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">{item.name}</span>
+            <span className="flex-1 text-[13px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors"><SportName name={item.name} /></span>
             <ChevronRight className="h-3.5 w-3.5 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/60 shrink-0 transition-colors" />
           </div>
         ))}
@@ -362,7 +362,7 @@ function MatchCouponSection({ items }: { items: NonNullable<typeof import('../da
             className="group flex items-center gap-2 py-2.5 border-b border-[#253241]/40 cursor-pointer hover:bg-[#121821] px-2 rounded transition-all"
           >
             <ChevronRight className="h-3.5 w-3.5 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/60 shrink-0 transition-colors" />
-            <span className="text-[13px] text-[#94A3B8]/70 group-hover:text-[#F8FAFC] transition-colors">{item.name}</span>
+            <span className="text-[13px] text-[#94A3B8]/70 group-hover:text-[#F8FAFC] transition-colors"><SportName name={item.name} /></span>
           </div>
         ))}
       </div>
@@ -434,7 +434,7 @@ function BoxingCompSection({ sportId }: { sportId: string }) {
               <span className="text-lg leading-none w-6 text-center shrink-0">
                 {comp.countryCode ? flag(comp.countryCode) : '🌐'}
               </span>
-              <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">{comp.name}</span>
+              <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors"><SportName name={comp.name} /></span>
               <ChevronRight className="h-4 w-4 text-[#94A3B8]/30 group-hover:text-[#94A3B8]/70 shrink-0 transition-colors" />
             </div>
           ))}
