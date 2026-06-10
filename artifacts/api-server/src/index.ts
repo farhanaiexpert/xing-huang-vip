@@ -549,6 +549,25 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v29 skipped");
   }
+
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS api_usage_daily (
+        id          SERIAL PRIMARY KEY,
+        provider    TEXT NOT NULL,
+        day         DATE NOT NULL,
+        calls       INTEGER NOT NULL DEFAULT 0,
+        errors      INTEGER NOT NULL DEFAULT 0,
+        last_status TEXT,
+        last_error  TEXT,
+        last_at     TIMESTAMPTZ
+      )
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_api_usage_daily_provider_day ON api_usage_daily (provider, day)`);
+    logger.info("DB migration v30 applied (api_usage_daily table)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v30 skipped");
+  }
 }
 
 runMigrations().then(() => {

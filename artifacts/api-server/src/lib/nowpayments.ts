@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { logger } from "./logger.js";
+import { recordApiCall } from "./apiUsage.js";
 
 const BASE_URL = "https://api.nowpayments.io/v1";
 
@@ -51,28 +52,44 @@ function parsePayment(d: Record<string, unknown>): NowPayment {
 }
 
 async function nowGet<T>(path: string): Promise<T> {
-  const resp = await fetch(`${BASE_URL}${path}`, {
-    headers: { "x-api-key": apiKey(), "Accept": "application/json" },
-    signal: AbortSignal.timeout(12_000),
-  });
+  let resp: Response;
+  try {
+    resp = await fetch(`${BASE_URL}${path}`, {
+      headers: { "x-api-key": apiKey(), "Accept": "application/json" },
+      signal: AbortSignal.timeout(12_000),
+    });
+  } catch (e) {
+    recordApiCall("nowpayments", false, "network", `GET ${path} → network/timeout`);
+    throw e;
+  }
   if (!resp.ok) {
     const body = await resp.text().catch(() => "");
+    recordApiCall("nowpayments", false, `HTTP ${resp.status}`, `GET ${path} → HTTP ${resp.status}`);
     throw new Error(`NOWPayments ${path} → HTTP ${resp.status}: ${body}`);
   }
+  recordApiCall("nowpayments", true, "ok");
   return resp.json() as Promise<T>;
 }
 
 async function nowPost<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const resp = await fetch(`${BASE_URL}${path}`, {
-    method:  "POST",
-    headers: { "x-api-key": apiKey(), "Content-Type": "application/json", "Accept": "application/json" },
-    body:    JSON.stringify(body),
-    signal:  AbortSignal.timeout(12_000),
-  });
+  let resp: Response;
+  try {
+    resp = await fetch(`${BASE_URL}${path}`, {
+      method:  "POST",
+      headers: { "x-api-key": apiKey(), "Content-Type": "application/json", "Accept": "application/json" },
+      body:    JSON.stringify(body),
+      signal:  AbortSignal.timeout(12_000),
+    });
+  } catch (e) {
+    recordApiCall("nowpayments", false, "network", `POST ${path} → network/timeout`);
+    throw e;
+  }
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
+    recordApiCall("nowpayments", false, `HTTP ${resp.status}`, `POST ${path} → HTTP ${resp.status}`);
     throw new Error(`NOWPayments ${path} → HTTP ${resp.status}: ${text}`);
   }
+  recordApiCall("nowpayments", true, "ok");
   return resp.json() as Promise<T>;
 }
 

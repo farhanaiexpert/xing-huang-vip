@@ -147,6 +147,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       label: "System",
       items: [
         { href: "/admin-accounts", icon: ShieldCheck, label: "Admin Accounts", badge: 0 },
+        { href: "/api-status",     icon: Activity,    label: "API Status",     badge: 0 },
         { href: "/audit",          icon: ScrollText,  label: "Audit Log",      badge: 0 },
         { href: "/settings",       icon: Settings,    label: "Settings",       badge: 0 },
       ],

@@ -3,6 +3,8 @@
  * Key is read from BETSAPI_KEY env var (server-side only).
  */
 
+import { recordApiCall } from './apiUsage.js';
+
 const BETSAPI_BASE = 'https://api.betsapi.com';
 export const BETSAPI_KEY = process.env.BETSAPI_KEY;
 
@@ -177,6 +179,7 @@ export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEven
         // All are recoverable conditions — flag so the caller uses a short
         // retry TTL instead of caching empty for 4 hours.
         if (res.status === 401 || res.status === 403 || res.status === 429) permissionError = true;
+        recordApiCall("betsapi", false, `HTTP ${res.status}`, `upcoming sport ${sportId} → HTTP ${res.status}`);
         return { events: [], total: 0 };
       }
       const json = await res.json() as BetsApiListResponse & { error?: string };
@@ -184,11 +187,14 @@ export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEven
         // BetsAPI sometimes returns HTTP 200 with {success:0, error:"TOO_MANY_REQUESTS"}
         // when the account is out of request volume — treat as recoverable too.
         if (json.success !== 1 && typeof json.error === 'string') permissionError = true;
+        recordApiCall("betsapi", false, json.error ?? "success=0", `upcoming sport ${sportId} → ${json.error ?? "success=0"}`);
         return { events: [], total: 0 };
       }
       const total = json.pager?.total ?? json.results.length;
+      recordApiCall("betsapi", true, "ok");
       return { events: json.results.filter(filterEvent), total };
     } catch {
+      recordApiCall("betsapi", false, "network", `upcoming sport ${sportId} → network/timeout`);
       return { events: [], total: 0 };
     }
   };
@@ -229,11 +235,13 @@ export async function fetchPrematchOdds(
   try {
     const url = `${BETSAPI_BASE}/v1/bet365/prematch?FI=${fixtureId}&token=${BETSAPI_KEY}`;
     const res  = await fetch(url, { signal: AbortSignal.timeout(8_000) });
-    if (!res.ok) return null;
+    if (!res.ok) { recordApiCall("betsapi", false, `HTTP ${res.status}`, `prematch → HTTP ${res.status}`); return null; }
     const json = await res.json() as PrematchResponse;
-    if (json.success !== 1) return null;
+    if (json.success !== 1) { recordApiCall("betsapi", false, "success=0", "prematch → success=0"); return null; }
+    recordApiCall("betsapi", true, "ok");
     return parsePrematchOdds(json, hasDraw);
   } catch {
+    recordApiCall("betsapi", false, "network", "prematch → network/timeout");
     return null;
   }
 }
@@ -312,16 +320,22 @@ async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEve
           const json = await res.json() as PrematchResponse;
           if (json.success === 1) {
             // Definitive API answer — cache regardless of whether 1X2 was found
+            recordApiCall("betsapi", true, "ok");
             const odds = parsePrematchOdds(json, hasDraw);
             inplayOddsCache.set(ev.id, { odds, expiresAt: now + INPLAY_TTL_MS });
             if (odds !== null) return { ...ev, prematchOdds: odds };
             // success=1 but no 1X2 market → fall through to prematch
+          } else {
+            // success≠1 → transient; don't cache; fall through
+            recordApiCall("betsapi", false, "success=0", "inplay → success=0");
           }
-          // success≠1 → transient; don't cache; fall through
+        } else {
+          // non-2xx → transient; fall through
+          recordApiCall("betsapi", false, `HTTP ${res.status}`, `inplay → HTTP ${res.status}`);
         }
-        // non-2xx → transient; fall through
       } catch {
         // timeout / network error → transient; fall through
+        recordApiCall("betsapi", false, "network", "inplay → network/timeout");
       }
 
       // ── Step 2: fall back to prematch opening odds ─────────────────────
@@ -332,13 +346,15 @@ async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEve
       try {
         const url = `${BETSAPI_BASE}/v1/bet365/prematch?FI=${ev.id}&token=${BETSAPI_KEY}`;
         const res = await fetch(url, { signal: AbortSignal.timeout(PER_FETCH) });
-        if (!res.ok) return null;
+        if (!res.ok) { recordApiCall("betsapi", false, `HTTP ${res.status}`, `prematch → HTTP ${res.status}`); return null; }
         const json = await res.json() as PrematchResponse;
-        if (json.success !== 1) return null;
+        if (json.success !== 1) { recordApiCall("betsapi", false, "success=0", "prematch → success=0"); return null; }
+        recordApiCall("betsapi", true, "ok");
         const odds = parsePrematchOdds(json, hasDraw);
         prematchOddsCache.set(ev.id, { odds, expiresAt: now + PREMATCH_TTL_MS });
         return odds !== null ? { ...ev, prematchOdds: odds } : null;
       } catch {
+        recordApiCall("betsapi", false, "network", "prematch → network/timeout");
         return null;
       }
     }));
@@ -362,11 +378,13 @@ export async function fetchBetsApiInplay(): Promise<BetsApiEventRaw[]> {
     try {
       const url = `${BETSAPI_BASE}/v1/bet365/inplay_filter?sport_id=${sportId}&token=${BETSAPI_KEY}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-      if (!res.ok) return [];
+      if (!res.ok) { recordApiCall("betsapi", false, `HTTP ${res.status}`, `inplay_filter sport ${sportId} → HTTP ${res.status}`); return []; }
       const json = await res.json() as BetsApiListResponse;
-      if (json.success !== 1 || !Array.isArray(json.results)) return [];
+      if (json.success !== 1 || !Array.isArray(json.results)) { recordApiCall("betsapi", false, "success=0", `inplay_filter sport ${sportId} → success=0`); return []; }
+      recordApiCall("betsapi", true, "ok");
       return json.results.filter(filterEvent);
     } catch {
+      recordApiCall("betsapi", false, "network", `inplay_filter sport ${sportId} → network/timeout`);
       return [];
     }
   };

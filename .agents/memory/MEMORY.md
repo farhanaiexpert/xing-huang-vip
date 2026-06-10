@@ -12,3 +12,4 @@
 - [Referral→wallet verify coupling](referral-sessionstorage-coupling.md) — wallet verify reads referral from sessionStorage 'cb_ref', not React state; referral inputs must persist there or codes silently drop.
 - [Route guard auth restore](route-guard-auth-restore.md) — client redirect guards must gate on `!isLoading` or they bounce genuinely-connected users to home on refresh/deep-link before session restores.
 - [Render single-service deploy](render-single-service-deploy.md) — prod = ONE Express service serving sportsbook (/) + admin (/admin) + API (/api); build frontends WITHOUT VITE_API_BASE_URL (same-origin, no CORS); keep CSP off for web3.
+- [API usage instrumentation](api-usage-instrumentation.md) — admin API Status reads api_usage_daily via fire-and-forget recordApiCall; instrument EVERY fetch exit path incl. network/timeout catch or failures undercount.

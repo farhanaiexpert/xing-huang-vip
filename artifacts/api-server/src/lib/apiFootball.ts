@@ -6,6 +6,7 @@
  * Results are cached per-date for 30 minutes to stay within the free-tier
  * limit of 100 req/day (≈ 3 dates × 2 calls/hour max).
  */
+import { recordApiCall } from "./apiUsage.js";
 
 import { logger } from "./logger.js";
 
@@ -111,6 +112,7 @@ async function fetchFixturesForDate(date: string): Promise<ApiFootballFixture[]>
 
     if (!res.ok) {
       logger.warn({ date, status: res.status }, "API-Football: fetch failed");
+      recordApiCall("api_football", false, `HTTP ${res.status}`, `fixtures ${date} → HTTP ${res.status}`);
       return [];
     }
 
@@ -118,15 +120,18 @@ async function fetchFixturesForDate(date: string): Promise<ApiFootballFixture[]>
 
     if (body.errors && Object.keys(body.errors as object).length > 0) {
       logger.warn({ date, errors: body.errors }, "API-Football: API error");
+      recordApiCall("api_football", false, "api_error", `fixtures ${date} → ${JSON.stringify(body.errors).slice(0, 120)}`);
       return [];
     }
 
     const fixtures = Array.isArray(body.response) ? body.response : [];
     _cache.set(date, { fixtures, fetchedAt: Date.now() });
     logger.info({ date, count: fixtures.length }, "API-Football: fixtures cached");
+    recordApiCall("api_football", true, "ok");
     return fixtures;
   } catch (err) {
     logger.warn({ err, date }, "API-Football: request error");
+    recordApiCall("api_football", false, "network", `fixtures ${date} → network/timeout`);
     return [];
   }
 }

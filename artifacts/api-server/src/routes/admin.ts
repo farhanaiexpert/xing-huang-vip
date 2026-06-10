@@ -72,6 +72,115 @@ router.get("/admin/odds-credits", async (_req, res): Promise<void> => {
   }
 });
 
+// ─── External API status dashboard ────────────────────────────────────────────
+router.get("/admin/api-status", async (_req, res): Promise<void> => {
+  try {
+    const usage = await db.execute(sql`
+      SELECT provider, calls, errors, last_status, last_error, last_at
+      FROM api_usage_daily WHERE day = CURRENT_DATE
+    `);
+    const usageMap = new Map<string, { calls: number; errors: number; lastStatus: string | null; lastError: string | null; lastAt: string | null }>();
+    for (const r of usage.rows as Array<Record<string, unknown>>) {
+      usageMap.set(String(r.provider), {
+        calls: Number(r.calls ?? 0),
+        errors: Number(r.errors ?? 0),
+        lastStatus: r.last_status != null ? String(r.last_status) : null,
+        lastError: r.last_error != null ? String(r.last_error) : null,
+        lastAt: r.last_at != null ? new Date(r.last_at as string).toISOString() : null,
+      });
+    }
+
+    const settingRows = await db.select().from(platformSettingsTable)
+      .where(inArray(platformSettingsTable.key, ['odds_credits_remaining', 'odds_credits_updated_at']));
+    const settings = Object.fromEntries(settingRows.map(r => [r.key, r.value]));
+    const oddsRemaining = settings.odds_credits_remaining != null ? Number(settings.odds_credits_remaining) : null;
+
+    const DEFS = [
+      { id: "odds_api",     name: "The Odds API",     envKey: "ODDS_API_KEY",        purpose: "Primary match odds & live scores" },
+      { id: "betsapi",      name: "BetsAPI (Bet365)", envKey: "BETSAPI_KEY",         purpose: "Live in-play data & Bet365 markets" },
+      { id: "api_football", name: "API-Football",     envKey: "API_FOOTBALL_KEY",    purpose: "Settlement fallback for soccer" },
+      { id: "nowpayments",  name: "NOWPayments",      envKey: "NOWPAYMENTS_API_KEY", purpose: "Crypto deposit gateway" },
+    ] as const;
+
+    const providers = DEFS.map(def => {
+      const u = usageMap.get(def.id);
+      const configured = !!process.env[def.envKey];
+      const callsToday = u?.calls ?? 0;
+      const errorsToday = u?.errors ?? 0;
+      const lastStatus = u?.lastStatus ?? null;
+      const lastError = u?.lastError ?? null;
+      const lastAt = u?.lastAt ?? null;
+      const ls = (lastStatus ?? "").toLowerCase();
+
+      let status: "operational" | "degraded" | "throttled" | "down" | "idle";
+      let headline: string;
+
+      if (!configured) {
+        status = "down";
+        headline = "Not configured — API key is missing.";
+      } else if (/401|403|authorize|unauthor|forbidden/.test(ls)) {
+        status = "down";
+        headline = "Authentication is failing — the key may be invalid or expired.";
+      } else if (/429|too_many|quota|volume|exhaust/.test(ls)) {
+        status = "throttled";
+        headline = "Rate limit / request volume reached — calls are being rejected.";
+      } else if (callsToday === 0) {
+        status = "idle";
+        headline = "Configured and ready — no calls made yet today.";
+      } else if (errorsToday > 0 && errorsToday / callsToday >= 0.5) {
+        status = "degraded";
+        headline = "Many recent calls are failing — provider may be unstable.";
+      } else {
+        status = "operational";
+        headline = "Working normally.";
+      }
+
+      let quotaRemaining: number | null = null;
+      let quotaUpdatedAt: string | null = null;
+      if (def.id === "odds_api") {
+        quotaRemaining = oddsRemaining;
+        quotaUpdatedAt = settings.odds_credits_updated_at ?? null;
+        if (configured && quotaRemaining !== null) {
+          if (quotaRemaining < 50 && status !== "down") {
+            status = "throttled";
+            headline = `Critically low — only ${quotaRemaining} credits left.`;
+          } else if (quotaRemaining < 200 && (status === "operational" || status === "idle")) {
+            status = "degraded";
+            headline = `Credits running low — ${quotaRemaining} left.`;
+          }
+        }
+      }
+
+      const extra: Record<string, unknown> = {};
+      if (def.id === "betsapi") {
+        extra.cronDisabled = process.env.BETSAPI_CRON_DISABLED === "1" || process.env.BETSAPI_CRON_DISABLED === "true";
+        extra.hourlyLimitNote = "Trial volume is ~1,800 requests/hour, shared across the whole account.";
+      }
+
+      return {
+        id: def.id,
+        name: def.name,
+        purpose: def.purpose,
+        configured,
+        status,
+        headline,
+        callsToday,
+        errorsToday,
+        lastStatus,
+        lastError,
+        lastAt,
+        quotaRemaining,
+        quotaUpdatedAt,
+        ...extra,
+      };
+    });
+
+    res.json({ providers, generatedAt: new Date().toISOString() });
+  } catch {
+    res.status(500).json({ error: "Failed to read API status" });
+  }
+});
+
 // ─── Stats ───────────────────────────────────────────────────────────────────
 router.get("/admin/stats", async (req, res): Promise<void> => {
   // All platform-total stats exclude test accounts (is_test_account = true)

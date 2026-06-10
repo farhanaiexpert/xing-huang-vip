@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { db, sportControlsTable, platformSettingsTable } from "@workspace/db";
 import { logger } from "../lib/logger.js";
+import { recordApiCall } from "../lib/apiUsage.js";
 
 const router = Router();
 
@@ -298,7 +299,13 @@ type OddsApiResult =
  *  Returns a typed discriminated union so callers can distinguish 429 from other errors. */
 async function fetchOddsFromApi(sportKey: string, extraMarkets: string): Promise<OddsApiResult> {
   const url = `${ODDS_API_BASE}/sports/${sportKey}/odds?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h${extraMarkets}&oddsFormat=decimal&dateFormat=iso`;
-  const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  } catch {
+    recordApiCall("odds_api", false, "network", `${sportKey} → network/timeout`);
+    return { fetchError: true };
+  }
 
   // ── Credit visibility ────────────────────────────────────────────────────
   const remaining = Number(response.headers.get('x-requests-remaining') ?? -1);
@@ -328,15 +335,18 @@ async function fetchOddsFromApi(sportKey: string, extraMarkets: string): Promise
   // ── 429: quota exhausted ─────────────────────────────────────────────────
   if (response.status === 429) {
     logger.error({ sportKey }, 'Odds API: 429 quota exhausted — caller should halt batch');
+    recordApiCall("odds_api", false, "429 quota exhausted", `${sportKey} → 429 quota exhausted`);
     return { quota: true };
   }
 
   if (response.ok) {
     const data = await response.json() as unknown[];
+    recordApiCall("odds_api", true, "ok");
     return { data: Array.isArray(data) ? data : [] };
   }
 
   logger.warn({ sportKey, status: response.status }, 'Odds API: non-ok response');
+  recordApiCall("odds_api", false, `HTTP ${response.status}`, `${sportKey} → HTTP ${response.status}`);
   return { fetchError: true };
 }
 
@@ -530,10 +540,17 @@ router.get("/odds/sports/list", async (_req, res): Promise<void> => {
   try {
     const url = `${ODDS_API_BASE}/sports?apiKey=${ODDS_API_KEY}`;
     const response = await fetch(url);
+    if (!response.ok) {
+      recordApiCall("odds_api", false, `HTTP ${response.status}`, `sports/list → HTTP ${response.status}`);
+      res.status(502).json({ error: "Failed to fetch sports" });
+      return;
+    }
     const data = await response.json();
+    recordApiCall("odds_api", true, "ok");
     liveCache.set("sports_list", { data, expiresAt: Date.now() + 6 * 60 * 60 * 1000 });
     res.json({ data, cached: false });
   } catch {
+    recordApiCall("odds_api", false, "network", "sports/list → network/timeout");
     res.status(500).json({ error: "Failed to fetch sports" });
   }
 });
@@ -632,7 +649,14 @@ router.get("/live/scores", async (_req, res): Promise<void> => {
 
         // DB cache miss — fetch from Odds API
         const url = `${ODDS_API_BASE}/sports/${sportKey}/scores?apiKey=${ODDS_API_KEY}&daysFrom=1&dateFormat=iso`;
-        const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        let response: Response;
+        try {
+          response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        } catch {
+          recordApiCall("odds_api", false, "network", `scores ${sportKey} → network/timeout`);
+          await setDbCachedOdds(dbKey, [], LIVE_SCORES_DB_TTL_MIN);
+          return [];
+        }
 
         // Log credit usage from scores calls too
         const remaining = Number(response.headers.get('x-requests-remaining') ?? -1);
@@ -641,12 +665,14 @@ router.get("/live/scores", async (_req, res): Promise<void> => {
         }
 
         if (!response.ok) {
+          recordApiCall("odds_api", false, `HTTP ${response.status}`, `scores ${sportKey} → HTTP ${response.status}`);
           // Cache empty array so we don't re-hit this sport next request
           await setDbCachedOdds(dbKey, [], LIVE_SCORES_DB_TTL_MIN);
           return [];
         }
 
         const raw = (await response.json()) as Record<string, unknown>[];
+        recordApiCall("odds_api", true, "ok");
         if (!Array.isArray(raw)) {
           await setDbCachedOdds(dbKey, [], LIVE_SCORES_DB_TTL_MIN);
           return [];
