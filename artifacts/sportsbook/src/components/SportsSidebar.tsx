@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import { SPORTS } from '../data/mockData';
 import { useFavorites } from '../hooks/useFavorites';
@@ -249,48 +249,100 @@ const LOGO_URL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Wo
 function WCPinnedEntry() {
   const [location] = useLocation();
   const { allLeagues } = useOddsData();
-  const matchCount = allLeagues.filter(l => l.sportKey === 'soccer_fifa_world_cup')
-    .reduce((n, l) => n + l.matches.length, 0);
+
+  const stats = useMemo(() => {
+    let total = 0, live = 0;
+    for (const l of allLeagues) {
+      if (l.sportKey !== 'soccer_fifa_world_cup') continue;
+      for (const m of l.matches) {
+        total++;
+        if (m.isLive) live++;
+      }
+    }
+    return { total, live };
+  }, [allLeagues]);
 
   const isActive = location === '/worldcup';
 
   return (
-    <Link
-      href="/worldcup"
-      className={cn(
-        'relative group flex items-center gap-2.5 px-4 xl:px-5 py-2.5 mx-2 mb-1 rounded-xl transition-all duration-150',
-        isActive
-          ? 'bg-[#FACC15]/10 border border-[#FACC15]/25'
-          : 'hover:bg-[#121821]/80 border border-transparent'
-      )}
-    >
-      {/* Gold left bar when active */}
-      {isActive && (
-        <span className="absolute left-[6px] top-[6px] bottom-[6px] w-[2px] rounded-full bg-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.7)]" />
-      )}
-      {/* Logo */}
-      <div className="shrink-0 grid place-items-center w-[18px] h-[18px]">
-        <img src={LOGO_URL} alt="" className="w-[18px] h-[18px] object-contain" draggable={false} />
-      </div>
-      {/* Label */}
-      <span className={cn(
-        'flex-1 text-[12px] font-bold truncate',
-        isActive ? 'text-[#FACC15]' : 'text-[#94A3B8] group-hover:text-[#F8FAFC]'
-      )}>
-        World Cup 2026
-      </span>
-      {/* Badges */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {matchCount > 0 && (
-          <span className="text-[9px] font-black tabular-nums text-[#FACC15]/70 bg-[#FACC15]/10 px-1.5 py-0.5 rounded">
-            {matchCount}
-          </span>
+    <div className="px-2 mb-3">
+      <Link
+        href="/worldcup"
+        className={cn(
+          'group relative block rounded-2xl overflow-hidden transition-all duration-200',
+          isActive
+            ? 'shadow-[0_0_0_1.5px_rgba(250,204,21,0.55),0_0_20px_rgba(250,204,21,0.18)]'
+            : 'shadow-[0_0_0_1px_rgba(250,204,21,0.22)] hover:shadow-[0_0_0_1.5px_rgba(250,204,21,0.45),0_0_16px_rgba(250,204,21,0.14)]'
         )}
-        <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#FACC15]/15 text-[#FACC15] leading-none">
-          🔥
-        </span>
-      </div>
-    </Link>
+      >
+        {/* Background layers */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1A1200] via-[#0B0F14] to-[#001810]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_0%_0%,rgba(250,204,21,0.13),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_100%_100%,rgba(0,223,169,0.07),transparent)]" />
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-[rgba(250,204,21,0.03)]" />
+
+        {/* Gold shimmer top border */}
+        <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-[#FACC15]/0 via-[#FACC15]/90 to-[#FACC15]/0" />
+
+        {/* Active accent bar on left */}
+        {isActive && (
+          <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#FACC15] shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
+        )}
+
+        <div className="relative flex items-center gap-3 px-3 py-3">
+          {/* Logo with glow */}
+          <div className="shrink-0 relative">
+            <div className="absolute inset-0 rounded-xl bg-[#FACC15]/25 blur-md scale-110 group-hover:bg-[#FACC15]/35 transition-all duration-300" />
+            <div className="relative grid place-items-center w-9 h-9 rounded-xl border border-[#FACC15]/30 bg-[#FACC15]/8 shadow-[0_0_12px_rgba(250,204,21,0.15)]">
+              <img
+                src={LOGO_URL}
+                alt="World Cup 2026"
+                className="w-6 h-6 object-contain drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]"
+                draggable={false}
+              />
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className={cn(
+                'text-[12px] font-black leading-none truncate',
+                isActive ? 'text-[#FACC15]' : 'text-white group-hover:text-[#FACC15] transition-colors duration-150'
+              )}>
+                World Cup 2026
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {stats.live > 0 ? (
+                <span className="flex items-center gap-1 text-[9px] font-black text-[#EF4444]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
+                  {stats.live} Live
+                </span>
+              ) : (
+                <span className="text-[9px] text-[#475569]">Group Stage</span>
+              )}
+              {stats.total > 0 && (
+                <span className="text-[9px] text-[#334155]">· {stats.total} matches</span>
+              )}
+            </div>
+          </div>
+
+          {/* Hot badge */}
+          <div className="shrink-0 flex flex-col items-end gap-1">
+            <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#FACC15]/20 text-[#FACC15] border border-[#FACC15]/30 leading-none">
+              🔥 HOT
+            </span>
+          </div>
+        </div>
+
+        {/* Bet now footer strip */}
+        <div className="relative flex items-center justify-between px-3 py-1.5 border-t border-[#FACC15]/10 bg-[#FACC15]/[0.04]">
+          <span className="text-[9px] font-bold text-[#FACC15]/60 uppercase tracking-widest">Bet on matches →</span>
+          <span className="text-[9px] text-[#334155]">USA · CAN · MEX</span>
+        </div>
+      </Link>
+    </div>
   );
 }
 
