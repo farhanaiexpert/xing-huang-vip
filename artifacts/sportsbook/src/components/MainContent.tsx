@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "../contexts/AuthContext";
 import { requestDeposit } from "../lib/depositGate";
 import { ScrollArea, ScrollBar } from "./ui/scroll-area";
+import { SportName } from "./SportName";
 import { LeagueSection } from "./LeagueSection";
 import { PopularBets } from "./PopularBets";
 import { SkeletonLeague } from "./SkeletonLeague";
@@ -464,7 +465,7 @@ export function MainContent({
                             : "text-[#94A3B8] group-hover:text-[#F8FAFC]",
                         )}
                       >
-                        {sport.name}
+                        <SportName name={sport.name} />
                       </span>
                       <span
                         className={cn(

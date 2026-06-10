@@ -7,6 +7,7 @@
  */
 import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
+import { SportName } from './SportName';
 import {
   ArrowLeft, RefreshCw, ChevronRight, Trophy, Tag, Star,
   Flame, Zap, ChevronDown, MonitorPlay, Gamepad2, BarChart2,
@@ -417,7 +418,7 @@ function BoxingCompSection({ sportId }: { sportId: string }) {
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#2E3D50] transition-all"
       >
-        <span className="text-[14px] font-bold text-[#F8FAFC]">{config.name}</span>
+        <span className="text-[14px] font-bold text-[#F8FAFC]"><SportName name={config.name} /></span>
         <ChevronDown className={cn('h-4 w-4 text-[#94A3B8]/60 transition-transform duration-200', open && 'rotate-180')} />
       </button>
       {open && (
@@ -747,7 +748,7 @@ export function SportDetailPage({
 
         <div className="flex items-center gap-2 flex-1">
           <span className="text-xl leading-none">{config.emoji}</span>
-          <h1 className="text-[17px] font-bold text-[#F8FAFC]">{config.name}</h1>
+          <h1 className="text-[17px] font-bold text-[#F8FAFC]"><SportName name={config.name} /></h1>
           {liveCount > 0 && (
             <span className="flex items-center gap-1 text-[10px] font-bold text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/25 px-1.5 py-0.5 rounded-full">
               <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />

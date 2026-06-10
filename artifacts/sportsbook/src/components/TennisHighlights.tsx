@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { useOddsData } from '../hooks/useOddsData';
+import { SportName } from './SportName';
 import type { Match, League } from '../types';
 
 // ── Sport detection ───────────────────────────────────────────────────────────
@@ -90,7 +91,7 @@ export function TennisHighlights({ onViewAll }: { onViewAll?: () => void } = {})
           <span className="text-[15px] leading-none">🎾</span>
         </div>
         <div>
-          <h2 className="text-[14px] font-black text-[#F8FAFC] uppercase tracking-wide leading-none">Tennis</h2>
+          <h2 className="text-[14px] font-black text-[#F8FAFC] uppercase tracking-wide leading-none"><SportName name="Tennis" /></h2>
           <p className="text-[10px] text-[#94A3B8]/40 font-medium mt-0.5 hidden sm:block">{leagueLabel}</p>
         </div>
         <div className="flex-1 h-px bg-gradient-to-r from-[#253241] to-transparent" />

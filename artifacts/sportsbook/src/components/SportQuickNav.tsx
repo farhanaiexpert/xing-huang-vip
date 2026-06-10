@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { cn } from '../lib/utils';
+import { SportName } from './SportName';
 import { MessageCircle } from 'lucide-react';
 
 function openLiveChat() {
@@ -125,7 +126,7 @@ export function SportQuickNav({ selectedId, liveCount = 0, onSelect }: Props) {
                 <span className={cn(
                   isActive ? 'font-bold' : 'font-semibold'
                 )}>
-                  {item.label}
+                  <SportName name={item.label} />
                 </span>
 
                 {/* Badge chips */}

@@ -4,6 +4,7 @@ import { estimatedEndTime } from '../lib/matchTime';
 import { OddsButton } from './OddsButton';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { useOddsData } from '../hooks/useOddsData';
+import { SportName } from './SportName';
 import type { Match, League } from '../types';
 
 // ── Sport bucket config ────────────────────────────────────────────────────────
@@ -299,7 +300,7 @@ function TrendingCard({ p }: { p: TrendingPill }) {
             <span className="text-sm leading-none">{bucket.emoji}</span>
             <span className="text-[9px] font-bold uppercase tracking-wide truncate"
               style={{ color: bucket.color }}>
-              {bucket.label}
+              <SportName name={bucket.label} />
             </span>
             {isHot && (
               <span className="flex items-center gap-0.5 text-[7px] font-black uppercase shrink-0 px-1 py-0.5 rounded-full"
@@ -500,7 +501,7 @@ function SportPanel({ data, onSelectSport }: { data: SportPanelData; onSelectSpo
       >
         <div className="flex items-center gap-2">
           <span className="text-[17px] leading-none">{bucket.emoji}</span>
-          <span className="text-[12.5px] font-black text-[#F8FAFC] uppercase tracking-wide">{bucket.label}</span>
+          <span className="text-[12.5px] font-black text-[#F8FAFC] uppercase tracking-wide"><SportName name={bucket.label} /></span>
           {liveCount > 0 && (
             <span
               className="text-[8px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"
@@ -541,7 +542,7 @@ function SportPanel({ data, onSelectSport }: { data: SportPanelData; onSelectSpo
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = bucket.color; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = `${bucket.color}70`; }}
         >
-          Show all {total} {bucket.label} matches →
+          Show all {total} <SportName name={bucket.label} /> matches →
         </button>
       )}
     </div>

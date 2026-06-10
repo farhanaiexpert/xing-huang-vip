@@ -4,6 +4,7 @@ import { SPORTS } from '../data/mockData';
 import { useFavorites } from '../hooks/useFavorites';
 import { useOddsData } from '../hooks/useOddsData';
 import { cn } from '../lib/utils';
+import { SportName } from './SportName';
 import {
   TrendingUp, Star, AlignLeft, ChevronRight,
   Clock, Heart, HeartOff,
@@ -295,7 +296,7 @@ function SidebarItem({ title, icon, isActive, isFavourite, onFavToggle, onClick 
         )}
       >
         <span className="text-sm shrink-0">{icon}</span>
-        <span className="text-[13px] truncate flex-1">{title}</span>
+        <span className="text-[13px] truncate flex-1"><SportName name={title} /></span>
         <ChevronRight className={cn(
           'h-3 w-3 shrink-0 transition-all duration-150',
           isActive ? 'text-[#00DFA9] opacity-100' : 'opacity-0 -translate-x-1 group-hover:opacity-40 group-hover:translate-x-0'
@@ -365,7 +366,7 @@ function AZSidebarItem({ title, iconUrl, isActive, isFavourite, matchCount, onFa
           <SportIconImg src={iconUrl} />
         </span>
 
-        <span className="text-[13px] truncate flex-1 leading-none">{title}</span>
+        <span className="text-[13px] truncate flex-1 leading-none"><SportName name={title} /></span>
 
         <span className={cn(
           'shrink-0 text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-full leading-none',

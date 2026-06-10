@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { useOddsData } from '../hooks/useOddsData';
+import { SportName } from './SportName';
 import type { Match, League } from '../types';
 
 // ── Sport config ──────────────────────────────────────────────────────────────
@@ -179,7 +180,7 @@ function SportBlock({ section, onSelectSport }: { section: SportSection; onSelec
         </div>
         <div>
           <h2 className="text-[14px] font-black text-[#F8FAFC] uppercase tracking-wide leading-none">
-            {config.label}
+            <SportName name={config.label} />
           </h2>
           <p className="text-[10px] text-[#94A3B8]/40 font-medium mt-0.5 hidden sm:block truncate max-w-[240px]">{label}</p>
         </div>
