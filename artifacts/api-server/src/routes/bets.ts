@@ -11,6 +11,76 @@ import { nextResetAt } from "../lib/depositGuard.js";
 
 const router = Router();
 
+// ── Odds slippage helpers ─────────────────────────────────────────────────
+
+const SLIPPAGE_TOLERANCE_DEFAULT = 0.05; // 5 %
+
+async function getCachedOddsBlob(sportKey: string): Promise<unknown[] | null> {
+  const rows = await db.execute(sql`
+    SELECT data FROM odds_cache
+    WHERE sport_key = ${sportKey} AND expires_at > NOW()
+    LIMIT 1
+  `);
+  const row = rows.rows[0] as { data: unknown } | undefined;
+  if (!row) return null;
+  const raw = row.data;
+  const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  return Array.isArray(parsed) ? (parsed as unknown[]) : null;
+}
+
+interface OddsOutcome   { name: string; price: number }
+interface OddsMarket    { key: string; outcomes: OddsOutcome[] }
+interface OddsBookmaker { markets: OddsMarket[] }
+interface OddsEvent     { id: string; home_team: string; away_team: string; bookmakers: OddsBookmaker[] }
+
+function normalizeSlippageMarket(mt: string): string {
+  const lower = mt.toLowerCase();
+  if (['h2h', 'match result', '1x2', 'match winner', 'moneyline', 'winner'].includes(lower)) return 'h2h';
+  if (lower.includes('over/under') || lower.startsWith('total')) return 'totals';
+  if (lower.includes('handicap') || lower.includes('spread'))    return 'spreads';
+  if (lower.includes('both teams') || lower.includes('btts'))    return 'btts';
+  return lower;
+}
+
+function findBestCurrentOdds(
+  events: unknown[],
+  eventId: string,
+  marketType: string,
+  selection: string,
+  homeTeam: string,
+  awayTeam: string,
+): number | null {
+  const event = (events as OddsEvent[]).find(e => e.id === eventId);
+  if (!event) return null;
+
+  const mKey = normalizeSlippageMarket(marketType);
+  const selLower = selection.toLowerCase();
+
+  let targetName: string;
+  if (mKey === 'h2h' || mKey === 'spreads') {
+    if (selLower === 'home')      targetName = event.home_team;
+    else if (selLower === 'away') targetName = event.away_team;
+    else if (selLower === 'draw') targetName = 'Draw';
+    else targetName = selection;
+  } else {
+    targetName = selection; // "Over", "Under", "Yes", "No"
+  }
+  const targetLower = targetName.toLowerCase();
+
+  let bestPrice: number | null = null;
+  for (const bm of event.bookmakers ?? []) {
+    for (const mkt of bm.markets ?? []) {
+      if (mkt.key !== mKey) continue;
+      for (const outcome of mkt.outcomes ?? []) {
+        if (outcome.name.toLowerCase() === targetLower && outcome.price > (bestPrice ?? 0)) {
+          bestPrice = outcome.price;
+        }
+      }
+    }
+  }
+  return bestPrice;
+}
+
 const SelectionSchema = z.object({
   eventId:          z.string().min(1),
   eventName:        z.string(),
@@ -129,6 +199,48 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
       res.status(403).json({
         error: `This market is temporarily suspended — ${s.selection} (${s.eventName}). Try another selection.`,
         code: "MARKET_SUSPENDED",
+      });
+      return;
+    }
+  }
+
+  // ── Odds slippage check (pre-match only — live odds move too fast) ──────────
+  const prematches = selections.filter(s => !s.isLive);
+  if (prematches.length > 0) {
+    const tolRow = await db.select().from(platformSettingsTable)
+      .where(eq(platformSettingsTable.key, 'odds_slippage_tolerance'))
+      .limit(1).then(r => r[0]);
+    const tolerance = tolRow ? parseFloat(tolRow.value) : SLIPPAGE_TOLERANCE_DEFAULT;
+
+    const sportKeys = [...new Set(prematches.map(s => s.sportKey))];
+    const blobMap = new Map<string, unknown[] | null>(
+      await Promise.all(sportKeys.map(async sk => [sk, await getCachedOddsBlob(sk)] as const))
+    );
+
+    type StaleSel = { eventId: string; eventName: string; selection: string; submittedOdds: number; currentOdds: number };
+    const stale: StaleSel[] = [];
+
+    for (const s of prematches) {
+      const blob = blobMap.get(s.sportKey);
+      if (!blob) continue; // Sport not cached (off-season) — fail open
+
+      const current = findBestCurrentOdds(blob, s.eventId, s.marketType, s.selection, s.homeTeam, s.awayTeam);
+      if (current === null) continue; // Event/market not in cache — fail open
+
+      // Reject only when submitted odds are higher than current best + tolerance
+      if (s.odds > current * (1 + tolerance)) {
+        stale.push({ eventId: s.eventId, eventName: s.eventName, selection: s.selection, submittedOdds: s.odds, currentOdds: current });
+      }
+    }
+
+    if (stale.length > 0) {
+      req.log.warn({ stale }, 'Bet rejected: odds slippage');
+      res.status(409).json({
+        error: stale.length === 1
+          ? `Odds changed for ${stale[0].eventName} — ${stale[0].selection} is now ${stale[0].currentOdds.toFixed(2)} (you had ${stale[0].submittedOdds.toFixed(2)}). Please review and confirm.`
+          : `Odds changed for ${stale.length} selections. Please review the updated odds and confirm.`,
+        code: 'ODDS_CHANGED',
+        changedSelections: stale,
       });
       return;
     }

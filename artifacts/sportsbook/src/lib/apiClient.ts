@@ -1,4 +1,18 @@
 const BASE = '/api';
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string | undefined;
+  readonly body: Record<string, unknown>;
+
+  constructor(message: string, status: number, body: Record<string, unknown>) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = body.code as string | undefined;
+    this.body = body;
+  }
+}
 const ACCESS_KEY = 'cb_access';
 const REFRESH_KEY = 'cb_refresh';
 
@@ -59,8 +73,8 @@ async function apiFetch(path: string, options: RequestInit = {}, retry = true): 
 export async function apiJson<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await apiFetch(path, options);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { error?: string };
-    throw new Error(err.error ?? `API error ${res.status}`);
+    const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+    throw new ApiError((body.error as string) ?? `API error ${res.status}`, res.status, body);
   }
   return res.json() as Promise<T>;
 }

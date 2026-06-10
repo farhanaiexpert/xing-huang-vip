@@ -9,7 +9,7 @@ import { useBetHistory } from '../hooks/useBetHistory';
 import { formatOdds } from '../lib/oddsFormat';
 import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../lib/apiClient';
+import { api, ApiError } from '../lib/apiClient';
 import { cn } from '../lib/utils';
 import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
@@ -27,7 +27,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     singleStakes, setSingleStake,
     removeSelection, clearSlip,
     totalOdds, accaReturn, totalSingleReturn, totalSingleStaked,
-    oddsChanges, acceptOddsChanges,
+    oddsChanges, acceptOddsChanges, updateSelectionOdds,
   } = useBetSlip();
 
   const { isConnected, balance, bonusBalance, refreshBalance, connect } = useWallet();
@@ -102,6 +102,15 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
         addBet(placed);
         setConfirmation(placed);
       } catch (err) {
+        if (err instanceof ApiError && err.code === 'ODDS_CHANGED') {
+          const changed = (err.body.changedSelections as { eventId: string; currentOdds: number }[]) ?? [];
+          changed.forEach(c => {
+            const sel = selections.find(s => s.matchId === c.eventId);
+            if (sel) updateSelectionOdds(sel.id, c.currentOdds);
+          });
+          setDriftPending(true);
+          return;
+        }
         const raw = err instanceof Error ? err.message : 'Could not place bet';
         const isAuthErr = /authorization|unauthorized|401/i.test(raw);
         toast({
@@ -148,6 +157,24 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
           if (r.status === 'fulfilled') succeeded.push({ sel: validSels[i], betId: r.value.id });
         });
         const failedCount = results.length - succeeded.length;
+
+        // Server-side odds slippage — update slip odds and show drift confirmation
+        const oddsChangedErrors = results
+          .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+          .map(r => r.reason)
+          .filter((e): e is ApiError => e instanceof ApiError && e.code === 'ODDS_CHANGED');
+        if (oddsChangedErrors.length > 0) {
+          oddsChangedErrors.forEach(e => {
+            const changed = (e.body.changedSelections as { eventId: string; currentOdds: number }[]) ?? [];
+            changed.forEach(c => {
+              const sel = selections.find(s => s.matchId === c.eventId);
+              if (sel) updateSelectionOdds(sel.id, c.currentOdds);
+            });
+          });
+          setDriftPending(true);
+          setIsPlacing(false);
+          return;
+        }
 
         if (failedCount > 0) {
           toast({
