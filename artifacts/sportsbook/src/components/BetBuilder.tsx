@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SportName } from './SportName';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { BB_MATCHES, TAB_CONFIG, type TabKey, type BBPlayer, type BBMatch } from '../data/betBuilderData';
 import { JerseySilk } from './JerseySilk';
@@ -184,7 +185,7 @@ export function BetBuilder() {
           <JerseySilk team={match.away} size="sm" sportIcon="⚽" flip />
           <span className="text-[15px] font-bold text-[#F8FAFC]">{match.away}</span>
         </div>
-        <span className="text-[11px] text-[#94A3B8]">{match.league} · {match.kickoff}</span>
+        <span className="text-[11px] text-[#94A3B8]"><SportName name={match.league} /> · {match.kickoff}</span>
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────────── */}

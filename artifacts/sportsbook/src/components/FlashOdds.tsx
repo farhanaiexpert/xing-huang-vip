@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SportName } from './SportName';
 import { Zap, Clock, TrendingUp, RotateCcw, Flame } from 'lucide-react';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { useBetSlip } from '../hooks/useBetSlip';
@@ -236,7 +237,7 @@ export function FlashOdds() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm">{flash.sport}</span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#364556] truncate">{flash.league}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#364556] truncate"><SportName name={flash.league} /></span>
                       </div>
                       <div className="flex items-center gap-1 text-[9px] font-semibold text-[#364556]">
                         <Clock className="h-2.5 w-2.5" />
@@ -279,7 +280,7 @@ export function FlashOdds() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm">{flash.sport}</span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]/50 truncate">{flash.league}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]/50 truncate"><SportName name={flash.league} /></span>
                       </div>
                       <div className="flex items-center gap-1">
                         {flash.hot && !isUrgent && (

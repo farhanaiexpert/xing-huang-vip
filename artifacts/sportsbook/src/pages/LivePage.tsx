@@ -485,7 +485,7 @@ function LiveMatchCard({ match }: { match: LiveMatch }) {
               <span className="text-[10px] font-bold text-[#EF4444]/70">{match.liveLabel}</span>
             )}
           </div>
-          <span className="text-[11px] font-medium text-[#64748B] truncate">{match.icon} {match.league}</span>
+          <span className="text-[11px] font-medium text-[#64748B] truncate">{match.icon} <SportName name={match.league} /></span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {match.isHot && (

@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
+import { SportName } from './SportName';
 import { Selection } from '../types';
 import { Copy, ChevronRight, ArrowRight } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -125,7 +126,7 @@ export function BetConfirmationModal({ confirmation, onClose }: BetConfirmationM
               <div className="min-w-0 flex-1">
                 {sel.leagueName && (
                   <p className="text-[9px] font-semibold uppercase tracking-wider text-[#94A3B8]/50 leading-none mb-0.5">
-                    {sel.leagueName}
+                    <SportName name={sel.leagueName} />
                   </p>
                 )}
                 <p className="text-[11px] font-medium text-[#94A3B8] truncate leading-none mb-0.5">

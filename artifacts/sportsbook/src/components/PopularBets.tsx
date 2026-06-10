@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { SportName } from './SportName';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { OddsButton } from './OddsButton';
 import { Flame, TrendingUp } from 'lucide-react';
@@ -136,7 +137,7 @@ function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-[9.5px] text-[#475569] truncate min-w-0">
             <span className="shrink-0">{bet.flag}</span>
-            <span className="truncate">{bet.leagueName}</span>
+            <span className="truncate"><SportName name={bet.leagueName} /></span>
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             {rank < 3 && (

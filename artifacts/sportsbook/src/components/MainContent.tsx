@@ -947,7 +947,7 @@ function TopMatchesBanner({ leagues }: { leagues: League[] }) {
                 {match.team2}
               </p>
               <p className="text-[10px] text-[#64748B] truncate mt-0.5">
-                {match.leagueName} · {match.date}
+                <SportName name={match.leagueName} /> · {match.date}
               </p>
             </div>
             {match.odds.home && match.odds.away && (

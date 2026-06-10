@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { SportName } from './SportName';
 import { Trophy, Clock, ChevronRight, Activity, TrendingUp } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useOddsData } from '../hooks/useOddsData';
@@ -160,7 +161,7 @@ function PreMatchCard({ match, league }: { match: Match; league: League }) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-[#94A3B8]/45 hidden sm:inline truncate max-w-[140px]">
-              {emoji} {league.name}
+              {emoji} <SportName name={league.name} />
             </span>
             {match.kickoffTime && (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-[#94A3B8]/60 bg-[#1A2535] border border-[#253241] px-2 py-0.5 rounded-full whitespace-nowrap">
@@ -325,7 +326,7 @@ function LiveCard({ m }: { m: NormalizedLiveMatch }) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-[#94A3B8]/45 hidden sm:inline truncate max-w-[120px]">
-              {emoji} {m.league}
+              {emoji} <SportName name={m.league} />
             </span>
             <span className="flex items-center gap-1.5 text-[9px] font-black text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/25 px-2.5 py-1 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />

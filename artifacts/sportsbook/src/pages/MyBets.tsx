@@ -1,4 +1,5 @@
 import { useState, ReactNode } from 'react';
+import { SportName } from '../components/SportName';
 import { Link } from 'wouter';
 import { Header } from '@/components/Header';
 import { ConnectWalletModal } from '@/components/ConnectWalletModal';
@@ -303,7 +304,7 @@ function BetCard({ bet }: { bet: PlacedBet }) {
               <div key={i} className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-semibold text-[#F8FAFC] truncate">{sel.selectionName || sel.selectionType}</p>
-                  <p className="text-[10px] text-[#94A3B8]/60 truncate">{sel.matchName}{sel.leagueName ? ` · ${sel.leagueName}` : ''}</p>
+                  <p className="text-[10px] text-[#94A3B8]/60 truncate">{sel.matchName}{sel.leagueName ? <> · <SportName name={sel.leagueName} /></> : ''}</p>
                 </div>
                 <span className="text-xs font-bold text-[#FACC15] tabular-nums shrink-0">{formatOdds(sel.odds, oddsFormat)}</span>
               </div>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { SportName } from '../components/SportName';
 import { Link } from 'wouter';
 import { Header } from '@/components/Header';
 import { ConnectWalletModal } from '@/components/ConnectWalletModal';
@@ -388,7 +389,7 @@ function BetCard({ bet }: { bet: PlacedBet }) {
             )}
           </p>
           {mainSel.leagueName && (
-            <p className="text-[10px] text-[#94A3B8]/50 mt-0.5">{mainSel.leagueName}</p>
+            <p className="text-[10px] text-[#94A3B8]/50 mt-0.5"><SportName name={mainSel.leagueName} /></p>
           )}
         </div>
 
@@ -427,7 +428,7 @@ function BetCard({ bet }: { bet: PlacedBet }) {
                     {sel.selectionName || sel.selectionType}
                   </p>
                   <p className="text-[10px] text-[#94A3B8]/60 truncate">
-                    {sel.matchName}{sel.leagueName ? ` · ${sel.leagueName}` : ''}
+                    {sel.matchName}{sel.leagueName ? <> · <SportName name={sel.leagueName} /></> : ''}
                   </p>
                 </div>
                 <span className={cn('text-xs font-bold tabular-nums shrink-0', theme.oddsColor)}>

@@ -1,4 +1,5 @@
 import { useLocation } from 'wouter';
+import { SportName } from '../SportName';
 import { ChevronLeft, Wifi, Clock, AlertCircle, Star, RefreshCw, Shield, TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { TeamBadge } from '../TeamBadge';
@@ -74,7 +75,7 @@ export function MatchHeader({ match, league, liveData }: MatchHeaderProps) {
           </button>
           <span className="text-[#253241] text-[11px] shrink-0">/</span>
           <span className="hidden sm:flex items-center gap-1 text-[11px] text-[#94A3B8]/50 shrink-0">
-            {flag(league.countryCode)}&nbsp;{league.name}
+            {flag(league.countryCode)}&nbsp;<SportName name={league.name} />
           </span>
           <span className="text-[#253241] text-[11px] shrink-0">/</span>
           <span className="text-[11px] text-[#94A3B8]/40 truncate min-w-0">
@@ -144,7 +145,7 @@ export function MatchHeader({ match, league, liveData }: MatchHeaderProps) {
 
           {/* League */}
           <span className="text-[11px] text-[#94A3B8]/55 truncate max-w-[160px] sm:max-w-none">
-            {flag(league.countryCode)} {league.name}
+            {flag(league.countryCode)} <SportName name={league.name} />
           </span>
 
           <span className="text-[#253241] shrink-0">·</span>
@@ -325,7 +326,7 @@ function HorseHeader({ match, sportIcon, league }: {
       <div className="min-w-0 flex-1">
         <h1 className="text-lg sm:text-xl font-bold text-[#F8FAFC] truncate">{match.homeTeamName}</h1>
         <p className="text-xs sm:text-sm text-[#94A3B8]/60 truncate mt-0.5">
-          {flag(league.countryCode)} {league.name} · {match.displayDate}
+          {flag(league.countryCode)} <SportName name={league.name} /> · {match.displayDate}
         </p>
       </div>
       <div className="ml-auto shrink-0">

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { SportName } from '../../components/SportName';
 import { useSearch } from 'wouter';
 import { useBetHistory, PlacedBet } from '@/hooks/useBetHistory';
 import { useOddsFormat } from '@/hooks/useOddsFormat';
@@ -182,7 +183,7 @@ function LegRow({ sel, idx, total, format }: {
           {sel.marketName ? <span className="text-[#64748B]"> · {sel.marketName}</span> : null}
           {sel.scoreAtPlacement ? <span className="text-[#EF4444]/70"> ({sel.scoreAtPlacement})</span> : null}
         </p>
-        {sel.leagueName ? <p className="text-[10px] text-[#64748B] mt-0.5">{sel.leagueName}</p> : null}
+        {sel.leagueName ? <p className="text-[10px] text-[#64748B] mt-0.5"><SportName name={sel.leagueName} /></p> : null}
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">
         <span className="text-[13px] font-bold text-[#FACC15]">{formatOdds(sel.odds, format)}</span>
@@ -266,7 +267,7 @@ function BetCard({ bet, isHighlighted }: { bet: PlacedBet; isHighlighted?: boole
               )}
             </p>
             {mainSel?.leagueName && (
-              <p className="text-[11px] text-[#94A3B8] leading-none mt-1 truncate">{mainSel.leagueName}</p>
+              <p className="text-[11px] text-[#94A3B8] leading-none mt-1 truncate"><SportName name={mainSel.leagueName} /></p>
             )}
           </div>
           {/* Live / countdown badge */}

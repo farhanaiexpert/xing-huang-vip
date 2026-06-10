@@ -158,7 +158,7 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
                     <span className="text-sm shrink-0">{m.sportIcon}</span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-medium truncate leading-none">{m.name}</p>
-                      <p className="text-[10px] text-[#94A3B8]/40 truncate leading-none mt-0.5">{m.leagueName}</p>
+                      <p className="text-[10px] text-[#94A3B8]/40 truncate leading-none mt-0.5"><SportName name={m.leagueName} /></p>
                     </div>
                     <ChevronRight className="h-3 w-3 shrink-0 opacity-0 -translate-x-1 group-hover:opacity-40 group-hover:translate-x-0 transition-all" />
                   </button>

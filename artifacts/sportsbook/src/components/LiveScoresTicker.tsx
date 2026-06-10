@@ -1,4 +1,5 @@
 import { useLiveOdds } from '../hooks/useLiveOdds';
+import { SportName } from './SportName';
 
 export function LiveScoresTicker() {
   const { matches, loading } = useLiveOdds();
@@ -50,7 +51,7 @@ export function LiveScoresTicker() {
                   </span>
                 )}
 
-                <span className="text-[9px] text-[#2A3A52] font-medium whitespace-nowrap pl-1">{m.league}</span>
+                <span className="text-[9px] text-[#2A3A52] font-medium whitespace-nowrap pl-1"><SportName name={m.league} /></span>
               </div>
             );
           })}

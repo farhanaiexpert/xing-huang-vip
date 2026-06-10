@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { SportName } from './SportName';
 import { useLocation } from 'wouter';
 import { requestDeposit } from '../lib/depositGate';
 import { useBetSlip } from '../hooks/useBetSlip';
@@ -909,7 +910,7 @@ function SelectionCard({
       {/* Row 1 — league · market */}
       {sel.leagueName && (
         <p className="w-full text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]/50 leading-snug mb-1 break-words [overflow-wrap:anywhere]">
-          {sel.leagueName}{sel.marketName ? <span className="font-medium normal-case tracking-normal text-[#94A3B8]/40"> · {sel.marketName}</span> : null}
+          <SportName name={sel.leagueName} />{sel.marketName ? <span className="font-medium normal-case tracking-normal text-[#94A3B8]/40"> · {sel.marketName}</span> : null}
         </p>
       )}
 

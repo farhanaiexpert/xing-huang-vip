@@ -575,7 +575,7 @@ function CompetitionsTab({ sportId }: { sportId: string }) {
           <span className="text-xl leading-none w-7 text-center shrink-0">
             {comp.countryCode ? flag(comp.countryCode) : '🌐'}
           </span>
-          <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors">{comp.name}</span>
+          <span className="flex-1 text-[14px] font-medium text-[#D1D9E2] group-hover:text-[#F8FAFC] transition-colors"><SportName name={comp.name} /></span>
           {comp.matchCount != null && (
             <span className="text-[11px] font-semibold text-[#94A3B8]/45 tabular-nums mr-1">{comp.matchCount}</span>
           )}
