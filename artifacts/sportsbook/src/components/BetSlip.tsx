@@ -12,6 +12,7 @@ import { api } from '../lib/apiClient';
 import { cn } from '../lib/utils';
 import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
+import { useI18n } from '../contexts/I18nContext';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Selection } from '../types';
@@ -767,6 +768,8 @@ function AccaView({
   onPlaceBet: () => void;
 }) {
   const stakeNum = parseFloat(stake || '0');
+  const { lang } = useI18n();
+  const isZh = lang === 'zh-CN' || lang === 'zh';
 
   // Compute why Place Bet is disabled
   let disabledHint: string | null = null;
@@ -827,7 +830,8 @@ function AccaView({
           <div className="relative">
             <Input
               type="number"
-              placeholder="Enter stake (USDT)…"
+              translate={isZh ? 'no' : undefined}
+              placeholder={isZh ? '输入投注金额（USDT）…' : 'Enter stake (USDT)…'}
               data-testid="input-stake"
               className="pl-3 pr-3 h-10 rounded-lg text-sm bg-[#0B0F14] border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-1 focus-visible:ring-[#00DFA9]/50 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
               value={stake}
