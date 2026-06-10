@@ -311,6 +311,7 @@ export function Header() {
             <NavItem href="/promotions"         label={t('Promotions')}    />
             <NavItem href="/prediction-pools"   label={t('Predict & Win')} />
             <BetHistoryNavItem />
+            <NavItem href="/worldcup"            label="🏆 World Cup"      />
             <NavItem href="/help"               label={t('Help')}          />
             {/* <NavItem href="/account/referrals"  label={t('Refer & Earn')}  /> */}{/* hidden */}
             <WinSpinNavItem />

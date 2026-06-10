@@ -61,7 +61,32 @@ function teamFlag(name: string): string {
 }
 
 type DateFilter = 'all' | 'live' | 'today' | 'tomorrow' | 'upcoming';
-type MarketTab  = '1x2' | 'ou' | 'btts';
+type MarketTab  = '1x2' | 'ou' | 'btts' | 'hcp';
+
+function deriveMarkets(odds1: number, oddsDraw: number | null | undefined, odds2: number) {
+  const clamp = (n: number) => Math.max(1.01, Math.round(n * 100) / 100);
+  const i1 = 1 / odds1;
+  const id = oddsDraw ? 1 / oddsDraw : 0;
+  const i2 = 1 / odds2;
+  const tot = i1 + id + i2;
+  const ph = i1 / tot;
+  const pd = id / tot;
+  const pa = i2 / tot;
+  const ou25O = clamp(1.88 * (1 + (pd - 0.28) * 0.45));
+  const ou25U = clamp(1.92 * (1 - (pd - 0.28) * 0.45));
+  const bttsY  = clamp(1.62 + pd * 0.7);
+  const bttsN  = clamp(2.18 - pd * 0.5);
+  const fairLine = (ph - pa) * 3.5;
+  const dist  = 0 - fairLine;
+  const adjF  = Math.exp(dist * 0.35);
+  const hcpIsFavHome = ph > 0.52;
+  const hcpIsFavAway = pa > 0.52;
+  const hLine = hcpIsFavHome ? '-1' : hcpIsFavAway ? '+1' : '0';
+  const aLine = hcpIsFavHome ? '+1' : hcpIsFavAway ? '-1' : '0';
+  const hcpH  = clamp(1.90 * adjF);
+  const hcpA  = clamp(1.90 / adjF);
+  return { ou25O, ou25U, bttsY, bttsN, hLine, aLine, hcpH, hcpA };
+}
 
 function WCOddsButton({
   label, odds, selectionId, marketId, match, marketName, selectionType, selectionName, point,
@@ -128,13 +153,19 @@ function WCMatchCard({ match }: { match: Match }) {
   const awayFlag = teamFlag(match.team2);
   const matchId  = `${match.id}`;
 
+  const sec = useMemo(
+    () => deriveMarkets(match.odds.home, match.odds.draw, match.odds.away),
+    [match.odds.home, match.odds.draw, match.odds.away]
+  );
+
   const hasOU   = (match.ouOver25 ?? 0) > 0 && (match.ouUnder25 ?? 0) > 0;
   const hasBTTS = (match.bttsYes  ?? 0) > 0 && (match.bttsNo    ?? 0) > 0;
 
   const tabs: { id: MarketTab; label: string; available: boolean }[] = [
-    { id: '1x2',  label: '1X2',    available: true   },
-    { id: 'ou',   label: 'O/U',    available: hasOU   },
+    { id: '1x2',  label: '1X2',    available: true  },
+    { id: 'ou',   label: 'O/U',    available: hasOU  },
     { id: 'btts', label: 'BTTS',   available: hasBTTS },
+    { id: 'hcp',  label: 'HCP',    available: true  },
   ];
 
   return (
@@ -264,18 +295,39 @@ function WCMatchCard({ match }: { match: Match }) {
             />
           </>
         )}
+        {tab === 'hcp' && (
+          <>
+            <WCOddsButton
+              label={`H ${sec.hLine}`} odds={sec.hcpH}
+              selectionId={`${matchId}-hcp-h`} marketId={`${matchId}-hcp`}
+              match={match} marketName={`Asian Handicap ${sec.hLine}`}
+              selectionType={`H${sec.hLine}`} selectionName={`${match.team1} ${sec.hLine}`}
+            />
+            <WCOddsButton
+              label={`A ${sec.aLine}`} odds={sec.hcpA}
+              selectionId={`${matchId}-hcp-a`} marketId={`${matchId}-hcp`}
+              match={match} marketName={`Asian Handicap ${sec.hLine}`}
+              selectionType={`A${sec.aLine}`} selectionName={`${match.team2} ${sec.aLine}`}
+            />
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-const DATE_TABS: { id: DateFilter; label: string }[] = [
-  { id: 'all',      label: 'All'      },
-  { id: 'live',     label: 'Live'     },
-  { id: 'today',    label: 'Today'    },
-  { id: 'tomorrow', label: 'Tomorrow' },
-  { id: 'upcoming', label: 'Upcoming' },
+const DATE_TABS: { id: DateFilter; label: string; alwaysShow?: boolean }[] = [
+  { id: 'all',      label: 'All',      alwaysShow: true  },
+  { id: 'live',     label: 'Live'                        },
+  { id: 'today',    label: 'Today',    alwaysShow: true  },
+  { id: 'tomorrow', label: 'Tomorrow', alwaysShow: true  },
+  { id: 'upcoming', label: 'Upcoming', alwaysShow: true  },
 ];
+
+interface DateGroup {
+  label: string;
+  matches: Match[];
+}
 
 export function WorldCupPage() {
   const [, navigate]  = useLocation();
@@ -309,13 +361,26 @@ export function WorldCupPage() {
     upcoming: wcMatches.filter(m => m.dateTag === 'upcoming').length,
   }), [wcMatches]);
 
-  const displayed = useMemo(() => {
-    if (dateFilter === 'all')      return wcMatches;
+  const flatDisplayed = useMemo(() => {
     if (dateFilter === 'live')     return wcMatches.filter(m => m.isLive);
     if (dateFilter === 'today')    return wcMatches.filter(m => m.dateTag === 'today');
     if (dateFilter === 'tomorrow') return wcMatches.filter(m => m.dateTag === 'tomorrow');
     if (dateFilter === 'upcoming') return wcMatches.filter(m => m.dateTag === 'upcoming' && !m.isLive);
     return wcMatches;
+  }, [wcMatches, dateFilter]);
+
+  const groupedDisplay = useMemo<DateGroup[]>(() => {
+    if (dateFilter !== 'all') return [];
+    const groups: DateGroup[] = [];
+    const live = wcMatches.filter(m => m.isLive);
+    if (live.length > 0) groups.push({ label: '🔴 Live Now', matches: live });
+    const today = wcMatches.filter(m => m.dateTag === 'today' && !m.isLive);
+    if (today.length > 0) groups.push({ label: 'Today', matches: today });
+    const tomorrow = wcMatches.filter(m => m.dateTag === 'tomorrow');
+    if (tomorrow.length > 0) groups.push({ label: 'Tomorrow', matches: tomorrow });
+    const upcoming = wcMatches.filter(m => m.dateTag === 'upcoming' && !m.isLive);
+    if (upcoming.length > 0) groups.push({ label: 'Upcoming', matches: upcoming });
+    return groups;
   }, [wcMatches, dateFilter]);
 
   return (
@@ -378,9 +443,10 @@ export function WorldCupPage() {
 
             {/* ── Date filter tabs ──────────────────────────── */}
             <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1 scrollbar-none">
-              {DATE_TABS.map(tab => {
+              {DATE_TABS.filter(t => t.alwaysShow || counts[t.id] > 0).map(tab => {
                 const count = counts[tab.id];
                 const active = dateFilter === tab.id;
+                const isLiveTab = tab.id === 'live';
                 return (
                   <button
                     key={tab.id}
@@ -388,18 +454,24 @@ export function WorldCupPage() {
                     className={cn(
                       'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all duration-150 shrink-0',
                       active
-                        ? 'bg-[#FACC15]/15 text-[#FACC15] border border-[#FACC15]/30'
+                        ? isLiveTab
+                          ? 'bg-[#EF4444]/12 text-[#EF4444] border border-[#EF4444]/30'
+                          : 'bg-[#FACC15]/15 text-[#FACC15] border border-[#FACC15]/30'
                         : 'text-[#64748B] border border-[#1A2535] hover:text-[#94A3B8] hover:border-[#253241]'
                     )}
                   >
-                    {tab.id === 'live' && count > 0 && (
+                    {isLiveTab && (
                       <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
                     )}
                     {tab.label}
                     {count > 0 && (
                       <span className={cn(
                         'text-[9px] font-black px-1.5 py-0.5 rounded tabular-nums min-w-[18px] text-center',
-                        active ? 'bg-[#FACC15]/20 text-[#FACC15]' : 'bg-[#1A2535] text-[#475569]'
+                        active
+                          ? isLiveTab
+                            ? 'bg-[#EF4444]/20 text-[#EF4444]'
+                            : 'bg-[#FACC15]/20 text-[#FACC15]'
+                          : 'bg-[#1A2535] text-[#475569]'
                       )}>
                         {count}
                       </span>
@@ -415,7 +487,39 @@ export function WorldCupPage() {
                 <div className="w-8 h-8 rounded-full border-2 border-[#FACC15]/30 border-t-[#FACC15] animate-spin" />
                 <p className="text-[13px] text-[#475569]">Loading World Cup odds…</p>
               </div>
-            ) : displayed.length === 0 ? (
+            ) : dateFilter === 'all' ? (
+              /* Grouped by date bucket */
+              groupedDisplay.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+                  <span className="text-4xl">🏆</span>
+                  <p className="text-[15px] font-semibold text-[#64748B]">No matches available yet</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {groupedDisplay.map(group => (
+                    <div key={group.label}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={cn(
+                          'text-[11px] font-black uppercase tracking-wider',
+                          group.label.includes('Live') ? 'text-[#EF4444]' : 'text-[#FACC15]'
+                        )}>
+                          {group.label}
+                        </span>
+                        <span className="text-[9px] font-bold text-[#334155] bg-[#1A2535] px-1.5 py-0.5 rounded tabular-nums">
+                          {group.matches.length}
+                        </span>
+                        <div className="flex-1 h-px bg-gradient-to-r from-[#1E2A38] to-transparent" />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {group.matches.map(match => (
+                          <WCMatchCard key={match.id} match={match} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : flatDisplayed.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
                 <span className="text-4xl">🏆</span>
                 <p className="text-[15px] font-semibold text-[#64748B]">No matches in this filter</p>
@@ -428,14 +532,14 @@ export function WorldCupPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {displayed.map(match => (
+                {flatDisplayed.map(match => (
                   <WCMatchCard key={match.id} match={match} />
                 ))}
               </div>
             )}
 
             {/* ── Trending promo footer ─────────────────────── */}
-            {displayed.length > 0 && (
+            {wcMatches.length > 0 && (
               <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-[#334155]">
                 <TrendingUp className="h-3.5 w-3.5" />
                 <span>All odds update every 25–30 min · Real-time from The Odds API</span>
