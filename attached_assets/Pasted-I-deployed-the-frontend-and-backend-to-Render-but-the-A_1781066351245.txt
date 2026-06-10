@@ -1,0 +1,76 @@
+I deployed the frontend and backend to Render, but the Admin Panel login is not working.
+
+Please perform a complete investigation and generate a report.
+
+Tasks:
+
+1. Check which database the application is currently connected to.
+
+   * Print the database host, database name, and current connection status.
+   * Verify that DATABASE_URL is being loaded correctly from environment variables.
+
+2. Check whether the backend is successfully connecting to PostgreSQL.
+
+   * Add a temporary test endpoint:
+     GET /api/debug/database
+   * Return:
+
+     * connection status
+     * database name
+     * total users count
+     * total admin users count
+
+3. Verify whether my admin account exists in the database.
+
+   * Check the admin table and users table.
+   * Return all admin emails (hide passwords).
+   * Confirm whether my login credentials exist.
+
+4. Check authentication flow.
+
+   * Verify admin login endpoint.
+   * Verify password hashing comparison.
+   * Verify JWT generation and validation.
+   * Verify session configuration if sessions are used.
+
+5. Check environment variables.
+
+   * Confirm:
+     DATABASE_URL
+     JWT_SECRET
+     SESSION_SECRET
+     NODE_ENV
+   * Report any missing or incorrect values.
+
+6. Check migrations.
+
+   * Verify all database migrations executed successfully.
+   * Report missing tables or columns.
+
+7. Add detailed logging for admin login.
+
+   * Log:
+
+     * login request received
+     * user found or not
+     * password matched or not
+     * JWT generated or failed
+     * final login result
+
+8. Create a database diagnostic report showing:
+
+   * Connected database
+   * Connected host
+   * Total users
+   * Total admins
+   * Existing admin emails
+   * Migration status
+   * Authentication status
+
+9. If the application is still using Replit database services, explain exactly how it is connected.
+   If not, identify which database Render is using.
+
+10. Do not make assumptions.
+    Trace the entire login flow from frontend → API → database and identify the exact reason the Admin Panel login is failing.
+
+Provide all findings and recommended fixes in a clear report.

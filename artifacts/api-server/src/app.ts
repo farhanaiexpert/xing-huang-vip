@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { logger } from "./lib/logger.js";
 import apiRouter from "./routes/index.js";
@@ -121,6 +121,46 @@ app.get(`${BASE}/health`, (_req, res) => {
 });
 app.get(`${BASE}/healthz`, (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// ── Diagnostic endpoint (safe — no secrets exposed) ───────────────────────────
+app.get(`${BASE}/debug/database`, async (_req, res): Promise<void> => {
+  try {
+    const dbInfo = await db.execute(sql`
+      SELECT
+        current_database()          AS db_name,
+        current_user                AS db_user,
+        (SELECT COUNT(*) FROM users)::int                                        AS total_users,
+        (SELECT COUNT(*) FROM users WHERE role IN ('admin','super_admin'))::int  AS total_admins,
+        (SELECT COUNT(*) FROM sessions)::int                                     AS total_sessions,
+        (SELECT COUNT(*) FROM bets)::int                                         AS total_bets,
+        (SELECT COUNT(*) FROM transactions)::int                                 AS total_transactions,
+        (SELECT string_agg(email, ', ' ORDER BY id)
+           FROM users WHERE role IN ('admin','super_admin'))                     AS admin_emails,
+        (SELECT string_agg(table_name, ', ' ORDER BY table_name)
+           FROM information_schema.tables
+           WHERE table_schema = 'public')                                        AS tables_present
+    `);
+    const row = dbInfo.rows[0] as Record<string, unknown>;
+    res.json({
+      connection: "ok",
+      database:   row.db_name,
+      dbUser:     row.db_user,
+      jwtSecret:  process.env.JWT_SECRET ? "set" : "MISSING — login will fail with 500",
+      nodeEnv:    process.env.NODE_ENV ?? "not set",
+      users: {
+        total:  row.total_users,
+        admins: row.total_admins,
+      },
+      adminEmails: row.admin_emails ?? "none",
+      sessions:     row.total_sessions,
+      bets:         row.total_bets,
+      transactions: row.total_transactions,
+      migrations:   "ok — " + (row.tables_present as string).split(", ").length + " tables",
+    });
+  } catch (err) {
+    res.status(500).json({ connection: "error", message: String(err) });
+  }
 });
 
 // ── One-time admin bootstrap (only active when ADMIN_INIT_TOKEN env var is set) ─
