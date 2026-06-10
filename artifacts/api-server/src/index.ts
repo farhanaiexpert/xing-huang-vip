@@ -736,19 +736,26 @@ runMigrations().then(() => {
 
   // BetsAPI cron: poll every 5 min, trigger batch if ≥60 min since last run.
   // Stagger: only fires if Odds API batch completed ≥2 min ago.
-  cron.schedule("*/5 * * * *", async () => {
-    const now = Date.now();
-    if (now - lastBetsApiRefreshAt < BETSAPI_INTERVAL_MS) return;
-    const oddsBatchAge = now - lastOddsRefreshAt;
-    if (isOddsRefreshing || oddsBatchAge < 2 * 60 * 1000) return;
-    runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
-  });
-  logger.info("BetsAPI cron started (every 60 minutes — skip-if-fresh, 4h TTL for empty sports)");
+  // NOTE: gated behind BETSAPI_CRON_DISABLED to conserve limited trial request
+  // volume while validating Bet365 market coverage. Set BETSAPI_CRON_DISABLED=1
+  // to disable both the periodic batch and the startup warm.
+  if (process.env.BETSAPI_CRON_DISABLED === "1") {
+    logger.warn("BetsAPI cron DISABLED (BETSAPI_CRON_DISABLED=1) — no automatic upcoming/prematch fetches");
+  } else {
+    cron.schedule("*/5 * * * *", async () => {
+      const now = Date.now();
+      if (now - lastBetsApiRefreshAt < BETSAPI_INTERVAL_MS) return;
+      const oddsBatchAge = now - lastOddsRefreshAt;
+      if (isOddsRefreshing || oddsBatchAge < 2 * 60 * 1000) return;
+      runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
+    });
+    logger.info("BetsAPI cron started (every 60 minutes — skip-if-fresh, 4h TTL for empty sports)");
 
-  // Warm BetsAPI cache on startup — 2-minute delay after Odds API warm starts
-  setTimeout(() => {
-    runBetsApiBatch().catch((err) => logger.error({ err }, "Startup BetsAPI warm: unhandled error"));
-  }, 2 * 60 * 1000);
+    // Warm BetsAPI cache on startup — 2-minute delay after Odds API warm starts
+    setTimeout(() => {
+      runBetsApiBatch().catch((err) => logger.error({ err }, "Startup BetsAPI warm: unhandled error"));
+    }, 2 * 60 * 1000);
+  }
 
   const server = app.listen(PORT, "0.0.0.0", () => {
     logger.info({ port: PORT }, "Xing Huang API server started");
