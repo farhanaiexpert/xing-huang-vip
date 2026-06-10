@@ -4,6 +4,7 @@
  */
 
 import { recordApiCall } from './apiUsage.js';
+import { reserveBetsApiCredit } from './betsApiRateLimiter.js';
 
 const BETSAPI_BASE = 'https://api.betsapi.com';
 export const BETSAPI_KEY = process.env.BETSAPI_KEY;
@@ -172,6 +173,12 @@ export async function fetchBetsApiUpcoming(sportId: number): Promise<BetsApiEven
 
   const fetchPage = async (page: number): Promise<{ events: BetsApiEventRaw[]; total: number }> => {
     try {
+      if (!(await reserveBetsApiCredit())) {
+        // Hourly credit cap reached — treat as recoverable so a short retry TTL is used.
+        permissionError = true;
+        recordApiCall("betsapi", false, "rate_limited", `upcoming sport ${sportId} → hourly credit cap reached`);
+        return { events: [], total: 0 };
+      }
       const url = `${BETSAPI_BASE}/v1/bet365/upcoming?sport_id=${sportId}&token=${BETSAPI_KEY}&per_page=${PER_PAGE}&page=${page}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
       if (!res.ok) {
@@ -233,6 +240,7 @@ export async function fetchPrematchOdds(
 ): Promise<{ home: number; draw?: number; away: number } | null> {
   if (!BETSAPI_KEY) return null;
   try {
+    if (!(await reserveBetsApiCredit())) { recordApiCall("betsapi", false, "rate_limited", "prematch → hourly credit cap reached"); return null; }
     const url = `${BETSAPI_BASE}/v1/bet365/prematch?FI=${fixtureId}&token=${BETSAPI_KEY}`;
     const res  = await fetch(url, { signal: AbortSignal.timeout(8_000) });
     if (!res.ok) { recordApiCall("betsapi", false, `HTTP ${res.status}`, `prematch → HTTP ${res.status}`); return null; }
@@ -314,6 +322,9 @@ async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEve
 
       // ── Step 1: try live inplay odds ──────────────────────────────────
       try {
+        if (!(await reserveBetsApiCredit())) {
+          recordApiCall("betsapi", false, "rate_limited", "inplay → hourly credit cap reached");
+        } else {
         const url = `${BETSAPI_BASE}/v1/bet365/inplay?FI=${ev.id}&token=${BETSAPI_KEY}`;
         const res = await fetch(url, { signal: AbortSignal.timeout(PER_FETCH) });
         if (res.ok) {
@@ -333,6 +344,7 @@ async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEve
           // non-2xx → transient; fall through
           recordApiCall("betsapi", false, `HTTP ${res.status}`, `inplay → HTTP ${res.status}`);
         }
+        }
       } catch {
         // timeout / network error → transient; fall through
         recordApiCall("betsapi", false, "network", "inplay → network/timeout");
@@ -344,6 +356,7 @@ async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEve
         return prematchHit.odds !== null ? { ...ev, prematchOdds: prematchHit.odds } : null;
       }
       try {
+        if (!(await reserveBetsApiCredit())) { recordApiCall("betsapi", false, "rate_limited", "prematch → hourly credit cap reached"); return null; }
         const url = `${BETSAPI_BASE}/v1/bet365/prematch?FI=${ev.id}&token=${BETSAPI_KEY}`;
         const res = await fetch(url, { signal: AbortSignal.timeout(PER_FETCH) });
         if (!res.ok) { recordApiCall("betsapi", false, `HTTP ${res.status}`, `prematch → HTTP ${res.status}`); return null; }
@@ -376,6 +389,7 @@ export async function fetchBetsApiInplay(): Promise<BetsApiEventRaw[]> {
 
   const fetchSport = async (sportId: number): Promise<BetsApiEventRaw[]> => {
     try {
+      if (!(await reserveBetsApiCredit())) { recordApiCall("betsapi", false, "rate_limited", `inplay_filter sport ${sportId} → hourly credit cap reached`); return []; }
       const url = `${BETSAPI_BASE}/v1/bet365/inplay_filter?sport_id=${sportId}&token=${BETSAPI_KEY}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
       if (!res.ok) { recordApiCall("betsapi", false, `HTTP ${res.status}`, `inplay_filter sport ${sportId} → HTTP ${res.status}`); return []; }

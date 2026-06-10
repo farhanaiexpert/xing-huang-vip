@@ -568,6 +568,20 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v30 skipped");
   }
+
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS api_usage_hourly (
+        provider TEXT        NOT NULL,
+        hour     TIMESTAMPTZ NOT NULL,
+        calls    INTEGER     NOT NULL DEFAULT 0,
+        PRIMARY KEY (provider, hour)
+      )
+    `);
+    logger.info("DB migration v31 applied (api_usage_hourly table — BetsAPI hourly credit cap)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v31 skipped");
+  }
 }
 
 runMigrations().then(() => {
