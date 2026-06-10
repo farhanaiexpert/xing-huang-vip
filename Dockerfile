@@ -45,8 +45,10 @@ RUN BASE_PATH=/admin/ pnpm --filter @workspace/admin run build
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2 — runner
-# Lean runtime image: production deps only + server source + pre-built static.
-# No Vite, no React, no @types/* — those are left behind in the builder.
+# All deps installed (drizzle-zod/zod live in lib/db devDeps but are required
+# at runtime by schema files — --prod would strip them and crash the server).
+# Builder-only tools (Vite, React, heavy @types/*) are still excluded because
+# only api-server + lib/db package.json files are copied here.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM node:22-slim AS runner
 
@@ -62,9 +64,11 @@ COPY artifacts/sportsbook/package.json    ./artifacts/sportsbook/
 COPY artifacts/admin/package.json         ./artifacts/admin/
 COPY scripts/package.json                 ./scripts/
 
-# Install production dependencies only — skips devDeps (Vite, React, @types/*).
-# tsx IS a production dep of api-server, so it is included.
-RUN pnpm install --frozen-lockfile --prod
+# Install all deps (no --prod): drizzle-zod and zod are in lib/db devDeps but
+# imported at runtime by every schema file — omitting them crashes the server.
+# Vite/React/etc. are not installed because their package.json files aren't
+# present in this stage — only api-server and lib/db manifests are copied.
+RUN pnpm install --frozen-lockfile
 
 # Copy TypeScript source for the server and its shared DB library.
 COPY lib/db/src/            ./lib/db/src/

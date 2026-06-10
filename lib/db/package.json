@@ -15,15 +15,15 @@
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
-    "drizzle-zod": "^0.7.0",
-    "pg": "^8.16.0",
-    "zod": "catalog:"
+    "pg": "^8.16.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.11.14",
     "drizzle-kit": "^0.31.1",
+    "drizzle-zod": "^0.7.0",
     "tsx": "catalog:",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "zod": "catalog:"
   }
 }
