@@ -1,150 +1,218 @@
-# Deployment Guide
+# Xing Huang — Deployment Guide
 
-Xing Huang has two parts that deploy differently:
+Two deployment options are supported. Both use the same Neon PostgreSQL database.
 
-- **Frontend** (`artifacts/sportsbook`, `artifacts/admin`) — static files, can be served by nginx or a CDN like Vercel.
-- **API server** (`artifacts/api-server`) — Express + PostgreSQL + cron jobs. **Must run on a real server (VPS).** It cannot run on Vercel/Netlify serverless.
-
-The reference production setup is a single VPS at `gobet.mywebpage.pro` running nginx (static files + reverse proxy) and PM2 (API server on port 5000).
+| Option | Where | How |
+|---|---|---|
+| **Render** | Cloud PaaS | `render.yaml` blueprint — push to GitHub, Render auto-deploys |
+| **Hostinger VPS** | Self-hosted | Docker Compose — `docker compose up -d --build` |
 
 ---
 
-## 1. VPS deployment (full stack)
+## Option A — Render (current production)
 
-### 1.1 First-time setup
+See `render.yaml` for the full configuration. Short version:
 
-```bash
-cd /var/www/xinghuang        # your project root (where .env lives)
-pnpm install                 # re-run after EVERY upload — new deps break the server silently
-```
+1. Push this repo to GitHub.
+2. Render → **New + → Blueprint** → connect the repo.
+3. Fill in every `sync: false` env var in the Render dashboard.
+4. Render builds and deploys automatically on every push.
 
-Make sure `.env` is at the project root (same level as `artifacts/`, `lib/`, `package.json`).
-If the file was created on Windows, strip carriage returns once:
+---
 
-```bash
-sed -i 's/\r//' .env
-```
+## Option B — Hostinger VPS with Docker
 
-### 1.2 Build the frontends
+### Prerequisites
 
-The frontend must know where the API lives. Set `VITE_API_BASE_URL` **at build time**
-(it is baked into the static bundle — changing it later requires a rebuild):
+- Hostinger KVM VPS running **Ubuntu 22.04** or **24.04**
+- A domain pointing at your VPS IP
+- SSH access as `root`
 
-```bash
-VITE_API_BASE_URL=https://gobet.mywebpage.pro pnpm --filter @workspace/sportsbook run build
-VITE_API_BASE_URL=https://gobet.mywebpage.pro BASE_PATH=/admin/ pnpm --filter @workspace/admin run build
-```
+---
 
-Output:
-- Sportsbook → `artifacts/sportsbook/dist/public`
-- Admin → `artifacts/admin/dist/public`
-
-### 1.3 Run the API server with PM2
+### 1. Connect to the VPS
 
 ```bash
-cd /var/www/xinghuang
-pm2 start "pnpm --filter @workspace/api-server run start" --name xinghuang-api
-pm2 save
-pm2 logs xinghuang-api --lines 30      # confirm migrations + crons started
+ssh root@YOUR_VPS_IP
 ```
 
-The API listens on port 5000 (set `PORT` in `.env` to change it).
+---
 
-### 1.4 nginx config
+### 2. Install Docker
+
+```bash
+apt-get update && apt-get upgrade -y
+curl -fsSL https://get.docker.com | sh
+
+# Verify
+docker --version
+docker compose version
+```
+
+---
+
+### 3. Clone the repository
+
+```bash
+cd /opt
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git xinghuang
+cd xinghuang
+```
+
+---
+
+### 4. Create `.env`
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Minimum required values:
+
+```dotenv
+# Neon PostgreSQL connection string
+DATABASE_URL=postgresql://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+
+# Generate with: openssl rand -hex 32
+JWT_SECRET=your_64_char_hex_secret
+```
+
+Add API keys and wallet addresses as needed. `NODE_ENV`, `PORT`, and `BASE_PATH`
+are already set in `docker-compose.yml` — **do not add them to `.env`**.
+
+---
+
+### 5. Build and start
+
+```bash
+docker compose up -d --build
+```
+
+First build takes 3–5 minutes. Subsequent builds use cached layers and are faster.
+
+```bash
+docker compose ps          # confirm container is running
+docker compose logs -f     # tail live logs
+```
+
+---
+
+### 6. Create the admin account (first time only)
+
+```
+http://YOUR_VPS_IP:3000/api/init-admin?token=xh2026
+```
+
+After success, remove `ADMIN_INIT_TOKEN` from `.env` and restart:
+
+```bash
+docker compose restart xinghuang
+```
+
+Admin login:
+- **URL**: `http://YOUR_VPS_IP:3000/admin`
+- **Email**: `admin@xinghuang.vip`
+- **Password**: `XingAdmin2026!`
+
+---
+
+### 7. Set up Nginx + SSL
+
+Nginx listens on 80/443 and reverse-proxies to `localhost:3000`.
+
+```bash
+apt-get install -y nginx certbot python3-certbot-nginx
+```
+
+Create `/etc/nginx/sites-available/xinghuang`:
 
 ```nginx
 server {
-    listen 443 ssl;
-    server_name gobet.mywebpage.pro;
-
-    # --- SSL certs (certbot / Let's Encrypt) ---
-    ssl_certificate     /etc/letsencrypt/live/gobet.mywebpage.pro/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/gobet.mywebpage.pro/privkey.pem;
-
-    # --- API server (Express on port 5000) ---
-    # Must come BEFORE the SPA fallback so /api/ is never swallowed by index.html
-    location /api/ {
-        proxy_pass http://localhost:5000/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # --- Admin panel (built with BASE_PATH=/admin/) ---
-    location /admin/ {
-        alias /var/www/xinghuang/artifacts/admin/dist/public/;
-        try_files $uri $uri/ /admin/index.html;
-    }
-
-    # --- Sportsbook (root) ---
-    location / {
-        root /var/www/xinghuang/artifacts/sportsbook/dist/public;
-        try_files $uri $uri/ /index.html;
-    }
-}
-
-# --- Redirect HTTP → HTTPS ---
-server {
     listen 80;
-    server_name gobet.mywebpage.pro;
-    return 301 https://$host$request_uri;
+    server_name yourdomain.com www.yourdomain.com;
+
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass         http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        "upgrade";
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
 }
 ```
 
-Apply it:
+Enable and get SSL:
 
 ```bash
-sudo nginx -t            # test config
-sudo systemctl reload nginx
-```
-
-### 1.5 Redeploy checklist (every update)
-
-```bash
-cd /var/www/xinghuang
-git pull                                                            # or re-upload files
-pnpm install                                                        # pick up new deps
-VITE_API_BASE_URL=https://gobet.mywebpage.pro pnpm --filter @workspace/sportsbook run build
-VITE_API_BASE_URL=https://gobet.mywebpage.pro BASE_PATH=/admin/ pnpm --filter @workspace/admin run build
-pm2 restart xinghuang-api
+ln -s /etc/nginx/sites-available/xinghuang /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+certbot --nginx -d yourdomain.com -d www.yourdomain.com
 ```
 
 ---
 
-## 2. Vercel deployment (frontend only — optional)
+### 8. Verify
 
-Vercel can host the **sportsbook frontend only**. The API server stays on your VPS.
-`vercel.json` (already in the repo root) builds the sportsbook and serves it as a SPA.
+```bash
+curl https://yourdomain.com/api/healthz
+curl https://yourdomain.com/api/debug/database
+```
 
-Steps:
-
-1. Import the GitHub repo into Vercel.
-2. In **Project Settings → Environment Variables**, add:
-   - `VITE_API_BASE_URL = https://gobet.mywebpage.pro`
-3. Leave Build Command / Output Directory empty — `vercel.json` already sets them.
-4. Deploy.
-
-**Important:** Vercel only serves the static sportsbook. All odds/auth/wallet/bet
-requests go to `https://gobet.mywebpage.pro/api/...` on your VPS, so:
-
-- The API server must stay running on the VPS (PM2 + nginx as above).
-- The VPS must allow CORS from your Vercel domain. The API already uses permissive
-  CORS, but confirm your Vercel URL is accepted if you tighten it later.
-
-The admin panel is **not** included in the Vercel build — serve it from the VPS at `/admin/`.
+`/api/debug/database` should return `"jwtSecret": "set"` and `"connection": "ok"`.
 
 ---
 
-## Why the API can't go on Vercel
+### Updating
 
-Vercel (and similar serverless platforms) can't run:
+```bash
+cd /opt/xinghuang
+git pull
+docker compose up -d --build
+```
 
-- a long-lived Express process,
-- persistent PostgreSQL connections,
-- background cron jobs (auto-settlement, odds refresh),
-- PM2-managed processes.
+---
 
-Keep the API on a VPS. Vercel is only worth it if you want a CDN in front of the
-static frontend — otherwise the VPS already serves everything.
+### Useful commands
+
+| Command | What it does |
+|---|---|
+| `docker compose ps` | Show container status |
+| `docker compose logs -f` | Tail live logs |
+| `docker compose logs --tail=200` | Last 200 lines |
+| `docker compose restart xinghuang` | Restart without rebuild |
+| `docker compose down` | Stop and remove container |
+| `docker compose up -d --build` | Full rebuild and restart |
+| `docker system prune -f` | Remove unused images/layers |
+
+---
+
+### Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | ✅ | Neon PostgreSQL connection string |
+| `JWT_SECRET` | ✅ | 64-char hex — `openssl rand -hex 32` |
+| `ODDS_API_KEY` | Recommended | The Odds API — live match odds |
+| `BETSAPI_KEY` | Recommended | BetsAPI — in-play data |
+| `API_FOOTBALL_KEY` | Optional | Settlement fallback |
+| `NOWPAYMENTS_API_KEY` | Optional | NOWPayments gateway |
+| `NOWPAYMENTS_IPN_SECRET` | Optional | NOWPayments webhooks |
+| `CRYPTOMUS_API_KEY` | Optional | Cryptomus gateway |
+| `CRYPTOMUS_MERCHANT_ID` | Optional | Cryptomus merchant ID |
+| `PLISIO_API_KEY` | Optional | Plisio gateway |
+| `PLISIO_IPN_SECRET` | Optional | Plisio webhooks |
+| `DEPOSIT_WALLET_ADDRESS` | Optional | TRC-20 USDT address |
+| `DEPOSIT_WALLET_ADDRESS_ERC` | Optional | ERC-20 USDT address |
+| `DEPOSIT_WALLET_ADDRESS_BSC` | Optional | BSC USDT address |
+| `DEPOSIT_WALLET_ADDRESS_BTC` | Optional | Bitcoin address |
+| `DEPOSIT_WALLET_ADDRESS_SOL` | Optional | Solana address |
+| `DEPOSIT_WALLET_ADDRESS_TON` | Optional | TON address |
+| `DEPOSIT_WALLET_ADDRESS_XRP` | Optional | XRP address |
+| `ADMIN_INIT_TOKEN` | One-time | Remove after bootstrapping admin |

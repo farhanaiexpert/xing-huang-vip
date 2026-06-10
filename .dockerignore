@@ -1,0 +1,44 @@
+# ── Version control ───────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+
+# ── Node / pnpm ───────────────────────────────────────────────────────────────
+node_modules
+**/node_modules
+
+# ── Built output (rebuilt inside Docker) ─────────────────────────────────────
+dist
+**/dist
+.tsbuildinfo
+**/.tsbuildinfo
+
+# ── Secrets — never bake into the image ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Replit-specific files ─────────────────────────────────────────────────────
+.replit
+replit.nix
+.upm
+.config
+.cache
+.local/
+
+# ── Project assets not served by the app ─────────────────────────────────────
+attached_assets/
+screenshots/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+**/logs/
+
+# ── Editor / OS ───────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

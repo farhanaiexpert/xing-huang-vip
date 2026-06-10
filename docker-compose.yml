@@ -1,0 +1,33 @@
+services:
+  xinghuang:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xinghuang
+    restart: unless-stopped
+
+    # Nginx on the VPS listens on 80/443 and reverse-proxies to localhost:3000.
+    ports:
+      - "3000:3000"
+
+    # All secrets live in .env — never committed to git.
+    # NODE_ENV / PORT / BASE_PATH are pinned here and cannot be overridden by .env.
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      BASE_PATH: /api
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/healthz').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
