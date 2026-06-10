@@ -6,6 +6,7 @@
 import { useMemo } from 'react';
 import { ChevronRight, Trophy } from 'lucide-react';
 import { OddsButton } from './OddsButton';
+import { SportName } from './SportName';
 import { useOddsData } from '../hooks/useOddsData';
 import type { Match, League } from '../types';
 
@@ -93,7 +94,7 @@ export function EuropaLeagueFinal() {
                 Featured Match
               </p>
               <h3 className="text-[12px] font-bold text-[#F8FAFC]/80 leading-none truncate max-w-[220px]">
-                {league.name}
+                <SportName name={league.name} />
               </h3>
             </div>
           </div>

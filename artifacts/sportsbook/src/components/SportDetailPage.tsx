@@ -390,7 +390,7 @@ function MatchListsSection({ items }: { items: NonNullable<typeof import('../dat
               'text-[13px] font-medium transition-colors',
               item.isHighlighted ? 'text-[#D1D9E2]' : 'text-[#94A3B8]/65 group-hover:text-[#D1D9E2]'
             )}>
-              {item.name}
+              <SportName name={item.name} />
             </span>
             {item.count != null && (
               <span className="flex items-center gap-0.5 text-[10px] font-bold text-[#F8FAFC] bg-[#00DFA9]/20 border border-[#00DFA9]/30 px-1.5 py-0.5 rounded-sm">

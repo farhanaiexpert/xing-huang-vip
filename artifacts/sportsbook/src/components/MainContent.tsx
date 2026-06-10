@@ -787,7 +787,7 @@ export function MainContent({
                         className="inline-flex items-center gap-1 text-[9px] font-medium text-[#64748B] bg-[#111827] border border-[#1E2A38] px-2.5 py-1 rounded-full whitespace-nowrap"
                       >
                         <LayoutList className="h-2.5 w-2.5 shrink-0 opacity-50" />
-                        {l.name}
+                        <SportName name={l.name} />
                       </span>
                     ))}
                     {hiddenCount > 6 && (
@@ -1180,7 +1180,7 @@ function SiteFooter() {
                       href={link.href}
                       className="text-[11px] text-[#94A3B8]/55 hover:text-[#F8FAFC] transition-colors duration-150 leading-snug block"
                     >
-                      {link.label}
+                      <SportName name={link.label} />
                     </Link>
                   </li>
                 ))}
@@ -1231,7 +1231,7 @@ function SiteFooter() {
                       href={link.href}
                       className="text-[11px] text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors duration-150"
                     >
-                      {link.label}
+                      <SportName name={link.label} />
                     </Link>
                   </li>
                 ))}

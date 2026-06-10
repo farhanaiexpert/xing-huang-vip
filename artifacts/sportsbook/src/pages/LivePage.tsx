@@ -8,6 +8,7 @@ import { useOddsFormat } from '@/hooks/useOddsFormat';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatOdds } from '@/lib/oddsFormat';
 import { cn } from '@/lib/utils';
+import { SportName } from '@/components/SportName';
 import { useToast } from '@/hooks/use-toast';
 import { playOddsAdd, playOddsRemove } from '@/lib/oddsSound';
 import { useLiveOdds } from '@/hooks/useLiveOdds';
@@ -869,7 +870,7 @@ export function LivePage() {
                     )}
                   >
                     <span className="text-[12px]">{sf.icon}</span>
-                    {sf.label}
+                    <SportName name={sf.label} />
                     <span className={cn(
                       'text-[10px] font-black px-1.5 py-0.5 rounded-md',
                       activeSport === sf.id ? 'bg-[#00DFA9]/20 text-[#00DFA9]' : 'bg-white/[0.06] text-[#475569]',

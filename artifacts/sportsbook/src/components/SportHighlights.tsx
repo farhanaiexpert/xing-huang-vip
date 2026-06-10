@@ -179,7 +179,7 @@ function FeaturedCard({ entry }: { entry: FeaturedEntry }) {
 
         {/* League */}
         <p className="text-[9px] uppercase tracking-widest mb-2.5 truncate" style={{ color: `${bucket.color}60` }}>
-          {league.name}
+          <SportName name={league.name} />
         </p>
 
         {/* Teams */}
