@@ -168,6 +168,10 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
             </>
           )}
 
+          {/* ── World Cup 2026 ───────────────────────────────────────── */}
+          <WCPinnedEntry />
+          <SectionDivider />
+
           {/* ── Trending ────────────────────────────────────────────────── */}
           <SectionLabel icon={<TrendingUp className="h-3 w-3" />} label="Trending" />
           <div className="mt-1 mb-4">
@@ -239,6 +243,56 @@ export function SportsSidebar({ selectedSportId, onSelectSport, className }: Spo
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+const LOGO_URL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/World-Cup-logo.png';
+
+function WCPinnedEntry() {
+  const [location] = useLocation();
+  const { allLeagues } = useOddsData();
+  const matchCount = allLeagues.filter(l => l.sportKey === 'soccer_fifa_world_cup')
+    .reduce((n, l) => n + l.matches.length, 0);
+
+  const isActive = location === '/worldcup';
+
+  return (
+    <Link
+      href="/worldcup"
+      className={cn(
+        'relative group flex items-center gap-2.5 px-4 xl:px-5 py-2.5 mx-2 mb-1 rounded-xl transition-all duration-150',
+        isActive
+          ? 'bg-[#FACC15]/10 border border-[#FACC15]/25'
+          : 'hover:bg-[#121821]/80 border border-transparent'
+      )}
+    >
+      {/* Gold left bar when active */}
+      {isActive && (
+        <span className="absolute left-[6px] top-[6px] bottom-[6px] w-[2px] rounded-full bg-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.7)]" />
+      )}
+      {/* Logo */}
+      <div className="shrink-0 grid place-items-center w-[18px] h-[18px]">
+        <img src={LOGO_URL} alt="" className="w-[18px] h-[18px] object-contain" draggable={false} />
+      </div>
+      {/* Label */}
+      <span className={cn(
+        'flex-1 text-[12px] font-bold truncate',
+        isActive ? 'text-[#FACC15]' : 'text-[#94A3B8] group-hover:text-[#F8FAFC]'
+      )}>
+        World Cup 2026
+      </span>
+      {/* Badges */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {matchCount > 0 && (
+          <span className="text-[9px] font-black tabular-nums text-[#FACC15]/70 bg-[#FACC15]/10 px-1.5 py-0.5 rounded">
+            {matchCount}
+          </span>
+        )}
+        <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#FACC15]/15 text-[#FACC15] leading-none">
+          🔥
+        </span>
+      </div>
+    </Link>
+  );
+}
 
 function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (

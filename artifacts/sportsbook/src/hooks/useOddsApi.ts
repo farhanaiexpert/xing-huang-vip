@@ -17,7 +17,7 @@ import { fetchBetsApiUpcoming, type BetsApiEvent, type BetsApiSportMeta } from '
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v5'; // v5 — persists betsApiCountById for instant sidebar counts
+const STORAGE_KEY  = 'oddschain_v6'; // v6 — adds soccer_fifa_world_cup to ODDS_API_SPORTS
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
 const CACHE_TTL_MS = 35 * 60 * 1000;
 

@@ -18,6 +18,7 @@ import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { SportHighlights } from "./SportHighlights";
 import { LiveScoresTicker } from "./LiveScoresTicker";
 import { LiveEventsBanner } from "./LiveEventsBanner";
+import { WorldCupHero } from "./WorldCupHero";
 import { MatchOfTheDay } from "./MatchOfTheDay";
 import { SportDetailPage, SPORT_DETAIL_IDS } from "./SportDetailPage";
 import { ConnectWalletModal } from "./ConnectWalletModal";
@@ -697,6 +698,7 @@ export function MainContent({
                   />
                 </div>
               )}
+              {showFeatured && <WorldCupHero />}
               {showFeatured && <LiveEventsBanner />}
               {showFeatured && <USDTDepositBanner onDeposit={() => requestDeposit(isAuthenticated, navigate)} />}
               {showFeatured && <PopularBets />}

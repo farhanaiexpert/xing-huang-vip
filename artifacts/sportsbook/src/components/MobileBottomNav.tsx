@@ -5,7 +5,7 @@ import {
   History, HelpCircle, Star, FileText, ShieldCheck,
   Landmark, ChevronRight, Wallet, X, Check,
   TrendingUp, Share2, UserCircle, Radio, ArrowDownLeft,
-  Zap, Globe,
+  Zap, Globe, Trophy,
 } from 'lucide-react';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useBetHistory } from '../hooks/useBetHistory';
@@ -26,6 +26,7 @@ const ODDS_FORMATS = [
 ] as const;
 
 const QUICK_ACTIONS = [
+  { icon: Trophy,     label: 'World Cup 2026', sub: 'Bet on the finals', href: '/worldcup',          color: '#FACC15', bg: 'rgba(250,204,21,0.08)',   border: 'rgba(250,204,21,0.18)' },
   { icon: Radio,      label: 'Live Betting',sub: 'In-play markets',    href: '/live',               color: '#EF4444', bg: 'rgba(239,68,68,0.08)',    border: 'rgba(239,68,68,0.18)' },
   { icon: History,    label: 'Bet History', sub: 'View your bets',     href: '/account/bets',      color: '#38BDF8', bg: 'rgba(56,189,248,0.08)',  border: 'rgba(56,189,248,0.18)' },
   { icon: Star,       label: 'WinSpin',     sub: 'Spin & win',         href: '/winspin',            color: '#F59E0B', bg: 'rgba(245,158,11,0.08)',   border: 'rgba(245,158,11,0.18)' },

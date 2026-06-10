@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { X } from "lucide-react";
 
 // FIFA World Cup 2026 kicks off June 11, 2026.
@@ -39,6 +40,7 @@ function Segment({ value, unit }: { value: number; unit: string }) {
 }
 
 export function WorldCupCountdown() {
+  const [, navigate] = useLocation();
   const [closed, setClosed] = useState(false);
   const [visible, setVisible] = useState(false);
   const [remaining, setRemaining] = useState<Remaining>(getRemaining);
@@ -94,7 +96,10 @@ export function WorldCupCountdown() {
       aria-label="World Cup 2026 kickoff countdown"
       aria-hidden={!visible}
     >
-      <div className="relative flex items-center gap-3 pl-2.5 pr-7 py-2.5 rounded-2xl border border-white/10 bg-[#0B0F14]/55 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] overflow-hidden">
+      <div
+        onClick={() => navigate('/worldcup')}
+        className="relative flex items-center gap-3 pl-2.5 pr-7 py-2.5 rounded-2xl border border-white/10 bg-[#0B0F14]/55 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] overflow-hidden cursor-pointer hover:border-[#FACC15]/30 transition-colors"
+      >
         {/* Soft brand glow */}
         <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-[#00DFA9]/12 via-transparent to-[#38BDF8]/12" />
         {/* Top sheen highlight */}

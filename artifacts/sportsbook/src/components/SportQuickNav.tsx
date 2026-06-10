@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useLocation } from 'wouter';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { cn } from '../lib/utils';
 import { SportName } from './SportName';
@@ -39,9 +40,12 @@ interface NavItem {
   badge?: 'live' | 'hot' | 'new';
   /** If true, rendered with a special "featured" highlight */
   featured?: boolean;
+  /** If set, clicking navigates here instead of calling onSelect */
+  href?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { id: 'worldcup', label: 'World Cup 2026', icon: '🏆', featured: true, badge: 'hot', href: '/worldcup' },
   { id: 'soccer',       label: 'Soccer',                  icon: '⚽' },
   { id: 'tennis',       label: 'Tennis',                  icon: '🎾' },
   { id: 'nba',          label: 'NBA',                     icon: '🏀' },
@@ -58,6 +62,7 @@ interface Props {
 
 export function SportQuickNav({ selectedId, liveCount = 0, onSelect }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [, navigate] = useLocation();
 
   return (
     <div
@@ -76,7 +81,7 @@ export function SportQuickNav({ selectedId, liveCount = 0, onSelect }: Props) {
             return (
               <button
                 key={item.id}
-                onClick={() => onSelect(isActive ? null : item.id)}
+                onClick={() => item.href ? navigate(item.href) : onSelect(isActive ? null : item.id)}
                 className={cn(
                   'relative group flex items-center gap-1.5 px-3 sm:px-3.5 py-2 sm:py-3 text-[11px] sm:text-[12px] font-semibold whitespace-nowrap transition-all duration-150 select-none outline-none',
                   isActive

@@ -58,6 +58,7 @@ export interface OddsApiSportConfig {
  */
 export const ODDS_API_SPORTS: OddsApiSportConfig[] = [
   // ── Soccer ───────────────────────────────────────────────────────────────────
+  { key: 'soccer_fifa_world_cup',              sportId: 'sp_soccer',            leagueName: 'FIFA World Cup',           countryCode: 'GL', hasDraw: true  },
   { key: 'soccer_epl',                         sportId: 'sp_soccer',            leagueName: 'Premier League',           countryCode: 'GB', hasDraw: true  },
   { key: 'soccer_spain_la_liga',               sportId: 'sp_soccer',            leagueName: 'La Liga',                  countryCode: 'ES', hasDraw: true  },
   { key: 'soccer_italy_serie_a',               sportId: 'sp_soccer',            leagueName: 'Serie A',                  countryCode: 'IT', hasDraw: true  },
