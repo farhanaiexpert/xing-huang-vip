@@ -53,6 +53,7 @@ JWT_SECRET = "69a3ac5d3d6b98c16d557c2a1bef7a89a0d0d5ca4e7119a40266dc154c419aa893
 PLISIO_IPN_SECRET = "3fcc3a23d77ab7e156a01fa8fc10a8d1881e094165e5ffcf709d5b0a9443b021"
 CI = "true"
 BETSAPI_CRON_DISABLED = "1"
+BETSAPI_HOURLY_LIMIT = "500"
 
 [userenv.production]
 ALLOWED_ORIGINS = "https://gobet.mywebpage.pro,https://sports-odds-platform.replit.app"
