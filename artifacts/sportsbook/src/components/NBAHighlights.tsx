@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ChevronRight, BarChart2 } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { useOddsData } from '../hooks/useOddsData';
+import { SportName } from './SportName';
 import type { Match, League } from '../types';
 
 // ── Sport detection ───────────────────────────────────────────────────────────
@@ -124,7 +125,7 @@ export function NBAHighlights({ onViewAll }: { onViewAll?: () => void } = {}) {
       {/* Section header */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-base leading-none">🏀</span>
-        <span className="text-[13px] font-bold text-[#F8FAFC]">Basketball</span>
+        <span className="text-[13px] font-bold text-[#F8FAFC]"><SportName name="Basketball" /></span>
         <span className="text-[10px] text-[#94A3B8]/40 hidden sm:block">{leagueLabel}</span>
         <div className="flex-1 h-px bg-gradient-to-r from-[#253241] to-transparent" />
         <button onClick={onViewAll} className="flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors shrink-0">

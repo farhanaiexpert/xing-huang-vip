@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useBetHistory } from '../hooks/useBetHistory';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '../lib/utils';
+import { SportName } from './SportName';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 import { useI18n } from '../contexts/I18nContext';
@@ -250,7 +251,7 @@ export function Header() {
                         className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#253241]/40 transition-colors"
                       >
                         <Search className="h-3.5 w-3.5 text-[#94A3B8]/40" />
-                        <span className="text-sm text-[#F8FAFC]">{r.label}</span>
+                        <span className="text-sm text-[#F8FAFC]"><SportName name={r.label} /></span>
                       </Link>
                     ))}
                   </>
@@ -265,7 +266,7 @@ export function Header() {
                         className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#253241]/40 transition-colors"
                       >
                         <ChevronDown className="h-3.5 w-3.5 text-[#94A3B8]/30 -rotate-90" />
-                        <span className="text-sm text-[#94A3B8]/70">{r.label}</span>
+                        <span className="text-sm text-[#94A3B8]/70"><SportName name={r.label} /></span>
                       </Link>
                     ))}
                   </>
