@@ -6,71 +6,41 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
 import type { AuthUser } from '../contexts/AuthContext';
 
-interface WalletLogoProps {
-  src: string;
-  alt: string;
-  fallbackInitials: string;
-  fallbackBg: string;
-  fallbackColor: string;
+type WalletTag = 'full' | 'dapp';
+type WalletType = 'evm' | 'tron';
+
+interface WalletOption {
+  name: string;
+  icon: string;
+  tag: WalletTag;
+  type: WalletType;
+  /** EIP-6963 rdns — lets us connect directly to an installed wallet (no AppKit popup). */
+  rdns?: string;
 }
 
-function WalletLogo({ src, alt, fallbackInitials, fallbackBg, fallbackColor }: WalletLogoProps) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return (
-      <span
-        className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[8px] font-black leading-none"
-        style={{ background: fallbackBg, color: fallbackColor }}
-      >
-        {fallbackInitials}
-      </span>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt={alt}
-      width={18}
-      height={18}
-      className="h-[18px] w-[18px] rounded-full object-cover"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
-const EVM_WALLET_LOGOS: WalletLogoProps[] = [
-  {
-    src: 'https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/SVG_MetaMask_Icon_Color.svg',
-    alt: 'MetaMask',
-    fallbackInitials: 'MM',
-    fallbackBg: '#F6851B',
-    fallbackColor: '#fff',
-  },
-  {
-    src: 'https://avatars.githubusercontent.com/u/37784886?s=40&v=4',
-    alt: 'WalletConnect',
-    fallbackInitials: 'WC',
-    fallbackBg: '#3B99FC',
-    fallbackColor: '#fff',
-  },
-  {
-    src: 'https://avatars.githubusercontent.com/u/18060234?s=40&v=4',
-    alt: 'Coinbase',
-    fallbackInitials: 'CB',
-    fallbackBg: '#0052FF',
-    fallbackColor: '#fff',
-  },
-  {
-    src: 'https://avatars.githubusercontent.com/u/32179149?s=40&v=4',
-    alt: 'Trust Wallet',
-    fallbackInitials: 'TW',
-    fallbackBg: '#3375BB',
-    fallbackColor: '#fff',
-  },
+/**
+ * Wallet list — order, names, icons and support tags match the reference design.
+ * Each wallet routes to a real sign-in flow: TronLink uses the TRON SIWE flow,
+ * every other wallet uses the EVM SIWE flow (direct EIP-6963 connect when the
+ * wallet is installed, AppKit QR/deep-link fallback otherwise).
+ */
+const WALLETS: WalletOption[] = [
+  { name: 'TronLink',    icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/TronLink.png',                              tag: 'full', type: 'tron' },
+  { name: 'OKX',         icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/OKX.svg',                                   tag: 'full', type: 'evm', rdns: 'com.okex.wallet' },
+  { name: 'Bitget',      icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/BitGet.svg',                                tag: 'full', type: 'evm', rdns: 'com.bitget.web3' },
+  { name: 'imToken',     icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imToken.svg',                               tag: 'dapp', type: 'evm', rdns: 'im.token' },
+  { name: 'TokenPocket', icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/TokenPocket.svg',                           tag: 'dapp', type: 'evm', rdns: 'pro.tokenpocket' },
+  { name: 'Trust',       icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/TrustWallet.svg',                           tag: 'dapp', type: 'evm', rdns: 'com.trustwallet.app' },
+  { name: 'Portal',      icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Portal.svg',                                tag: 'dapp', type: 'evm' },
+  { name: 'FoxWallet',   icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/FoxWallet.svg',                             tag: 'dapp', type: 'evm' },
+  { name: 'BitPie',      icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/e8570352728f9524148d395e9b9f39ed_icon.png', tag: 'dapp', type: 'evm' },
+  { name: 'MetaMask',    icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/MetaMask.svg',                              tag: 'dapp', type: 'evm', rdns: 'io.metamask' },
 ];
 
+/** Number of wallets shown in the collapsed state before "Show more". */
+const COLLAPSED_COUNT = 4;
+
 type Step = 'choose' | 'referral' | 'signing' | 'verifying' | 'error';
-type WalletType = 'evm' | 'tron';
 
 interface NonceFetchResult { nonce: string; message: string }
 interface VerifyResult {
@@ -85,27 +55,22 @@ interface WalletPickerModalProps {
   onClose: () => void;
 }
 
-function EVM_ICON() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="10" cy="10" r="9" stroke="#627EEA" strokeWidth="1.5" />
-      <path d="M10 3.5V8.2L13.75 10L10 3.5Z" fill="#627EEA" fillOpacity="0.6" />
-      <path d="M10 3.5L6.25 10L10 8.2V3.5Z" fill="#627EEA" />
-      <path d="M10 12.5V16.5L13.75 10.8L10 12.5Z" fill="#627EEA" fillOpacity="0.6" />
-      <path d="M10 16.5V12.5L6.25 10.8L10 16.5Z" fill="#627EEA" />
-      <path d="M10 11.6L13.75 10L10 8.2V11.6Z" fill="#627EEA" fillOpacity="0.2" />
-      <path d="M6.25 10L10 11.6V8.2L6.25 10Z" fill="#627EEA" fillOpacity="0.6" />
-    </svg>
-  );
-}
-
-function TRON_ICON() {
+function WalletIcon({ name, icon }: { name: string; icon: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-xl bg-white/[0.06] text-sm font-black text-[#00DFA9]">
+        {name.charAt(0)}
+      </div>
+    );
+  }
   return (
     <img
-      src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/TronLink.png"
-      alt="TronLink"
-      className="w-5 h-5 object-contain rounded"
-      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      src={icon}
+      alt={name}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-full w-full object-contain"
     />
   );
 }
@@ -119,6 +84,7 @@ function stepLabel(step: Step): string {
 export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
   const [step, setStep] = useState<Step>('choose');
   const [walletType, setWalletType] = useState<WalletType | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
   const [pendingAddress, setPendingAddress] = useState<string | null>(null);
@@ -141,6 +107,7 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
     if (!open) {
       setStep('choose');
       setWalletType(null);
+      setExpanded(false);
       setError('');
       setPendingAddress(null);
     }
@@ -199,14 +166,14 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
   }, []);
 
   // ── EVM auth flow ──────────────────────────────────────────────────────────
-  const handleEvmConnect = useCallback(async () => {
+  const handleEvmConnect = useCallback(async (rdns?: string) => {
     setError('');
     setWalletType('evm');
     setStep('signing');
     try {
       let addr: string | undefined = evmWallet.address;
       if (!addr || !evmWallet.isConnected) {
-        const connected = await evmWallet.connect();
+        const connected = await evmWallet.connect(rdns);
         if (!connected) {
           setError('Wallet connection was cancelled or timed out. Please try again.');
           setStep('error');
@@ -347,6 +314,15 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
     }
   }, [checkWalletExists, handleTronSignFor]);
 
+  // ── Wallet row click → route to the right flow ──────────────────────────────
+  function handleWalletClick(w: WalletOption) {
+    if (w.type === 'tron') {
+      void handleTronConnect();
+    } else {
+      void handleEvmConnect(w.rdns);
+    }
+  }
+
   // ── Referral step: continue to sign ───────────────────────────────────────
   function handleContinueToSign() {
     if (!pendingAddress) return;
@@ -360,6 +336,7 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
   if (!open) return null;
 
   const isLoading = step === 'signing' || step === 'verifying';
+  const visibleWallets = expanded ? WALLETS : WALLETS.slice(0, COLLAPSED_COUNT);
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6">
@@ -377,7 +354,7 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="relative flex max-h-[90vh] w-full max-w-[400px] flex-col overflow-hidden rounded-3xl border border-white/[0.08] outline-none"
+        className="relative flex max-h-[90vh] w-full max-w-[420px] flex-col overflow-hidden rounded-3xl border border-white/[0.08] outline-none"
         style={{
           background: 'linear-gradient(180deg, #0E141B 0%, #0B0F14 100%)',
           boxShadow: '0 0 0 1px rgba(255,255,255,0.03) inset, 0 32px 90px rgba(0,0,0,0.75), 0 0 60px rgba(0,223,169,0.06)',
@@ -387,9 +364,9 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00DFA9]/40 to-transparent" />
 
         {/* Header */}
-        <div className="relative flex items-center justify-center px-6 pt-6 pb-4">
+        <div className="relative flex items-center justify-center px-6 pt-6 pb-2">
           <h2 id={titleId} className="text-[15px] font-semibold tracking-wide text-[#F8FAFC]">
-            Connect to Xing Huang
+            Connect your wallet
           </h2>
           <button
             onClick={handleClose}
@@ -400,134 +377,121 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-3">
+        {/* ── Loading state ── */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center px-6 py-12 gap-4">
+            <Loader2 className="h-9 w-9 text-[#00DFA9] animate-spin" />
+            <p className="text-[13px] text-[#94A3B8] text-center">{stepLabel(step)}</p>
+          </div>
+        )}
 
-          {/* ── Loading state ── */}
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center py-10 gap-4">
-              <Loader2 className="h-9 w-9 text-[#00DFA9] animate-spin" />
-              <p className="text-[13px] text-[#94A3B8] text-center">{stepLabel(step)}</p>
-            </div>
-          )}
-
-          {/* ── Choose wallet type ── */}
-          {step === 'choose' && (
-            <>
-              <p className="text-[12px] text-[#64748B] text-center pb-1">
-                Choose your wallet type to sign in
-              </p>
-
-              {/* EVM wallets */}
-              <button
-                onClick={() => void handleEvmConnect()}
-                className="group w-full flex items-center gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-4 py-4 transition-all duration-200 hover:border-[#00DFA9]/40 hover:bg-white/[0.05] active:scale-[0.99] text-left"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#627EEA]/10 border border-[#627EEA]/20">
-                  <EVM_ICON />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-bold text-[#F8FAFC] group-hover:text-white">EVM Wallets</p>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    {EVM_WALLET_LOGOS.map(logo => (
-                      <WalletLogo key={logo.alt} {...logo} />
-                    ))}
-                    <span className="text-[10px] text-[#64748B] font-medium ml-0.5">+300 more</span>
-                  </div>
-                </div>
-                <span className="shrink-0 rounded-md border border-[#00DFA9]/30 bg-[#00DFA9]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#00DFA9]">
-                  Full Support
-                </span>
-              </button>
-
-              {/* Tron wallet */}
-              <button
-                onClick={() => void handleTronConnect()}
-                className="group w-full flex items-center gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-4 py-4 transition-all duration-200 hover:border-[#F05023]/40 hover:bg-white/[0.05] active:scale-[0.99] text-left"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F05023]/10 border border-[#F05023]/20">
-                  <TRON_ICON />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-bold text-[#F8FAFC] group-hover:text-white">TronLink</p>
-                  <p className="text-[11px] text-[#64748B] mt-0.5">TRX / USDT TRC-20 — TRON Network</p>
-                </div>
-                <span className="shrink-0 rounded-md border border-[#00DFA9]/30 bg-[#00DFA9]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#00DFA9]">
-                  Full Support
-                </span>
-              </button>
-
-              <p className="text-[11px] text-[#64748B]/60 text-center pt-2">
-                Connecting a wallet signs you in — no password needed
-              </p>
-            </>
-          )}
-
-          {/* ── Referral code step ── */}
-          {step === 'referral' && (
-            <div className="space-y-4 py-2">
-              <div
-                className="flex items-center gap-2.5 rounded-xl px-4 py-3"
-                style={{ background: 'rgba(0,223,169,0.06)', border: '1px solid rgba(0,223,169,0.18)' }}
-              >
-                <CheckCircle2 className="h-4 w-4 text-[#00DFA9] shrink-0" />
-                <p className="text-[12px] text-[#00DFA9] font-semibold">
-                  Wallet connected:{' '}
-                  <span className="font-mono font-normal text-[#94A3B8]">
-                    {pendingAddress ? pendingAddress.slice(0, 8) + '…' + pendingAddress.slice(-6) : ''}
+        {/* ── Choose wallet (branded list) ── */}
+        {step === 'choose' && (
+          <>
+            <div className="flex flex-col gap-2.5 overflow-y-auto px-5 py-4 sidebar-scroll">
+              {visibleWallets.map(w => (
+                <button
+                  key={w.name}
+                  onClick={() => handleWalletClick(w)}
+                  className="group flex items-center gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-4 py-3.5 text-left transition-all duration-200 hover:border-[#00DFA9]/40 hover:bg-white/[0.05] active:scale-[0.99]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+                    <WalletIcon name={w.name} icon={w.icon} />
                   </span>
-                </p>
-              </div>
+                  <span className="text-[15px] font-bold tracking-tight text-[#F8FAFC] group-hover:text-white">
+                    {w.name}
+                  </span>
+                  {w.tag === 'full' ? (
+                    <span className="ml-auto rounded-md border border-[#00DFA9]/30 bg-[#00DFA9]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#00DFA9]">
+                      Full Support
+                    </span>
+                  ) : (
+                    <span className="ml-auto text-[11px] font-semibold text-[#94A3B8]/55">
+                      DApp Browser
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-[#64748B] mb-2">
-                  Referral Code <span className="normal-case font-normal text-[#64748B]/60">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={referralCode}
-                  onChange={e => setReferralCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. IHFFXMRP"
-                  maxLength={16}
-                  className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-4 py-3 text-[13px] font-mono text-[#F8FAFC] placeholder:text-[#64748B]/50 outline-none focus:border-[#00DFA9]/40 focus:bg-white/[0.06] transition-all"
-                />
-              </div>
-
+            {/* Show more / less */}
+            <div className="px-5 pb-3">
               <button
-                onClick={handleContinueToSign}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-[14px] font-bold transition-all"
-                style={{ background: 'linear-gradient(135deg, #00DFA9, #00B589)', color: '#0B0F14' }}
+                onClick={() => setExpanded(v => !v)}
+                className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3 text-[13px] font-semibold text-[#94A3B8] transition-all duration-200 hover:border-[#00DFA9]/30 hover:text-[#F8FAFC]"
               >
-                Continue to Sign
-                <ChevronRight className="h-4 w-4" />
+                {expanded ? 'Show less' : `Show more (${WALLETS.length - COLLAPSED_COUNT})`}
               </button>
+            </div>
+            <div className="pb-5 text-center text-[10px] font-bold uppercase tracking-[0.25em] text-[#94A3B8]/30">
+              Sign in securely — no password
+            </div>
+          </>
+        )}
 
-              <p className="text-[11px] text-[#64748B]/60 text-center">
-                You'll be asked to sign a message in your wallet — no gas fees
+        {/* ── Referral code step ── */}
+        {step === 'referral' && (
+          <div className="space-y-4 px-5 pb-6 pt-2">
+            <div
+              className="flex items-center gap-2.5 rounded-xl px-4 py-3"
+              style={{ background: 'rgba(0,223,169,0.06)', border: '1px solid rgba(0,223,169,0.18)' }}
+            >
+              <CheckCircle2 className="h-4 w-4 text-[#00DFA9] shrink-0" />
+              <p className="text-[12px] text-[#00DFA9] font-semibold">
+                Wallet connected:{' '}
+                <span className="font-mono font-normal text-[#94A3B8]">
+                  {pendingAddress ? pendingAddress.slice(0, 8) + '…' + pendingAddress.slice(-6) : ''}
+                </span>
               </p>
             </div>
-          )}
 
-          {/* ── Error state ── */}
-          {step === 'error' && (
-            <div className="space-y-4 py-2">
-              <div
-                className="flex items-start gap-3 rounded-xl px-4 py-3.5"
-                style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)' }}
-              >
-                <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                <p className="text-[12px] text-red-400 leading-relaxed">{error}</p>
-              </div>
-              <button
-                onClick={() => { setStep('choose'); setError(''); setPendingAddress(null); setWalletType(null); }}
-                className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.03] py-3 text-[13px] font-semibold text-[#94A3B8] hover:text-[#F8FAFC] hover:border-white/[0.18] transition-all"
-              >
-                Try Again
-              </button>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-[#64748B] mb-2">
+                Referral Code <span className="normal-case font-normal text-[#64748B]/60">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={referralCode}
+                onChange={e => setReferralCode(e.target.value.toUpperCase())}
+                placeholder="e.g. IHFFXMRP"
+                maxLength={16}
+                className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-4 py-3 text-[13px] font-mono text-[#F8FAFC] placeholder:text-[#64748B]/50 outline-none focus:border-[#00DFA9]/40 focus:bg-white/[0.06] transition-all"
+              />
             </div>
-          )}
 
-        </div>
+            <button
+              onClick={handleContinueToSign}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-[14px] font-bold transition-all"
+              style={{ background: 'linear-gradient(135deg, #00DFA9, #00B589)', color: '#0B0F14' }}
+            >
+              Continue to Sign
+              <ChevronRight className="h-4 w-4" />
+            </button>
+
+            <p className="text-[11px] text-[#64748B]/60 text-center">
+              You'll be asked to sign a message in your wallet — no gas fees
+            </p>
+          </div>
+        )}
+
+        {/* ── Error state ── */}
+        {step === 'error' && (
+          <div className="space-y-4 px-5 pb-6 pt-2">
+            <div
+              className="flex items-start gap-3 rounded-xl px-4 py-3.5"
+              style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)' }}
+            >
+              <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-[12px] text-red-400 leading-relaxed">{error}</p>
+            </div>
+            <button
+              onClick={() => { setStep('choose'); setError(''); setPendingAddress(null); setWalletType(null); }}
+              className="w-full rounded-2xl border border-white/[0.10] bg-white/[0.03] py-3 text-[13px] font-semibold text-[#94A3B8] hover:text-[#F8FAFC] hover:border-white/[0.18] transition-all"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body,
