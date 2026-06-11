@@ -1,0 +1,61 @@
+Please completely redesign the Match Details page into a premium modern sportsbook layout.
+
+I want the page structure like this:
+
+1. Left Sidebar — Market Navigation
+
+* Show all market categories vertically on the left side.
+* Example: Popular, Goals, Match Result, Handicap, European Handicap, Half Time, Corners, Cards, Correct Score, Next Goal, Time/Minute, Specials.
+* Each item should show icon + name + market count.
+* Active market should be clearly highlighted.
+* Clicking a market should smoothly scroll/open that section in the center.
+* On mobile, this sidebar should become a horizontal scrollable market bar.
+
+2. Center Main Area — Match Hero + Odds
+
+* At the top, create a proper match hero section for the teams.
+* Behind the teams/hero section, use this image as the cover background:
+  https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ground1.webp
+* Add a dark premium overlay on top of the image so team names, flags/logos, league, date/time, and VS area are clearly readable.
+* Show both teams clearly: team logo/flag, team name, Home/Away badge, VS center, league name, match date/time, stadium if available.
+* Below the hero, show odds/markets in clean professional cards.
+* Market sections should be grouped properly: Match Result, BTTS, Over/Under, Handicap, Half Time, Correct Score, Corners, Cards, Time/Minute, Specials, etc.
+* Odds buttons should be larger, clean, clickable, and perfectly aligned.
+* Each market section should be collapsible/expandable.
+
+3. Right Sidebar — Bet Slip
+
+* Keep the bet slip as a sticky right sidebar on desktop.
+* Make it clean, modern, and professional.
+* Do not break the existing bet slip logic or betting flow.
+
+Color and design improvements:
+
+* Improve the full color system.
+* Use a premium dark sportsbook theme.
+* Background: deep navy / black gradient.
+* Cards: dark glassmorphism panels with subtle borders.
+* Main accent: neon green / teal for active states and important actions.
+* Secondary accent: cyan/blue for hover, icons, and section borders.
+* Odds color: keep yellow/gold, but make it cleaner and more readable.
+* Avoid too many random colors. Keep everything consistent and premium.
+* Improve spacing, typography, shadows, borders, active states, and hover effects.
+* The layout should look professional, modern, and high-end.
+
+Important:
+
+* Completely change the current layout, not small CSS edits.
+* Desktop layout should be 3 columns: left market sidebar, center match/odds content, right bet slip.
+* Tablet/mobile layout should stack properly: hero first, market nav horizontal scroll, odds content, bet slip accessible without breaking layout.
+* Remove the current cramped horizontal market navigator design.
+* Keep all existing market data, odds selection, bet slip actions, and backend API logic intact.
+* Do not break the current betting functionality.
+
+After finishing, summarize:
+
+1. Files changed
+2. New layout structure
+3. How the hero background image and overlay were added
+4. How market navigation works
+5. How mobile responsiveness works
+6. How to test odds selection and bet slip

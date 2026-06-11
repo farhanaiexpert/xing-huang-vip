@@ -5,6 +5,7 @@ import { Header } from '../components/Header';
 import { MatchHeader } from '../components/match/MatchHeader';
 import { MarketGroup } from '../components/match/MarketGroup';
 import { MarketNav } from '../components/match/MarketNav';
+import { MarketSidebar } from '../components/match/MarketSidebar';
 import { generateDetailMarkets } from '../data/marketDetails';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useOddsData } from '../hooks/useOddsData';
@@ -375,6 +376,17 @@ export function MatchDetail() {
 // Height of the sticky MarketNav bar (h-[54px]). Used for scroll offset calculation
 // and for the scroll-spy threshold.
 const NAV_HEIGHT = 63; // matches h-[60px] nav + 3px border-bottom active indicator
+const DESKTOP_TOP_GAP = 16; // small breathing gap on xl+ where the horizontal nav is hidden
+
+// On xl+ the horizontal MarketNav is replaced by the fixed left sidebar, so there's
+// no sticky top bar to offset for — only a small breathing gap. Below xl the sticky
+// horizontal nav is visible, so reserve its full height.
+function topOffset(): number {
+  if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches) {
+    return DESKTOP_TOP_GAP;
+  }
+  return NAV_HEIGHT;
+}
 
 function MatchDetailBody({
   match, league, sportKey, matchName, groups,
@@ -408,7 +420,7 @@ function MatchDetailBody({
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = requestAnimationFrame(() => {
         const containerRect = container.getBoundingClientRect();
-        const threshold     = containerRect.top + NAV_HEIGHT + 24;
+        const threshold     = containerRect.top + topOffset() + 24;
 
         // Start null (= All tab); update to the last group whose top <= threshold.
         let found: string | null = null;
@@ -458,7 +470,7 @@ function MatchDetailBody({
       curr = curr.offsetParent as HTMLElement | null;
     }
 
-    container.scrollTo({ top: Math.max(0, offsetTop - NAV_HEIGHT - 6), behavior: 'smooth' });
+    container.scrollTo({ top: Math.max(0, offsetTop - topOffset() - 6), behavior: 'smooth' });
     setTimeout(() => { isScrollingRef.current = false; }, 800);
   }, []);
 
@@ -484,7 +496,8 @@ function MatchDetailBody({
   const displayScore = liveData.score ?? match.score;
 
   // ── Layout ──────────────────────────────────────────────────────────────────
-  // Right padding reserves space for the fixed BetSlip panel on desktop.
+  // Right padding reserves space for the fixed BetSlip panel on desktop;
+  // left padding reserves space for the fixed market sidebar.
   const contentPr = betSlipCollapsed ? 'xl:pr-16' : 'xl:pr-[264px]';
 
   return (
@@ -492,9 +505,19 @@ function MatchDetailBody({
       <Header />
 
       <div className="flex-1 flex overflow-hidden">
+        {/* ── Left: vertical market navigation (desktop only) ───────────────── */}
+        <MarketSidebar
+          groups={groups}
+          activeId={activeGroupId}
+          onSelect={handleNavSelect}
+          match={match}
+          league={league}
+        />
+
         {/* ── Main column ─────────────────────────────────────────────────── */}
         <div className={cn(
           'flex-1 flex flex-col min-w-0 overflow-hidden transition-[padding] duration-300',
+          'xl:pl-[228px]',
           contentPr,
         )}>
           {/*
@@ -518,12 +541,15 @@ function MatchDetailBody({
             {/* Primary market quick-bet panel */}
             <OddsOverview match={match} sportKey={sportKey} commenceTime={match.startTime} />
 
-            {/* Sticky market navigator — sticks within this scroll container */}
-            <MarketNav
-              groups={groups}
-              activeId={activeGroupId}
-              onSelect={handleNavSelect}
-            />
+            {/* Sticky market navigator — horizontal scroll bar (mobile/tablet only;
+                replaced by the fixed left sidebar on desktop) */}
+            <div className="xl:hidden">
+              <MarketNav
+                groups={groups}
+                activeId={activeGroupId}
+                onSelect={handleNavSelect}
+              />
+            </div>
 
             {/* Market group cards */}
             <div className="px-3 sm:px-4 xl:px-5 pt-3 pb-16 space-y-2.5 w-full">

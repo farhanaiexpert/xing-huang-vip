@@ -147,11 +147,6 @@ function NavTab({ tabRef, icon, label, count, isActive, color, onClick, isAllTab
         borderBottom:  `3px solid ${isActive ? activeBorder : 'transparent'}`,
         color:         isActive ? activeText : inactiveText,
         transition:    'color 0.18s ease, background 0.18s ease, border-color 0.18s ease',
-        outline:       'none',
-        border:        'none',
-        borderBottomWidth: '3px',
-        borderBottomStyle: 'solid',
-        borderBottomColor: isActive ? activeBorder : 'transparent',
       }}
       onMouseEnter={e => {
         if (isActive) return;

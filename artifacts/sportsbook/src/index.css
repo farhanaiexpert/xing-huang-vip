@@ -363,6 +363,14 @@ wcm-modal::part(backdrop) {
   border-radius: 2px;
 }
 
+/* ── Keyboard focus indication for market navigation ────────────────────────── */
+.market-nav-scroll button:focus-visible,
+.sidebar-scroll button:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.7);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
 /* ── LiveScoresTicker infinite scroll ───────────────────────────────────────── */
 @keyframes tickerScroll {
   0%   { transform: translateX(0); }

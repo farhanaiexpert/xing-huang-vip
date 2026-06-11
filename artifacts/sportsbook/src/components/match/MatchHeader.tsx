@@ -56,6 +56,23 @@ export function MatchHeader({ match, league, liveData }: MatchHeaderProps) {
       {/* Deep background */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0D1825] via-[#0B1520] to-[#0B0F14]" />
 
+      {/* Stadium cover image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: 'url(https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ground1.webp)',
+          opacity: 0.3,
+        }}
+      />
+      {/* Dark premium overlay — keeps team names, VS, and text readable */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(11,15,20,0.80) 0%, rgba(11,15,20,0.50) 38%, rgba(11,15,20,0.78) 78%, rgba(11,15,20,0.95) 100%)',
+        }}
+      />
+
       {/* Ambient glow — home side */}
       <div className="absolute left-0 top-0 bottom-0 w-1/2 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(0,223,169,0.05) 0%, transparent 70%)' }} />
