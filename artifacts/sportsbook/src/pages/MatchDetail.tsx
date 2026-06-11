@@ -374,7 +374,7 @@ export function MatchDetail() {
 
 // Height of the sticky MarketNav bar (h-[54px]). Used for scroll offset calculation
 // and for the scroll-spy threshold.
-const NAV_HEIGHT = 58;
+const NAV_HEIGHT = 63; // matches h-[60px] nav + 3px border-bottom active indicator
 
 function MatchDetailBody({
   match, league, sportKey, matchName, groups,
@@ -397,14 +397,8 @@ function MatchDetailBody({
   const isScrollingRef    = useRef(false);
   const rafIdRef          = useRef<number | null>(null);
 
-  // Set first group as active when groups arrive
-  useEffect(() => {
-    if (groups.length > 0 && !activeGroupId) {
-      setActiveGroupId(groups[0].id);
-    }
-  }, [groups.length, activeGroupId]);
-
-  // Scroll-spy: listen to scroll events on the container and update activeGroupId
+  // Scroll-spy: listen to scroll events and update the active tab.
+  // null = user is above all groups (≙ "All" tab active).
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || groups.length === 0) return;
@@ -414,17 +408,14 @@ function MatchDetailBody({
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = requestAnimationFrame(() => {
         const containerRect = container.getBoundingClientRect();
-        // The threshold is just below the sticky nav
-        const threshold = containerRect.top + NAV_HEIGHT + 24;
+        const threshold     = containerRect.top + NAV_HEIGHT + 24;
 
-        // Walk all groups and find the last one whose top edge is above the threshold
-        let found: string | null = groups[0].id;
+        // Start null (= All tab); update to the last group whose top <= threshold.
+        let found: string | null = null;
         for (const group of groups) {
           const el = groupRefs.current[group.id];
           if (!el) continue;
-          if (el.getBoundingClientRect().top <= threshold) {
-            found = group.id;
-          }
+          if (el.getBoundingClientRect().top <= threshold) found = group.id;
         }
         setActiveGroupId(found);
       });
@@ -437,20 +428,29 @@ function MatchDetailBody({
     };
   }, [groups]);
 
-  // Navigate to a group: open it and scroll to it
+  // Navigate to a group or scroll to top ("__all__").
   const handleNavSelect = useCallback((id: string) => {
+    const container = scrollContainerRef.current;
+
+    if (id === '__all__') {
+      // "All" tab: scroll to top, clear active group
+      setActiveGroupId(null);
+      if (container) {
+        isScrollingRef.current = true;
+        container.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => { isScrollingRef.current = false; }, 800);
+      }
+      return;
+    }
+
     setActiveGroupId(id);
 
-    const el        = groupRefs.current[id];
-    const container = scrollContainerRef.current;
+    const el = groupRefs.current[id];
     if (!el || !container) return;
 
     isScrollingRef.current = true;
 
-    // Walk the offsetParent chain from the group element up to the scroll container,
-    // accumulating offsetTop values. This gives the element's true distance from the
-    // top of the scroll container's content — reliable regardless of sticky positioning,
-    // getBoundingClientRect viewport shifts, or any ancestor transforms.
+    // Walk offsetParent chain for a layout-independent offset calculation.
     let offsetTop = 0;
     let curr: HTMLElement | null = el;
     while (curr && curr !== container) {
@@ -458,10 +458,7 @@ function MatchDetailBody({
       curr = curr.offsetParent as HTMLElement | null;
     }
 
-    const scrollTarget = Math.max(0, offsetTop - NAV_HEIGHT - 6);
-    container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
-
-    // Release scroll-spy lock after smooth scroll finishes (~700ms)
+    container.scrollTo({ top: Math.max(0, offsetTop - NAV_HEIGHT - 6), behavior: 'smooth' });
     setTimeout(() => { isScrollingRef.current = false; }, 800);
   }, []);
 

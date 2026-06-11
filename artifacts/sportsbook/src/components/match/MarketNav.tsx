@@ -1,5 +1,4 @@
-import { useRef, useEffect, forwardRef } from 'react';
-import { cn } from '../../lib/utils';
+import { useRef, useEffect } from 'react';
 import { getGroupColor } from '../../data/groupColors';
 import type { MarketDetailGroup } from '../../data/marketDetails';
 
@@ -9,134 +8,198 @@ interface MarketNavProps {
   onSelect: (id: string) => void;
 }
 
+function hexToRgb(hex: string) {
+  const h = hex.replace('#', '');
+  return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
+}
+
 export function MarketNav({ groups, activeId, onSelect }: MarketNavProps) {
   const navScrollRef = useRef<HTMLDivElement | null>(null);
   const buttonRefs   = useRef<Record<string, HTMLButtonElement | null>>({});
 
+  const totalCount = groups.reduce(
+    (sum, g) => sum + g.markets.reduce((a, m) => a + m.selections.length, 0), 0
+  );
+
+  // Auto-center active tab
   useEffect(() => {
-    const btn = activeId ? buttonRefs.current[activeId] : null;
+    const id  = activeId ?? '__all__';
+    const btn = buttonRefs.current[id];
     const nav = navScrollRef.current;
     if (!btn || !nav) return;
     const targetLeft = btn.offsetLeft - nav.clientWidth / 2 + btn.offsetWidth / 2;
     nav.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
   }, [activeId]);
 
+  const visibleGroups = groups.filter(g =>
+    g.markets.reduce((a, m) => a + m.selections.length, 0) > 0
+  );
+
   return (
     <div
       className="sticky top-0 z-20"
       style={{
-        background: 'linear-gradient(180deg, #0D1520 0%, rgba(11,15,20,0.98) 100%)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(37,50,65,0.6)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+        background:       'linear-gradient(180deg, #070B12 0%, #08101A 100%)',
+        backdropFilter:   'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderBottom:     '1px solid rgba(30,42,58,0.8)',
+        boxShadow:        '0 4px 32px rgba(0,0,0,0.5)',
       }}
     >
-      {/* Thin rainbow-ish accent line at top */}
-      <div
-        className="h-[1.5px] w-full"
-        style={{ background: 'linear-gradient(90deg, #FACC15 0%, #00DFA9 25%, #38BDF8 50%, #A78BFA 75%, #FB7185 100%)' }}
-      />
+      {/* Rainbow top accent line */}
+      <div style={{
+        height: '2px',
+        background: 'linear-gradient(90deg, #FACC15 0%, #00DFA9 22%, #38BDF8 44%, #A78BFA 66%, #F472B6 83%, #FB7185 100%)',
+      }} />
 
-      {/* Scrollable pill strip */}
+      {/* Scrollable tab row */}
       <div
         ref={navScrollRef}
-        className="market-nav-scroll flex items-center gap-2 px-3 sm:px-4 h-[58px] overflow-x-auto"
+        className="market-nav-scroll flex items-stretch overflow-x-auto"
+        style={{ height: '60px' }}
       >
-        {groups.map(group => {
-          const count    = group.markets.reduce((a, m) => a + m.selections.length, 0);
-          if (count === 0) return null;
-          const isActive = activeId === group.id;
-          const color    = getGroupColor(group.id);
+        {/* "All" tab */}
+        <NavTab
+          tabRef={el => { buttonRefs.current['__all__'] = el; }}
+          icon="◎"
+          label="All"
+          count={totalCount}
+          isActive={activeId === null}
+          color="#94A3B8"
+          onClick={() => onSelect('__all__')}
+          isAllTab
+        />
+
+        {/* Thin vertical divider after All */}
+        <div style={{ width: '1px', background: 'rgba(37,50,65,0.5)', alignSelf: 'center', height: '28px', flexShrink: 0 }} />
+
+        {/* Group tabs */}
+        {visibleGroups.map(group => {
+          const count = group.markets.reduce((a, m) => a + m.selections.length, 0);
           return (
-            <NavPill
+            <NavTab
               key={group.id}
-              ref={el => { buttonRefs.current[group.id] = el; }}
-              label={group.name}
+              tabRef={el => { buttonRefs.current[group.id] = el; }}
               icon={group.icon}
+              label={group.name}
               count={count}
-              isActive={isActive}
-              color={color}
+              isActive={activeId === group.id}
+              color={getGroupColor(group.id)}
               onClick={() => onSelect(group.id)}
             />
           );
         })}
-        {/* Right padding spacer so last pill isn't clipped by the fade */}
-        <div className="w-8 shrink-0" />
+
+        {/* Right padding so last tab isn't behind the fade */}
+        <div style={{ width: '24px', flexShrink: 0 }} />
       </div>
 
       {/* Left + right fade gradients */}
-      <div className="absolute left-0 top-0 h-full w-8 pointer-events-none"
-        style={{ background: 'linear-gradient(to right, #0D1520 0%, transparent 100%)' }} />
-      <div className="absolute right-0 top-0 h-full w-10 pointer-events-none"
-        style={{ background: 'linear-gradient(to left, rgba(11,15,20,0.95) 0%, transparent 100%)' }} />
+      <div style={{
+        position: 'absolute', left: 0, top: 0, width: '32px', height: '100%',
+        background: 'linear-gradient(to right, rgba(7,11,18,0.95) 0%, transparent 100%)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', right: 0, top: 0, width: '40px', height: '100%',
+        background: 'linear-gradient(to left, rgba(8,16,26,0.95) 0%, transparent 100%)',
+        pointerEvents: 'none',
+      }} />
     </div>
   );
 }
 
-// ─── Individual pill tab ───────────────────────────────────────────────────────
+// ─── Individual tab ────────────────────────────────────────────────────────────
 
-const NavPill = forwardRef<
-  HTMLButtonElement,
-  { label: string; icon: string; count: number; isActive: boolean; color: string; onClick: () => void }
->(({ label, icon, count, isActive, color, onClick }, ref) => {
-  const hex6 = color.replace('#', '');
-  const r    = parseInt(hex6.slice(0, 2), 16);
-  const g    = parseInt(hex6.slice(2, 4), 16);
-  const b    = parseInt(hex6.slice(4, 6), 16);
+interface NavTabProps {
+  tabRef:   (el: HTMLButtonElement | null) => void;
+  icon:     string;
+  label:    string;
+  count:    number;
+  isActive: boolean;
+  color:    string;
+  onClick:  () => void;
+  isAllTab?: boolean;
+}
 
-  const activeBg     = `rgba(${r},${g},${b},0.14)`;
-  const activeBorder = `rgba(${r},${g},${b},0.55)`;
-  const activeGlow   = `0 0 18px rgba(${r},${g},${b},0.28), 0 2px 8px rgba(0,0,0,0.4)`;
-  const badgeBg      = `rgba(${r},${g},${b},0.22)`;
+function NavTab({ tabRef, icon, label, count, isActive, color, onClick, isAllTab }: NavTabProps) {
+  const { r, g, b } = hexToRgb(color);
+
+  const activeText   = color;
+  const inactiveText = 'rgba(148,163,184,0.6)';
+  const activeBg     = `rgba(${r},${g},${b},0.06)`;
+  const activeBorder = color;
 
   return (
     <button
-      ref={ref}
+      ref={tabRef}
       onClick={onClick}
-      className={cn(
-        'relative flex items-center gap-1.5 px-3.5 py-2 rounded-full',
-        'whitespace-nowrap transition-all duration-200 select-none shrink-0',
-        'focus-visible:outline-none',
-        'text-[12px] font-bold',
-      )}
-      style={isActive ? {
-        background:  activeBg,
-        border:      `1.5px solid ${activeBorder}`,
-        color,
-        boxShadow:   activeGlow,
-        transform:   'translateY(-0.5px)',
-      } : {
-        background:  'rgba(17,26,40,0.7)',
-        border:      '1.5px solid rgba(37,50,65,0.5)',
-        color:       'rgba(148,163,184,0.6)',
+      style={{
+        height:        '60px',
+        paddingInline: isAllTab ? '18px' : '15px',
+        display:       'flex',
+        alignItems:    'center',
+        gap:           '7px',
+        whiteSpace:    'nowrap',
+        flexShrink:    0,
+        cursor:        'pointer',
+        background:    isActive ? activeBg : 'transparent',
+        borderBottom:  `3px solid ${isActive ? activeBorder : 'transparent'}`,
+        color:         isActive ? activeText : inactiveText,
+        transition:    'color 0.18s ease, background 0.18s ease, border-color 0.18s ease',
+        outline:       'none',
+        border:        'none',
+        borderBottomWidth: '3px',
+        borderBottomStyle: 'solid',
+        borderBottomColor: isActive ? activeBorder : 'transparent',
       }}
       onMouseEnter={e => {
         if (isActive) return;
-        const el = e.currentTarget as HTMLElement;
-        el.style.color       = `rgba(${r},${g},${b},0.85)`;
-        el.style.border      = `1.5px solid rgba(${r},${g},${b},0.25)`;
-        el.style.background  = `rgba(${r},${g},${b},0.06)`;
+        const el = e.currentTarget;
+        el.style.color      = 'rgba(220,228,240,0.88)';
+        el.style.background = 'rgba(37,50,65,0.25)';
+        el.style.borderBottomColor = `rgba(${r},${g},${b},0.25)`;
       }}
       onMouseLeave={e => {
         if (isActive) return;
-        const el = e.currentTarget as HTMLElement;
-        el.style.color      = 'rgba(148,163,184,0.6)';
-        el.style.border     = '1.5px solid rgba(37,50,65,0.5)';
-        el.style.background = 'rgba(17,26,40,0.7)';
+        const el = e.currentTarget;
+        el.style.color             = inactiveText;
+        el.style.background        = 'transparent';
+        el.style.borderBottomColor = 'transparent';
       }}
     >
-      <span className="text-[14px] leading-none">{icon}</span>
-      <span className="leading-none tracking-tight">{label}</span>
-      <span
-        className="text-[10px] font-black px-1.5 py-[3px] rounded-full tabular-nums leading-none transition-colors duration-150"
-        style={isActive
-          ? { background: badgeBg, color }
-          : { background: 'rgba(37,50,65,0.7)', color: 'rgba(148,163,184,0.4)' }
-        }
-      >
+      {/* Icon */}
+      <span style={{ fontSize: isAllTab ? '14px' : '15px', lineHeight: 1, flexShrink: 0 }}>
+        {icon}
+      </span>
+
+      {/* Label */}
+      <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1 }}>
+        {label}
+      </span>
+
+      {/* Count badge */}
+      <span style={{
+        fontSize:     '10.5px',
+        fontWeight:   700,
+        lineHeight:   1,
+        padding:      '2px 6px',
+        borderRadius: '20px',
+        fontVariantNumeric: 'tabular-nums',
+        flexShrink:   0,
+        transition:   'all 0.18s ease',
+        ...(isActive ? {
+          background: `rgba(${r},${g},${b},0.18)`,
+          color,
+          border:     `1px solid rgba(${r},${g},${b},0.3)`,
+        } : {
+          background: 'rgba(22,33,48,0.9)',
+          color:      'rgba(148,163,184,0.4)',
+          border:     '1px solid rgba(37,50,65,0.5)',
+        }),
+      }}>
         {count}
       </span>
     </button>
   );
-});
-NavPill.displayName = 'NavPill';
+}
