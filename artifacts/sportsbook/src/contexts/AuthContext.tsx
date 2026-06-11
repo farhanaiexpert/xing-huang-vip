@@ -18,12 +18,12 @@ interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  /** True when the user just signed in for the first time (fresh wallet account) */
+  /** True when the user just signed in for the first time (no username set yet) */
   isNewUser: boolean;
   /** Dismiss the profile-setup prompt */
   clearNewUser: () => void;
   /** Called by WalletPickerModal after successful wallet verify — stores tokens + user */
-  loginWithWallet: (accessToken: string, refreshToken: string, user: AuthUser, isNewUser?: boolean) => void;
+  loginWithWallet: (accessToken: string, refreshToken: string, user: AuthUser) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateUser: (partial: Partial<AuthUser>) => void;
@@ -96,10 +96,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('cb:session-expired', handleExpired);
   }, []);
 
-  const loginWithWallet = useCallback((accessToken: string, refreshToken: string, authedUser: AuthUser, newUser = false) => {
+  const loginWithWallet = useCallback((accessToken: string, refreshToken: string, authedUser: AuthUser) => {
     setTokens(accessToken, refreshToken);
     setUser(authedUser);
-    if (newUser) setIsNewUser(true);
+    // No username = brand-new wallet account → trigger profile setup
+    if (!authedUser.username) setIsNewUser(true);
   }, []);
 
   const logout = useCallback(async () => {

@@ -190,12 +190,10 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
     .limit(1);
 
   let user = existing[0];
-  let isNewUser = false;
 
   const network = chainName(chainId);
 
   if (!user) {
-    isNewUser = true;
     const referralCode = randomBytes(4).toString("hex").toUpperCase();
     const [created] = await db.insert(usersTable).values({
       walletAddress: address,
@@ -263,11 +261,10 @@ router.post("/auth/wallet/verify", async (req, res): Promise<void> => {
   res.json({
     accessToken,
     refreshToken,
-    isNewUser,
     user: {
       id: user.id,
       walletAddress: user.walletAddress,
-      displayName: user.displayName ?? shortAddress(user.walletAddress!),
+      displayName: shortAddress(user.walletAddress!),
       // email and username are null for wallet-only accounts; kept for
       // contract compatibility with consumers that destructure these fields
       email: user.email ?? null,
@@ -355,10 +352,8 @@ router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
     .limit(1);
 
   let user = existing[0];
-  let isNewUserTron = false;
 
   if (!user) {
-    isNewUserTron = true;
     const referralCode = randomBytes(4).toString("hex").toUpperCase();
     const [created] = await db.insert(usersTable).values({
       walletAddress: address,
@@ -423,11 +418,10 @@ router.post("/auth/wallet/verify/tron", async (req, res): Promise<void> => {
   res.json({
     accessToken,
     refreshToken,
-    isNewUser: isNewUserTron,
     user: {
       id: user.id,
       walletAddress: user.walletAddress,
-      displayName: user.displayName ?? shortAddress(user.walletAddress!),
+      displayName: shortAddress(user.walletAddress!),
       email: user.email ?? null,
       username: user.username ?? null,
       role: user.role,
@@ -555,10 +549,8 @@ router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
     .limit(1);
 
   let user = existing[0];
-  let isNewUserSolana = false;
 
   if (!user) {
-    isNewUserSolana = true;
     const referralCode = randomBytes(4).toString("hex").toUpperCase();
     const [created] = await db.insert(usersTable).values({
       walletAddress: address,
@@ -623,11 +615,10 @@ router.post("/auth/wallet/verify/solana", async (req, res): Promise<void> => {
   res.json({
     accessToken,
     refreshToken,
-    isNewUser: isNewUserSolana,
     user: {
       id: user.id,
       walletAddress: user.walletAddress,
-      displayName: user.displayName ?? shortAddress(user.walletAddress!),
+      displayName: shortAddress(user.walletAddress!),
       email: user.email ?? null,
       username: user.username ?? null,
       role: user.role,
@@ -891,9 +882,7 @@ router.post("/auth/wallet/verify/ton", async (req, res): Promise<void> => {
     .limit(1);
 
   let user = existing[0];
-  let isNewUserTon = false;
   if (!user) {
-    isNewUserTon = true;
     const referralCode = randomBytes(4).toString("hex").toUpperCase();
     const [created] = await db.insert(usersTable).values({
       walletAddress: address,
@@ -953,11 +942,10 @@ router.post("/auth/wallet/verify/ton", async (req, res): Promise<void> => {
   res.json({
     accessToken,
     refreshToken,
-    isNewUser: isNewUserTon,
     user: {
       id: user.id,
       walletAddress: user.walletAddress,
-      displayName: user.displayName ?? shortAddress(user.walletAddress!),
+      displayName: shortAddress(user.walletAddress!),
       email: user.email ?? null,
       username: user.username ?? null,
       role: user.role,
@@ -1018,7 +1006,6 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
   const [user] = await db.select({
     id: usersTable.id,
     walletAddress: usersTable.walletAddress,
-    displayName: usersTable.displayName,
     email: usersTable.email,
     username: usersTable.username,
     role: usersTable.role,
@@ -1032,42 +1019,48 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
     res.status(404).json({ error: "User not found" });
     return;
   }
+  // Additive: include walletAddress and displayName alongside existing fields
   res.json({
     ...user,
-    displayName: user.displayName ?? (
-      user.walletAddress
-        ? shortAddress(user.walletAddress)
-        : (user.username ?? user.email ?? "User")
-    ),
+    displayName: user.walletAddress
+      ? shortAddress(user.walletAddress)
+      : (user.username ?? user.email ?? "User"),
   });
 });
 
 // ── PATCH /auth/update-profile ────────────────────────────────────────────────
-// Wallet users: displayName only (1–20 chars, alphanumeric + spaces)
+// Kept for backward compatibility; wallet users may still set a display username
 const UpdateProfileBody = z.object({
-  displayName: z.string().min(1).max(20).regex(/^[\w\s]+$/, "Display name must be alphanumeric with spaces"),
+  username: z.string().min(3).max(30).optional(),
 });
 
 router.patch("/auth/update-profile", authenticate, async (req, res): Promise<void> => {
   const parsed = UpdateProfileBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0]?.message ?? parsed.error.message });
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { username } = parsed.data;
+  if (!username) {
+    res.status(400).json({ error: "username is required" });
+    return;
+  }
+
+  const existing = await db.select({ id: usersTable.id })
+    .from(usersTable)
+    .where(and(eq(usersTable.username, username), ne(usersTable.id, req.user!.userId)))
+    .limit(1);
+  if (existing.length > 0) {
+    res.status(409).json({ error: "Username already taken" });
     return;
   }
 
   const [user] = await db.update(usersTable)
-    .set({ displayName: parsed.data.displayName.trim() })
+    .set({ username })
     .where(eq(usersTable.id, req.user!.userId))
     .returning();
 
-  res.json({
-    id: user.id,
-    displayName: user.displayName,
-    email: user.email,
-    username: user.username,
-    role: user.role,
-    referralCode: user.referralCode,
-  });
+  res.json({ id: user.id, email: user.email, username: user.username, role: user.role, referralCode: user.referralCode });
 });
 
 // ── POST /auth/change-password ────────────────────────────────────────────────
@@ -1090,24 +1083,7 @@ router.post("/auth/change-password", authenticate, async (req, res): Promise<voi
     .where(eq(usersTable.id, req.user!.userId))
     .limit(1);
 
-  if (!user) {
-    res.status(404).json({ error: "User not found" });
-    return;
-  }
-
-  // Wallet-only accounts have no password — reject with clear guidance
-  if (!user.passwordHash) {
-    res.status(403).json({ error: "This account uses wallet authentication. Password changes are not available — sign in with your connected wallet." });
-    return;
-  }
-
-  // Non-admin accounts cannot use password auth — sportsbook is wallet-only
-  if (user.role !== "admin" && user.role !== "super_admin") {
-    res.status(403).json({ error: "Password management is reserved for admin accounts. Sportsbook users authenticate via wallet." });
-    return;
-  }
-
-  if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+  if (!user || !user.passwordHash || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
     res.status(401).json({ error: "Current password is incorrect" });
     return;
   }
@@ -1118,25 +1094,6 @@ router.post("/auth/change-password", authenticate, async (req, res): Promise<voi
   res.json({ success: true });
 });
 
-// ── GET /auth/wallet-check ─────────────────────────────────────────────────────
-// Lightweight pre-check: does a wallet address already have an account?
-// Used by the frontend to skip the referral step for returning users.
-// EVM addresses are stored lowercase; Tron base58 is case-sensitive — preserve as-is.
-router.get("/auth/wallet-check", async (req, res): Promise<void> => {
-  const raw = typeof req.query.address === "string" ? req.query.address.trim() : "";
-  if (!raw) {
-    res.status(400).json({ error: "address query param is required" });
-    return;
-  }
-  // Preserve Tron base58 casing; normalise EVM to lowercase
-  const address = isTronAddress(raw) ? raw : raw.toLowerCase();
-  const [existing] = await db.select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.walletAddress, address))
-    .limit(1);
-  res.json({ exists: !!existing });
-});
-
 // ── POST /auth/register ───────────────────────────────────────────────────────
 const RegisterBody = z.object({
   email: z.string().email("Invalid email address"),
@@ -1144,9 +1101,73 @@ const RegisterBody = z.object({
   referralCode: z.string().optional(),
 });
 
-router.post("/auth/register", async (_req, res): Promise<void> => {
-  // Wallet-only era: email/password registration is disabled for regular users.
-  res.status(403).json({ error: "Email registration is not available. Connect a crypto wallet to sign in." });
+router.post("/auth/register", async (req, res): Promise<void> => {
+  const parsed = RegisterBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    return;
+  }
+  const { email, password, referralCode } = parsed.data;
+
+  // Check email not already taken
+  const [existing] = await db.select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, email.toLowerCase()))
+    .limit(1);
+
+  if (existing) {
+    res.status(409).json({ error: "An account with this email already exists" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const newReferralCode = randomBytes(4).toString("hex").toUpperCase();
+
+  // Handle referral (optional)
+  let referrerId: number | null = null;
+  if (referralCode) {
+    const [referrer] = await db.select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.referralCode, referralCode.toUpperCase()))
+      .limit(1);
+    if (referrer) referrerId = referrer.id;
+  }
+
+  const [user] = await db.insert(usersTable).values({
+    email: email.toLowerCase(),
+    passwordHash,
+    referralCode: newReferralCode,
+    role: "user",
+  }).returning();
+
+  await db.insert(walletsTable).values({ userId: user.id, balanceUsdt: "0" });
+
+  if (referrerId) {
+    await createReferralChain(user.id, referrerId);
+  }
+
+  const payload = { userId: user.id, role: user.role };
+  const accessToken = signAccessToken(payload);
+  const refreshToken = signRefreshToken(payload);
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    refreshToken,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  res.status(201).json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      walletAddress: null,
+      displayName: user.username ?? user.email ?? "User",
+      email: user.email,
+      username: user.username ?? null,
+      role: user.role,
+      referralCode: user.referralCode,
+    },
+  });
 });
 
 // ── POST /auth/login ──────────────────────────────────────────────────────────
@@ -1167,18 +1188,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     .from(usersTable)
     .where(eq(usersTable.email, email.toLowerCase()))
     .limit(1);
-
-  // Wallet-only accounts have no passwordHash — direct them to Connect Wallet
-  if (user && !user.passwordHash) {
-    res.status(403).json({ error: "This account uses wallet authentication. Please use Connect Wallet to sign in." });
-    return;
-  }
-
-  // Non-admin accounts cannot use password login — sportsbook is wallet-only
-  if (user && user.passwordHash && user.role !== "admin" && user.role !== "super_admin") {
-    res.status(403).json({ error: "Password login is reserved for admin accounts. Please use Connect Wallet to sign in." });
-    return;
-  }
 
   if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
     res.status(401).json({ error: "Invalid email or password" });

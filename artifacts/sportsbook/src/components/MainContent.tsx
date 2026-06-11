@@ -718,12 +718,6 @@ export function MainContent({
           ) : (
             <>
               {showFeatured && (
-                <FeaturedMatchesCarousel
-                  leagues={allLeagues}
-                  onViewAll={() => navigate('/more-markets')}
-                />
-              )}
-              {showFeatured && (
                 <div className="mb-5 rounded-2xl overflow-hidden shadow-2xl">
                   <img
                     src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-hero-banner.webp"
@@ -735,6 +729,7 @@ export function MainContent({
               )}
               {showFeatured && <WorldCupHero />}
               {showFeatured && <LiveEventsBanner />}
+              {showFeatured && <FeaturedMatchesCarousel leagues={allLeagues} />}
               {showFeatured && <USDTDepositBanner onDeposit={() => requestDeposit(isAuthenticated, navigate)} />}
               {showFeatured && <PopularBets />}
               {showFeatured && (
