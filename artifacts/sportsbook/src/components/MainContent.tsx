@@ -545,6 +545,16 @@ export function MainContent({
 
             <div className="h-4 w-px bg-[#253241] hidden sm:block" />
 
+            <button
+              onClick={() => navigate('/more-markets')}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold border border-[#FACC15]/40 bg-[#FACC15]/10 text-[#FACC15] hover:bg-[#FACC15]/20 hover:border-[#FACC15]/60 transition-all duration-150 shadow-[0_0_12px_rgba(250,204,21,0.15)]"
+            >
+              <TrendingUp className="h-3 w-3" />
+              Top Matches
+            </button>
+
+            <div className="h-4 w-px bg-[#253241] hidden sm:block" />
+
             {PROMO_PILLS.map((pill) => {
               const isActive = selectedSportId === pill.id;
               return (

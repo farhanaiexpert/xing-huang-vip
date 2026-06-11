@@ -33,9 +33,6 @@ interface Props {
   leagues: League[];
 }
 
-/** Cap on how many cards render in the strip at once (count badge shows the true total). */
-const STRIP_LIMIT = 12;
-
 export function FeaturedMatchesCarousel({ leagues }: Props) {
   const [, setLocation] = useLocation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -51,11 +48,12 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
   const effectiveSport =
     selectedSport && sportGroups.some((g) => g.id === selectedSport) ? selectedSport : null;
 
+  // Show every featured match — no cap.
   const visible = useMemo<FeaturedEntry[]>(() => {
-    const list = effectiveSport
-      ? allFeatured.filter((e) => (e.match.sportId || 'other') === effectiveSport)
-      : allFeatured;
-    return list.slice(0, STRIP_LIMIT);
+    if (effectiveSport) {
+      return allFeatured.filter((e) => (e.match.sportId || 'other') === effectiveSport);
+    }
+    return allFeatured;
   }, [allFeatured, effectiveSport]);
 
   if (allFeatured.length === 0) return null;
