@@ -214,6 +214,17 @@ export default function ReportsPage() {
     { newUsers: 0, betAmount: 0, winLoss: 0, deposits: 0, withdrawals: 0 },
   );
 
+  const todayRow = dailyMetrics.find(r => r.day === todayStr()) ?? dailyMetrics[dailyMetrics.length - 1] ?? null;
+  const todayStats = todayRow
+    ? {
+        newUsers:    Number(todayRow.newUsers),
+        betAmount:   parseFloat(todayRow.betAmount),
+        winLoss:     parseFloat(todayRow.winLoss),
+        deposits:    parseFloat(todayRow.deposits),
+        withdrawals: parseFloat(todayRow.withdrawals),
+      }
+    : null;
+
   const maxStaked = Math.max(...topBettors.map(b => parseFloat(b.totalStaked)), 0);
   const maxMarginAbs = Math.max(...revBySport.map(r => {
     const staked = parseFloat(r.totalStaked);
@@ -324,6 +335,82 @@ export default function ReportsPage() {
                 color="text-[#F87171]" bg="bg-[#F87171]/10" />
             </div>
           )}
+
+          {/* Today's snapshot cards */}
+          <div>
+            <p className="text-[10px] font-semibold text-[#475569] uppercase tracking-widest mb-2">Today's Snapshot</p>
+            {loadingMetrics ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16" />)}
+              </div>
+            ) : todayStats === null ? (
+              <div className="h-16 flex items-center justify-center text-[#475569] text-xs rounded-lg border border-dashed border-white/6">
+                No data for today
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {/* New Users — purple */}
+                <div className="bg-[#A78BFA]/5 border border-[#A78BFA]/15 rounded-lg px-3 py-2.5 flex flex-col gap-0.5 hover:border-[#A78BFA]/30 transition-colors">
+                  <span className="text-[10px] font-semibold text-[#A78BFA]/70 uppercase tracking-wider flex items-center gap-1">
+                    <Users className="w-3 h-3" /> New Users
+                  </span>
+                  <span className="text-lg font-bold text-[#A78BFA] tabular-nums leading-tight">
+                    {todayStats.newUsers.toLocaleString("en-US")}
+                  </span>
+                </div>
+                {/* Bet Amount — blue */}
+                <div className="bg-[#38BDF8]/5 border border-[#38BDF8]/15 rounded-lg px-3 py-2.5 flex flex-col gap-0.5 hover:border-[#38BDF8]/30 transition-colors">
+                  <span className="text-[10px] font-semibold text-[#38BDF8]/70 uppercase tracking-wider flex items-center gap-1">
+                    <BarChart2 className="w-3 h-3" /> Bet Amount
+                  </span>
+                  <span className="text-lg font-bold text-[#38BDF8] tabular-nums leading-tight">
+                    {fmtShort(todayStats.betAmount)}
+                  </span>
+                </div>
+                {/* Win/Loss — green/red */}
+                <div className={cn(
+                  "border rounded-lg px-3 py-2.5 flex flex-col gap-0.5 transition-colors",
+                  todayStats.winLoss >= 0
+                    ? "bg-[#00DFA9]/5 border-[#00DFA9]/15 hover:border-[#00DFA9]/30"
+                    : "bg-[#F87171]/5 border-[#F87171]/15 hover:border-[#F87171]/30",
+                )}>
+                  <span className={cn(
+                    "text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1",
+                    todayStats.winLoss >= 0 ? "text-[#00DFA9]/70" : "text-[#F87171]/70",
+                  )}>
+                    {todayStats.winLoss >= 0
+                      ? <TrendingUp className="w-3 h-3" />
+                      : <TrendingDown className="w-3 h-3" />}
+                    Win/Loss
+                  </span>
+                  <span className={cn(
+                    "text-lg font-bold tabular-nums leading-tight",
+                    todayStats.winLoss >= 0 ? "text-[#00DFA9]" : "text-[#F87171]",
+                  )}>
+                    {fmtShort(todayStats.winLoss)}
+                  </span>
+                </div>
+                {/* Deposits — gold */}
+                <div className="bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-lg px-3 py-2.5 flex flex-col gap-0.5 hover:border-[#FACC15]/30 transition-colors">
+                  <span className="text-[10px] font-semibold text-[#FACC15]/70 uppercase tracking-wider flex items-center gap-1">
+                    <ArrowDownLeft className="w-3 h-3" /> Deposits
+                  </span>
+                  <span className="text-lg font-bold text-[#FACC15] tabular-nums leading-tight">
+                    {fmtShort(todayStats.deposits)}
+                  </span>
+                </div>
+                {/* Withdrawals — red */}
+                <div className="bg-[#F87171]/5 border border-[#F87171]/15 rounded-lg px-3 py-2.5 flex flex-col gap-0.5 hover:border-[#F87171]/30 transition-colors">
+                  <span className="text-[10px] font-semibold text-[#F87171]/70 uppercase tracking-wider flex items-center gap-1">
+                    <ArrowUpRight className="w-3 h-3" /> Withdrawals
+                  </span>
+                  <span className="text-lg font-bold text-[#F87171] tabular-nums leading-tight">
+                    {fmtShort(todayStats.withdrawals)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Trend chart */}
           <div>
