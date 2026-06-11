@@ -198,7 +198,7 @@ function MatchCard({ match, league }: MatchCardProps) {
         <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
           {isSoccer
             ? <JerseySilk team={match.team1} size="md" sportIcon={theme.icon} />
-            : <TeamBadge name={match.team1} sportIcon={theme.icon} size="md" />
+            : <TeamBadge name={match.team1} sportId={match.sportId} sportIcon={theme.icon} size="md" />
           }
           <span className="text-[11px] font-semibold text-[#F8FAFC] text-center leading-tight line-clamp-2 w-full">
             {match.team1}
@@ -223,7 +223,7 @@ function MatchCard({ match, league }: MatchCardProps) {
         <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
           {isSoccer
             ? <JerseySilk team={match.team2 ?? match.team1} size="md" sportIcon={theme.icon} flip />
-            : <TeamBadge name={match.team2 ?? match.team1} sportIcon={theme.icon} size="md" />
+            : <TeamBadge name={match.team2 ?? match.team1} sportId={match.sportId} sportIcon={theme.icon} size="md" />
           }
           <span className="text-[11px] font-semibold text-[#94A3B8] text-center leading-tight line-clamp-2 w-full">
             {match.team2 ?? 'TBD'}

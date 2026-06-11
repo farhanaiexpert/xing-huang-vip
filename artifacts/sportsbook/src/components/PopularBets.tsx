@@ -4,6 +4,7 @@ import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { OddsButton } from './OddsButton';
 import { Flame, TrendingUp } from 'lucide-react';
 import { useOddsData } from '../hooks/useOddsData';
+import { TeamBadge } from './TeamBadge';
 import type { League } from '../types';
 
 // ── Country flag lookup ───────────────────────────────────────────────────────
@@ -157,12 +158,7 @@ function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
         <div className="flex flex-col gap-1.5">
           {/* Home */}
           <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center text-[10px] font-black leading-none"
-              style={{ background: `${accent}18`, color: accent }}
-            >
-              {bet.homeTeam.charAt(0).toUpperCase()}
-            </div>
+            <TeamBadge name={bet.homeTeam} sportId={bet.sportKey} size={24} />
             <span className="text-[13px] font-bold text-[#E2E8F0] truncate leading-none">{bet.homeTeam}</span>
           </div>
           {/* vs row */}
@@ -175,9 +171,7 @@ function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
           {/* Away */}
           {bet.awayTeam && (
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center text-[10px] font-black leading-none bg-[#1A2232] text-[#475569]">
-                {bet.awayTeam.charAt(0).toUpperCase()}
-              </div>
+              <TeamBadge name={bet.awayTeam} sportId={bet.sportKey} size={24} />
               <span className="text-[12px] font-semibold text-[#64748B] truncate leading-none">{bet.awayTeam}</span>
             </div>
           )}

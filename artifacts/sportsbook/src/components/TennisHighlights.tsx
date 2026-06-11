@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { useOddsData } from '../hooks/useOddsData';
 import { SportName } from './SportName';
+import { TeamBadge } from './TeamBadge';
 import type { Match, League } from '../types';
 
 // ── Sport detection ───────────────────────────────────────────────────────────
@@ -29,11 +30,15 @@ function TennisMatchRow({ match, league }: { match: Match; league: League }) {
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 border-b border-[#253241]/50 hover:bg-[#121821]/60 transition-colors group cursor-pointer">
       {/* Players + time */}
-      <div className="flex flex-col gap-1 flex-1 min-w-0">
-        <span className="text-[13px] font-medium text-[#F8FAFC] leading-none truncate">{match.team1}</span>
-        <span className="text-[13px] font-medium text-[#94A3B8] leading-none truncate group-hover:text-[#F8FAFC] transition-colors">
-          {match.team2}
-        </span>
+      <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <TeamBadge name={match.team1} sportId="sp_tennis" size={18} />
+          <span className="text-[13px] font-medium text-[#F8FAFC] leading-none truncate">{match.team1}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <TeamBadge name={match.team2} sportId="sp_tennis" size={18} />
+          <span className="text-[13px] font-medium text-[#94A3B8] leading-none truncate group-hover:text-[#F8FAFC] transition-colors">{match.team2}</span>
+        </div>
         <span className="text-[10px] text-[#94A3B8]/40 font-medium mt-0.5">{timeLabel}</span>
       </div>
 

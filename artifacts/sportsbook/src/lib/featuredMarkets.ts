@@ -40,13 +40,50 @@ export const SPORT_META: Record<string, { label: string; icon: string }> = {
   sp_volleyball:       { label: 'Volleyball',   icon: '🏐' },
 };
 
+/**
+ * Canonical sport → emoji map keyed by a normalised sport token (lowercase, no
+ * separators). Used as the single source of truth for team-badge fallback icons
+ * across the whole sportsbook so a team with no flag/logo never shows initials.
+ */
+const SPORT_EMOJI: Record<string, string> = {
+  soccer: '⚽', football: '⚽', futsal: '⚽', ucl: '⚽',
+  tennis: '🎾', tabletennis: '🏓',
+  basketball: '🏀', nba: '🏀',
+  baseball: '⚾',
+  volleyball: '🏐', beachvolleyball: '🏐',
+  cricket: '🏏',
+  mma: '🥊', ufc: '🥊', boxing: '🥊',
+  icehockey: '🏒', hockey: '🏒',
+  americanfootball: '🏈', nfl: '🏈',
+  rugby: '🏉', rugbyleague: '🏉', rugbyunion: '🏉',
+  darts: '🎯',
+  handball: '🤾', golf: '⛳', snooker: '🎱', pool: '🎱',
+  esports: '🎮', horseracing: '🏇', horse: '🏇',
+  formula1: '🏎️', f1: '🏎️', motorsport: '🏎️',
+  aussierules: '🦘', badminton: '🏸',
+};
+
+/**
+ * Resolve a guaranteed sport emoji for any sport id / key variant the app uses
+ * (e.g. `sp_soccer`, `soccer_epl`, `betsapi_rugby`, `mma_ufc`, `table_tennis`).
+ * Always returns a non-empty icon (🏆 as last resort) so it is safe to use as a
+ * never-broken fallback. Pure + cheap; result is deterministic per input.
+ */
+export function sportIconFor(raw?: string | null): string {
+  if (!raw) return '🏆';
+  const s = raw.toLowerCase().trim().replace(/^sp_/, '').replace(/^betsapi_/, '');
+  const collapsed = s.replace(/[_\s-]/g, '');
+  const first = s.split(/[_\s-]/)[0];
+  return SPORT_EMOJI[collapsed] ?? SPORT_EMOJI[first] ?? SPORT_EMOJI[s] ?? '🏆';
+}
+
 export function sportMetaFor(sportId: string): { label: string; icon: string } {
   if (SPORT_META[sportId]) return SPORT_META[sportId];
   const label = sportId
     .replace(/^sp_/, '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
-  return { label: label || 'Other', icon: '🏆' };
+  return { label: label || 'Other', icon: sportIconFor(sportId) };
 }
 
 export function marketMeta(match: Match): { marketId: string; marketName: string } {

@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { ChevronRight, Trophy } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { SportName } from './SportName';
+import { TeamBadge } from './TeamBadge';
 import { useOddsData } from '../hooks/useOddsData';
 import type { Match, League } from '../types';
 
@@ -19,21 +20,7 @@ function isSoccerLeague(l: League): boolean {
 }
 
 function TeamInitials({ name, size = 48 }: { name: string; size?: number }) {
-  const initials = name
-    .split(' ')
-    .map(w => w[0])
-    .filter(Boolean)
-    .join('')
-    .slice(0, 3)
-    .toUpperCase();
-  return (
-    <div
-      className="rounded-xl shrink-0 flex items-center justify-center font-black text-white bg-[#253241]"
-      style={{ width: size, height: size, fontSize: size * 0.36 }}
-    >
-      {initials}
-    </div>
-  );
+  return <TeamBadge name={name} sportIcon="⚽" size={size} />;
 }
 
 export function EuropaLeagueFinal() {

@@ -8,18 +8,13 @@ import { BetsApiMarketDrawer } from './BetsApiMarketDrawer';
 import { useFavorites } from '../hooks/useFavorites';
 import { cn } from '../lib/utils';
 import { formatKickoffTime, estimatedEndTime } from '../lib/matchTime';
+import { sportIconFor } from '../lib/featuredMarkets';
 
 interface MatchRowProps {
   match: Match;
   leagueName: string;
   isLast?: boolean;
 }
-
-const SPORT_ICONS: Record<string, string> = {
-  sp_soccer: '⚽', sp_tennis: '🎾', sp_nba: 'https://www.bet365.com/home/images/Home/imgs/V9FlagIcons/USA.svg', sp_basketball: '🏀',
-  sp_esports: '🎮', sp_horse_racing: '🏇', sp_cricket: '🏏',
-  sp_boxing: '🥊', sp_mma: '🥋', sp_formula_1: '🏎️',
-};
 
 function getMarketMeta(sportId: string, matchId: string) {
   if (sportId === 'sp_soccer')                     return { marketId: `mkt_${matchId}_mr`, marketName: 'Match Result' };
@@ -66,7 +61,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       id: match.id,
       name: matchName,
       leagueName,
-      sportIcon: SPORT_ICONS[match.sportId] ?? '🏆',
+      sportIcon: sportIconFor(match.sportId),
     });
     setLocation(`/match/${match.id}`);
   }
@@ -132,14 +127,14 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
       <div className="flex flex-col gap-1.5 min-w-0 flex-1">
         {isHorse ? (
           <div className="flex items-center gap-2 min-w-0">
-            <TeamBadge name={match.team1} sportIcon={SPORT_ICONS[match.sportId]} size="xs" className="shrink-0" />
+            <TeamBadge name={match.team1} sportId={match.sportId} size="xs" className="shrink-0" />
             <span className="text-[13px] font-semibold text-[#F8FAFC] leading-none truncate">{match.team1}</span>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between gap-1">
               <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                <TeamBadge name={match.team1} sportIcon={SPORT_ICONS[match.sportId]} size="xs" className="shrink-0" />
+                <TeamBadge name={match.team1} sportId={match.sportId} size="xs" className="shrink-0" />
                 <span className="text-[13px] font-medium leading-none truncate text-[#F8FAFC]">{match.team1}</span>
               </div>
               {match.isLive && match.score !== undefined && (
@@ -151,7 +146,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
             {match.team2 && (
               <div className="flex items-center justify-between gap-1">
                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <TeamBadge name={match.team2} sportIcon={SPORT_ICONS[match.sportId]} size="xs" className="shrink-0" />
+                  <TeamBadge name={match.team2} sportId={match.sportId} size="xs" className="shrink-0" />
                   <span className="text-[13px] font-medium text-[#94A3B8] leading-none truncate group-hover:text-[#F8FAFC] transition-colors">{match.team2}</span>
                 </div>
                 {match.isLive && match.score !== undefined && (

@@ -5,6 +5,7 @@ import { OddsButton } from './OddsButton';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { useOddsData } from '../hooks/useOddsData';
 import { SportName } from './SportName';
+import { TeamBadge as TeamBadgeBase } from './TeamBadge';
 import type { Match, League } from '../types';
 
 // ── Sport bucket config ────────────────────────────────────────────────────────
@@ -52,24 +53,8 @@ function scrollToTop() {
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
-function TeamBadge({ name, size = 20, bg = '#253241', color = '#F8FAFC' }: {
-  name: string; size?: number; bg?: string; color?: string;
-}) {
-  const initials = name
-    .split(/[\s\-/]/)
-    .map(w => w[0])
-    .filter(Boolean)
-    .join('')
-    .slice(0, 3)
-    .toUpperCase();
-  return (
-    <div
-      className="rounded shrink-0 flex items-center justify-center font-black"
-      style={{ width: size, height: size, fontSize: size * 0.38, background: bg, color }}
-    >
-      {initials}
-    </div>
-  );
+function TeamBadge({ name, size = 20, emoji }: { name: string; size?: number; emoji?: string }) {
+  return <TeamBadgeBase name={name} sportIcon={emoji} size={size} />;
 }
 
 function getTimeLabel(match: Match) {
@@ -185,11 +170,11 @@ function FeaturedCard({ entry }: { entry: FeaturedEntry }) {
         {/* Teams */}
         <div className="flex flex-col gap-2 mb-3.5">
           <div className="flex items-center gap-2">
-            <TeamBadge name={match.team1} size={30} bg={`${bucket.color}1a`} color={bucket.color} />
+            <TeamBadge name={match.team1} size={30} emoji={bucket.emoji} />
             <span className="text-[14px] font-bold text-[#F8FAFC] leading-tight truncate">{match.team1}</span>
           </div>
           <div className="flex items-center gap-2">
-            <TeamBadge name={match.team2} size={30} bg="rgba(37,50,65,0.7)" color="#64748B" />
+            <TeamBadge name={match.team2} size={30} emoji={bucket.emoji} />
             <span className="text-[14px] font-bold text-[#94A3B8] leading-tight truncate">{match.team2}</span>
           </div>
         </div>
@@ -456,11 +441,11 @@ function PanelMatchRow({ match, league, bucket }: { match: Match; league: League
       {/* Teams */}
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <TeamBadge name={match.team1} size={15} bg={`${bucket.color}18`} color={bucket.color} />
+          <TeamBadge name={match.team1} size={15} emoji={bucket.emoji} />
           <span className="text-[11.5px] font-medium text-[#F8FAFC] leading-none truncate">{match.team1}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <TeamBadge name={match.team2} size={15} bg="rgba(37,50,65,0.7)" color="#64748B" />
+          <TeamBadge name={match.team2} size={15} emoji={bucket.emoji} />
           <span className="text-[11.5px] font-medium text-[#94A3B8] leading-none truncate">{match.team2}</span>
         </div>
       </div>
@@ -601,11 +586,11 @@ function CountdownCard({ entry }: { entry: ComingSoonEntry }) {
         {/* Teams */}
         <div className="flex flex-col gap-1.5 mb-3">
           <div className="flex items-center gap-1.5">
-            <TeamBadge name={match.team1} size={21} bg={`${bucket.color}18`} color={bucket.color} />
+            <TeamBadge name={match.team1} size={21} emoji={bucket.emoji} />
             <span className="text-[12px] font-bold text-[#F8FAFC] leading-none truncate">{match.team1}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <TeamBadge name={match.team2} size={21} bg="rgba(37,50,65,0.75)" color="#64748B" />
+            <TeamBadge name={match.team2} size={21} emoji={bucket.emoji} />
             <span className="text-[12px] font-bold text-[#94A3B8] leading-none truncate">{match.team2}</span>
           </div>
         </div>

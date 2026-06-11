@@ -5,15 +5,10 @@ import { useLocation } from 'wouter';
 import { useOddsData } from '../hooks/useOddsData';
 import { useLiveOdds, type NormalizedLiveMatch } from '../hooks/useLiveOdds';
 import { OddsButton } from './OddsButton';
+import { TeamBadge } from './TeamBadge';
 import type { Match, League } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function teamInitials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 1) return name.slice(0, 2).toUpperCase();
-  return words.slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
 
 const SPORT_COLORS: [string, string][] = [
   ['soccer',           '#00DFA9'],
@@ -78,25 +73,14 @@ function pickPreMatch(allLeagues: League[]): { match: Match; league: League } | 
 
 // ── Team avatar ────────────────────────────────────────────────────────────────
 
-function TeamAvatar({ initials, color, size = 'md' }: { initials: string; color: string; size?: 'sm' | 'md' | 'lg' }) {
+function TeamAvatar({ name, emoji, color, size = 'md' }: { name: string; emoji?: string; color: string; size?: 'sm' | 'md' | 'lg' }) {
   const dim = size === 'lg' ? 56 : size === 'md' ? 44 : 32;
-  const fs  = size === 'lg' ? 16  : size === 'md' ? 13  : 10;
   return (
-    <div
-      className="rounded-2xl flex items-center justify-center font-black shrink-0 relative"
-      style={{ width: dim, height: dim, fontSize: fs }}
-    >
+    <div className="relative shrink-0" style={{ width: dim, height: dim }}>
       {/* Glow */}
       <div className="absolute inset-0 rounded-2xl blur-md opacity-30"
         style={{ background: `radial-gradient(circle, ${color}, transparent)` }} />
-      <div className="relative rounded-2xl w-full h-full flex items-center justify-center"
-        style={{
-          background: `linear-gradient(135deg, ${color}22, ${color}0A)`,
-          border: `1.5px solid ${color}35`,
-          color,
-        }}>
-        {initials}
-      </div>
+      <TeamBadge name={name} sportIcon={emoji} size={dim} className="relative" />
     </div>
   );
 }
@@ -107,8 +91,6 @@ function PreMatchCard({ match, league }: { match: Match; league: League }) {
   const [, setLocation] = useLocation();
   const color    = getSportColor(match.sportId ?? league.sportKey ?? '');
   const emoji    = getSportEmoji(match.sportId ?? league.sportKey ?? '');
-  const init1    = teamInitials(match.team1);
-  const init2    = teamInitials(match.team2);
   const matchId  = match.id;
   const name     = `${match.team1} vs ${match.team2}`;
   const marketId = `${matchId}-h2h`;
@@ -177,7 +159,7 @@ function PreMatchCard({ match, league }: { match: Match; league: League }) {
 
           {/* Home */}
           <div className="flex-1 flex flex-col items-center gap-2.5 text-center min-w-0">
-            <TeamAvatar initials={init1} color={color} size="lg" />
+            <TeamAvatar name={match.team1} emoji={emoji} color={color} size="lg" />
             <div>
               <span className="text-[12px] sm:text-[13px] font-bold text-[#F8FAFC] leading-tight line-clamp-2 block">{match.team1}</span>
               <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5 block" style={{ color: `${color}70` }}>Home</span>
@@ -197,7 +179,7 @@ function PreMatchCard({ match, league }: { match: Match; league: League }) {
 
           {/* Away */}
           <div className="flex-1 flex flex-col items-center gap-2.5 text-center min-w-0">
-            <TeamAvatar initials={init2} color="#475569" size="lg" />
+            <TeamAvatar name={match.team2} emoji={emoji} color="#475569" size="lg" />
             <div>
               <span className="text-[12px] sm:text-[13px] font-bold text-[#F8FAFC] leading-tight line-clamp-2 block">{match.team2}</span>
               <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5 block text-[#475569]/70">Away</span>
@@ -286,8 +268,6 @@ function LiveCard({ m }: { m: NormalizedLiveMatch }) {
   const [, setLocation] = useLocation();
   const color  = getSportColor(m.sport);
   const emoji  = getSportEmoji(m.sport);
-  const init1  = teamInitials(m.homeTeam);
-  const init2  = teamInitials(m.awayTeam);
   const name   = `${m.homeTeam} vs ${m.awayTeam}`;
   const hasScore = m.homeScore !== '-' && m.awayScore !== '-';
 
@@ -338,7 +318,7 @@ function LiveCard({ m }: { m: NormalizedLiveMatch }) {
         {/* Teams + score */}
         <div className="flex items-center gap-3 sm:gap-5 mb-5">
           <div className="flex-1 flex flex-col items-center gap-2.5 text-center min-w-0">
-            <TeamAvatar initials={init1} color={color} size="lg" />
+            <TeamAvatar name={m.homeTeam} emoji={emoji} color={color} size="lg" />
             <span className="text-[12px] sm:text-[13px] font-bold text-[#F8FAFC] leading-tight line-clamp-2">{m.homeTeam}</span>
           </div>
 
@@ -363,7 +343,7 @@ function LiveCard({ m }: { m: NormalizedLiveMatch }) {
           </div>
 
           <div className="flex-1 flex flex-col items-center gap-2.5 text-center min-w-0">
-            <TeamAvatar initials={init2} color="#475569" size="lg" />
+            <TeamAvatar name={m.awayTeam} emoji={emoji} color="#475569" size="lg" />
             <span className="text-[12px] sm:text-[13px] font-bold text-[#F8FAFC] leading-tight line-clamp-2">{m.awayTeam}</span>
           </div>
         </div>

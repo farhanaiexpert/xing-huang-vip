@@ -4,6 +4,7 @@ import { OddsButton } from './OddsButton';
 import { useOddsData } from '../hooks/useOddsData';
 import { cn } from '../lib/utils';
 import { SportName } from './SportName';
+import { TeamBadge } from './TeamBadge';
 import type { Match, League } from '../types';
 
 // ── Sport detection ───────────────────────────────────────────────────────────
@@ -15,23 +16,9 @@ function isSoccerLeague(l: League): boolean {
   );
 }
 
-// ── Simple initials badge (replaces bet365-CDN kit images) ───────────────────
+// ── Team badge (flag → sport-emoji fallback, never a broken image) ───────────
 function TeamInitials({ name, size = 20 }: { name: string; size?: number }) {
-  const initials = name
-    .split(' ')
-    .map(w => w[0])
-    .filter(Boolean)
-    .join('')
-    .slice(0, 3)
-    .toUpperCase();
-  return (
-    <div
-      className="rounded shrink-0 flex items-center justify-center font-black text-white bg-[#253241]"
-      style={{ width: size, height: size, fontSize: size * 0.38 }}
-    >
-      {initials}
-    </div>
-  );
+  return <TeamBadge name={name} sportIcon="⚽" size={size} />;
 }
 
 // ── Single match row ──────────────────────────────────────────────────────────

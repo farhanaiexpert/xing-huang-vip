@@ -9,6 +9,7 @@ import { ChevronRight } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { useOddsData } from '../hooks/useOddsData';
 import { SportName } from './SportName';
+import { TeamBadge } from './TeamBadge';
 import type { Match, League } from '../types';
 
 // ── Sport config ──────────────────────────────────────────────────────────────
@@ -56,29 +57,8 @@ function getConfig(sportKey: string): SportConfig | null {
 
 // ── TeamInitials badge ────────────────────────────────────────────────────────
 
-function TeamInitials({ name, size = 20, color }: { name: string; size?: number; color: string }) {
-  const initials = name
-    .split(/[\s/-]/)
-    .map(w => w[0])
-    .filter(Boolean)
-    .join('')
-    .slice(0, 3)
-    .toUpperCase();
-  return (
-    <div
-      className="rounded shrink-0 flex items-center justify-center font-black text-white"
-      style={{
-        width:      size,
-        height:     size,
-        fontSize:   size * 0.38,
-        background: `${color}18`,
-        border:     `1px solid ${color}30`,
-        color,
-      }}
-    >
-      {initials}
-    </div>
-  );
+function TeamInitials({ name, size = 20, emoji }: { name: string; size?: number; emoji?: string }) {
+  return <TeamBadge name={name} sportIcon={emoji} size={size} />;
 }
 
 // ── Single match row ──────────────────────────────────────────────────────────
@@ -156,12 +136,12 @@ function MatchRow({ match, league, config }: { match: Match; league: League; con
         {/* Teams */}
         <div className="flex flex-col gap-1.5 flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <TeamInitials name={match.team1} size={18} color={config.color} />
+            <TeamInitials name={match.team1} size={18} emoji={config.emoji} />
             <span className="text-[12.5px] font-semibold text-[#F8FAFC] leading-none truncate">{match.team1}</span>
           </div>
           {match.team2 && (
             <div className="flex items-center gap-2">
-              <TeamInitials name={match.team2} size={18} color="#94A3B8" />
+              <TeamInitials name={match.team2} size={18} emoji={config.emoji} />
               <span className="text-[12.5px] font-semibold text-[#94A3B8] leading-none truncate">{match.team2}</span>
             </div>
           )}
