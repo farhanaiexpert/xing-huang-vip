@@ -680,16 +680,22 @@ runMigrations().then(() => {
   let lastBetsApiRefreshAt = 0;
   const BETSAPI_INTERVAL_MS = 60 * 60 * 1000; // 60 min (was 30 min)
 
-  /** Returns milliseconds until a betsapi_cache entry expires (0 = expired/missing). */
-  async function getBetsApiCacheRemainingMs(cacheKey: string): Promise<number> {
+  // How long cached events persist in the DB as a fallback (Option A: 12h).
+  // Decoupled from refresh frequency — we still re-fetch every ~60 min via the
+  // age-based skip guard below, but if a refresh cycle fails the data survives
+  // for 12 h instead of disappearing after 70 min.
+  const BETSAPI_DATA_TTL = '12 hours';
+
+  /** Returns milliseconds since a betsapi_cache entry was last fetched (Infinity = missing). */
+  async function getBetsApiCacheAgeMs(cacheKey: string): Promise<number> {
     try {
       const result = await db.execute(sql`
-        SELECT EXTRACT(EPOCH FROM (expires_at - NOW())) * 1000 AS remaining_ms
+        SELECT EXTRACT(EPOCH FROM (NOW() - fetched_at)) * 1000 AS age_ms
         FROM betsapi_cache WHERE cache_key = ${cacheKey}
       `);
-      if (result.rows.length > 0) return Math.max(0, Number(result.rows[0].remaining_ms));
-      return 0;
-    } catch { return 0; }
+      if (result.rows.length > 0) return Math.max(0, Number(result.rows[0].age_ms));
+      return Infinity;
+    } catch { return Infinity; }
   }
 
   async function runBetsApiBatch() {
@@ -702,9 +708,11 @@ runMigrations().then(() => {
         const meta = BETSAPI_SPORT_MAP[sportId];
         if (!meta) continue;
 
-        // Skip if cache for this sport is still fresh (>15 min remaining).
-        const remaining = await getBetsApiCacheRemainingMs(String(sportId));
-        if (remaining > 15 * 60 * 1000) { skipped++; continue; }
+        // Skip if this sport was fetched less than 50 min ago.
+        // Uses fetched_at age (not expires_at) so the refresh frequency is
+        // independent of the 12-hour data-persistence TTL.
+        const age = await getBetsApiCacheAgeMs(String(sportId));
+        if (age < 50 * 60 * 1000) { skipped++; continue; }
 
         const events = await fetchBetsApiUpcoming(sportId);
 
@@ -726,12 +734,20 @@ runMigrations().then(() => {
         }
 
         if (events.length === 0) {
-          // Genuinely off-season / no events — cache for 4 hours to avoid wasting credits.
+          // Option B: API returned empty list (off-season / no fixtures scheduled).
+          // DO NOT overwrite existing cached events with []. Instead, keep whatever
+          // data is already there and only extend the TTL. Only write [] when no
+          // row exists yet (first-time insert). This prevents "matches disappeared"
+          // when BetsAPI temporarily has nothing scheduled for a sport.
           await db.execute(sql`
             INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
             VALUES (${String(sportId)}, '[]'::jsonb, NOW(), NOW() + INTERVAL '4 hours')
             ON CONFLICT (cache_key) DO UPDATE SET
-              data       = '[]'::jsonb,
+              data       = CASE
+                             WHEN jsonb_array_length(betsapi_cache.data) > 0
+                             THEN betsapi_cache.data
+                             ELSE '[]'::jsonb
+                           END,
               fetched_at = NOW(),
               expires_at = NOW() + INTERVAL '4 hours'
           `);
@@ -761,11 +777,11 @@ runMigrations().then(() => {
 
         await db.execute(sql`
           INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
-          VALUES (${String(sportId)}, ${JSON.stringify(events)}::jsonb, NOW(), NOW() + INTERVAL '70 minutes')
+          VALUES (${String(sportId)}, ${JSON.stringify(events)}::jsonb, NOW(), NOW() + INTERVAL '${sql.raw(BETSAPI_DATA_TTL)}')
           ON CONFLICT (cache_key) DO UPDATE SET
             data       = EXCLUDED.data,
             fetched_at = NOW(),
-            expires_at = NOW() + INTERVAL '70 minutes'
+            expires_at = NOW() + INTERVAL '${sql.raw(BETSAPI_DATA_TTL)}'
         `);
 
         logger.info({ sportId, name: meta.name, count: events.length }, "BetsAPI cron: sport cached");
@@ -798,7 +814,7 @@ runMigrations().then(() => {
       if (isOddsRefreshing || oddsBatchAge < 2 * 60 * 1000) return;
       runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
     });
-    logger.info("BetsAPI cron started (every 60 minutes — skip-if-fresh, 4h TTL for empty sports)");
+    logger.info("BetsAPI cron started (every 60 minutes — age-based skip, 12h data TTL, empty preserves existing)");
 
     // Warm BetsAPI cache on startup — 2-minute delay after Odds API warm starts
     setTimeout(() => {
