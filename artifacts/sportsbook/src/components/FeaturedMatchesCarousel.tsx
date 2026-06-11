@@ -22,7 +22,7 @@ import { SportName } from './SportName';
 import { BetsApiMarketDrawer } from './BetsApiMarketDrawer';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { cn } from '../lib/utils';
-import { deriveFeatured, deriveSportChips, marketMeta, FEATURED_ALL } from '../lib/featuredMatches';
+import { deriveFeatured, deriveSportChips, marketMeta, sportIconFor, FEATURED_ALL } from '../lib/featuredMatches';
 
 interface Props {
   leagues: League[];
@@ -182,11 +182,11 @@ export function FeaturedMatchesCarousel({ leagues, onViewAll }: Props) {
                 className="flex flex-col gap-1.5 text-left group/teams"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <TeamBadge name={match.team1} size="sm" />
+                  <TeamBadge name={match.team1} sportIcon={sportIconFor(match.sportId)} size="sm" />
                   <span className="text-[13px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team1}</span>
                 </div>
                 <div className="flex items-center gap-2 min-w-0">
-                  <TeamBadge name={match.team2 ?? 'Away'} size="sm" />
+                  <TeamBadge name={match.team2 ?? 'Away'} sportIcon={sportIconFor(match.sportId)} size="sm" />
                   <span className="text-[13px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team2 ?? 'Away'}</span>
                 </div>
               </button>

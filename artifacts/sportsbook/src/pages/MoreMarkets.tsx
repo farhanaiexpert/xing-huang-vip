@@ -26,6 +26,7 @@ import {
   deriveFeatured,
   deriveSportChips,
   marketMeta,
+  sportIconFor,
   FEATURED_ALL,
 } from '@/lib/featuredMatches';
 
@@ -213,11 +214,11 @@ export function MoreMarkets() {
                         className="flex flex-col gap-1.5 text-left group/teams"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <TeamBadge name={match.team1} size="sm" />
+                          <TeamBadge name={match.team1} sportIcon={sportIconFor(match.sportId)} size="sm" />
                           <span className="text-[13px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team1}</span>
                         </div>
                         <div className="flex items-center gap-2 min-w-0">
-                          <TeamBadge name={match.team2 ?? 'Away'} size="sm" />
+                          <TeamBadge name={match.team2 ?? 'Away'} sportIcon={sportIconFor(match.sportId)} size="sm" />
                           <span className="text-[13px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team2 ?? 'Away'}</span>
                         </div>
                       </button>
