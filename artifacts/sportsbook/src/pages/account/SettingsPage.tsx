@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/hooks/useWallet';
 import { useOddsFormat } from '@/hooks/useOddsFormat';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/lib/apiClient';
 import {
   BarChart2, ShieldCheck, Calendar,
-  CheckCircle2, Copy, Check, Wallet,
+  CheckCircle2, Copy, Check, Wallet, Pencil, Loader2, LogOut,
 } from 'lucide-react';
 import type { OddsFormat } from '@/lib/oddsFormat';
 
@@ -21,12 +24,31 @@ function fmtDate(iso?: string) {
 }
 
 export function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { disconnect } = useWallet();
+  const [, navigate] = useLocation();
   const { format, setFormat } = useOddsFormat();
   const { toast } = useToast();
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const [copiedRef,  setCopiedRef]  = useState(false);
   const [copiedAddr, setCopiedAddr] = useState(false);
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput,   setNameInput]   = useState('');
+  const [nameSaving,  setNameSaving]  = useState(false);
+  const [nameError,   setNameError]   = useState('');
+
+  function handleDisconnect() {
+    setDisconnecting(true);
+    try {
+      disconnect();
+      toast({ title: 'Wallet disconnected' });
+      navigate('/');
+    } finally {
+      setDisconnecting(false);
+    }
+  }
 
   function handleCopyRef() {
     if (!user?.referralCode) return;
@@ -43,6 +65,31 @@ export function SettingsPage() {
     setCopiedAddr(true);
     setTimeout(() => setCopiedAddr(false), 2000);
     toast({ title: 'Address copied!' });
+  }
+
+  function startEditName() {
+    setNameInput(user?.displayName ?? '');
+    setNameError('');
+    setEditingName(true);
+  }
+
+  async function saveDisplayName() {
+    const trimmed = nameInput.trim();
+    if (!trimmed) { setNameError('Display name cannot be empty'); return; }
+    if (trimmed.length > 20) { setNameError('Max 20 characters'); return; }
+    if (!/^[\w\s]+$/.test(trimmed)) { setNameError('Letters, numbers and spaces only'); return; }
+    setNameSaving(true);
+    setNameError('');
+    try {
+      const res = await api.patch<{ displayName: string }>('/auth/update-profile', { displayName: trimmed });
+      updateUser({ displayName: res.displayName ?? trimmed });
+      setEditingName(false);
+      toast({ title: 'Display name updated!' });
+    } catch (err) {
+      setNameError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setNameSaving(false);
+    }
   }
 
   return (
@@ -81,6 +128,58 @@ export function SettingsPage() {
             <p className="text-[13px] text-[#94A3B8]/50">No wallet connected</p>
           )}
 
+          {/* Display name */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Display Name</p>
+              {!editingName && (
+                <button
+                  onClick={startEditName}
+                  className="flex items-center gap-1 text-[11px] text-[#94A3B8]/60 hover:text-[#00DFA9] transition-colors"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Edit
+                </button>
+              )}
+            </div>
+            {editingName ? (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={e => { setNameInput(e.target.value); setNameError(''); }}
+                  maxLength={20}
+                  placeholder="e.g. CryptoKing"
+                  className="w-full rounded-xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-[13px] text-[#F8FAFC] placeholder:text-[#64748B]/50 outline-none focus:border-[#00DFA9]/40 focus:bg-white/[0.06] transition-all"
+                  autoFocus
+                  onKeyDown={e => { if (e.key === 'Enter') void saveDisplayName(); if (e.key === 'Escape') setEditingName(false); }}
+                />
+                {nameError && <p className="text-[11px] text-red-400">{nameError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void saveDisplayName()}
+                    disabled={nameSaving}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-bold transition-all disabled:opacity-50"
+                    style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}
+                  >
+                    {nameSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingName(false)}
+                    className="px-4 py-2 rounded-xl text-[12px] font-semibold text-[#94A3B8] border border-white/[0.08] hover:border-white/[0.18] hover:text-[#F8FAFC] transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[13px] text-[#F8FAFC]">
+                {user?.displayName || <span className="text-[#64748B]/50">Not set</span>}
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B] mb-1.5">Member Since</p>
@@ -116,6 +215,33 @@ export function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Disconnect Wallet ── */}
+      {user?.walletAddress && (
+        <section className="rounded-2xl border border-white/[0.07] bg-[#0E1520] overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-white/[0.06] bg-[#0A0F16]">
+            <LogOut className="h-3.5 w-3.5 text-red-400" />
+            <p className="text-[12px] font-bold text-[#F8FAFC]">Session</p>
+          </div>
+          <div className="p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[13px] text-[#F8FAFC] font-semibold">Disconnect Wallet</p>
+                <p className="text-[11px] text-[#64748B] mt-0.5">Sign out and clear your session. Your balance and bets are preserved.</p>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all disabled:opacity-50"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.25)' }}
+              >
+                {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+                Disconnect
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Odds format ── */}
       <section className="rounded-2xl border border-white/[0.07] bg-[#0E1520] overflow-hidden">

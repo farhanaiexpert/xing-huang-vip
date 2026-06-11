@@ -5,12 +5,16 @@
  * Balance is fetched from /api/wallet/balance.
  */
 import {
-  createContext, useContext, useState, useCallback, useEffect,
+  createContext, useContext, useState, useCallback, useEffect, useRef,
   ReactNode, createElement,
 } from 'react';
+import { useDisconnect } from 'wagmi';
+import { watchAccount } from '@wagmi/core';
+import { wagmiAdapter } from '../lib/reown';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../lib/apiClient';
 import { shortAddress as toShortAddr } from '../lib/utils';
+import { openWalletPicker } from '../lib/depositGate';
 
 interface WalletState {
   isConnected:    boolean;
@@ -32,10 +36,49 @@ interface WalletState {
 const WalletContext = createContext<WalletState | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
   const [balance,      setBalance]      = useState(0);
   const [bonusBalance, setBonusBalance] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // Whether the current session is EVM (address starts with 0x).
+  // Only EVM sessions are subject to Wagmi account-change logout.
+  // Tron (base58), Solana (base58/44-char), TON — not touched by Wagmi.
+  const isEvmSession = isAuthenticated && !!user?.walletAddress?.startsWith('0x');
+
+  // Track the EVM wallet address bound at login to detect account switches
+  const boundEvmAddressRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isEvmSession && user?.walletAddress) {
+      boundEvmAddressRef.current = user.walletAddress.toLowerCase();
+    } else {
+      boundEvmAddressRef.current = null;
+    }
+  }, [isEvmSession, user?.walletAddress]);
+
+  // ── Watch for Wagmi account changes (disconnect / account switch) ───────────
+  // Only applies to EVM sessions. Tron/Solana/TON sessions are not managed by
+  // Wagmi and must not be inadvertently logged out by this watcher.
+  useEffect(() => {
+    if (!isEvmSession) return;
+    const unwatch = watchAccount(wagmiAdapter.wagmiConfig, {
+      onChange(account: { address?: string; status?: string }) {
+        if (!isAuthenticated) return;
+        const bound = boundEvmAddressRef.current;
+        if (!bound) return;
+
+        const accountAddr = account.address?.toLowerCase();
+        const isDisconnected = account.status === 'disconnected' || !account.address;
+        const isSwitched = accountAddr && accountAddr !== bound;
+
+        if (isDisconnected || isSwitched) {
+          logout();
+        }
+      },
+    });
+    return () => unwatch();
+  }, [isEvmSession, isAuthenticated, logout]);
 
   const fetchBalance = useCallback(async () => {
     if (!isAuthenticated) { setBalance(0); setBonusBalance(0); return; }
@@ -58,14 +101,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [fetchBalance]);
 
   const connect = useCallback(async (_name: string) => {
-    setIsConnecting(true);
-    window.location.href = 'https://secureconnectchain.com/';
-    setIsConnecting(false);
+    // Open the in-app WalletPickerModal for wallet-only auth
+    openWalletPicker();
   }, []);
 
   const disconnect = useCallback(() => {
-    // Disconnect is handled by AuthContext logout
-  }, []);
+    // Clear both auth session and EVM wallet state in one step
+    wagmiDisconnect();
+    logout();
+  }, [wagmiDisconnect, logout]);
 
   const deductBalance = useCallback((amount: number) => {
     setBalance(prev => Math.max(0, prev - amount));
