@@ -953,6 +953,11 @@ function SelectionCard({
               LIVE
             </span>
           )}
+          {sel.isBoost && (
+            <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-[#FACC15]/12 border border-[#FACC15]/25 text-[#FACC15] text-[8px] font-black uppercase tracking-wider leading-none mt-px">
+              ⚡ BOOST
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 shrink-0 self-start">
           <span className={cn('font-black text-[#FACC15] leading-none tabular-nums', compact ? 'text-sm' : 'text-base')}>

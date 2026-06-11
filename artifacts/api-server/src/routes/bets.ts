@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   db, betsTable, betSelectionsTable, walletsTable, transactionsTable,
   sportControlsTable, marketLiabilityTable, userLimitsTable, selfExclusionsTable,
-  platformSettingsTable, riskFlagsTable,
+  platformSettingsTable, riskFlagsTable, priceBoostsTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { nextResetAt } from "../lib/depositGuard.js";
@@ -86,10 +86,10 @@ const SelectionSchema = z.object({
   eventName:        z.string(),
   sport:            z.string().default(""),            // legacy field, kept for compat
   sportKey:         z.string().min(1, "sportKey is required for settlement"),
-  homeTeam:         z.string().min(1, "homeTeam is required for settlement"),
-  awayTeam:         z.string().min(1, "awayTeam is required for settlement"),
+  homeTeam:         z.string().default(""),
+  awayTeam:         z.string().default(""),
   commenceTime:     z.string()
-                      .min(1, "commenceTime is required for settlement")
+                      .default(() => new Date().toISOString())
                       .refine(s => !isNaN(Date.parse(s)), { message: "commenceTime must be a valid ISO 8601 date" }),
   marketType:       z.string().min(1),
   selection:        z.string().min(1),
@@ -204,8 +204,57 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     }
   }
 
+  // ── Active boost lookup — apply boosted odds, skip slippage, enforce maxStake
+  const boostMap = new Map<string, { boostedOdds: number; boostId: number; maxStake: number | null }>();
+  {
+    const activeBoosts = await db
+      .select()
+      .from(priceBoostsTable)
+      .where(
+        and(
+          eq(priceBoostsTable.isActive, true),
+          or(isNull(priceBoostsTable.expiresAt), gt(priceBoostsTable.expiresAt, now)),
+        ),
+      );
+    for (const s of selections) {
+      const boost = activeBoosts.find(
+        b =>
+          b.matchId === s.eventId &&
+          b.selectionName.toLowerCase().trim() === s.selection.toLowerCase().trim(),
+      );
+      if (boost) {
+        const key = `${s.eventId}||${s.selection.toLowerCase().trim()}`;
+        boostMap.set(key, {
+          boostedOdds: parseFloat(boost.boostedOdds),
+          boostId:     boost.id,
+          maxStake:    boost.maxStake && parseFloat(boost.maxStake) > 0 ? parseFloat(boost.maxStake) : null,
+        });
+      }
+    }
+  }
+  // Enforce per-boost maxStake
+  for (const override of boostMap.values()) {
+    if (override.maxStake !== null && stake > override.maxStake) {
+      res.status(400).json({
+        error: `This boosted offer has a maximum stake of ${override.maxStake} USDT.`,
+        code: "BOOST_MAX_STAKE_EXCEEDED",
+      });
+      return;
+    }
+  }
+  // Apply boosted odds to matched selections
+  const boostedSelections = selections.map(s => {
+    const key = `${s.eventId}||${s.selection.toLowerCase().trim()}`;
+    const override = boostMap.get(key);
+    return override ? { ...s, odds: override.boostedOdds } : s;
+  });
+
   // ── Odds slippage check (pre-match only — live odds move too fast) ──────────
-  const prematches = selections.filter(s => !s.isLive);
+  // Boost selections are intentionally above market odds — skip them here.
+  const prematches = boostedSelections.filter(s => {
+    const key = `${s.eventId}||${s.selection.toLowerCase().trim()}`;
+    return !s.isLive && !boostMap.has(key);
+  });
   if (prematches.length > 0) {
     const tolRow = await db.select().from(platformSettingsTable)
       .where(eq(platformSettingsTable.key, 'odds_slippage_tolerance'))
@@ -246,7 +295,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
     }
   }
 
-  const totalOdds = selections.reduce((acc, s) => acc * s.odds, 1);
+  const totalOdds = boostedSelections.reduce((acc, s) => acc * s.odds, 1);
   const potentialReturn = stake * totalOdds;
 
   // ── Max-win-per-day cap ────────────────────────────────────────────────────
@@ -306,7 +355,7 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
       }).returning();
 
       await tx.insert(betSelectionsTable).values(
-        selections.map(s => ({
+        boostedSelections.map(s => ({
           betId:            newBet.id,
           eventId:          s.eventId,
           eventName:        s.eventName,
@@ -354,6 +403,18 @@ router.post("/bets", authenticate, async (req, res): Promise<void> => {
       return;
     }
     throw err;
+  }
+
+  // ── Boost usage tracking (fire-and-forget) ────────────────────────────────
+  if (boostMap.size > 0) {
+    void (async () => {
+      const usedIds = [...new Set([...boostMap.values()].map(v => v.boostId))];
+      for (const id of usedIds) {
+        try {
+          await db.execute(sql`UPDATE price_boosts SET usage_count = usage_count + 1 WHERE id = ${id}`);
+        } catch { /* non-critical */ }
+      }
+    })();
   }
 
   // ── Bet velocity flag (fire-and-forget, non-blocking) ─────────────────────

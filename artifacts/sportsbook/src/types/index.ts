@@ -31,6 +31,10 @@ export type Selection = {
   awayTeam?: string;
   /** Handicap / totals line, e.g. 2.5 — used for settlement */
   point?: number;
+  /** True when this selection came from a Price Boost offer */
+  isBoost?: boolean;
+  /** Original (pre-boost) odds — used for display strikethrough in bet slip */
+  originalOdds?: number;
 };
 
 export type Match = {

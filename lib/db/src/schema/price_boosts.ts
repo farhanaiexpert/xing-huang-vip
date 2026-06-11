@@ -17,6 +17,11 @@ export const priceBoostsTable = pgTable("price_boosts", {
   expiresAt:     timestamp("expires_at",   { withTimezone: true }),
   createdAt:     timestamp("created_at",   { withTimezone: true }).notNull().defaultNow(),
   createdBy:     integer("created_by"),
+  homeTeam:      text("home_team").notNull().default(""),
+  awayTeam:      text("away_team").notNull().default(""),
+  commenceTime:  timestamp("commence_time", { withTimezone: true }),
+  sportKey:      text("sport_key").notNull().default(""),
+  usageCount:    integer("usage_count").notNull().default(0),
 });
 
 export const insertPriceBoostSchema = createInsertSchema(priceBoostsTable).omit({ id: true, createdAt: true });

@@ -582,6 +582,20 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v31 skipped");
   }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE price_boosts
+        ADD COLUMN IF NOT EXISTS home_team     TEXT        NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS away_team     TEXT        NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS commence_time TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS sport_key     TEXT        NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS usage_count   INTEGER     NOT NULL DEFAULT 0
+    `);
+    logger.info("DB migration v32 applied (price_boosts: home_team, away_team, commence_time, sport_key, usage_count)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v32 skipped");
+  }
 }
 
 runMigrations().then(() => {

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Zap, Clock } from 'lucide-react';
+import { Zap, Clock, ChevronRight } from 'lucide-react';
 import { useBetSlip } from '@/hooks/useBetSlip';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,10 @@ interface PriceBoost {
   boostedOdds: string;
   maxStake: string | null;
   expiresAt: string | null;
-  sportKey?: string;
+  homeTeam: string;
+  awayTeam: string;
+  commenceTime: string | null;
+  sportKey: string;
 }
 
 function useCountdown(expiresAt: string | null) {
@@ -42,19 +45,47 @@ function useCountdown(expiresAt: string | null) {
 }
 
 function BoostCard({ boost }: { boost: PriceBoost }) {
-  const { hasSelection, removeSelection } = useBetSlip();
+  const { hasSelection, addSelection, removeSelection } = useBetSlip();
   const countdown = useCountdown(boost.expiresAt);
-  const selId = `boost-${boost.id}`;
+  const selId     = `boost-${boost.id}`;
   const isSelected = hasSelection(selId);
-  const origOdds = parseFloat(boost.originalOdds);
-  const bstOdds  = parseFloat(boost.boostedOdds);
+  const origOdds   = parseFloat(boost.originalOdds);
+  const bstOdds    = parseFloat(boost.boostedOdds);
+  const uplift     = Math.round(((bstOdds - origOdds) / origOdds) * 100);
 
   function handleClick() {
     if (isSelected) {
       removeSelection(selId);
       return;
     }
-    // homeTeam, awayTeam, commenceTime required for settlement — unavailable in static promo data.
+
+    // Parse home/away from "Team A vs Team B" if not stored explicitly
+    const parts = boost.matchName.split(/\s+vs\.?\s+/i);
+    const homeTeam = boost.homeTeam || (parts[0] ?? '').trim();
+    const awayTeam = boost.awayTeam || (parts[1] ?? '').trim();
+
+    addSelection({
+      id:           selId,
+      marketId:     `boost-market-${boost.id}`,
+      matchId:      boost.matchId || selId,
+      matchName:    boost.matchName,
+      leagueName:   boost.leagueName || '',
+      marketName:   boost.marketName,
+      selectionType: 'boost',
+      selectionName: boost.selectionName,
+      odds:         bstOdds,
+      sportKey:     boost.sportKey || 'soccer',
+      homeTeam,
+      awayTeam,
+      commenceTime: boost.commenceTime
+        || boost.expiresAt
+        || new Date(Date.now() + 3_600_000).toISOString(),
+      isBoost:      true,
+      originalOdds: origOdds,
+    });
+    toast.success('Added to bet slip', {
+      description: `${boost.selectionName} @ ${bstOdds.toFixed(2)}`,
+    });
   }
 
   return (
@@ -70,7 +101,7 @@ function BoostCard({ boost }: { boost: PriceBoost }) {
       {/* Gold glow top bar */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#FACC15]/80 via-[#FACC15] to-[#FACC15]/80" />
 
-      {/* BOOST badge */}
+      {/* Top row: BOOST badge + countdown */}
       <div className="flex items-center justify-between mb-2">
         <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-[#FACC15] bg-[#FACC15]/10 border border-[#FACC15]/20 px-1.5 py-0.5 rounded-full">
           <Zap className="h-2.5 w-2.5" />
@@ -99,12 +130,28 @@ function BoostCard({ boost }: { boost: PriceBoost }) {
         )}>
           {bstOdds.toFixed(2)}
         </span>
-        {boost.maxStake && (
-          <span className="ml-auto text-[9px] text-[#94A3B8]/40">
-            Max {parseFloat(boost.maxStake).toFixed(0)} USDT
+        {uplift > 0 && (
+          <span className="ml-auto text-[9px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-1 py-0.5 rounded-full">
+            +{uplift}%
           </span>
         )}
       </div>
+
+      {/* Max stake note */}
+      {boost.maxStake && parseFloat(boost.maxStake) > 0 && (
+        <p className="text-[9px] text-[#94A3B8]/40 mt-1.5">
+          Max stake {parseFloat(boost.maxStake).toFixed(0)} USDT
+        </p>
+      )}
+
+      {/* Selected CTA */}
+      {isSelected ? (
+        <p className="text-[9px] text-[#00DFA9] mt-1.5 font-bold">✓ In your bet slip</p>
+      ) : (
+        <p className="text-[9px] text-[#94A3B8]/40 mt-1.5 flex items-center gap-0.5">
+          Tap to add <ChevronRight className="h-2.5 w-2.5" />
+        </p>
+      )}
     </button>
   );
 }
@@ -124,9 +171,12 @@ export function PriceBoostsStrip() {
   return (
     <div className="mb-4">
       <div className="flex items-center gap-2 mb-2.5 px-1">
-        <Zap className="h-4 w-4 text-[#FACC15]" />
-        <span className="text-[13px] font-bold text-[#F8FAFC]">Price Boosts</span>
-        <span className="text-[10px] text-[#94A3B8]/40 ml-1">Enhanced odds — limited time</span>
+        <div className="flex items-center gap-1.5">
+          <Zap className="h-4 w-4 text-[#FACC15]" />
+          <span className="text-[13px] font-bold text-[#F8FAFC]">Price Boosts</span>
+        </div>
+        <span className="text-[10px] text-[#94A3B8]/40 ml-0.5">Enhanced odds · limited time</span>
+        <span className="ml-auto text-[10px] text-[#FACC15]/60 font-semibold">{boosts.length} live</span>
       </div>
       <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
         {boosts.map(b => <BoostCard key={b.id} boost={b} />)}
