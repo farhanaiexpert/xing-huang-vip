@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRoute, useLocation } from 'wouter';
-import { ScrollArea } from '../components/ui/scroll-area';
 import { BetSlip } from '../components/BetSlip';
 import { Header } from '../components/Header';
 import { MatchHeader } from '../components/match/MatchHeader';
@@ -12,7 +11,7 @@ import { useOddsData } from '../hooks/useOddsData';
 import { useLiveMatchScore } from '../hooks/useLiveMatchScore';
 import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
 import { findMatchInLeagues } from '../lib/matchUtils';
-import { Receipt, TrendingUp, BarChart2, Users, RefreshCw, Flame, CheckCircle2, Shield } from 'lucide-react';
+import { Receipt, TrendingUp, Users, RefreshCw, Flame, CheckCircle2, Shield } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle, DrawerDescription } from '../components/ui/drawer';
 import { cn } from '../lib/utils';
 import type { MatchEntity, LeagueEntity } from '../data/types';
@@ -52,7 +51,6 @@ function matchToEntity(match: Match): MatchEntity {
         { id: `${match.id}_a`, marketId: primaryMarketId, name: match.team2 ?? 'Away', shortName: '2', odds: match.odds.away,       oddsStatus: 'active', oddsMovement: 'stable' },
       ],
     },
-    // Pass real API totals/BTTS odds so soccerMarkets() can prefer them over generated values
     ouOver25:  match.ouOver25,
     ouUnder25: match.ouUnder25,
     bttsYes:   match.bttsYes,
@@ -78,7 +76,7 @@ function leagueToEntity(league: League): LeagueEntity {
 
 function popularityPct(matchId: string): number {
   const n = matchId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  return 55 + (n % 40); // 55–94 %
+  return 55 + (n % 40);
 }
 
 function bettersBadge(matchId: string): string {
@@ -99,7 +97,6 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
   const pct     = popularityPct(match.id);
   const bettors = bettersBadge(match.id);
 
-  // Implied probabilities (normalised)
   const ih    = 1 / home.odds;
   const id    = draw ? 1 / draw.odds : 0;
   const ia    = 1 / away.odds;
@@ -114,10 +111,8 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
     <div className="mx-3 sm:mx-4 xl:mx-5 mt-3 mb-0 rounded-2xl overflow-hidden border border-[#1E2D3D] shadow-[0_4px_24px_rgba(0,0,0,0.35)]"
       style={{ background: 'linear-gradient(180deg, #111827 0%, #0d1520 100%)' }}>
 
-      {/* Top accent */}
       <div className="h-[2px]" style={{ background: 'linear-gradient(90deg, #00DFA9, #38BDF8 50%, transparent)' }} />
 
-      {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-5 py-3 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center shrink-0">
@@ -144,7 +139,6 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
         </div>
       </div>
 
-      {/* Activity bar */}
       <div className="mx-4 sm:mx-5 mb-3 h-1.5 bg-[#0A0E13] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-1000"
@@ -152,7 +146,6 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
         />
       </div>
 
-      {/* Odds buttons */}
       <div className={cn('grid px-4 sm:px-5 pb-4 gap-2.5 sm:gap-3', draw ? 'grid-cols-3' : 'grid-cols-2')}>
         {([home, draw, away] as typeof home[]).filter(Boolean).map((sel, idx) => {
           const prob = idx === 0 ? homeProb : idx === 1 && draw ? drawProb : awayProb;
@@ -175,7 +168,6 @@ function OddsOverview({ match, sportKey, commenceTime }: { match: MatchEntity; s
         })}
       </div>
 
-      {/* Disclaimer */}
       <div className="flex items-center justify-center gap-1.5 pb-3">
         <Shield className="h-3 w-3 text-[#94A3B8]/20" />
         <p className="text-[9px] text-[#94A3B8]/25 font-medium">
@@ -218,30 +210,23 @@ function QuickOddsCell({
           : 'linear-gradient(160deg, #0F1825 0%, #0B1018 100%)',
       }}
     >
-      {/* Selected check */}
       {isSelected && (
         <div className="absolute top-2 right-2">
           <CheckCircle2 className="h-3.5 w-3.5 text-[#00DFA9]" />
         </div>
       )}
-
-      {/* Label */}
       <span className={cn(
         'text-[10px] font-bold uppercase tracking-wider leading-none',
         isSelected ? 'text-[#00DFA9]/90' : 'text-[#94A3B8]/60'
       )}>
         {label}
       </span>
-
-      {/* Odds */}
       <span className={cn(
         'text-[28px] sm:text-[26px] font-black tabular-nums leading-none',
         isSelected ? 'text-[#00DFA9]' : 'text-[#FACC15]'
       )}>
         {sel.odds.toFixed(2)}
       </span>
-
-      {/* Implied probability */}
       {impliedProb !== undefined && (
         <span className={cn(
           'text-[10px] font-semibold leading-none',
@@ -287,7 +272,6 @@ function MatchDetailSkeleton() {
       <Header />
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          {/* Hero skeleton */}
           <div className="bg-gradient-to-b from-[#0F1825] to-[#0B0F14] border-b border-[#253241] px-4 pt-3 pb-4">
             <div className="h-3 w-48 bg-[#1A2433] rounded mb-4 animate-pulse" />
             <div className="flex items-center justify-between gap-4">
@@ -302,7 +286,6 @@ function MatchDetailSkeleton() {
               </div>
             </div>
           </div>
-          {/* Quick odds skeleton */}
           <div className="mx-3 sm:mx-4 mt-3 mb-1 rounded-xl bg-[#121821] border border-[#253241] p-4">
             <div className="grid grid-cols-3 gap-3">
               {[0,1,2].map(i => (
@@ -311,12 +294,11 @@ function MatchDetailSkeleton() {
             </div>
           </div>
           {/* Nav skeleton */}
-          <div className="h-10 border-b border-[#253241]/60 flex items-center gap-2 px-4">
-            {[80,60,72,64,80].map((w, i) => (
-              <div key={i} className={`h-6 rounded-lg bg-[#1A2433] animate-pulse`} style={{ width: w }} />
+          <div className="h-[54px] border-b border-[#1A2433] flex items-center gap-2 px-4">
+            {[80,60,72,64,80,56].map((w, i) => (
+              <div key={i} className="h-8 rounded-full bg-[#1A2433] animate-pulse shrink-0" style={{ width: w }} />
             ))}
           </div>
-          {/* Market groups skeleton */}
           <div className="px-4 py-3 space-y-2.5">
             {[0,1,2,3].map(i => (
               <div key={i} className="rounded-xl border border-[#253241] bg-[#121821] overflow-hidden">
@@ -344,73 +326,34 @@ function MatchDetailSkeleton() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function MatchDetail() {
-  const [, params]     = useRoute<{ id: string }>('/match/:id');
+  const [, params]      = useRoute<{ id: string }>('/match/:id');
   const [, setLocation] = useLocation();
-  const matchId        = params?.id;
+  const matchId         = params?.id;
 
-  // Access real API matches through the global context
   const { allLeagues, loading } = useOddsData();
 
-  // Resolve match + league from real API data only
   const resolved = useMemo(() => {
     if (!matchId) return null;
-
     const found = findMatchInLeagues(matchId, allLeagues);
     if (found) {
       return {
         match:    matchToEntity(found.match),
         league:   leagueToEntity(found.league),
         sportKey: found.match.sportKey ?? found.match.sportId ?? '',
-        isApi:    true,
       };
     }
-
     return null;
   }, [matchId, allLeagues]);
-
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const { selections } = useBetSlip();
-  const groupRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const groups = useMemo(
     () => resolved ? generateDetailMarkets(resolved.match) : [],
     [resolved]
   );
 
-  useEffect(() => {
-    if (groups.length > 0 && !activeGroupId) {
-      setActiveGroupId(groups[0].id);
-    }
-  }, [groups.length, activeGroupId]);
+  if (!resolved && loading) return <MatchDetailSkeleton />;
+  if (!resolved) return <MatchNotFound onBack={() => setLocation('/')} />;
 
-  // Scroll to group when nav tab clicked
-  const handleNavSelect = useCallback((id: string) => {
-    setActiveGroupId(id);
-    const el = groupRefs.current[id];
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
-  // Mobile FAB pulse when new selection added
-  const prevCount = useRef(selections.length);
-  const [fabPulse, setFabPulse] = useState(false);
-  useEffect(() => {
-    if (selections.length > prevCount.current) {
-      setFabPulse(true);
-      setTimeout(() => setFabPulse(false), 600);
-    }
-    prevCount.current = selections.length;
-  }, [selections.length]);
-
-  // Show skeleton while API data is still loading
-  if (!resolved && loading) {
-    return <MatchDetailSkeleton />;
-  }
-
-  if (!resolved) {
-    return <MatchNotFound onBack={() => setLocation('/')} />;
-  }
-
-  const { match, league, sportKey } = resolved as { match: typeof resolved.match; league: typeof resolved.league; sportKey?: string; isApi: boolean };
+  const { match, league, sportKey } = resolved;
   const matchName = match.awayTeamName
     ? `${match.homeTeamName} vs ${match.awayTeamName}`
     : match.homeTeamName;
@@ -422,36 +365,110 @@ export function MatchDetail() {
       sportKey={sportKey}
       matchName={matchName}
       groups={groups}
-      activeGroupId={activeGroupId}
-      groupRefs={groupRefs}
-      handleNavSelect={handleNavSelect}
-      selections={selections}
-      fabPulse={fabPulse}
     />
   );
 }
 
-// ─── Inner body — separated so hooks are called at top level ─────────────────
+// ─── Inner body ───────────────────────────────────────────────────────────────
+
+// Height of the sticky MarketNav bar (h-[54px]). Used for scroll offset calculation
+// and for the scroll-spy threshold.
+const NAV_HEIGHT = 54;
 
 function MatchDetailBody({
-  match, league, sportKey, matchName, groups, activeGroupId,
-  groupRefs, handleNavSelect, selections, fabPulse,
+  match, league, sportKey, matchName, groups,
 }: {
-  match: MatchEntity;
-  league: LeagueEntity;
-  sportKey: string | undefined;
+  match:     MatchEntity;
+  league:    LeagueEntity;
+  sportKey:  string | undefined;
   matchName: string;
-  groups: ReturnType<typeof generateDetailMarkets>;
-  activeGroupId: string | null;
-  groupRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
-  handleNavSelect: (id: string) => void;
-  selections: ReturnType<typeof useBetSlip>['selections'];
-  fabPulse: boolean;
+  groups:    ReturnType<typeof generateDetailMarkets>;
 }) {
-  const isSoccer = match.sportId === 'sp_soccer';
+  const isSoccer               = match.sportId === 'sp_soccer';
   const { collapsed: betSlipCollapsed } = useBetSlipSidebar();
+  const { selections }         = useBetSlip();
 
-  // Real-time live score polling — only fires when the match is live
+  // ── Nav / scroll state ──────────────────────────────────────────────────────
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const groupRefs         = useRef<Record<string, HTMLDivElement | null>>({});
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  // True while a programmatic scroll is running — prevents scroll-spy interference
+  const isScrollingRef    = useRef(false);
+  const rafIdRef          = useRef<number | null>(null);
+
+  // Set first group as active when groups arrive
+  useEffect(() => {
+    if (groups.length > 0 && !activeGroupId) {
+      setActiveGroupId(groups[0].id);
+    }
+  }, [groups.length, activeGroupId]);
+
+  // Scroll-spy: listen to scroll events on the container and update activeGroupId
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || groups.length === 0) return;
+
+    const handleScroll = () => {
+      if (isScrollingRef.current) return;
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = requestAnimationFrame(() => {
+        const containerRect = container.getBoundingClientRect();
+        // The threshold is just below the sticky nav
+        const threshold = containerRect.top + NAV_HEIGHT + 24;
+
+        // Walk all groups and find the last one whose top edge is above the threshold
+        let found: string | null = groups[0].id;
+        for (const group of groups) {
+          const el = groupRefs.current[group.id];
+          if (!el) continue;
+          if (el.getBoundingClientRect().top <= threshold) {
+            found = group.id;
+          }
+        }
+        setActiveGroupId(found);
+      });
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    };
+  }, [groups]);
+
+  // Navigate to a group: open it and scroll to it
+  const handleNavSelect = useCallback((id: string) => {
+    setActiveGroupId(id);
+
+    const el        = groupRefs.current[id];
+    const container = scrollContainerRef.current;
+    if (!el || !container) return;
+
+    isScrollingRef.current = true;
+
+    // Compute scroll target: element top relative to the container viewport, minus nav
+    const containerRect = container.getBoundingClientRect();
+    const elRect        = el.getBoundingClientRect();
+    const scrollTarget  = container.scrollTop + (elRect.top - containerRect.top) - NAV_HEIGHT - 6;
+
+    container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+
+    // Release the scroll-spy lock once the smooth scroll animation finishes (~600ms)
+    setTimeout(() => { isScrollingRef.current = false; }, 700);
+  }, []);
+
+  // ── FAB pulse when selection added ─────────────────────────────────────────
+  const prevCount  = useRef(selections.length);
+  const [fabPulse, setFabPulse] = useState(false);
+  useEffect(() => {
+    if (selections.length > prevCount.current) {
+      setFabPulse(true);
+      setTimeout(() => setFabPulse(false), 600);
+    }
+    prevCount.current = selections.length;
+  }, [selections.length]);
+
+  // ── Live score ──────────────────────────────────────────────────────────────
   const liveData = useLiveMatchScore({
     matchId:  match.id,
     homeTeam: match.homeTeamName,
@@ -459,13 +476,10 @@ function MatchDetailBody({
     isLive:   match.isLive,
     isSoccer,
   });
-
-  // Use the polled score if available (falls back to static snapshot)
   const displayScore = liveData.score ?? match.score;
 
-  // Right padding reserves space for the fixed-positioned BetSlip panel on desktop.
-  // Expanded panel: w-[244px] + right-3(12px) margin = 256px → use 264px.
-  // Collapsed icon strip: w-14 (56px) + right-0 = 56px → use 64px (pr-16).
+  // ── Layout ──────────────────────────────────────────────────────────────────
+  // Right padding reserves space for the fixed BetSlip panel on desktop.
   const contentPr = betSlipCollapsed ? 'xl:pr-16' : 'xl:pr-[264px]';
 
   return (
@@ -473,30 +487,43 @@ function MatchDetailBody({
       <Header />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* ── Main column (padding-right clears the fixed BetSlip) ─── */}
-        <div className={cn('flex-1 flex flex-col min-w-0 overflow-hidden transition-[padding] duration-300', contentPr)}>
-          <ScrollArea className="flex-1 h-[calc(100vh-3.5rem)] pb-14 xl:pb-0">
-
-            {/* Match hero — with live score data wired in */}
+        {/* ── Main column ─────────────────────────────────────────────────── */}
+        <div className={cn(
+          'flex-1 flex flex-col min-w-0 overflow-hidden transition-[padding] duration-300',
+          contentPr,
+        )}>
+          {/*
+           * Plain overflow-y-auto div replaces Radix ScrollArea.
+           * This gives us a direct ref to the scroll container so we can
+           * compute exact scroll offsets for the nav tabs — scrollIntoView()
+           * is unreliable inside Radix ScrollArea's custom viewport.
+           */}
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto h-[calc(100vh-3.5rem)] pb-14 xl:pb-0"
+            style={{ scrollbarWidth: 'thin', scrollbarColor: '#253241 transparent' }}
+          >
+            {/* Match hero */}
             <MatchHeader
               match={match}
               league={league}
               liveData={match.isLive ? liveData : undefined}
             />
 
-            {/* Quick odds overview — primary market prominent at top */}
+            {/* Primary market quick-bet panel */}
             <OddsOverview match={match} sportKey={sportKey} commenceTime={match.startTime} />
 
-            {/* Sticky market navigation */}
+            {/* Sticky market navigator — sticks within this scroll container */}
             <MarketNav
               groups={groups}
               activeId={activeGroupId}
               onSelect={handleNavSelect}
             />
 
-            {/* Market groups */}
+            {/* Market group cards */}
             <div className="px-3 sm:px-4 xl:px-5 pt-3 pb-16 space-y-2.5 w-full">
-              {/* Live banner */}
+
+              {/* Live match banner */}
               {match.isLive && (
                 <div className="flex items-center gap-3 rounded-2xl px-4 py-3.5 border-2 border-[#EF4444]/25"
                   style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(15,22,32,0.9) 100%)' }}>
@@ -541,14 +568,14 @@ function MatchDetailBody({
                 <div
                   key={group.id}
                   ref={el => { groupRefs.current[group.id] = el; }}
-                  style={{ scrollMarginTop: '44px' }}
+                  data-group-id={group.id}
                 >
                   <MarketGroup
                     group={group}
                     matchId={match.id}
                     matchName={matchName}
                     leagueName={league.name}
-                    defaultOpen={idx < 2}
+                    defaultOpen={true}
                     isFeatured={idx === 0}
                     groupIndex={idx}
                     sportKey={sportKey}
@@ -565,14 +592,14 @@ function MatchDetailBody({
                 </p>
               </div>
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
-        {/* ── Right: Bet Slip ──────────────────────────────────────────── */}
+        {/* ── Right: Bet Slip ──────────────────────────────────────────────── */}
         <BetSlip />
       </div>
 
-      {/* ── Mobile Bet Slip FAB — sits above the mobile nav bar (h-14 = 56px) ── */}
+      {/* ── Mobile Bet Slip FAB ──────────────────────────────────────────────── */}
       <div className="xl:hidden fixed right-4 z-50" style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
         <Drawer>
           <DrawerTrigger asChild>
