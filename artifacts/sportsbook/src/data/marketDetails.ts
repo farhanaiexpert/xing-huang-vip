@@ -331,6 +331,116 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
   const mAG   = market(`mkt_${mid}_ag`,   mid, 'mt_anytime_scorer',   'Anytime Goal Scorer',  anytimeSels);
   const mLG   = market(`mkt_${mid}_lg`,   mid, 'mt_last_scorer',      'Last Goal Scorer',     lastGoalSels);
 
+  // ── Team totals & odd/even ─────────────────────────────────────────────────
+  const ttHomeOv = o((2.30 - ph * 1.10) * v);
+  const ttHomeUn = o((1.55 + ph * 0.80) / v);
+  const ttAwayOv = o((2.30 - pa * 1.10) * v);
+  const ttAwayUn = o((1.55 + pa * 0.80) / v);
+
+  const mTTHome  = market(`mkt_${mid}_tth`, mid, 'mt_team_total', `${ht} Total Goals — Over/Under 1.5`, [
+    sel(`mkt_${mid}_ttho`, `mkt_${mid}_tth`, 'Over 1.5',  'O 1.5', ttHomeOv),
+    sel(`mkt_${mid}_tthu`, `mkt_${mid}_tth`, 'Under 1.5', 'U 1.5', ttHomeUn),
+  ]);
+  const mTTAway  = market(`mkt_${mid}_tta`, mid, 'mt_team_total', `${at} Total Goals — Over/Under 1.5`, [
+    sel(`mkt_${mid}_ttao`, `mkt_${mid}_tta`, 'Over 1.5',  'O 1.5', ttAwayOv),
+    sel(`mkt_${mid}_ttau`, `mkt_${mid}_tta`, 'Under 1.5', 'U 1.5', ttAwayUn),
+  ]);
+  const mGoalsOE = market(`mkt_${mid}_oe`,  mid, 'mt_goals_oddeven', 'Total Goals — Odd/Even', [
+    sel(`mkt_${mid}_oeo`, `mkt_${mid}_oe`, 'Odd',  'Odd',  o(1.90 * v)),
+    sel(`mkt_${mid}_oee`, `mkt_${mid}_oe`, 'Even', 'Even', o(1.90 / v)),
+  ]);
+
+  // ── Next Goal & BTTS variants ──────────────────────────────────────────────
+  const ngPH = ph * 0.80 + 0.10;
+  const ngPA = pa * 0.80 + 0.10;
+  const ngPN = Math.max(0.05, 1 - ngPH - ngPA);
+  const mNextGoal = market(`mkt_${mid}_ng`, mid, 'mt_next_goal', 'Next Goal', [
+    sel(`mkt_${mid}_ngh`, `mkt_${mid}_ng`, ht,        '1',  o(1 / ngPH * 1.08 * v)),
+    sel(`mkt_${mid}_ngn`, `mkt_${mid}_ng`, 'No Goal', 'No', o(1 / ngPN * 1.05 * v)),
+    sel(`mkt_${mid}_nga`, `mkt_${mid}_ng`, at,        '2',  o(1 / ngPA * 1.08 * v)),
+  ]);
+  const mBTTSHt = market(`mkt_${mid}_bttsht`, mid, 'mt_btts_ht', 'Both Teams to Score — 1st Half', [
+    sel(`mkt_${mid}_bttshty`, `mkt_${mid}_bttsht`, 'Yes', 'Yes', o(bY * 1.95 * v)),
+    sel(`mkt_${mid}_bttshtn`, `mkt_${mid}_bttsht`, 'No',  'No',  o(1.22 / v)),
+  ]);
+
+  // ── Featured combinations (same-game) ──────────────────────────────────────
+  const pBY = 1 / bY, pBN = 1 / bN, pOv = 1 / o25Ov, pUn = 1 / o25Un;
+  const combo = (p: number) => o(1 / Math.max(0.02, p) * 1.10 * v);
+  const mComboResBtts = market(`mkt_${mid}_cb_rb`, mid, 'mt_combo_result_btts', 'Result & Both Teams to Score', [
+    sel(`mkt_${mid}_cb_rb_hy`, `mkt_${mid}_cb_rb`, `${ht} & Yes`, '1 & Y', combo(ph * pBY)),
+    sel(`mkt_${mid}_cb_rb_dy`, `mkt_${mid}_cb_rb`, 'Draw & Yes',  'X & Y', combo(pd * pBY)),
+    sel(`mkt_${mid}_cb_rb_ay`, `mkt_${mid}_cb_rb`, `${at} & Yes`, '2 & Y', combo(pa * pBY)),
+    sel(`mkt_${mid}_cb_rb_hn`, `mkt_${mid}_cb_rb`, `${ht} & No`,  '1 & N', combo(ph * pBN)),
+    sel(`mkt_${mid}_cb_rb_an`, `mkt_${mid}_cb_rb`, `${at} & No`,  '2 & N', combo(pa * pBN)),
+  ]);
+  const mComboResOU = market(`mkt_${mid}_cb_ro`, mid, 'mt_combo_result_ou', 'Result & Over/Under 2.5 Goals', [
+    sel(`mkt_${mid}_cb_ro_ho`, `mkt_${mid}_cb_ro`, `${ht} & Over 2.5`,  '1 & O', combo(ph * pOv)),
+    sel(`mkt_${mid}_cb_ro_hu`, `mkt_${mid}_cb_ro`, `${ht} & Under 2.5`, '1 & U', combo(ph * pUn)),
+    sel(`mkt_${mid}_cb_ro_du`, `mkt_${mid}_cb_ro`, 'Draw & Under 2.5',  'X & U', combo(pd * pUn)),
+    sel(`mkt_${mid}_cb_ro_ao`, `mkt_${mid}_cb_ro`, `${at} & Over 2.5`,  '2 & O', combo(pa * pOv)),
+    sel(`mkt_${mid}_cb_ro_au`, `mkt_${mid}_cb_ro`, `${at} & Under 2.5`, '2 & U', combo(pa * pUn)),
+  ]);
+  const mComboBttsOU = market(`mkt_${mid}_cb_bo`, mid, 'mt_combo_btts_ou', 'Both Teams to Score & Over/Under 2.5', [
+    sel(`mkt_${mid}_cb_bo_yo`, `mkt_${mid}_cb_bo`, 'Yes & Over 2.5',  'Y & O', combo(pBY * pOv)),
+    sel(`mkt_${mid}_cb_bo_yu`, `mkt_${mid}_cb_bo`, 'Yes & Under 2.5', 'Y & U', combo(pBY * pUn)),
+    sel(`mkt_${mid}_cb_bo_no`, `mkt_${mid}_cb_bo`, 'No & Over 2.5',   'N & O', combo(pBN * pOv)),
+    sel(`mkt_${mid}_cb_bo_nu`, `mkt_${mid}_cb_bo`, 'No & Under 2.5',  'N & U', combo(pBN * pUn)),
+  ]);
+
+  // ── Time / minute markets ──────────────────────────────────────────────────
+  const tfgBands = [
+    { lbl: '1-15',    p: 0.20 },
+    { lbl: '16-30',   p: 0.19 },
+    { lbl: '31-45',   p: 0.18 },
+    { lbl: '46-60',   p: 0.16 },
+    { lbl: '61-75',   p: 0.13 },
+    { lbl: '76-90',   p: 0.10 },
+    { lbl: 'No Goal', p: 0.06 },
+  ];
+  const mFirstGoalTime = market(`mkt_${mid}_fgt`, mid, 'mt_first_goal_time', 'Time of First Goal',
+    tfgBands.map((b, i) => sel(
+      `mkt_${mid}_fgt_${i}`, `mkt_${mid}_fgt`,
+      b.lbl === 'No Goal' ? 'No Goal' : `${b.lbl} min`, b.lbl,
+      o(1 / b.p * 1.12 * v),
+    )),
+  );
+  const mGoalIn10 = market(`mkt_${mid}_gi10`, mid, 'mt_goal_first_10', 'Goal in First 10 Minutes', [
+    sel(`mkt_${mid}_gi10y`, `mkt_${mid}_gi10`, 'Yes', 'Yes', o(3.40 * v)),
+    sel(`mkt_${mid}_gi10n`, `mkt_${mid}_gi10`, 'No',  'No',  o(1.28 / v)),
+  ]);
+  const mFhOU15 = market(`mkt_${mid}_fhou15`, mid, 'mt_fh_ou', '1st Half Goals — Over/Under 1.5', [
+    sel(`mkt_${mid}_fhou15o`, `mkt_${mid}_fhou15`, 'Over 1.5',  'O 1.5', o(2.60 * v)),
+    sel(`mkt_${mid}_fhou15u`, `mkt_${mid}_fhou15`, 'Under 1.5', 'U 1.5', o(1.46 / v)),
+  ]);
+  const mHighHalf = market(`mkt_${mid}_hsh`, mid, 'mt_highest_half', 'Highest Scoring Half', [
+    sel(`mkt_${mid}_hsh1`, `mkt_${mid}_hsh`, '1st Half', '1st', o(2.70 * v)),
+    sel(`mkt_${mid}_hsh2`, `mkt_${mid}_hsh`, '2nd Half', '2nd', o(2.10 * v)),
+    sel(`mkt_${mid}_hshe`, `mkt_${mid}_hsh`, 'Equal',    'Eq',  o(3.10 * v)),
+  ]);
+
+  // ── Specials: cards / penalties / fouls ────────────────────────────────────
+  const mCards35 = market(`mkt_${mid}_cd35`, mid, 'mt_total_cards', 'Total Cards — Over/Under 3.5', [
+    sel(`mkt_${mid}_cd35o`, `mkt_${mid}_cd35`, 'Over 3.5',  'O 3.5', o(1.95 * v)),
+    sel(`mkt_${mid}_cd35u`, `mkt_${mid}_cd35`, 'Under 3.5', 'U 3.5', o(1.80 / v)),
+  ]);
+  const mCards45 = market(`mkt_${mid}_cd45`, mid, 'mt_total_cards', 'Total Cards — Over/Under 4.5', [
+    sel(`mkt_${mid}_cd45o`, `mkt_${mid}_cd45`, 'Over 4.5',  'O 4.5', o(2.70 * v)),
+    sel(`mkt_${mid}_cd45u`, `mkt_${mid}_cd45`, 'Under 4.5', 'U 4.5', o(1.44 / v)),
+  ]);
+  const mRedCard = market(`mkt_${mid}_red`, mid, 'mt_red_card', 'Red Card in Match', [
+    sel(`mkt_${mid}_redy`, `mkt_${mid}_red`, 'Yes', 'Yes', o(4.20 * v)),
+    sel(`mkt_${mid}_redn`, `mkt_${mid}_red`, 'No',  'No',  o(1.20 / v)),
+  ]);
+  const mPenalty = market(`mkt_${mid}_pen`, mid, 'mt_penalty_awarded', 'Penalty Awarded', [
+    sel(`mkt_${mid}_peny`, `mkt_${mid}_pen`, 'Yes', 'Yes', o(3.10 * v)),
+    sel(`mkt_${mid}_penn`, `mkt_${mid}_pen`, 'No',  'No',  o(1.34 / v)),
+  ]);
+  const mFouls = market(`mkt_${mid}_fouls`, mid, 'mt_total_fouls', 'Total Fouls — Over/Under 24.5', [
+    sel(`mkt_${mid}_foulso`, `mkt_${mid}_fouls`, 'Over 24.5',  'O 24.5', o(1.90 * v)),
+    sel(`mkt_${mid}_foulsu`, `mkt_${mid}_fouls`, 'Under 24.5', 'U 24.5', o(1.85 / v)),
+  ]);
+
   return [
     {
       id: 'popular', name: 'Popular', icon: '⭐', category: 'popular',
@@ -338,9 +448,24 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
       isDefaultOpen: true,
     },
     {
-      id: 'goals', name: 'Goals', icon: '⚽', category: 'goals',
-      markets: [mBTTS, mOU05, mOU15, mOU25, mOU35, mOU45, mOU55],
+      id: 'goals', name: 'Goals / BTTS / Next Goal', icon: '⚽', category: 'goals',
+      markets: [mBTTS, mBTTSHt, mNextGoal, mOU15, mOU25, mOU35],
       isDefaultOpen: true,
+    },
+    {
+      id: 'overunder', name: 'Over / Under', icon: '📈', category: 'goals',
+      markets: [mOU05, mOU15, mOU25, mOU35, mOU45, mOU55, mTTHome, mTTAway, mGoalsOE],
+      isDefaultOpen: false,
+    },
+    {
+      id: 'combos', name: 'Featured Combinations', icon: '🔥', category: 'specials',
+      markets: [mComboResBtts, mComboResOU, mComboBttsOU],
+      isDefaultOpen: false,
+    },
+    {
+      id: 'timing', name: 'Time / Minute', icon: '🕐', category: 'specials',
+      markets: [mFirstGoalTime, mGoalIn10, mFhOU15, mHighHalf],
+      isDefaultOpen: false,
     },
     {
       id: 'result', name: 'Match Result', icon: '🏆', category: 'result',
@@ -380,6 +505,11 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
     {
       id: 'goalscorer', name: 'Goal Scorer', icon: '👟', category: 'players',
       markets: [mFG, mAG, mLG],
+      isDefaultOpen: false,
+    },
+    {
+      id: 'cards-specials', name: 'Specials', icon: '🃏', category: 'specials',
+      markets: [mCards35, mCards45, mRedCard, mPenalty, mFouls],
       isDefaultOpen: false,
     },
   ];

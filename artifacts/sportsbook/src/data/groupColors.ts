@@ -2,6 +2,10 @@ export function getGroupColor(groupId: string): string {
   switch (groupId) {
     case 'popular':       return '#FACC15';
     case 'goals':         return '#00DFA9';
+    case 'overunder':     return '#2DD4BF';
+    case 'combos':        return '#F59E0B';
+    case 'timing':        return '#818CF8';
+    case 'cards-specials':return '#F87171';
     case 'result':        return '#38BDF8';
     case 'handicap':      return '#A78BFA';
     case 'eur-handicap':  return '#FB923C';
