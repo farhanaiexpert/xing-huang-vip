@@ -17,7 +17,7 @@ import { fetchBetsApiUpcoming, type BetsApiEvent, type BetsApiSportMeta } from '
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v7'; // v7 — slims betsapi richMarkets in cache (drops heavy correctScore; fetched on-demand)
+const STORAGE_KEY  = 'oddschain_v8'; // v8 — featured "more markets" gate lowered 4→2 (recompute cached featuredMatch)
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
 const CACHE_TTL_MS = 35 * 60 * 1000;
 
@@ -200,7 +200,12 @@ function normaliseBetsApiLeagues(
                 bttsY: rmFull.bttsY, bttsN: rmFull.bttsN,
               }
             : undefined;
-          const featured = rm ? rm.marketScore >= 4 : false;
+          // "Matches With More Markets" gate. Real Bet365 upcoming feeds rarely
+          // expose 4+ extra market families on the soonest matches (typical depth
+          // is 2-3), so a >=4 gate left the section permanently empty. The carousel
+          // sorts by marketScore desc and shows only the top 8, so a >=2 gate keeps
+          // the richest matches first while ensuring the section actually populates.
+          const featured = rm ? rm.marketScore >= 2 : false;
           return {
             id:          `betsapi_${ev.id}`,
             team1:       ev.home.name,
