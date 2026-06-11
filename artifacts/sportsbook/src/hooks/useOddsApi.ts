@@ -17,7 +17,7 @@ import { fetchBetsApiUpcoming, type BetsApiEvent, type BetsApiSportMeta } from '
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v8'; // v8 — featured "more markets" gate lowered 4→2 (recompute cached featuredMatch)
+const STORAGE_KEY  = 'oddschain_v9'; // v9 — force re-fetch after BetsAPI exhaustion cleared (recompute featuredMatch with richMarkets)
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
 const CACHE_TTL_MS = 35 * 60 * 1000;
 
