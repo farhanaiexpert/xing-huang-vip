@@ -22,11 +22,11 @@ import { sql } from "drizzle-orm";
 /**
  * Hard per-hour ceiling.
  * Override with BETSAPI_HOURLY_LIMIT env var.
- * Default is 3200 — leaves a 400-credit safety buffer under the 3600/hour key limit.
+ * Default is 2500 — a conservative hard cap well below the purchased volume limit.
  */
 export const BETSAPI_HOURLY_LIMIT: number = (() => {
   const raw = Number(process.env.BETSAPI_HOURLY_LIMIT);
-  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 3200;
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 2500;
 })();
 
 /**
