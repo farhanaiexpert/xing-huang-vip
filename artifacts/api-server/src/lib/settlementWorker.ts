@@ -1,24 +1,26 @@
 /**
- * Auto-Settlement Worker  (v3)
+ * Auto-Settlement Worker  (v4)
  *
- * Dual-source settlement:
- *  1. The Odds API  /v4/sports/{sport}/scores  — primary, all sports
- *  2. API-Football  /fixtures?date=…&status=FT — fallback, soccer only
+ * Three-source settlement:
+ *  1. The Odds API  /v4/sports/{sport}/scores      — primary, Odds-API events
+ *  2. BetsAPI       /v1/bet365/result?FI={id}      — BetsAPI (betsapi_*) events
+ *  3. Manual review — fallback after 48 h with no result from either source
  *
  * Settlement timing: driven by match commence_time stored at bet placement,
  * NOT by the bet's created_at timestamp.
  *
  * Decision tree per event (evaluated each cron tick):
  *  1. commence_time in future (or null for legacy rows) → skip, keep open
- *  2. commence_time in past → attempt settlement from both sources
- *  3. Result found (Odds API exact ID, api_live_ prefix, or API-Football) → settle
- *  4. No result found AND < 48h after commence_time → keep open, retry next tick
- *  5. No result found AND ≥ 48h after commence_time → mark bet as manual_review
+ *  2. commence_time in past → attempt settlement from source 1 then 2
+ *  3. Result found (Odds API exact ID or api_live_ prefix) → settle via source 1
+ *  4. Event ID starts with "betsapi_" → query BetsAPI result endpoint (source 2)
+ *  5. No result found AND < 48h after commence_time → keep open, retry next tick
+ *  6. No result found AND ≥ 48h after commence_time → mark bet as manual_review
  *
  * Event identity: always matched by eventId (exact).
- *  - api_live_XXXX synthetic IDs: strip prefix, look up real Odds API UUID.
- *  - Fuzzy team-name event matching has been REMOVED — team names are only used
- *    for score-side mapping after a match has been identified by ID.
+ *  - Odds API events:    UUID string, e.g. "a3f9c21b-88d4-4e12-…"
+ *  - api_live_XXXX:      strip prefix → look up real Odds API UUID
+ *  - betsapi_XXXXXXXX:   strip prefix → fixture ID for /v1/bet365/result call
  *
  * Idempotent: only processes bet_selections with status = 'open'.
  */
@@ -44,6 +46,7 @@ import {
   isApiFootballSport,
   type CompletedEvent,
 } from "./apiFootball.js";
+import { fetchBetsApiResult } from "./betsApiResult.js";
 
 const ODDS_API_KEY  = process.env.ODDS_API_KEY;
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4";
@@ -713,7 +716,7 @@ async function markBetsAsManualReview(
 async function processEvent(
   event:         CompletedEvent,
   sport:         string,
-  source:        "odds_api" | "api_football",
+  source:        "odds_api" | "api_football" | "betsapi",
   commenceTime?: Date | null,
 ): Promise<number> {
   const matchOutcome = determineMatchOutcome(event);
@@ -952,13 +955,47 @@ async function processSettlement(): Promise<void> {
 
     if (unsettledIds.size === 0) continue;
 
-    // ── Step 2: No team-name fallback — ID-first semantics only ─────────────────
-    // API-Football identifies fixtures by team-name fuzzy matching, which
-    // violates the ID-first event-identity requirement: it cannot guarantee
-    // which exact fixture is being settled when teams have played multiple
-    // times. Settlement is gated to Odds-API-exact-ID results only.
-    // Events that Odds API has not yet reported as completed remain open and
-    // will escalate to manual_review after the 48h cutoff (Step 3).
+    // ── Step 2: BetsAPI direct result (for betsapi_* event IDs) ─────────────────
+    // For events whose ID starts with "betsapi_", query BetsAPI's own
+    // /v1/bet365/result endpoint using the stored Bet365 fixture ID.
+    // This covers ALL BetsAPI sports including those not on The Odds API
+    // (Table Tennis, Darts, Snooker, Handball, Volleyball, Golf, etc.)
+    // as well as major league matches that simply have different IDs on
+    // each platform.
+    //
+    // Results are cached 30 min (completed) / 5 min (pending) to stay
+    // within the shared 3-hour credit window.  Calls that cannot reserve
+    // a credit slot are silently skipped (the event stays open and will
+    // be retried on the next cron tick).
+
+    const betsapiUnsettled = [...unsettledIds].filter(id => id.startsWith('betsapi_'));
+
+    for (const eventId of betsapiUnsettled) {
+      if (!unsettledIds.has(eventId)) continue;   // already settled in a prior iteration
+      const meta = startedEvents.find(e => e.eventId === eventId);
+
+      try {
+        const result = await fetchBetsApiResult(
+          eventId,
+          meta?.homeTeam ?? '',
+          meta?.awayTeam ?? '',
+        );
+
+        if (!result) continue;   // not finished yet or API unavailable — retry next tick
+
+        const n = await processEvent(result, sport, 'betsapi', meta?.commenceTime);
+        if (n > 0) {
+          grandTotal += n;
+          unsettledIds.delete(eventId);
+          logger.info(
+            { eventId, sport, betsSettled: n },
+            'Settlement worker: BetsAPI event settled via /v1/bet365/result',
+          );
+        }
+      } catch (err) {
+        logger.error({ err, eventId }, 'Settlement worker: BetsAPI result step error');
+      }
+    }
 
     // ── Step 3: Manual review — events ≥ 48h past commence_time with no result ─
     const toReview = startedEvents.filter(e => {
