@@ -17,6 +17,7 @@ import { AllSportsHighlights } from "./AllSportsHighlights";
 import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { SportHighlights } from "./SportHighlights";
 import { FeaturedMatchesCarousel } from "./FeaturedMatchesCarousel";
+import { PriceBoostsStrip } from "./PriceBoostsStrip";
 import { LiveScoresTicker } from "./LiveScoresTicker";
 import { LiveEventsBanner } from "./LiveEventsBanner";
 import { WorldCupHero } from "./WorldCupHero";
@@ -744,6 +745,7 @@ export function MainContent({
             </div>
           ) : (
             <>
+              {showFeatured && <PriceBoostsStrip />}
               {showFeatured && (
                 <FeaturedMatchesCarousel leagues={allLeagues} />
               )}
