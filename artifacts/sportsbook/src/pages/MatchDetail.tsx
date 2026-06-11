@@ -462,21 +462,24 @@ function MatchDetailBody({
     // Always expand the targeted group, even if it was previously collapsed.
     setOpenSignal(s => ({ id, nonce: s.nonce + 1 }));
 
-    const el = groupRefs.current[id];
-    if (!el || !container) return;
+    if (!container) return;
 
     isScrollingRef.current = true;
 
-    // Walk offsetParent chain for a layout-independent offset calculation.
-    let offsetTop = 0;
-    let curr: HTMLElement | null = el;
-    while (curr && curr !== container) {
-      offsetTop += curr.offsetTop;
-      curr = curr.offsetParent as HTMLElement | null;
-    }
+    // Scroll the group's header to the top of the viewport. We compute the
+    // target from bounding rects (robust regardless of the container's
+    // positioning) and run it on the next frame so any force-open expansion
+    // above the fold has settled before we measure.
+    const performScroll = () => {
+      const el = groupRefs.current[id];
+      if (!el || !container) return;
+      const delta = el.getBoundingClientRect().top - container.getBoundingClientRect().top;
+      const target = container.scrollTop + delta - topOffset() - 6;
+      container.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+    };
 
-    container.scrollTo({ top: Math.max(0, offsetTop - topOffset() - 6), behavior: 'smooth' });
-    setTimeout(() => { isScrollingRef.current = false; }, 800);
+    requestAnimationFrame(() => requestAnimationFrame(performScroll));
+    setTimeout(() => { isScrollingRef.current = false; }, 900);
   }, []);
 
   // ── FAB pulse when selection added ─────────────────────────────────────────
