@@ -27,6 +27,7 @@ import BookBalancePage from "@/pages/BookBalancePage";
 import BoostsPage from "@/pages/BoostsPage";
 import LoginHistoryPage from "@/pages/LoginHistoryPage";
 import ApiStatusPage from "@/pages/ApiStatusPage";
+import SecretAdminPage from "@/pages/SecretAdminPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -68,6 +69,7 @@ function Router() {
       <Route path="/boosts"         component={() => <ProtectedRoute component={BoostsPage}         />} />
       <Route path="/login-history" component={() => <ProtectedRoute component={LoginHistoryPage}  />} />
       <Route path="/api-status"   component={() => <ProtectedRoute component={ApiStatusPage}      />} />
+      <Route path="/secret/admin" component={SecretAdminPage} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );
