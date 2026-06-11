@@ -23,6 +23,7 @@ import { cn } from '../lib/utils';
 import {
   MARKET_PILLS,
   marketMeta,
+  sportMetaFor,
   selectFeaturedEntries,
   groupFeaturedBySport,
   type FeaturedEntry,
@@ -141,6 +142,7 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
           const isSel = match.id === selectedId;
           const rm = match.richMarkets;
           const pills = MARKET_PILLS.filter(p => rm && rm[p.key]);
+          const sportIcon = sportMetaFor(match.sportId).icon;
           const base = {
             matchId: match.id, marketId, matchName: match.team2 ? `${match.team1} vs ${match.team2}` : match.team1,
             leagueName, marketName, sportKey: match.sportKey, sportId: match.sportId,
@@ -174,11 +176,11 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
                 className="flex flex-col gap-1.5 text-left group/teams"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <TeamBadge name={match.team1} size="sm" />
+                  <TeamBadge name={match.team1} sportIcon={sportIcon} size="sm" />
                   <span className="text-[13px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team1}</span>
                 </div>
                 <div className="flex items-center gap-2 min-w-0">
-                  <TeamBadge name={match.team2 ?? 'Away'} size="sm" />
+                  <TeamBadge name={match.team2 ?? 'Away'} sportIcon={sportIcon} size="sm" />
                   <span className="text-[13px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team2 ?? 'Away'}</span>
                 </div>
               </button>

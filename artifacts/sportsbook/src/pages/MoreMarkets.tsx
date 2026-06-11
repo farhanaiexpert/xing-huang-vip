@@ -9,7 +9,7 @@
  * inline. Includes a sport-chip filter and a team/league search box.
  */
 import { useMemo, useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { Sparkles, ChevronRight, ChevronLeft, Search, Layers } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { BetSlip } from '@/components/BetSlip';
@@ -18,10 +18,12 @@ import { TeamBadge } from '@/components/TeamBadge';
 import { SportName } from '@/components/SportName';
 import { BetsApiMarketDrawer } from '@/components/BetsApiMarketDrawer';
 import { useOddsData } from '@/hooks/useOddsData';
+import { useBetSlipSidebar } from '@/contexts/BetSlipSidebarContext';
 import { cn } from '@/lib/utils';
 import {
   MARKET_PILLS,
   marketMeta,
+  sportMetaFor,
   selectFeaturedEntries,
   groupFeaturedBySport,
   type FeaturedEntry,
@@ -30,6 +32,7 @@ import {
 export function MoreMarkets() {
   const [, setLocation] = useLocation();
   const { allLeagues, loading } = useOddsData();
+  const { collapsed } = useBetSlipSidebar();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -58,7 +61,8 @@ export function MoreMarkets() {
     <div className="min-h-screen bg-[#0B0F14] text-[#F8FAFC] pb-14 xl:pb-0">
       <Header />
 
-      <main className="max-w-6xl mx-auto px-3 sm:px-6 py-5 sm:py-8">
+      <div className="flex">
+        <main className="flex-1 min-w-0 max-w-6xl mx-auto w-full px-3 sm:px-6 py-5 sm:py-8">
         {/* Back + title */}
         <button
           type="button"
@@ -169,6 +173,7 @@ export function MoreMarkets() {
               const isSel = match.id === selectedId;
               const rm = match.richMarkets;
               const pills = MARKET_PILLS.filter((p) => rm && rm[p.key]);
+              const sportIcon = sportMetaFor(match.sportId).icon;
               const base = {
                 matchId: match.id, marketId,
                 matchName: match.team2 ? `${match.team1} vs ${match.team2}` : match.team1,
@@ -203,11 +208,11 @@ export function MoreMarkets() {
                     className="flex flex-col gap-2 text-left group/teams"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <TeamBadge name={match.team1} size="md" />
+                      <TeamBadge name={match.team1} sportIcon={sportIcon} size="md" />
                       <span className="text-[14px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team1}</span>
                     </div>
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <TeamBadge name={match.team2 ?? 'Away'} size="md" />
+                      <TeamBadge name={match.team2 ?? 'Away'} sportIcon={sportIcon} size="md" />
                       <span className="text-[14px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team2 ?? 'Away'}</span>
                     </div>
                   </button>
@@ -266,7 +271,11 @@ export function MoreMarkets() {
             })}
           </div>
         )}
-      </main>
+        </main>
+
+        {/* Desktop BetSlip spacer — reserves room so cards are never hidden */}
+        <div className={cn('shrink-0 hidden xl:block transition-[width] duration-300', collapsed ? 'w-16' : 'w-[268px]')} />
+      </div>
 
       <BetSlip />
     </div>
