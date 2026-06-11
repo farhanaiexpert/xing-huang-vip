@@ -22,16 +22,12 @@ import { SportName } from './SportName';
 import { BetsApiMarketDrawer } from './BetsApiMarketDrawer';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { cn } from '../lib/utils';
+import { deriveFeatured, deriveSportChips, marketMeta, FEATURED_ALL } from '../lib/featuredMatches';
 
 interface Props {
   leagues: League[];
-  /** Optional: enable the full-list Featured filter and scroll to it. */
+  /** Optional: navigate to the dedicated More Markets page. */
   onViewAll?: () => void;
-}
-
-interface FeaturedEntry {
-  match:      Match;
-  leagueName: string;
 }
 
 const MARKET_PILLS: { key: keyof NonNullable<Match['richMarkets']>; label: string }[] = [
@@ -44,80 +40,24 @@ const MARKET_PILLS: { key: keyof NonNullable<Match['richMarkets']>; label: strin
   { key: 'hasCards',   label: 'Cards' },
 ];
 
-const SPORT_ICONS: Record<string, string> = {
-  sp_soccer: '⚽', sp_tennis: '🎾', sp_table_tennis: '🏓', sp_basketball: '🏀',
-  sp_ice_hockey: '🏒', sp_cricket: '🏏', sp_baseball: '⚾', sp_american_football: '🏈',
-  sp_volleyball: '🏐', sp_darts: '🎯', sp_boxing: '🥊', sp_mma: '🥋',
-  sp_rugby_league: '🏉', sp_rugby_union: '🏉', sp_esports: '🎮', sp_handball: '🤾',
-  sp_snooker: '🎱', sp_badminton: '🏸', sp_futsal: '⚽',
-};
-
-const SPORT_LABELS: Record<string, string> = {
-  sp_soccer: 'Soccer', sp_tennis: 'Tennis', sp_table_tennis: 'Table Tennis',
-  sp_basketball: 'Basketball', sp_ice_hockey: 'Ice Hockey', sp_cricket: 'Cricket',
-  sp_baseball: 'Baseball', sp_american_football: 'NFL', sp_volleyball: 'Volleyball',
-  sp_darts: 'Darts', sp_boxing: 'Boxing', sp_mma: 'MMA', sp_rugby_league: 'Rugby League',
-  sp_rugby_union: 'Rugby Union', sp_esports: 'Esports', sp_handball: 'Handball',
-  sp_snooker: 'Snooker', sp_badminton: 'Badminton', sp_futsal: 'Futsal',
-};
-
-function sportIconFor(id?: string): string {
-  return (id && SPORT_ICONS[id]) || '🏅';
-}
-
-function sportLabelFor(id?: string): string {
-  if (id && SPORT_LABELS[id]) return SPORT_LABELS[id];
-  if (!id) return 'Other';
-  return id.replace(/^sp_/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function marketMeta(match: Match) {
-  if (match.sportId === 'sp_soccer') return { marketId: `mkt_${match.id}_mr`, marketName: 'Match Result' };
-  return { marketId: `mkt_${match.id}_mw`, marketName: 'Match Winner' };
-}
-
-const ALL = '__all__';
-
 export function FeaturedMatchesCarousel({ leagues, onViewAll }: Props) {
   const [, setLocation] = useLocation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [sportFilter, setSportFilter] = useState<string>(ALL);
+  const [sportFilter, setSportFilter] = useState<string>(FEATURED_ALL);
 
   // All rich-market matches (no slice) — drives the count + sport chips.
-  const allFeatured = useMemo<FeaturedEntry[]>(() => {
-    const entries: FeaturedEntry[] = [];
-    for (const league of leagues) {
-      for (const match of league.matches) {
-        if (!match.id.startsWith('betsapi_')) continue;
-        if (!match.featuredMatch) continue;
-        entries.push({ match, leagueName: league.name });
-      }
-    }
-    entries.sort(
-      (a, b) => (b.match.richMarkets?.marketScore ?? 0) - (a.match.richMarkets?.marketScore ?? 0),
-    );
-    return entries;
-  }, [leagues]);
+  const allFeatured = useMemo(() => deriveFeatured(leagues), [leagues]);
 
   // Sport chips derived from the matches actually present, sorted by count desc.
-  const sportChips = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const { match } of allFeatured) {
-      const id = match.sportId ?? 'other';
-      counts.set(id, (counts.get(id) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .map(([id, count]) => ({ id, count, label: sportLabelFor(id), icon: sportIconFor(id) }))
-      .sort((a, b) => b.count - a.count);
-  }, [allFeatured]);
+  const sportChips = useMemo(() => deriveSportChips(allFeatured), [allFeatured]);
 
   // Keep the active chip valid if the underlying data changes.
-  const activeSport = sportFilter !== ALL && sportChips.some((c) => c.id === sportFilter)
+  const activeSport = sportFilter !== FEATURED_ALL && sportChips.some((c) => c.id === sportFilter)
     ? sportFilter
-    : ALL;
+    : FEATURED_ALL;
 
   const display = useMemo(() => {
-    const filtered = activeSport === ALL
+    const filtered = activeSport === FEATURED_ALL
       ? allFeatured
       : allFeatured.filter((e) => (e.match.sportId ?? 'other') === activeSport);
     return filtered.slice(0, 12);
@@ -164,11 +104,11 @@ export function FeaturedMatchesCarousel({ leagues, onViewAll }: Props) {
           <div className="flex items-center gap-1.5 w-max pb-1.5">
             <button
               type="button"
-              onClick={() => { setSportFilter(ALL); setSelectedId(null); }}
+              onClick={() => { setSportFilter(FEATURED_ALL); setSelectedId(null); }}
               data-testid="featured-sport-all"
               className={cn(
                 'shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all duration-150',
-                activeSport === ALL
+                activeSport === FEATURED_ALL
                   ? 'bg-[#FACC15]/10 text-[#FACC15] border-[#FACC15]/30'
                   : 'bg-[#121821] text-[#94A3B8]/70 border-[#253241] hover:text-[#F8FAFC] hover:border-[#2E3D50]',
               )}

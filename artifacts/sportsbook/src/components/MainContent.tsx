@@ -720,7 +720,7 @@ export function MainContent({
               {showFeatured && (
                 <FeaturedMatchesCarousel
                   leagues={allLeagues}
-                  onViewAll={() => { setFeaturedOnly(true); scrollToLeagueList(); }}
+                  onViewAll={() => navigate('/more-markets')}
                 />
               )}
               {showFeatured && (
