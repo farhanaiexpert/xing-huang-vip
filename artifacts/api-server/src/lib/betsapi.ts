@@ -501,7 +501,7 @@ const prematchOddsCache = new Map<string, PrematchCacheEntry>();
  */
 async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEventRaw[]> {
   const now             = Date.now();
-  const INPLAY_TTL_MS   = 2 * 60 * 1000;    // 2 min — reflects live match state
+  const INPLAY_TTL_MS   = 5 * 60 * 1000;    // 5 min — cuts per-fixture inplay calls by ~60% vs 2 min
   const PREMATCH_TTL_MS = 30 * 60 * 1000;   // 30 min — stable opening lines
   const CONCUR          = 5;
   const PER_FETCH       = 4_000;

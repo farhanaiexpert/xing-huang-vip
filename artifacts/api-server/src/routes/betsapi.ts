@@ -96,7 +96,7 @@ router.get('/betsapi/upcoming', async (_req, res): Promise<void> => {
 // ─── GET /betsapi/live — inplay events (DB-backed, 30 s TTL) ─────────────────
 
 const LIVE_CACHE_KEY = 'live';
-const LIVE_TTL_SECS  = 30;
+const LIVE_TTL_SECS  = 90;   // 90 s — 3× fewer inplay_filter calls vs 30 s (was 120/hr → 40/hr)
 // If the upstream refresh takes longer than this, serve the last-known (stale)
 // cache instead of blocking the request. The refresh keeps running in the
 // background and populates the cache for the next caller.
