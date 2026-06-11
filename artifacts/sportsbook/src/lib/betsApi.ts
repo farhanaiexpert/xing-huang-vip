@@ -83,6 +83,8 @@ interface AllResponse {
   /** Raw event count per BetsAPI sport_id string — includes countOnly sports */
   countBySportId: Record<string, number>;
   cached:         boolean;
+  /** true when the server is serving expired cache because a fresh fetch failed */
+  stale?:         boolean;
   sportCount:     number;
 }
 

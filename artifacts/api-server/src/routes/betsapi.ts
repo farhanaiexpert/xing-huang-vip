@@ -27,19 +27,31 @@ async function readUpcomingCache(): Promise<{
   sportMeta:       Record<string, typeof BETSAPI_SPORT_MAP[number]>;
   countBySportId:  Record<string, number>;
   updatedAt:       string | null;
+  stale:           boolean;
 }> {
+  // Fetch ALL rows (fresh + expired) so we can fall back to stale data when the
+  // cron hasn't been able to refresh yet (credits exhausted, key error, etc.).
   const result = await db.execute(sql`
-    SELECT cache_key, data, fetched_at FROM betsapi_cache WHERE expires_at > NOW()
+    SELECT cache_key, data, fetched_at, (expires_at <= NOW()) AS is_stale
+    FROM betsapi_cache
   `);
 
   const sports: Record<string, BetsApiEventRaw[]> = {};
   let latestFetchedAt: Date | null = null;
+  let hasStaleData = false;
 
   for (const row of result.rows) {
     const key  = row.cache_key as string;
     if (key === 'live') continue;  // skip live cache row
     const data = Array.isArray(row.data) ? (row.data as BetsApiEventRaw[]) : [];
-    sports[key] = data;
+    // Only include non-empty rows — preserves the "genuinely no events" case
+    // where an empty [] was intentionally written for off-season sports.
+    if (data.length > 0 || !(row.is_stale as boolean)) {
+      sports[key] = data;
+    }
+    if (data.length > 0 && (row.is_stale as boolean)) {
+      hasStaleData = true;
+    }
     const fetchedAt = row.fetched_at ? new Date(row.fetched_at as string) : null;
     if (fetchedAt && (!latestFetchedAt || fetchedAt > latestFetchedAt)) {
       latestFetchedAt = fetchedAt;
@@ -58,7 +70,7 @@ async function readUpcomingCache(): Promise<{
     countBySportId[key] = events.length;
   }
 
-  return { sports, sportMeta, countBySportId, updatedAt: latestFetchedAt?.toISOString() ?? null };
+  return { sports, sportMeta, countBySportId, updatedAt: latestFetchedAt?.toISOString() ?? null, stale: hasStaleData };
 }
 
 // ─── GET /betsapi/all — primary endpoint ─────────────────────────────────────
@@ -69,8 +81,8 @@ router.get('/betsapi/all', async (_req, res): Promise<void> => {
     return;
   }
   try {
-    const { sports, sportMeta, countBySportId, updatedAt } = await readUpcomingCache();
-    res.json({ sports, sportMeta, countBySportId, updatedAt, cached: true, sportCount: Object.keys(sports).length });
+    const { sports, sportMeta, countBySportId, updatedAt, stale } = await readUpcomingCache();
+    res.json({ sports, sportMeta, countBySportId, updatedAt, cached: true, stale, sportCount: Object.keys(sports).length });
   } catch (err) {
     logger.error({ err }, 'BetsAPI: failed to read upcoming cache');
     res.status(500).json({ error: 'Failed to fetch BetsAPI data' });
@@ -85,8 +97,8 @@ router.get('/betsapi/upcoming', async (_req, res): Promise<void> => {
     return;
   }
   try {
-    const { sports, sportMeta, countBySportId, updatedAt } = await readUpcomingCache();
-    res.json({ sports, sportMeta, countBySportId, updatedAt, cached: true, sportCount: Object.keys(sports).length });
+    const { sports, sportMeta, countBySportId, updatedAt, stale } = await readUpcomingCache();
+    res.json({ sports, sportMeta, countBySportId, updatedAt, cached: true, stale, sportCount: Object.keys(sports).length });
   } catch (err) {
     logger.error({ err }, 'BetsAPI: failed to read upcoming cache');
     res.status(500).json({ error: 'Failed to fetch BetsAPI upcoming' });
