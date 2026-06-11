@@ -718,10 +718,7 @@ export function MainContent({
           ) : (
             <>
               {showFeatured && (
-                <FeaturedMatchesCarousel
-                  leagues={allLeagues}
-                  onViewAll={() => { setFeaturedOnly(true); scrollToLeagueList(); }}
-                />
+                <FeaturedMatchesCarousel leagues={allLeagues} />
               )}
               {showFeatured && (
                 <div className="mb-5 rounded-2xl overflow-hidden shadow-2xl">

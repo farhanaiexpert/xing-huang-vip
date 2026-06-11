@@ -5,109 +5,46 @@
  * <BetsApiMarketDrawer/> below the strip.
  *
  * Header shows a live count of how many rich-market matches are available plus a
- * "View all" affordance, and a thin sport-chip row lets visitors filter the strip
- * to a single sport. Uses only data already in `allLeagues` (no network calls);
- * the drawer itself fetches from the cache-only markets endpoint. Renders nothing
- * when there are no featured matches (e.g. BetsAPI cache empty).
+ * prominent "View all" button that navigates to the dedicated /more-markets
+ * page, and a thin sport-chip row lets visitors filter the strip to a single
+ * sport. Uses only data already in `allLeagues` (no network calls); the drawer
+ * itself fetches from the cache-only markets endpoint. Renders nothing when
+ * there are no featured matches (e.g. BetsAPI cache empty).
  */
 import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
-import { Sparkles, ChevronRight } from 'lucide-react';
-import type { League, Match } from '../types';
+import { Sparkles, ChevronRight, ArrowRight } from 'lucide-react';
+import type { League } from '../types';
 import { OddsButton } from './OddsButton';
 import { TeamBadge } from './TeamBadge';
 import { SportName } from './SportName';
 import { BetsApiMarketDrawer } from './BetsApiMarketDrawer';
 import { cn } from '../lib/utils';
+import {
+  MARKET_PILLS,
+  marketMeta,
+  selectFeaturedEntries,
+  groupFeaturedBySport,
+  type FeaturedEntry,
+} from '../lib/featuredMarkets';
 
 interface Props {
   leagues: League[];
-  /** Called by the "View all" control — enable the Featured filter + scroll to list. */
-  onViewAll?: () => void;
-}
-
-interface FeaturedEntry {
-  match:      Match;
-  leagueName: string;
-}
-
-const MARKET_PILLS: { key: keyof NonNullable<Match['richMarkets']>; label: string }[] = [
-  { key: 'hasHcp',     label: 'Handicap' },
-  { key: 'hasOU',      label: 'O/U 2.5' },
-  { key: 'hasBTTS',    label: 'BTTS' },
-  { key: 'hasHT',      label: 'Half-Time' },
-  { key: 'hasCS',      label: 'Correct Score' },
-  { key: 'hasCorners', label: 'Corners' },
-  { key: 'hasCards',   label: 'Cards' },
-];
-
-/** Friendly label + icon per internal sport id (BetsAPI matches only). */
-const SPORT_META: Record<string, { label: string; icon: string }> = {
-  sp_soccer:           { label: 'Soccer',       icon: '⚽' },
-  sp_basketball:       { label: 'Basketball',   icon: '🏀' },
-  sp_tennis:           { label: 'Tennis',       icon: '🎾' },
-  sp_table_tennis:     { label: 'Table Tennis', icon: '🏓' },
-  sp_cricket:          { label: 'Cricket',      icon: '🏏' },
-  sp_rugby:            { label: 'Rugby',        icon: '🏉' },
-  sp_americanfootball: { label: 'NFL',          icon: '🏈' },
-  sp_baseball:         { label: 'Baseball',     icon: '⚾' },
-  sp_icehockey:        { label: 'Ice Hockey',   icon: '🏒' },
-  sp_golf:             { label: 'Golf',         icon: '⛳' },
-  sp_handball:         { label: 'Handball',     icon: '🤾' },
-  sp_snooker:          { label: 'Snooker',      icon: '🎱' },
-  sp_darts:            { label: 'Darts',        icon: '🎯' },
-  sp_volleyball:       { label: 'Volleyball',   icon: '🏐' },
-};
-
-function sportMetaFor(sportId: string): { label: string; icon: string } {
-  if (SPORT_META[sportId]) return SPORT_META[sportId];
-  const label = sportId
-    .replace(/^sp_/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-  return { label: label || 'Other', icon: '🏆' };
-}
-
-function marketMeta(match: Match) {
-  if (match.sportId === 'sp_soccer') return { marketId: `mkt_${match.id}_mr`, marketName: 'Match Result' };
-  return { marketId: `mkt_${match.id}_mw`, marketName: 'Match Winner' };
 }
 
 /** Cap on how many cards render in the strip at once (count badge shows the true total). */
 const STRIP_LIMIT = 12;
 
-export function FeaturedMatchesCarousel({ leagues, onViewAll }: Props) {
+export function FeaturedMatchesCarousel({ leagues }: Props) {
   const [, setLocation] = useLocation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
 
   // All rich-market matches, sorted by depth (no cap — drives the count + chips).
-  const allFeatured = useMemo<FeaturedEntry[]>(() => {
-    const entries: FeaturedEntry[] = [];
-    for (const league of leagues) {
-      for (const match of league.matches) {
-        if (!match.id.startsWith('betsapi_')) continue;
-        if (!match.featuredMatch) continue;
-        entries.push({ match, leagueName: league.name });
-      }
-    }
-    entries.sort(
-      (a, b) => (b.match.richMarkets?.marketScore ?? 0) - (a.match.richMarkets?.marketScore ?? 0),
-    );
-    return entries;
-  }, [leagues]);
+  const allFeatured = useMemo<FeaturedEntry[]>(() => selectFeaturedEntries(leagues), [leagues]);
 
   // Sports present among the featured matches, with counts (most matches first).
-  const sportGroups = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const e of allFeatured) {
-      const id = e.match.sportId || 'other';
-      counts.set(id, (counts.get(id) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .map(([id, count]) => ({ id, count, ...sportMetaFor(id) }))
-      .sort((a, b) => b.count - a.count);
-  }, [allFeatured]);
+  const sportGroups = useMemo(() => groupFeaturedBySport(allFeatured), [allFeatured]);
 
   // Guard the selected sport against data rotation (selected sport may disappear).
   const effectiveSport =
@@ -141,17 +78,15 @@ export function FeaturedMatchesCarousel({ leagues, onViewAll }: Props) {
             {totalCount} match{totalCount !== 1 ? 'es' : ''}
           </span>
           <div className="flex-1 h-px bg-gradient-to-r from-[#FACC15]/30 to-transparent" />
-          {onViewAll && (
-            <button
-              type="button"
-              onClick={onViewAll}
-              data-testid="featured-view-all"
-              className="shrink-0 flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8] hover:text-[#7DD3FC] transition-colors"
-            >
-              View all
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setLocation('/more-markets')}
+            data-testid="featured-view-all"
+            className="group/va shrink-0 flex items-center gap-1 rounded-full bg-[#38BDF8]/12 hover:bg-[#38BDF8]/20 border border-[#38BDF8]/40 hover:border-[#38BDF8]/60 px-3 py-1.5 text-[11px] sm:text-[12px] font-bold text-[#38BDF8] hover:text-[#7DD3FC] transition-colors shadow-[0_0_14px_rgba(56,189,248,0.12)]"
+          >
+            View all
+            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/va:translate-x-0.5" />
+          </button>
         </div>
         <p className="mt-1 text-[11px] font-medium text-[#94A3B8]/80">
           Tap any match to bet on handicaps, totals, BTTS, correct score, corners &amp; more

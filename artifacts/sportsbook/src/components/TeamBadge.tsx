@@ -2,9 +2,11 @@
  * TeamBadge — displays a team/club logo image with graceful fallback.
  *
  * Fallback priority:
- *   1. ESPN CDN logo (via getTeamLogo)
- *   2. Sport icon (emoji) — used for esports, tennis, horse racing, cricket etc.
- *   3. Styled initials badge — last resort for team sports with no logo
+ *   1. ESPN CDN club logo (via getTeamLogo)
+ *   2. Country flag (via getTeamFlag) — national / youth teams (e.g. "Japan
+ *      Youth", "Thailand U19") get a recognisable flag picture
+ *   3. Sport icon (emoji) — used for esports, tennis, horse racing, cricket etc.
+ *   4. Styled initials badge — last resort for team sports with no logo
  *
  * Sizes:
  *   xs  — 20px  used in compact rows
@@ -12,9 +14,10 @@
  *   md  — 40px  default
  *   lg  — 64px  used in match detail hero
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '../lib/utils';
 import { getTeamLogo } from '../lib/teamLogos';
+import { getTeamFlag } from '../lib/countryFlags';
 
 interface TeamBadgeProps {
   name: string;
@@ -63,12 +66,23 @@ const SIZE: Record<string, { box: string; img: string; text: string; radius: str
 };
 
 export function TeamBadge({ name, sportIcon, size = 'md', className }: TeamBadgeProps) {
-  const [imgFailed, setImgFailed] = useState(false);
-  const logoUrl = imgFailed ? null : getTeamLogo(name);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const [flagFailed, setFlagFailed] = useState(false);
+
+  // Reset failure flags when the team changes so a reused badge instance doesn't
+  // suppress the new team's logo/flag based on the previous team's load errors.
+  useEffect(() => {
+    setLogoFailed(false);
+    setFlagFailed(false);
+  }, [name]);
+
   const cfg = SIZE[size];
   const { from, to } = teamColor(name);
 
-  // 1. Logo from CDN
+  const logoUrl = logoFailed ? null : getTeamLogo(name);
+  const flagUrl = flagFailed ? null : getTeamFlag(name);
+
+  // 1. Club logo from CDN
   if (logoUrl) {
     return (
       <div className={cn(cfg.box, 'flex items-center justify-center shrink-0', className)}>
@@ -78,13 +92,37 @@ export function TeamBadge({ name, sportIcon, size = 'md', className }: TeamBadge
           loading="lazy"
           decoding="async"
           className="w-full h-full object-contain drop-shadow-md"
-          onError={() => setImgFailed(true)}
+          onError={() => setLogoFailed(true)}
         />
       </div>
     );
   }
 
-  // 2. Sport icon — emoji or image URL
+  // 2. Country flag — national / youth teams
+  if (flagUrl) {
+    return (
+      <div
+        className={cn(
+          cfg.box, cfg.radius,
+          'flex items-center justify-center shrink-0 overflow-hidden',
+          'shadow-[0_2px_8px_rgba(0,0,0,0.3)] ring-1 ring-white/10',
+          className,
+        )}
+        title={name}
+      >
+        <img
+          src={flagUrl}
+          alt={`${name} flag`}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover"
+          onError={() => setFlagFailed(true)}
+        />
+      </div>
+    );
+  }
+
+  // 3. Sport icon — emoji or image URL
   if (sportIcon) {
     const isImgUrl = sportIcon.startsWith('http');
     return (
@@ -106,7 +144,7 @@ export function TeamBadge({ name, sportIcon, size = 'md', className }: TeamBadge
     );
   }
 
-  // 3. Initials badge — fallback for team sports with no logo and no sport icon
+  // 4. Initials badge — fallback for team sports with no logo and no sport icon
   const abbr = initials(name);
   return (
     <div
