@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ChevronRight, Flame, Clock, Bell, TrendingUp, Star, ArrowRight } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { ChevronRight, Flame, Clock, Bell, TrendingUp, Star, ArrowRight, Layers } from 'lucide-react';
 import { estimatedEndTime } from '../lib/matchTime';
 import { OddsButton } from './OddsButton';
 import { ScrollArea, ScrollBar } from './ui/scroll-area';
@@ -49,6 +50,16 @@ function bucketToSportId(bucket: SportBucketConfig): string {
 
 function scrollToTop() {
   document.getElementById('main-content-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Fisher–Yates shuffle — returns a new array, does not mutate the input. */
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -240,8 +251,10 @@ interface TrendingPill {
 
 function TrendingCard({ p }: { p: TrendingPill }) {
   const { match, league, bucket, rank } = p;
-  const isHot   = rank < 2;
-  const hasDraw = match.odds.draw != null;
+  const [, setLocation] = useLocation();
+  const isHot     = match.isLive || rank < 2;
+  const hasDraw   = match.odds.draw != null;
+  const marketCnt = match.marketCount ?? 0;
   const shared  = {
     matchId:      match.id,
     marketId:     `1x2_${match.id}`,
@@ -256,7 +269,11 @@ function TrendingCard({ p }: { p: TrendingPill }) {
 
   return (
     <div
-      className="relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5"
+      role="button"
+      tabIndex={0}
+      onClick={() => setLocation(`/match/${match.id}`)}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLocation(`/match/${match.id}`); } }}
+      className="group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00DFA9]/40"
       style={{
         background:  'linear-gradient(160deg, #0E1824 0%, #0B1220 100%)',
         borderColor: 'rgba(30,45,61,0.8)',
@@ -264,8 +281,8 @@ function TrendingCard({ p }: { p: TrendingPill }) {
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
-        el.style.boxShadow   = `0 6px 24px ${bucket.color}12, 0 2px 8px rgba(0,0,0,0.3)`;
-        el.style.borderColor = `${bucket.color}40`;
+        el.style.boxShadow   = `0 8px 28px ${bucket.color}1f, 0 2px 8px rgba(0,0,0,0.35)`;
+        el.style.borderColor = `${bucket.color}55`;
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
@@ -273,11 +290,13 @@ function TrendingCard({ p }: { p: TrendingPill }) {
         el.style.borderColor = 'rgba(30,45,61,0.8)';
       }}
     >
-      {/* Sport-coloured top accent */}
+      {/* Sport-coloured glow accent */}
       <div className="h-[3px] w-full shrink-0"
         style={{ background: `linear-gradient(90deg, ${bucket.color} 0%, ${bucket.color}50 55%, transparent 100%)` }} />
+      <div className="pointer-events-none absolute -top-10 -right-10 w-28 h-28 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{ background: `${bucket.color}14` }} />
 
-      <div className="flex flex-col flex-1 p-3 gap-0">
+      <div className="relative flex flex-col flex-1 p-3 gap-0">
 
         {/* ── Row 1: sport + HOT + time ── */}
         <div className="flex items-center justify-between gap-1 mb-2.5">
@@ -308,14 +327,11 @@ function TrendingCard({ p }: { p: TrendingPill }) {
         </div>
 
         {/* ── Row 2: teams stacked ── */}
-        <div className="flex flex-col gap-0 mb-3">
+        <div className="flex flex-col gap-0 mb-2.5">
           {/* Home */}
           <div className="flex items-center gap-2 py-1.5 border-l-2 pl-2 rounded-r"
             style={{ borderColor: bucket.color }}>
-            <div className="w-5 h-5 shrink-0 rounded-lg flex items-center justify-center text-[8px] font-black"
-              style={{ background: `${bucket.color}18`, color: bucket.color, border: `1px solid ${bucket.color}25` }}>
-              {match.team1.charAt(0).toUpperCase()}
-            </div>
+            <TeamBadge name={match.team1} emoji={bucket.emoji} size={20} />
             <span className="text-[12px] font-bold text-[#F0F4F8] leading-none truncate">{match.team1}</span>
           </div>
 
@@ -329,15 +345,25 @@ function TrendingCard({ p }: { p: TrendingPill }) {
 
           {/* Away */}
           <div className="flex items-center gap-2 py-1.5 border-l-2 pl-2 rounded-r border-[#1E2D3D]">
-            <div className="w-5 h-5 shrink-0 rounded-lg flex items-center justify-center text-[8px] font-black bg-[#131C28] text-[#475569] border border-[#1E2D3D]">
-              {match.team2.charAt(0).toUpperCase()}
-            </div>
+            <TeamBadge name={match.team2} emoji={bucket.emoji} size={20} />
             <span className="text-[11px] font-semibold text-[#64748B] leading-none truncate">{match.team2}</span>
           </div>
         </div>
 
+        {/* ── Row 2.5: league + markets meta ── */}
+        <div className="flex items-center justify-between gap-1.5 mb-2.5 min-w-0">
+          <span className="text-[8.5px] font-medium text-[#475569] truncate">
+            <SportName name={league.name} />
+          </span>
+          {marketCnt > 1 && (
+            <span className="flex items-center gap-0.5 shrink-0 text-[8px] font-bold text-[#38BDF8]/80 bg-[#38BDF8]/8 border border-[#38BDF8]/15 px-1.5 py-0.5 rounded-full">
+              <Layers className="h-[8px] w-[8px]" /> +{marketCnt} markets
+            </span>
+          )}
+        </div>
+
         {/* ── Row 3: odds ── */}
-        <div className="mt-auto" onClick={e => e.stopPropagation()}>
+        <div className="mt-auto" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
           <div className={`grid mb-1.5 ${hasDraw ? 'grid-cols-3' : 'grid-cols-2'} gap-1`}>
             <span className="text-center text-[8px] font-bold uppercase tracking-wider text-[#334155]">
               {hasDraw ? '1' : 'HOME'}
@@ -693,16 +719,45 @@ export function SportHighlights({ onSelectSport, onComingSoonViewAll }: { onSele
       })
       .slice(0, 4);
 
-    // 2. Trending — sort by marketCount desc then max odds, cap 6
-    const trending: TrendingPill[] = [...allPairs]
-      .sort((a, b) => {
-        const mc = (b.match.marketCount ?? 0) - (a.match.marketCount ?? 0);
-        if (mc !== 0) return mc;
-        const maxA = Math.max(a.match.odds.home, a.match.odds.away, a.match.odds.draw ?? 0);
-        const maxB = Math.max(b.match.odds.home, b.match.odds.away, b.match.odds.draw ?? 0);
-        return maxB - maxA;
-      })
-      .slice(0, 6)
+    // 2. Trending — randomised premium mix of BetsAPI + Odds API events.
+    //    BetsAPI events have ids prefixed "betsapi_"; everything else is Odds API.
+    //    We surface the richest events from each source, then shuffle so the rail
+    //    feels fresh on every refresh while always blending both feeds.
+    const TRENDING_TARGET = 8;
+    const byRichness = (
+      a: { match: Match }, b: { match: Match },
+    ) => (b.match.marketCount ?? 0) - (a.match.marketCount ?? 0);
+
+    const eligible = allPairs.filter(p =>
+      p.match.team1 && p.match.team2 &&
+      p.match.odds.home > 1 && p.match.odds.away > 1,
+    );
+    const betsPool = eligible.filter(p => p.match.id.startsWith('betsapi_'));
+    const oddsPool = eligible.filter(p => !p.match.id.startsWith('betsapi_'));
+
+    // Take a shuffled slice from each source's richest events.
+    const half = Math.ceil(TRENDING_TARGET / 2);
+    const pickFrom = (pool: typeof eligible, n: number) =>
+      shuffle([...pool].sort(byRichness).slice(0, Math.max(n * 3, 12))).slice(0, n);
+
+    const picked = [...pickFrom(betsPool, half), ...pickFrom(oddsPool, half)];
+
+    // Top up from whichever pool still has events if one source is thin/empty.
+    const seenIds = new Set(picked.map(p => p.match.id));
+    if (picked.length < TRENDING_TARGET) {
+      const filler = shuffle(
+        eligible.filter(p => !seenIds.has(p.match.id)).sort(byRichness),
+      );
+      for (const p of filler) {
+        if (picked.length >= TRENDING_TARGET) break;
+        if (seenIds.has(p.match.id)) continue;
+        seenIds.add(p.match.id);
+        picked.push(p);
+      }
+    }
+
+    const trending: TrendingPill[] = shuffle(picked)
+      .slice(0, TRENDING_TARGET)
       .map((p, i) => ({
         match:    p.match,
         league:   p.league,
