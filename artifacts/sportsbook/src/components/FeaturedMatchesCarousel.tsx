@@ -1,0 +1,198 @@
+/**
+ * FeaturedMatchesCarousel — horizontal carousel of the top BetsAPI matches by
+ * rich-market depth (marketScore). Each card shows 1X2 odds + market pills and,
+ * when selected, expands a full-width <BetsApiMarketDrawer/> below the carousel.
+ *
+ * Uses only data already in `allLeagues` (no network calls); the drawer itself
+ * fetches from the cache-only markets endpoint. Renders nothing when there are
+ * no featured matches (e.g. BetsAPI cache empty).
+ */
+import { useMemo, useState } from 'react';
+import { useLocation } from 'wouter';
+import { Sparkles, ChevronRight } from 'lucide-react';
+import type { League, Match } from '../types';
+import { OddsButton } from './OddsButton';
+import { TeamBadge } from './TeamBadge';
+import { SportName } from './SportName';
+import { BetsApiMarketDrawer } from './BetsApiMarketDrawer';
+import { cn } from '../lib/utils';
+
+interface Props {
+  leagues: League[];
+}
+
+interface FeaturedEntry {
+  match:      Match;
+  leagueName: string;
+}
+
+const MARKET_PILLS: { key: keyof NonNullable<Match['richMarkets']>; label: string }[] = [
+  { key: 'hasHcp',     label: 'Handicap' },
+  { key: 'hasOU',      label: 'O/U 2.5' },
+  { key: 'hasBTTS',    label: 'BTTS' },
+  { key: 'hasHT',      label: 'Half-Time' },
+  { key: 'hasCS',      label: 'Correct Score' },
+  { key: 'hasCorners', label: 'Corners' },
+  { key: 'hasCards',   label: 'Cards' },
+];
+
+function marketMeta(match: Match) {
+  if (match.sportId === 'sp_soccer') return { marketId: `mkt_${match.id}_mr`, marketName: 'Match Result' };
+  return { marketId: `mkt_${match.id}_mw`, marketName: 'Match Winner' };
+}
+
+export function FeaturedMatchesCarousel({ leagues }: Props) {
+  const [, setLocation] = useLocation();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const featured = useMemo<FeaturedEntry[]>(() => {
+    const entries: FeaturedEntry[] = [];
+    for (const league of leagues) {
+      for (const match of league.matches) {
+        if (!match.id.startsWith('betsapi_')) continue;
+        if (!match.featuredMatch) continue;
+        entries.push({ match, leagueName: league.name });
+      }
+    }
+    entries.sort(
+      (a, b) => (b.match.richMarkets?.marketScore ?? 0) - (a.match.richMarkets?.marketScore ?? 0),
+    );
+    return entries.slice(0, 8);
+  }, [leagues]);
+
+  if (featured.length === 0) return null;
+
+  const selected = featured.find(e => e.match.id === selectedId);
+
+  return (
+    <div className="mb-4" data-testid="featured-carousel">
+      {/* Heading */}
+      <div className="flex items-center gap-2 mb-2.5">
+        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#FACC15]">
+          <Sparkles className="w-3.5 h-3.5" />
+          Featured Matches
+        </span>
+        <span className="text-[10px] font-semibold text-[#94A3B8]/50">Most markets available</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-[#FACC15]/20 to-transparent" />
+      </div>
+
+      {/* Horizontal scroller */}
+      <div className="flex gap-2.5 overflow-x-auto pb-1.5 -mx-1 px-1 snap-x snap-mandatory">
+        {featured.map(({ match, leagueName }) => {
+          const { marketId, marketName } = marketMeta(match);
+          const isSel = match.id === selectedId;
+          const rm = match.richMarkets;
+          const pills = MARKET_PILLS.filter(p => rm && rm[p.key]);
+          const base = {
+            matchId: match.id, marketId, matchName: match.team2 ? `${match.team1} vs ${match.team2}` : match.team1,
+            leagueName, marketName, sportKey: match.sportKey, sportId: match.sportId,
+            commenceTime: match.commenceIso, homeTeam: match.team1 ?? '', awayTeam: match.team2 ?? '',
+            kickoffTime: match.isLive ? undefined : match.kickoffTime,
+          };
+          return (
+            <div
+              key={match.id}
+              data-testid={`featured-card-${match.id}`}
+              className={cn(
+                'shrink-0 w-[268px] sm:w-[300px] snap-start rounded-xl border bg-[#121821] p-3 flex flex-col gap-2.5 transition-colors',
+                isSel ? 'border-[#FACC15]/50 shadow-[0_0_16px_rgba(250,204,21,0.12)]' : 'border-[#1E2A38] hover:border-[#2E3D50]',
+              )}
+            >
+              {/* League + score badge */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-[#94A3B8]/60 truncate">
+                  <SportName name={leagueName} />
+                </span>
+                <span className="shrink-0 flex items-center gap-0.5 text-[9px] font-bold text-[#FACC15] bg-[#FACC15]/10 px-1.5 py-0.5 rounded">
+                  <Sparkles className="w-2.5 h-2.5" />
+                  {rm?.marketScore ?? 0}
+                </span>
+              </div>
+
+              {/* Teams */}
+              <button
+                type="button"
+                onClick={() => setLocation(`/match/${match.id}`)}
+                className="flex flex-col gap-1.5 text-left group/teams"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <TeamBadge name={match.team1} size="sm" />
+                  <span className="text-[13px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team1}</span>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <TeamBadge name={match.team2 ?? 'Away'} size="sm" />
+                  <span className="text-[13px] font-semibold text-[#F8FAFC] truncate group-hover/teams:text-[#38BDF8] transition-colors">{match.team2 ?? 'Away'}</span>
+                </div>
+              </button>
+
+              {/* Pills */}
+              {pills.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {pills.slice(0, 4).map(p => (
+                    <span key={p.key} className="text-[8px] font-medium text-[#38BDF8]/80 bg-[#38BDF8]/10 px-1.5 py-0.5 rounded">
+                      {p.label}
+                    </span>
+                  ))}
+                  {pills.length > 4 && (
+                    <span className="text-[8px] font-medium text-[#94A3B8]/50 px-1 py-0.5">+{pills.length - 4}</span>
+                  )}
+                </div>
+              )}
+
+              {/* 1X2 odds */}
+              <div className="flex items-end gap-1.5">
+                <div className="flex flex-col items-center gap-0.5 flex-1">
+                  <span className="text-[8px] font-semibold text-[#94A3B8]/60">1</span>
+                  <OddsButton {...base} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
+                </div>
+                {match.odds.draw != null && (
+                  <div className="flex flex-col items-center gap-0.5 flex-1">
+                    <span className="text-[8px] font-semibold text-[#94A3B8]/60">X</span>
+                    <OddsButton {...base} selectionType="X" selectionName="Draw" odds={match.odds.draw} />
+                  </div>
+                )}
+                <div className="flex flex-col items-center gap-0.5 flex-1">
+                  <span className="text-[8px] font-semibold text-[#94A3B8]/60">2</span>
+                  <OddsButton {...base} selectionType="2" selectionName={match.team2 ?? 'Away'} odds={match.odds.away} />
+                </div>
+              </div>
+
+              {/* More markets toggle */}
+              <button
+                type="button"
+                data-testid={`featured-more-${match.id}`}
+                onClick={() => setSelectedId(isSel ? null : match.id)}
+                className={cn(
+                  'flex items-center justify-center gap-1 w-full py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-colors',
+                  isSel ? 'bg-[#FACC15]/15 text-[#FACC15]' : 'bg-[#0B1018] text-[#38BDF8] hover:bg-[#38BDF8]/10',
+                )}
+              >
+                {isSel ? 'Hide markets' : 'More markets'}
+                <ChevronRight className={cn('w-3 h-3 transition-transform', isSel && 'rotate-90')} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Selected match drawer (full width below the carousel) */}
+      {selected && (
+        <div className="mt-2 rounded-xl border border-[#FACC15]/30 overflow-hidden">
+          <div className="px-3.5 py-2 bg-[#101722] flex items-center justify-between">
+            <span className="text-[12px] font-bold text-[#F8FAFC] truncate">
+              {selected.match.team1} <span className="text-[#94A3B8]/50">vs</span> {selected.match.team2 ?? 'Away'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedId(null)}
+              className="text-[10px] font-semibold text-[#94A3B8] hover:text-[#F8FAFC] transition-colors"
+            >
+              Close
+            </button>
+          </div>
+          <BetsApiMarketDrawer match={selected.match} leagueName={selected.leagueName} />
+        </div>
+      )}
+    </div>
+  );
+}

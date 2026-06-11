@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { ChevronDown } from 'lucide-react';
 import { Match } from '../types';
 import { OddsButton } from './OddsButton';
 import { TeamBadge } from './TeamBadge';
+import { BetsApiMarketDrawer } from './BetsApiMarketDrawer';
 import { useFavorites } from '../hooks/useFavorites';
 import { cn } from '../lib/utils';
 import { formatKickoffTime, estimatedEndTime } from '../lib/matchTime';
@@ -34,6 +37,9 @@ function getSelectionName(selectionType: '1' | 'X' | '2', match: Match): string 
 export function MatchRow({ match, leagueName }: MatchRowProps) {
   const [, setLocation]  = useLocation();
   const { addRecentMatch } = useFavorites();
+  const [expanded, setExpanded] = useState(false);
+
+  const canExpand = match.id.startsWith('betsapi_') && (match.richMarkets?.marketScore ?? 0) >= 1;
 
   const matchName = match.team2
     ? `${match.team1} vs ${match.team2}`
@@ -66,6 +72,7 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
   }
 
   return (
+    <div className="flex flex-col">
     <div
       onClick={handleRowClick}
       data-testid={`match-row-${match.id}`}
@@ -188,17 +195,46 @@ export function MatchRow({ match, leagueName }: MatchRowProps) {
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
             <OddsButton {...sharedOddsProps} selectionType="X" selectionName="Draw"                         odds={match.odds.draw ?? 0} />
             <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
-            <div className="w-[10px] sm:w-[18px] shrink-0" />
+            <ExpandToggle canExpand={canExpand} expanded={expanded} onToggle={() => setExpanded(v => !v)} className="w-[10px] sm:w-[18px]" />
           </>
         ) : (
           <>
             <OddsButton {...sharedOddsProps} selectionType="1" selectionName={getSelectionName('1', match)} odds={match.odds.home} />
             <OddsButton {...sharedOddsProps} selectionType="2" selectionName={getSelectionName('2', match)} odds={match.odds.away} />
-            <div className="w-[8px] sm:w-[12px] shrink-0" />
+            <ExpandToggle canExpand={canExpand} expanded={expanded} onToggle={() => setExpanded(v => !v)} className="w-[8px] sm:w-[12px]" />
           </>
         )}
       </div>
     </div>
+
+      {canExpand && expanded && (
+        <BetsApiMarketDrawer match={match} leagueName={leagueName} />
+      )}
+    </div>
+  );
+}
+
+function ExpandToggle({ canExpand, expanded, onToggle, className }: {
+  canExpand: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  if (!canExpand) return <div className={cn('shrink-0', className)} />;
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      data-testid="markets-toggle"
+      aria-label={expanded ? 'Hide markets' : 'Show more markets'}
+      aria-expanded={expanded}
+      className={cn(
+        'shrink-0 flex items-center justify-center h-9 rounded-md text-[#94A3B8] hover:text-[#38BDF8] hover:bg-[#38BDF8]/10 transition-colors',
+        className,
+      )}
+    >
+      <ChevronDown className={cn('w-4 h-4 transition-transform duration-200', expanded && 'rotate-180')} />
+    </button>
   );
 }
 

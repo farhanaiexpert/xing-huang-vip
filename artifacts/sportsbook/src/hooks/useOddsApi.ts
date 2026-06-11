@@ -17,7 +17,7 @@ import { fetchBetsApiUpcoming, type BetsApiEvent, type BetsApiSportMeta } from '
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v6'; // v6 — adds soccer_fifa_world_cup to ODDS_API_SPORTS
+const STORAGE_KEY  = 'oddschain_v7'; // v7 — slims betsapi richMarkets in cache (drops heavy correctScore; fetched on-demand)
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
 const CACHE_TTL_MS = 35 * 60 * 1000;
 
@@ -184,7 +184,22 @@ function normaliseBetsApiLeagues(
           const ts       = parseInt(ev.time, 10);
           const real     = ev.prematchOdds;
           const fallback = meta.fallbackOdds;
-          const rm       = ev.richMarkets ?? undefined;
+          const rmFull   = ev.richMarkets ?? undefined;
+          // Keep the homepage Match lightweight — drop the heavy detail markets
+          // (correctScore array, corners/cards/nextGoal) which the drawer fetches
+          // on demand from /betsapi/markets/:id. This keeps localStorage lean.
+          const rm = rmFull
+            ? {
+                hasHcp: rmFull.hasHcp, hasOU: rmFull.hasOU, hasHT: rmFull.hasHT,
+                hasBTTS: rmFull.hasBTTS, hasCS: rmFull.hasCS, hasCorners: rmFull.hasCorners,
+                hasCards: rmFull.hasCards, hasNextGoal: rmFull.hasNextGoal,
+                marketScore: rmFull.marketScore,
+                hcpHome: rmFull.hcpHome, hcpAway: rmFull.hcpAway, hcpLine: rmFull.hcpLine,
+                ou25Over: rmFull.ou25Over, ou25Under: rmFull.ou25Under,
+                htHome: rmFull.htHome, htDraw: rmFull.htDraw, htAway: rmFull.htAway,
+                bttsY: rmFull.bttsY, bttsN: rmFull.bttsN,
+              }
+            : undefined;
           const featured = rm ? rm.marketScore >= 4 : false;
           return {
             id:          `betsapi_${ev.id}`,

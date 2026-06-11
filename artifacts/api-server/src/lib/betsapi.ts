@@ -78,6 +78,18 @@ export interface BetsApiRichMarkets {
   htAway?:    number;
   bttsY?:     number;
   bttsN?:     number;
+  // Detailed markets (returned by /betsapi/markets/:id, NOT stored on the homepage Match to keep localStorage lean)
+  /** Top correct-score lines, e.g. [{ label: "2-1", odds: 8.5 }] (cap 16) */
+  correctScore?: { label: string; odds: number }[];
+  cornersLine?:  string;
+  cornersOver?:  number;
+  cornersUnder?: number;
+  cardsLine?:    string;
+  cardsOver?:    number;
+  cardsUnder?:   number;
+  nextGoalHome?: number;
+  nextGoalNone?: number;
+  nextGoalAway?: number;
 }
 
 export interface BetsApiEventRaw {
@@ -249,12 +261,71 @@ function parsePrematchData(
   // BTTS
   const [bttsY, bttsN] = pickOdds(['both_teams_to_score', 'btts'], 2);
 
+  // Correct Score — collect scorelines like "2-1" with their odds (cap 16)
+  let correctScore: { label: string; odds: number }[] | undefined;
+  for (const key of ['correct_score', 'correct_score_v2', 'halftime_correct_score']) {
+    const outcomes = sp[key];
+    if (!Array.isArray(outcomes)) continue;
+    const real = outcomes.filter(
+      o => o.name && /^\d+\s*-\s*\d+$/.test(o.name.trim()) && o.odds && parseFloat(o.odds) > 1,
+    );
+    if (real.length >= 3) {
+      correctScore = real.slice(0, 16).map(o => ({ label: o.name.trim().replace(/\s+/g, ''), odds: parseFloat(o.odds) }));
+      break;
+    }
+  }
+
+  /** Find a matching Over/Under pair (same handicap line) from any of the given keys */
+  const pickOverUnder = (keys: string[]): { line?: string; over?: number; under?: number } => {
+    for (const key of keys) {
+      const outcomes = sp[key];
+      if (!Array.isArray(outcomes)) continue;
+      const real = outcomes.filter(o => o.name && o.odds && parseFloat(o.odds) > 1);
+      const over  = real.find(o => /over/i.test(o.name));
+      const under = real.find(o => /under/i.test(o.name) && (!over || o.handicap === over.handicap || !over.handicap));
+      if (over && under) {
+        return { line: over.handicap ?? under.handicap ?? '', over: parseFloat(over.odds), under: parseFloat(under.odds) };
+      }
+    }
+    return {};
+  };
+
+  // Corners O/U
+  const { line: cornersLine, over: cornersOver, under: cornersUnder } =
+    pickOverUnder(['corner_count_over_under', 'corners_over_under', 'total_corners', 'asian_corners']);
+
+  // Cards O/U
+  const { line: cardsLine, over: cardsOver, under: cardsUnder } =
+    pickOverUnder(['cards_over_under', 'total_bookings', 'bookings_over_under']);
+
+  // Next Goal — 2-way (Home/Away) or 3-way (Home/None/Away)
+  let nextGoalHome: number | undefined, nextGoalNone: number | undefined, nextGoalAway: number | undefined;
+  for (const key of ['next_goal', 'next_goal_scorer']) {
+    const outcomes = sp[key];
+    if (!Array.isArray(outcomes)) continue;
+    const real = outcomes.filter(o => o.odds && parseFloat(o.odds) > 1);
+    if (real.length >= 3) {
+      nextGoalHome = parseFloat(real[0].odds);
+      nextGoalNone = parseFloat(real[1].odds);
+      nextGoalAway = parseFloat(real[2].odds);
+      break;
+    } else if (real.length === 2) {
+      nextGoalHome = parseFloat(real[0].odds);
+      nextGoalAway = parseFloat(real[1].odds);
+      break;
+    }
+  }
+
   const richMarkets: BetsApiRichMarkets = {
     hasHcp, hasOU, hasHT, hasBTTS, hasCS, hasCorners, hasCards, hasNextGoal, marketScore,
     hcpHome, hcpAway, hcpLine,
     ou25Over, ou25Under,
     htHome, htDraw, htAway,
     bttsY, bttsN,
+    correctScore,
+    cornersLine, cornersOver, cornersUnder,
+    cardsLine, cardsOver, cardsUnder,
+    nextGoalHome, nextGoalNone, nextGoalAway,
   };
 
   return { odds, richMarkets };

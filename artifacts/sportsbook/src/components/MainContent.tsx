@@ -16,6 +16,7 @@ import { NBAHighlights } from "./NBAHighlights";
 import { AllSportsHighlights } from "./AllSportsHighlights";
 import { EuropaLeagueFinal } from "./EuropaLeagueFinal";
 import { SportHighlights } from "./SportHighlights";
+import { FeaturedMatchesCarousel } from "./FeaturedMatchesCarousel";
 import { LiveScoresTicker } from "./LiveScoresTicker";
 import { LiveEventsBanner } from "./LiveEventsBanner";
 import { WorldCupHero } from "./WorldCupHero";
@@ -42,6 +43,7 @@ import {
   RefreshCw,
   ChevronDown,
   LayoutList,
+  Sparkles,
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { useOddsData } from "../hooks/useOddsData";
@@ -215,6 +217,7 @@ export function MainContent({
   onSelectSport,
 }: MainContentProps) {
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [featuredOnly, setFeaturedOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -342,8 +345,19 @@ export function MainContent({
         .filter((l) => l.matches.length > 0);
     }
 
+    if (featuredOnly) {
+      leagues = leagues
+        .map((l) => ({
+          ...l,
+          matches: l.matches.filter(
+            (m) => m.id.startsWith("betsapi_") && m.featuredMatch === true,
+          ),
+        }))
+        .filter((l) => l.matches.length > 0);
+    }
+
     return leagues;
-  }, [selectedSportId, dateFilter, search]);
+  }, [allLeagues, selectedSportId, dateFilter, search, featuredOnly]);
 
   const totalMatchCount = useMemo(
     () => filteredLeagues.reduce((acc, l) => acc + l.matches.length, 0),
@@ -513,6 +527,21 @@ export function MainContent({
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={() => setFeaturedOnly((v) => !v)}
+              data-testid="filter-featured-only"
+              aria-pressed={featuredOnly}
+              className={cn(
+                "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold border transition-all duration-150",
+                featuredOnly
+                  ? "bg-[#FACC15]/10 text-[#FACC15] border-[#FACC15]/30"
+                  : "bg-[#121821] text-[#94A3B8]/70 border-[#253241] hover:text-[#F8FAFC] hover:border-[#2E3D50]",
+              )}
+            >
+              <Sparkles className="h-3 w-3" />
+              Featured
+            </button>
 
             <div className="h-4 w-px bg-[#253241] hidden sm:block" />
 
@@ -702,6 +731,7 @@ export function MainContent({
               {showFeatured && <LiveEventsBanner />}
               {showFeatured && <USDTDepositBanner onDeposit={() => requestDeposit(isAuthenticated, navigate)} />}
               {showFeatured && <PopularBets />}
+              {showFeatured && <FeaturedMatchesCarousel leagues={allLeagues} />}
               {showFeatured && (
                 <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
               )}

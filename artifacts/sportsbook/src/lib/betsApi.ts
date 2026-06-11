@@ -29,6 +29,17 @@ export interface BetsApiRichMarkets {
   htAway?:    number;
   bttsY?:     number;
   bttsN?:     number;
+  /** Top correct-score lines, e.g. [{ label: "2-1", odds: 8.5 }] */
+  correctScore?: { label: string; odds: number }[];
+  cornersLine?:  string;
+  cornersOver?:  number;
+  cornersUnder?: number;
+  cardsLine?:    string;
+  cardsOver?:    number;
+  cardsUnder?:   number;
+  nextGoalHome?: number;
+  nextGoalNone?: number;
+  nextGoalAway?: number;
 }
 
 export interface BetsApiEvent {
@@ -101,6 +112,30 @@ export async function fetchBetsApiLive(): Promise<BetsApiEvent[]> {
   if (!res.ok) throw new Error(`BetsAPI live HTTP ${res.status}`);
   const json = await res.json() as LiveResponse;
   return Array.isArray(json.events) ? json.events : [];
+}
+
+// ─── Rich markets for a single fixture (cache-only — 0 extra credits) ──────────
+
+export interface BetsApiMarketsResponse {
+  fixtureId:    string;
+  richMarkets:  BetsApiRichMarkets | null;
+  prematchOdds: { home: number; draw?: number; away: number } | null;
+  home:         string;
+  away:         string;
+  commenceTime: string;
+  cached:       boolean;
+}
+
+/**
+ * Fetch rich markets for one BetsAPI fixture from the server cache.
+ * `fixtureId` is the numeric BetsAPI event id (Match.id without the `betsapi_` prefix).
+ * Returns null when the fixture is not cached (404) or markets are unavailable.
+ */
+export async function fetchBetsApiMarkets(fixtureId: string): Promise<BetsApiMarketsResponse | null> {
+  const id = fixtureId.replace(/^betsapi_/, '');
+  const res = await fetch(`${API_BASE}/api/betsapi/markets/${id}`);
+  if (!res.ok) return null;
+  return await res.json() as BetsApiMarketsResponse;
 }
 
 // ─── Sport ID → internal sport key mapping ────────────────────────────────────
