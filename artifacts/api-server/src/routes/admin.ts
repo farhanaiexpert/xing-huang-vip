@@ -31,7 +31,7 @@ import {
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
-import { getBetsApiHourlyUsage } from "../lib/betsApiRateLimiter.js";
+import { getBetsApiWindowUsage } from "../lib/betsApiRateLimiter.js";
 
 const router = Router();
 
@@ -96,7 +96,7 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
     const settings = Object.fromEntries(settingRows.map(r => [r.key, r.value]));
     const oddsRemaining = settings.odds_credits_remaining != null ? Number(settings.odds_credits_remaining) : null;
 
-    const betsApiHourly = await getBetsApiHourlyUsage();
+    const betsApiHourly = await getBetsApiWindowUsage();
 
     const DEFS = [
       { id: "odds_api",     name: "The Odds API",     envKey: "ODDS_API_KEY",        purpose: "Primary match odds & live scores" },
@@ -160,10 +160,10 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
         extra.hourlyLimit = betsApiHourly.limit;
         extra.hourlyUsed = betsApiHourly.used;
         extra.hourlyRemaining = betsApiHourly.remaining;
-        extra.hourlyLimitNote = `Hard cap: ${betsApiHourly.limit} requests/hour, enforced system-wide. ${betsApiHourly.used}/${betsApiHourly.limit} used this hour.`;
+        extra.hourlyLimitNote = `Hard cap: ${betsApiHourly.limit} requests per 3-hour window, enforced system-wide. ${betsApiHourly.used}/${betsApiHourly.limit} used this window.`;
         if (configured && betsApiHourly.remaining === 0 && status !== "down") {
           status = "throttled";
-          headline = `Hourly credit cap reached — ${betsApiHourly.limit}/${betsApiHourly.limit} used. Calls paused until the next hour.`;
+          headline = `3-hour credit cap reached — ${betsApiHourly.limit}/${betsApiHourly.limit} used. Calls paused until the next 3-hour window.`;
         }
       }
 
