@@ -62,10 +62,10 @@ export function MarketGroup({
       className="rounded-2xl overflow-hidden border transition-all duration-200"
       style={{
         background:  'linear-gradient(180deg, #101825 0%, #0C1219 100%)',
-        borderColor: isOpen ? `rgba(${r},${g},${b},0.22)` : 'rgba(25,37,52,0.8)',
+        borderColor: isOpen ? `rgba(${r},${g},${b},0.30)` : `rgba(${r},${g},${b},0.16)`,
         boxShadow:   isOpen
-          ? `0 0 28px rgba(${r},${g},${b},0.07), 0 4px 16px rgba(0,0,0,0.3)`
-          : '0 2px 8px rgba(0,0,0,0.2)',
+          ? `0 0 28px rgba(${r},${g},${b},0.09), 0 4px 16px rgba(0,0,0,0.3)`
+          : `0 0 14px rgba(${r},${g},${b},0.04), 0 2px 10px rgba(0,0,0,0.28)`,
       }}
     >
       {/* Top accent bar — always shown, color matches category */}

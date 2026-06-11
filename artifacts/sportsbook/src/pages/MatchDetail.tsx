@@ -614,7 +614,7 @@ function MatchDetailBody({
                     matchId={match.id}
                     matchName={matchName}
                     leagueName={league.name}
-                    defaultOpen={true}
+                    defaultOpen={false}
                     isFeatured={idx === 0}
                     groupIndex={idx}
                     sportKey={sportKey}
