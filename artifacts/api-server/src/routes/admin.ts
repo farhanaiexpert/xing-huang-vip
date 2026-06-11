@@ -161,9 +161,13 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
         extra.hourlyUsed = betsApiHourly.used;
         extra.hourlyRemaining = betsApiHourly.remaining;
         extra.hourlyLimitNote = `Hard cap: ${betsApiHourly.limit} requests per 3-hour window, enforced system-wide. ${betsApiHourly.used}/${betsApiHourly.limit} used this window.`;
+        extra.windowExhaustedUntil = betsApiHourly.exhaustedUntil;
         if (configured && betsApiHourly.remaining === 0 && status !== "down") {
           status = "throttled";
-          headline = `3-hour credit cap reached — ${betsApiHourly.limit}/${betsApiHourly.limit} used. Calls paused until the next 3-hour window.`;
+          const resumeAt = betsApiHourly.exhaustedUntil
+            ? ` Resumes at ${new Date(betsApiHourly.exhaustedUntil).toUTCString()}.`
+            : ' Calls paused until the next 3-hour window.';
+          headline = `3-hour credit cap reached — ${betsApiHourly.limit}/${betsApiHourly.limit} used.${resumeAt}`;
         }
       }
 
