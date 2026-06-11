@@ -403,6 +403,9 @@ function MatchDetailBody({
 
   // ── Nav / scroll state ──────────────────────────────────────────────────────
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  // Force-open signal: bumping `nonce` re-opens the targeted group even if the
+  // user had previously collapsed it. Consumed by MarketGroup via effect.
+  const [openSignal, setOpenSignal] = useState<{ id: string; nonce: number }>({ id: '', nonce: 0 });
   const groupRefs         = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   // True while a programmatic scroll is running — prevents scroll-spy interference
@@ -456,6 +459,8 @@ function MatchDetailBody({
     }
 
     setActiveGroupId(id);
+    // Always expand the targeted group, even if it was previously collapsed.
+    setOpenSignal(s => ({ id, nonce: s.nonce + 1 }));
 
     const el = groupRefs.current[id];
     if (!el || !container) return;
@@ -614,6 +619,7 @@ function MatchDetailBody({
                     awayTeam={match.awayTeamName}
                     commenceTime={match.startTime}
                     accentColor={getGroupColor(group.id)}
+                    openSignalNonce={openSignal.id === group.id ? openSignal.nonce : 0}
                   />
                 </div>
               ))}

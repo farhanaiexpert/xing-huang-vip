@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Star, TrendingUp, Clock, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { OddsButton } from '../OddsButton';
@@ -18,6 +18,8 @@ interface MarketGroupProps {
   awayTeam?:    string;
   commenceTime?: string;
   accentColor?:  string;
+  /** Bumped by the parent when this group is selected in the nav — forces it open. */
+  openSignalNonce?: number;
 }
 
 function updatedLabel(groupId: string): string {
@@ -37,10 +39,15 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 export function MarketGroup({
   group, matchId, matchName, leagueName, defaultOpen, isFeatured, groupIndex = 0,
-  sportKey, homeTeam, awayTeam, commenceTime, accentColor,
+  sportKey, homeTeam, awayTeam, commenceTime, accentColor, openSignalNonce = 0,
 }: MarketGroupProps) {
   const [isOpen, setIsOpen]   = useState(defaultOpen ?? group.isDefaultOpen);
   const contentRef            = useRef<HTMLDivElement>(null);
+
+  // When this group is selected in the nav, force it open (even if collapsed).
+  useEffect(() => {
+    if (openSignalNonce > 0) setIsOpen(true);
+  }, [openSignalNonce]);
   const totalSelections       = group.markets.reduce((acc, m) => acc + m.selections.length, 0);
   const label                 = updatedLabel(group.id);
   const isTrending            = groupIndex === 0 || (groupIndex % 4 === 1);
