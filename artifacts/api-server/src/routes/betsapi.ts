@@ -97,6 +97,61 @@ router.get('/betsapi/upcoming', async (_req, res): Promise<void> => {
 
 const LIVE_CACHE_KEY = 'live';
 const LIVE_TTL_SECS  = 30;
+// If the upstream refresh takes longer than this, serve the last-known (stale)
+// cache instead of blocking the request. The refresh keeps running in the
+// background and populates the cache for the next caller.
+const LIVE_FETCH_TIMEOUT_MS = 9_000;
+const LIVE_TIMEOUT = Symbol('live-fetch-timeout');
+
+// Singleflight guard: coalesce concurrent cache-miss refreshes into a single
+// upstream fetch so we don't stampede BetsAPI (and burn credits) when the
+// 30 s cache expires while several clients are polling at once.
+let liveFetchInFlight: Promise<BetsApiEventRaw[]> | null = null;
+
+async function refreshLiveCache(): Promise<BetsApiEventRaw[]> {
+  const events = await fetchBetsApiInplay();
+
+  const enriched = events.map(ev => ({
+    ...ev,
+    _meta: BETSAPI_SPORT_MAP[Number(ev.sport_id)] ?? null,
+  }));
+
+  await db.execute(sql`
+    INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
+    VALUES (
+      ${LIVE_CACHE_KEY},
+      ${JSON.stringify(enriched)}::jsonb,
+      NOW(),
+      NOW() + INTERVAL '${sql.raw(String(LIVE_TTL_SECS))} seconds'
+    )
+    ON CONFLICT (cache_key) DO UPDATE
+      SET data       = EXCLUDED.data,
+          fetched_at = EXCLUDED.fetched_at,
+          expires_at = EXCLUDED.expires_at
+  `);
+
+  return enriched;
+}
+
+function getLiveEventsSingleflight(): Promise<BetsApiEventRaw[]> {
+  if (liveFetchInFlight) return liveFetchInFlight;
+  liveFetchInFlight = refreshLiveCache().finally(() => {
+    liveFetchInFlight = null;
+  });
+  return liveFetchInFlight;
+}
+
+// Last-known live cache, ignoring the TTL — used as a fast fallback when the
+// fresh upstream fetch is slow or fails.
+async function readStaleLive(): Promise<BetsApiEventRaw[] | null> {
+  const stale = await db.execute(sql`
+    SELECT data FROM betsapi_cache WHERE cache_key = ${LIVE_CACHE_KEY} LIMIT 1
+  `);
+  if (stale.rows.length > 0 && Array.isArray(stale.rows[0].data)) {
+    return stale.rows[0].data as BetsApiEventRaw[];
+  }
+  return null;
+}
 
 router.get('/betsapi/live', async (_req, res): Promise<void> => {
   if (!BETSAPI_KEY) {
@@ -105,7 +160,7 @@ router.get('/betsapi/live', async (_req, res): Promise<void> => {
   }
 
   try {
-    // Check DB cache first
+    // Fresh cache hit — fast path.
     const cached = await db.execute(sql`
       SELECT data FROM betsapi_cache
       WHERE cache_key = ${LIVE_CACHE_KEY} AND expires_at > NOW()
@@ -118,32 +173,58 @@ router.get('/betsapi/live', async (_req, res): Promise<void> => {
       return;
     }
 
-    // Fetch fresh live data
-    const events = await fetchBetsApiInplay();
+    // Cache expired. Stale-while-revalidate: if we have last-known data, serve
+    // it immediately and refresh in the background. Concurrent callers share
+    // one upstream fetch (singleflight), so the cache stays warm without
+    // stampeding BetsAPI or making anyone wait on a slow upstream.
+    const stale = await readStaleLive();
+    if (stale) {
+      void getLiveEventsSingleflight().catch((err) => {
+        logger.error({ err }, 'BetsAPI: background live refresh failed');
+      });
+      res.json({ events: stale, cached: true, stale: true, count: stale.length });
+      return;
+    }
 
-    const enriched = events.map(ev => ({
-      ...ev,
-      _meta: BETSAPI_SPORT_MAP[Number(ev.sport_id)] ?? null,
-    }));
+    // Cold start — no data at all. Refresh, but race a timeout so a slow
+    // upstream can't hang the request indefinitely.
+    const fetchPromise = getLiveEventsSingleflight();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<typeof LIVE_TIMEOUT>((resolve) => {
+      timer = setTimeout(() => resolve(LIVE_TIMEOUT), LIVE_FETCH_TIMEOUT_MS);
+    });
 
-    // Persist to DB with 30 s TTL
-    await db.execute(sql`
-      INSERT INTO betsapi_cache (cache_key, data, fetched_at, expires_at)
-      VALUES (
-        ${LIVE_CACHE_KEY},
-        ${JSON.stringify(enriched)}::jsonb,
-        NOW(),
-        NOW() + INTERVAL '${sql.raw(String(LIVE_TTL_SECS))} seconds'
-      )
-      ON CONFLICT (cache_key) DO UPDATE
-        SET data       = EXCLUDED.data,
-            fetched_at = EXCLUDED.fetched_at,
-            expires_at = EXCLUDED.expires_at
-    `);
+    let winner: BetsApiEventRaw[] | typeof LIVE_TIMEOUT;
+    try {
+      winner = await Promise.race([fetchPromise, timeout]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
 
-    res.json({ events: enriched, cached: false, count: enriched.length });
+    if (winner === LIVE_TIMEOUT) {
+      // Still nothing to serve and upstream is slow — return empty rather than
+      // blocking; the background refresh continues for the next caller.
+      void fetchPromise.catch((err) => {
+        logger.error({ err }, 'BetsAPI: background live refresh failed');
+      });
+      res.json({ events: [], cached: false, count: 0 });
+      return;
+    }
+
+    const events = winner;
+    res.json({ events, cached: false, count: events.length });
   } catch (err) {
     logger.error({ err }, 'BetsAPI: failed to fetch/cache inplay');
+    // Last resort: serve stale cache rather than erroring out the UI.
+    try {
+      const stale = await readStaleLive();
+      if (stale) {
+        res.json({ events: stale, cached: true, stale: true, count: stale.length });
+        return;
+      }
+    } catch {
+      // ignore — fall through to error response
+    }
     res.status(500).json({ error: 'Failed to fetch live events' });
   }
 });
