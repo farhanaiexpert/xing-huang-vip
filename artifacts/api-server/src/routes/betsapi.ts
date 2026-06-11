@@ -1,9 +1,10 @@
 /**
  * BetsAPI routes
  *
- * GET /betsapi/all       — all upcoming sports from DB betsapi_cache (primary)
- * GET /betsapi/upcoming  — alias for /betsapi/all (backwards compat)
- * GET /betsapi/live      — live inplay events (DB cache, 30 s TTL)
+ * GET /betsapi/all                    — all upcoming sports from DB betsapi_cache (primary)
+ * GET /betsapi/upcoming               — alias for /betsapi/all (backwards compat)
+ * GET /betsapi/live                   — live inplay events (DB cache, 30 s TTL)
+ * GET /betsapi/markets/:fixtureId     — rich market flags for a specific fixture (cache-only, 0 extra credits)
  */
 import { Router } from 'express';
 import { db } from '@workspace/db';
@@ -144,6 +145,53 @@ router.get('/betsapi/live', async (_req, res): Promise<void> => {
   } catch (err) {
     logger.error({ err }, 'BetsAPI: failed to fetch/cache inplay');
     res.status(500).json({ error: 'Failed to fetch live events' });
+  }
+});
+
+// ─── GET /betsapi/markets/:fixtureId — rich market flags from cache ───────────
+// Returns the BetsApiRichMarkets object stored on the event during cron enrichment.
+// Cache-only — no extra API credits consumed. Returns 404 if event not cached.
+
+router.get('/betsapi/markets/:fixtureId', async (req, res): Promise<void> => {
+  if (!BETSAPI_KEY) {
+    res.status(503).json({ error: 'BetsAPI not configured' });
+    return;
+  }
+
+  const { fixtureId } = req.params;
+  if (!fixtureId || !/^\d+$/.test(fixtureId)) {
+    res.status(400).json({ error: 'Invalid fixtureId' });
+    return;
+  }
+
+  try {
+    // Search all sport cache keys for the event
+    const rows = await db.execute(sql`
+      SELECT data FROM betsapi_cache WHERE expires_at > NOW()
+    `);
+
+    for (const row of rows.rows) {
+      if (!Array.isArray(row.data)) continue;
+      const events = row.data as BetsApiEventRaw[];
+      const ev = events.find(e => String(e.id) === fixtureId);
+      if (ev) {
+        res.json({
+          fixtureId,
+          richMarkets:   ev.richMarkets   ?? null,
+          prematchOdds:  ev.prematchOdds  ?? null,
+          home:          ev.home.name,
+          away:          ev.away.name,
+          commenceTime:  ev.time,
+          cached:        true,
+        });
+        return;
+      }
+    }
+
+    res.status(404).json({ error: 'Fixture not found in cache', fixtureId });
+  } catch (err) {
+    logger.error({ err, fixtureId }, 'BetsAPI markets: failed to read cache');
+    res.status(500).json({ error: 'Failed to look up fixture markets' });
   }
 });
 

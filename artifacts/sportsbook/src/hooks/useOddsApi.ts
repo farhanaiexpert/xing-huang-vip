@@ -184,6 +184,8 @@ function normaliseBetsApiLeagues(
           const ts       = parseInt(ev.time, 10);
           const real     = ev.prematchOdds;
           const fallback = meta.fallbackOdds;
+          const rm       = ev.richMarkets ?? undefined;
+          const featured = rm ? rm.marketScore >= 4 : false;
           return {
             id:          `betsapi_${ev.id}`,
             team1:       ev.home.name,
@@ -194,7 +196,7 @@ function normaliseBetsApiLeagues(
             sportId:     meta.sportId,
             sportKey,
             isLive:      false,
-            marketCount: 10,
+            marketCount: rm ? Math.max(10, rm.marketScore * 12) : 10,
             commenceIso: new Date(ts * 1000).toISOString(),
             odds: {
               home: real?.home  ?? fallback.home,
@@ -203,6 +205,14 @@ function normaliseBetsApiLeagues(
                 : {}),
               away: real?.away  ?? fallback.away,
             },
+            // Rich market data from BetsAPI prematch — no extra credit cost
+            richMarkets:  rm,
+            featuredMatch: featured,
+            // Populate standard O/U and BTTS fields from richMarkets when available
+            ...(rm?.ou25Over  != null ? { ouOver25:  rm.ou25Over  } : {}),
+            ...(rm?.ou25Under != null ? { ouUnder25: rm.ou25Under } : {}),
+            ...(rm?.bttsY     != null ? { bttsYes:   rm.bttsY     } : {}),
+            ...(rm?.bttsN     != null ? { bttsNo:    rm.bttsN     } : {}),
           };
         });
 

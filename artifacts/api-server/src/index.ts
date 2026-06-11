@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 import cron from "node-cron";
 import { runSettlementWorker } from "./lib/settlementWorker.js";
 import { fetchAndCacheOdds, getDbCacheRemainingMs, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
-import { fetchBetsApiUpcoming, fetchPrematchOdds, BETSAPI_SPORT_IDS, BETSAPI_SPORT_MAP, BETSAPI_KEY } from "./lib/betsapi.js";
+import { fetchBetsApiUpcoming, fetchPrematchData, BETSAPI_SPORT_IDS, BETSAPI_SPORT_MAP, BETSAPI_KEY } from "./lib/betsapi.js";
 
 // ── Global process error handlers ─────────────────────────────────────────────
 // Must be registered before any async work so nothing slips through unnoticed.
@@ -726,7 +726,8 @@ runMigrations().then(() => {
           continue;
         }
 
-        // Enrich top 20 events with real prematch odds (was 50 — reduced to save credits).
+        // Enrich top 20 events with real prematch odds + rich market flags.
+        // Uses fetchPrematchData which parses ALL market types from the same API call — no extra credits.
         if (!meta.countOnly) {
           const toEnrich = events.slice(0, 20);
           for (let i = 0; i < toEnrich.length; i += 10) {
@@ -734,9 +735,10 @@ runMigrations().then(() => {
             await Promise.all(
               batch.map(async (ev) => {
                 try {
-                  const odds = await fetchPrematchOdds(ev.id, meta.hasDraw);
+                  const { odds, richMarkets } = await fetchPrematchData(ev.id, meta.hasDraw);
                   if (odds) ev.prematchOdds = odds;
-                } catch { /* leave prematchOdds undefined — frontend uses fallback */ }
+                  if (richMarkets.marketScore > 0) ev.richMarkets = richMarkets;
+                } catch { /* leave prematchOdds/richMarkets undefined — frontend uses fallback */ }
               })
             );
             if (i + 10 < toEnrich.length) await new Promise(r => setTimeout(r, 200));

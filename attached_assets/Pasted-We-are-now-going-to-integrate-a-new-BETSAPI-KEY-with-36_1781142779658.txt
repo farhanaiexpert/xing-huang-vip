@@ -1,0 +1,45 @@
+We are now going to integrate a new BETSAPI_KEY with 3600 credits/hour.
+
+Please carefully update the project and make sure the new BETSAPI_KEY is added securely in Replit Secrets / environment variables only. Do not hardcode the key anywhere in the codebase.
+
+Main goal:
+Improve the sportsbook markets system so our platform properly fetches, maps, displays, and highlights all required market types from BetsAPI.
+
+Required market categories:
+1. Handicap / Asian Handicap
+2. Over / Under
+3. Half-Time / HT markets
+4. Goals / BTTS / Next Goal
+5. Correct Score
+6. Featured Combinations
+7. Time / Minute markets
+8. Corners
+9. Specials: cards, penalties, fouls, and similar special markets
+
+Important rules:
+1. Use the latest BETSAPI_KEY from environment variables only.
+2. The key has a limit of 3600 credits/hour. Add safe rate limiting, caching, and request control so usage always stays under this limit.
+3. Avoid unnecessary duplicate API calls. Reuse cached data where possible.
+4. Add logging/monitoring for BetsAPI usage so we can see how many credits/requests are being used per hour.
+5. If the API limit is close to being reached, pause non-critical refreshes and show cached data instead of making more calls.
+6. Make sure all required markets are clearly shown in the frontend.
+7. Matches that contain these important market types should be displayed prominently.
+8. If a match has richer markets such as Asian Handicap, Correct Score, Corners, Cards, Penalties, or Time/Minute markets, highlight it as a “Featured Match” or similar.
+9. Keep the UI clean, modern, responsive, and easy for users to understand.
+10. Do not break the existing betting flow, bet slip, odds selection, admin panel, or settlement logic.
+
+Please check the current codebase first and then implement:
+- Backend BetsAPI integration improvements
+- Market mapping/normalization
+- API usage protection under 3600 credits/hour
+- Caching strategy
+- Frontend display improvements
+- Clear labels for all required market categories
+- Featured/prominent display for matches with rich market coverage
+
+After finishing, please summarize exactly:
+1. Which files were changed
+2. How the BETSAPI_KEY is used securely
+3. How the 3600/hour limit is protected
+4. Which market categories are now supported
+5. How to test everything

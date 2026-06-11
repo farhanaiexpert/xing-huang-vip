@@ -83,6 +83,19 @@ function TeamInitials({ name, size = 20, color }: { name: string; size?: number;
 
 // ── Single match row ──────────────────────────────────────────────────────────
 
+// ── Market type pills ─────────────────────────────────────────────────────────
+
+const MARKET_PILLS: { key: keyof NonNullable<Match['richMarkets']>; label: string }[] = [
+  { key: 'hasHcp',      label: 'HCP'     },
+  { key: 'hasOU',       label: 'O/U'     },
+  { key: 'hasHT',       label: 'HT'      },
+  { key: 'hasBTTS',     label: 'BTTS'    },
+  { key: 'hasCS',       label: 'CS'      },
+  { key: 'hasCorners',  label: 'Corners' },
+  { key: 'hasCards',    label: 'Cards'   },
+  { key: 'hasNextGoal', label: '1st Goal'},
+];
+
 function MatchRow({ match, league, config }: { match: Match; league: League; config: SportConfig }) {
   const matchName = match.team2 ? `${match.team1} vs ${match.team2}` : match.team1;
   const timeLabel = match.kickoffTime ?? (match.date.includes(', ') ? match.date.split(', ')[1] : match.date);
@@ -95,57 +108,85 @@ function MatchRow({ match, league, config }: { match: Match; league: League; con
     sportKey:   match.sportKey ?? league.sportKey ?? '',
   };
 
+  const rm = match.richMarkets;
+  const activePills = rm ? MARKET_PILLS.filter(p => rm[p.key] === true).slice(0, 5) : [];
+
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 border-b transition-colors cursor-pointer"
+      className="flex flex-col border-b transition-colors cursor-pointer"
       style={{ borderColor: 'rgba(37,50,65,0.5)' }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${config.color}08`; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}
     >
-      {/* Time / LIVE */}
-      <div className="w-[42px] shrink-0 text-right">
-        {match.isLive ? (
-          <span className="flex items-center justify-end gap-0.5 text-[9px] font-black text-[#EF4444]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" /> LIVE
-          </span>
-        ) : (
-          <span className="text-[10.5px] text-[#94A3B8]/50 font-semibold leading-tight text-right block">{timeLabel}</span>
-        )}
-      </div>
-
-      {/* Teams */}
-      <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <TeamInitials name={match.team1} size={18} color={config.color} />
-          <span className="text-[12.5px] font-semibold text-[#F8FAFC] leading-none truncate">{match.team1}</span>
-        </div>
-        {match.team2 && (
-          <div className="flex items-center gap-2">
-            <TeamInitials name={match.team2} size={18} color="#94A3B8" />
-            <span className="text-[12.5px] font-semibold text-[#94A3B8] leading-none truncate">{match.team2}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Market count */}
-      {(match.marketCount ?? 0) > 0 && (
-        <span
-          className="text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0 hidden sm:block"
-          style={{ background: `${config.color}15`, color: config.color, border: `1px solid ${config.color}25` }}
+      {/* Featured banner */}
+      {match.featuredMatch && (
+        <div
+          className="flex items-center gap-1.5 px-4 pt-2 pb-0"
         >
-          +{match.marketCount}
-        </span>
+          <span
+            className="text-[7.5px] font-black uppercase tracking-[0.18em] px-2 py-0.5 rounded-full leading-none"
+            style={{ background: `${config.color}20`, color: config.color, border: `1px solid ${config.color}35` }}
+          >
+            ⭐ Featured · Rich Markets
+          </span>
+          {activePills.map(p => (
+            <span
+              key={p.key}
+              className="text-[7px] font-bold px-1.5 py-0.5 rounded leading-none text-[#64748B]"
+              style={{ background: 'rgba(37,50,65,0.6)', border: '1px solid rgba(37,50,65,0.8)' }}
+            >
+              {p.label}
+            </span>
+          ))}
+        </div>
       )}
 
-      {/* Odds */}
-      <div className="flex items-center gap-1 shrink-0">
-        <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
-        {match.odds.draw != null && (
-          <OddsButton {...shared} selectionType="X" selectionName="Draw" odds={match.odds.draw} />
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        {/* Time / LIVE */}
+        <div className="w-[42px] shrink-0 text-right">
+          {match.isLive ? (
+            <span className="flex items-center justify-end gap-0.5 text-[9px] font-black text-[#EF4444]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" /> LIVE
+            </span>
+          ) : (
+            <span className="text-[10.5px] text-[#94A3B8]/50 font-semibold leading-tight text-right block">{timeLabel}</span>
+          )}
+        </div>
+
+        {/* Teams */}
+        <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <TeamInitials name={match.team1} size={18} color={config.color} />
+            <span className="text-[12.5px] font-semibold text-[#F8FAFC] leading-none truncate">{match.team1}</span>
+          </div>
+          {match.team2 && (
+            <div className="flex items-center gap-2">
+              <TeamInitials name={match.team2} size={18} color="#94A3B8" />
+              <span className="text-[12.5px] font-semibold text-[#94A3B8] leading-none truncate">{match.team2}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Market count (non-featured) or market score */}
+        {!match.featuredMatch && (match.marketCount ?? 0) > 0 && (
+          <span
+            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0 hidden sm:block"
+            style={{ background: `${config.color}15`, color: config.color, border: `1px solid ${config.color}25` }}
+          >
+            +{match.marketCount}
+          </span>
         )}
-        {match.team2 && (
-          <OddsButton {...shared} selectionType="2" selectionName={match.team2} odds={match.odds.away} />
-        )}
+
+        {/* Odds */}
+        <div className="flex items-center gap-1 shrink-0">
+          <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
+          {match.odds.draw != null && (
+            <OddsButton {...shared} selectionType="X" selectionName="Draw" odds={match.odds.draw} />
+          )}
+          {match.team2 && (
+            <OddsButton {...shared} selectionType="2" selectionName={match.team2} odds={match.odds.away} />
+          )}
+        </div>
       </div>
     </div>
   );

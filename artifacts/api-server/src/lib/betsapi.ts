@@ -50,6 +50,36 @@ const VIRTUAL_RE = /esoccer|esport|virtual|ebasketball|efootball|cyber|simul/i;
 
 // ─── Raw API shapes ───────────────────────────────────────────────────────────
 
+// ─── Rich market availability flags ──────────────────────────────────────────
+
+/**
+ * Flags indicating which BetsAPI market categories are available for an event.
+ * Populated for free from the same prematch API call used for 1X2 odds — no extra credits.
+ */
+export interface BetsApiRichMarkets {
+  hasHcp:      boolean;  // Asian Handicap
+  hasOU:       boolean;  // Over/Under Goals
+  hasHT:       boolean;  // Half-Time Result
+  hasBTTS:     boolean;  // Both Teams To Score
+  hasCS:       boolean;  // Correct Score
+  hasCorners:  boolean;  // Corners
+  hasCards:    boolean;  // Cards / Bookings
+  hasNextGoal: boolean;  // Next Goal / First Goalscorer
+  /** Total count of market categories available — used to determine "Featured" status (≥4) */
+  marketScore: number;
+  // Key odds for quick display in market tabs
+  hcpHome?:   number;
+  hcpAway?:   number;
+  hcpLine?:   string;
+  ou25Over?:  number;
+  ou25Under?: number;
+  htHome?:    number;
+  htDraw?:    number;
+  htAway?:    number;
+  bttsY?:     number;
+  bttsN?:     number;
+}
+
 export interface BetsApiEventRaw {
   id:          string;
   sport_id:    string;
@@ -63,6 +93,8 @@ export interface BetsApiEventRaw {
   timer?:      { tm?: string; ts?: string; tt?: string; ta?: string };
   /** Real odds extracted from prematch endpoint (attached by fetch layer) */
   prematchOdds?: { home: number; draw?: number; away: number } | null;
+  /** Rich market availability flags (from same prematch call — no extra credits) */
+  richMarkets?: BetsApiRichMarkets | null;
 }
 
 interface BetsApiListResponse {
@@ -112,7 +144,6 @@ function parsePrematchOdds(
   for (const key of ['full_time_result', 'home_away_draw']) {
     const outcomes = sp[key];
     if (!Array.isArray(outcomes) || outcomes.length === 0) continue;
-    // Filter out header rows (odds === '' or name in header set)
     const real = outcomes.filter(o => o.odds && parseFloat(o.odds) > 1);
     if (real.length < 2) continue;
 
@@ -134,7 +165,6 @@ function parsePrematchOdds(
   for (const key of ['match_lines', 'match_result']) {
     const outcomes = sp[key];
     if (!Array.isArray(outcomes) || outcomes.length === 0) continue;
-    // Real outcomes have numeric odds and a header (team name)
     const real = outcomes.filter(o => o.odds && parseFloat(o.odds) > 1 && o.header && o.header.trim() !== '' && !o.name);
     if (real.length < 2) continue;
     const home = parseFloat(real[0].odds);
@@ -144,6 +174,90 @@ function parsePrematchOdds(
   }
 
   return null;
+}
+
+/**
+ * Parse ALL market types from the same prematch API response.
+ * Returns both 1X2 odds AND rich market flags with key odds — no extra API credit needed.
+ */
+function parsePrematchData(
+  data: PrematchResponse,
+  hasDraw: boolean,
+): { odds: { home: number; draw?: number; away: number } | null; richMarkets: BetsApiRichMarkets } {
+  const odds = parsePrematchOdds(data, hasDraw);
+
+  const item = data.results?.[0];
+  const sp: Record<string, PrematchOutcome[] | undefined> = item?.main?.sp ?? {};
+
+  /** Returns true if an sp key exists and has ≥2 real outcome entries */
+  const hasKey = (keys: string[]) =>
+    keys.some(k => Array.isArray(sp[k]) && (sp[k] as PrematchOutcome[]).filter(o => o.odds && parseFloat(o.odds) > 1).length >= 2);
+
+  const hasHcp      = hasKey(['asian_handicap', 'asian_handicap_including_overtime', 'handicap_result', 'asian_handicap_half_time', 'asian_handicap_corners']);
+  const hasOU       = hasKey(['goals_over_under', 'over_under_25', 'total_goals', 'over_under_15', 'over_under_35', '1st_half_over_under', 'alternative_over_under']);
+  const hasHT       = hasKey(['half_time_result', 'half_time_home_away', 'ht_home_away', 'half_time_score', 'half_time']);
+  const hasBTTS     = hasKey(['both_teams_to_score', 'btts', 'score_both_teams', 'both_to_score']);
+  const hasCS       = hasKey(['correct_score', 'correct_score_v2', 'scores', 'halftime_correct_score']);
+  const hasCorners  = hasKey(['corner_count_over_under', 'asian_corners', 'corners_over_under', 'corners_match_line', 'corners_handicap', 'total_corners']);
+  const hasCards    = hasKey(['cards_over_under', 'player_to_receive_a_card', 'cards_handicap', 'cards_match_line', 'total_bookings']);
+  const hasNextGoal = hasKey(['next_goal', 'first_goalscorer', 'first_goal_scorer', 'next_goal_scorer', 'last_goalscorer']);
+  const marketScore = [hasHcp, hasOU, hasHT, hasBTTS, hasCS, hasCorners, hasCards, hasNextGoal].filter(Boolean).length;
+
+  /** Pull first N valid odds from an sp key */
+  const pickOdds = (keys: string[], count: number): number[] => {
+    for (const key of keys) {
+      const outcomes = sp[key];
+      if (!Array.isArray(outcomes)) continue;
+      const real = outcomes.filter(o => o.odds && parseFloat(o.odds) > 1);
+      if (real.length >= count) return real.slice(0, count).map(o => parseFloat(o.odds));
+    }
+    return [];
+  };
+
+  // HCP
+  let hcpHome: number | undefined, hcpAway: number | undefined, hcpLine: string | undefined;
+  for (const key of ['asian_handicap', 'handicap_result']) {
+    const outcomes = sp[key];
+    if (!Array.isArray(outcomes)) continue;
+    const real = outcomes.filter(o => o.odds && parseFloat(o.odds) > 1);
+    if (real.length >= 2) {
+      hcpLine = real[0].handicap ?? real[0].name ?? '';
+      hcpHome = parseFloat(real[0].odds);
+      hcpAway = parseFloat(real[real.length - 1].odds);
+      break;
+    }
+  }
+
+  // O/U 2.5
+  const [ou25Over, ou25Under] = pickOdds(['goals_over_under', 'over_under_25', 'total_goals'], 2);
+
+  // HT
+  let htHome: number | undefined, htDraw: number | undefined, htAway: number | undefined;
+  for (const key of ['half_time_result', 'half_time_home_away']) {
+    const outcomes = sp[key];
+    if (!Array.isArray(outcomes)) continue;
+    const real = outcomes.filter(o => o.odds && parseFloat(o.odds) > 1);
+    if (hasDraw && real.length >= 3) {
+      htHome = parseFloat(real[0].odds); htDraw = parseFloat(real[1].odds); htAway = parseFloat(real[2].odds);
+      break;
+    } else if (real.length >= 2) {
+      htHome = parseFloat(real[0].odds); htAway = parseFloat(real[real.length - 1].odds);
+      break;
+    }
+  }
+
+  // BTTS
+  const [bttsY, bttsN] = pickOdds(['both_teams_to_score', 'btts'], 2);
+
+  const richMarkets: BetsApiRichMarkets = {
+    hasHcp, hasOU, hasHT, hasBTTS, hasCS, hasCorners, hasCards, hasNextGoal, marketScore,
+    hcpHome, hcpAway, hcpLine,
+    ou25Over, ou25Under,
+    htHome, htDraw, htAway,
+    bttsY, bttsN,
+  };
+
+  return { odds, richMarkets };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -251,6 +365,38 @@ export async function fetchPrematchOdds(
   } catch {
     recordApiCall("betsapi", false, "network", "prematch → network/timeout");
     return null;
+  }
+}
+
+/**
+ * Fetch BOTH 1X2 odds AND rich market flags from a single prematch API call.
+ * Use this in the cron to populate richMarkets at no extra credit cost.
+ */
+export async function fetchPrematchData(
+  fixtureId: string,
+  hasDraw:   boolean,
+): Promise<{ odds: { home: number; draw?: number; away: number } | null; richMarkets: BetsApiRichMarkets }> {
+  const emptyRich: BetsApiRichMarkets = {
+    hasHcp: false, hasOU: false, hasHT: false, hasBTTS: false,
+    hasCS: false, hasCorners: false, hasCards: false, hasNextGoal: false,
+    marketScore: 0,
+  };
+  if (!BETSAPI_KEY) return { odds: null, richMarkets: emptyRich };
+  try {
+    if (!(await reserveBetsApiCredit())) {
+      recordApiCall("betsapi", false, "rate_limited", "prematch → hourly credit cap reached");
+      return { odds: null, richMarkets: emptyRich };
+    }
+    const url = `${BETSAPI_BASE}/v1/bet365/prematch?FI=${fixtureId}&token=${BETSAPI_KEY}`;
+    const res  = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    if (!res.ok) { recordApiCall("betsapi", false, `HTTP ${res.status}`, `prematch ${fixtureId} → HTTP ${res.status}`); return { odds: null, richMarkets: emptyRich }; }
+    const json = await res.json() as PrematchResponse;
+    if (json.success !== 1) { recordApiCall("betsapi", false, "success=0", `prematch ${fixtureId} → success=0`); return { odds: null, richMarkets: emptyRich }; }
+    recordApiCall("betsapi", true, "ok");
+    return parsePrematchData(json, hasDraw);
+  } catch {
+    recordApiCall("betsapi", false, "network", `prematch ${fixtureId} → network/timeout`);
+    return { odds: null, richMarkets: emptyRich };
   }
 }
 

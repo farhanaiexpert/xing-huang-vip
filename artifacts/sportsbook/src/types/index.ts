@@ -64,6 +64,33 @@ export type Match = {
   bttsYes?: number;
   /** Real API BTTS No odds, when available */
   bttsNo?: number;
+  /**
+   * BetsAPI rich market availability flags — populated for BetsAPI events only.
+   * Parsed from the prematch API at no extra credit cost.
+   */
+  richMarkets?: {
+    hasHcp:      boolean;
+    hasOU:       boolean;
+    hasHT:       boolean;
+    hasBTTS:     boolean;
+    hasCS:       boolean;
+    hasCorners:  boolean;
+    hasCards:    boolean;
+    hasNextGoal: boolean;
+    marketScore: number;
+    hcpHome?:   number;
+    hcpAway?:   number;
+    hcpLine?:   string;
+    ou25Over?:  number;
+    ou25Under?: number;
+    htHome?:    number;
+    htDraw?:    number;
+    htAway?:    number;
+    bttsY?:     number;
+    bttsN?:     number;
+  };
+  /** True for BetsAPI matches with 4+ rich market types available */
+  featuredMatch?: boolean;
 };
 
 export type League = {

@@ -8,6 +8,29 @@ import { API_BASE } from './apiBase';
 
 // ─── Raw event shape (mirrored from server) ───────────────────────────────────
 
+/** Rich market availability flags — mirrors server BetsApiRichMarkets */
+export interface BetsApiRichMarkets {
+  hasHcp:      boolean;
+  hasOU:       boolean;
+  hasHT:       boolean;
+  hasBTTS:     boolean;
+  hasCS:       boolean;
+  hasCorners:  boolean;
+  hasCards:    boolean;
+  hasNextGoal: boolean;
+  marketScore: number;
+  hcpHome?:   number;
+  hcpAway?:   number;
+  hcpLine?:   string;
+  ou25Over?:  number;
+  ou25Under?: number;
+  htHome?:    number;
+  htDraw?:    number;
+  htAway?:    number;
+  bttsY?:     number;
+  bttsN?:     number;
+}
+
 export interface BetsApiEvent {
   id:          string;
   sport_id:    string;
@@ -21,6 +44,8 @@ export interface BetsApiEvent {
   timer?:      { tm?: string; ts?: string; tt?: string; ta?: string };
   /** Real prematch odds fetched from /v1/bet365/prematch (server-enriched) */
   prematchOdds?: { home: number; draw?: number; away: number } | null;
+  /** Rich market availability flags (same prematch call — no extra credits) */
+  richMarkets?: BetsApiRichMarkets | null;
   /** Attached by server — sport metadata */
   _meta?: {
     name:    string;
