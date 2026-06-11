@@ -1,11 +1,14 @@
 /**
- * FeaturedMatchesCarousel — horizontal carousel of the top BetsAPI matches by
- * rich-market depth (marketScore). Each card shows 1X2 odds + market pills and,
- * when selected, expands a full-width <BetsApiMarketDrawer/> below the carousel.
+ * FeaturedMatchesCarousel — the homepage lead block. A horizontal strip of the
+ * BetsAPI matches with the richest market depth (marketScore). Each card shows
+ * 1X2 odds + market pills and, when selected, expands a full-width
+ * <BetsApiMarketDrawer/> below the strip.
  *
- * Uses only data already in `allLeagues` (no network calls); the drawer itself
- * fetches from the cache-only markets endpoint. Renders nothing when there are
- * no featured matches (e.g. BetsAPI cache empty).
+ * Header shows a live count of how many rich-market matches are available plus a
+ * "View all" affordance, and a thin sport-chip row lets visitors filter the strip
+ * to a single sport. Uses only data already in `allLeagues` (no network calls);
+ * the drawer itself fetches from the cache-only markets endpoint. Renders nothing
+ * when there are no featured matches (e.g. BetsAPI cache empty).
  */
 import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
@@ -19,6 +22,8 @@ import { cn } from '../lib/utils';
 
 interface Props {
   leagues: League[];
+  /** Called by the "View all" control — enable the Featured filter + scroll to list. */
+  onViewAll?: () => void;
 }
 
 interface FeaturedEntry {
@@ -36,16 +41,48 @@ const MARKET_PILLS: { key: keyof NonNullable<Match['richMarkets']>; label: strin
   { key: 'hasCards',   label: 'Cards' },
 ];
 
+/** Friendly label + icon per internal sport id (BetsAPI matches only). */
+const SPORT_META: Record<string, { label: string; icon: string }> = {
+  sp_soccer:           { label: 'Soccer',       icon: '⚽' },
+  sp_basketball:       { label: 'Basketball',   icon: '🏀' },
+  sp_tennis:           { label: 'Tennis',       icon: '🎾' },
+  sp_table_tennis:     { label: 'Table Tennis', icon: '🏓' },
+  sp_cricket:          { label: 'Cricket',      icon: '🏏' },
+  sp_rugby:            { label: 'Rugby',        icon: '🏉' },
+  sp_americanfootball: { label: 'NFL',          icon: '🏈' },
+  sp_baseball:         { label: 'Baseball',     icon: '⚾' },
+  sp_icehockey:        { label: 'Ice Hockey',   icon: '🏒' },
+  sp_golf:             { label: 'Golf',         icon: '⛳' },
+  sp_handball:         { label: 'Handball',     icon: '🤾' },
+  sp_snooker:          { label: 'Snooker',      icon: '🎱' },
+  sp_darts:            { label: 'Darts',        icon: '🎯' },
+  sp_volleyball:       { label: 'Volleyball',   icon: '🏐' },
+};
+
+function sportMetaFor(sportId: string): { label: string; icon: string } {
+  if (SPORT_META[sportId]) return SPORT_META[sportId];
+  const label = sportId
+    .replace(/^sp_/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return { label: label || 'Other', icon: '🏆' };
+}
+
 function marketMeta(match: Match) {
   if (match.sportId === 'sp_soccer') return { marketId: `mkt_${match.id}_mr`, marketName: 'Match Result' };
   return { marketId: `mkt_${match.id}_mw`, marketName: 'Match Winner' };
 }
 
-export function FeaturedMatchesCarousel({ leagues }: Props) {
+/** Cap on how many cards render in the strip at once (count badge shows the true total). */
+const STRIP_LIMIT = 12;
+
+export function FeaturedMatchesCarousel({ leagues, onViewAll }: Props) {
   const [, setLocation] = useLocation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
 
-  const featured = useMemo<FeaturedEntry[]>(() => {
+  // All rich-market matches, sorted by depth (no cap — drives the count + chips).
+  const allFeatured = useMemo<FeaturedEntry[]>(() => {
     const entries: FeaturedEntry[] = [];
     for (const league of leagues) {
       for (const match of league.matches) {
@@ -57,32 +94,114 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
     entries.sort(
       (a, b) => (b.match.richMarkets?.marketScore ?? 0) - (a.match.richMarkets?.marketScore ?? 0),
     );
-    return entries.slice(0, 8);
+    return entries;
   }, [leagues]);
 
-  if (featured.length === 0) return null;
+  // Sports present among the featured matches, with counts (most matches first).
+  const sportGroups = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of allFeatured) {
+      const id = e.match.sportId || 'other';
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([id, count]) => ({ id, count, ...sportMetaFor(id) }))
+      .sort((a, b) => b.count - a.count);
+  }, [allFeatured]);
 
-  const selected = featured.find(e => e.match.id === selectedId);
+  // Guard the selected sport against data rotation (selected sport may disappear).
+  const effectiveSport =
+    selectedSport && sportGroups.some((g) => g.id === selectedSport) ? selectedSport : null;
+
+  const visible = useMemo<FeaturedEntry[]>(() => {
+    const list = effectiveSport
+      ? allFeatured.filter((e) => (e.match.sportId || 'other') === effectiveSport)
+      : allFeatured;
+    return list.slice(0, STRIP_LIMIT);
+  }, [allFeatured, effectiveSport]);
+
+  if (allFeatured.length === 0) return null;
+
+  const selected = visible.find((e) => e.match.id === selectedId);
+  const totalCount = allFeatured.length;
 
   return (
-    <div className="mb-4" data-testid="featured-carousel">
-      {/* Heading */}
-      <div className="mb-3">
+    <div className="mb-5" data-testid="featured-carousel">
+      {/* Header */}
+      <div className="mb-2.5">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 text-[15px] sm:text-base font-extrabold text-[#FACC15]">
             <Sparkles className="w-4 h-4" />
             Matches With More Markets
           </span>
+          <span
+            className="shrink-0 text-[10px] font-bold tabular-nums text-[#FACC15] bg-[#FACC15]/10 border border-[#FACC15]/20 px-1.5 py-0.5 rounded-full"
+            data-testid="featured-count"
+          >
+            {totalCount} match{totalCount !== 1 ? 'es' : ''}
+          </span>
           <div className="flex-1 h-px bg-gradient-to-r from-[#FACC15]/30 to-transparent" />
+          {onViewAll && (
+            <button
+              type="button"
+              onClick={onViewAll}
+              data-testid="featured-view-all"
+              className="shrink-0 flex items-center gap-0.5 text-[11px] font-semibold text-[#38BDF8] hover:text-[#7DD3FC] transition-colors"
+            >
+              View all
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         <p className="mt-1 text-[11px] font-medium text-[#94A3B8]/80">
           Tap any match to bet on handicaps, totals, BTTS, correct score, corners &amp; more
         </p>
       </div>
 
+      {/* Sport-chip filter row (only when more than one sport is present) */}
+      {sportGroups.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 snap-x" data-testid="featured-sport-chips">
+          <button
+            type="button"
+            onClick={() => setSelectedSport(null)}
+            data-testid="featured-chip-all"
+            className={cn(
+              'shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors snap-start',
+              effectiveSport === null
+                ? 'bg-[#FACC15]/12 text-[#FACC15] border-[#FACC15]/35'
+                : 'bg-[#121821] text-[#94A3B8]/80 border-[#1E2A38] hover:text-[#F8FAFC] hover:border-[#2E3D50]',
+            )}
+          >
+            All
+            <span className="text-[9px] tabular-nums opacity-70">{totalCount}</span>
+          </button>
+          {sportGroups.map((g) => {
+            const active = effectiveSport === g.id;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setSelectedSport(active ? null : g.id)}
+                data-testid={`featured-chip-${g.id}`}
+                className={cn(
+                  'shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors snap-start',
+                  active
+                    ? 'bg-[#38BDF8]/12 text-[#38BDF8] border-[#38BDF8]/35'
+                    : 'bg-[#121821] text-[#94A3B8]/80 border-[#1E2A38] hover:text-[#F8FAFC] hover:border-[#2E3D50]',
+                )}
+              >
+                <span className="text-[13px] leading-none">{g.icon}</span>
+                <SportName name={g.label} />
+                <span className="text-[9px] tabular-nums opacity-70">{g.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Horizontal scroller */}
       <div className="flex gap-2.5 overflow-x-auto pb-1.5 -mx-1 px-1 snap-x snap-mandatory">
-        {featured.map(({ match, leagueName }) => {
+        {visible.map(({ match, leagueName }) => {
           const { marketId, marketName } = marketMeta(match);
           const isSel = match.id === selectedId;
           const rm = match.richMarkets;
@@ -179,7 +298,7 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
         })}
       </div>
 
-      {/* Selected match drawer (full width below the carousel) */}
+      {/* Selected match drawer (full width below the strip) */}
       {selected && (
         <div className="mt-2 rounded-xl border border-[#FACC15]/30 overflow-hidden">
           <div className="px-3.5 py-2 bg-[#101722] flex items-center justify-between">
