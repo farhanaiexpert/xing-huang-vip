@@ -91,20 +91,38 @@ export function marketMeta(match: Match): { marketId: string; marketName: string
   return { marketId: `mkt_${match.id}_mw`, marketName: 'Match Winner' };
 }
 
-/** All BetsAPI rich-market matches across every league, sorted by market depth. */
+/**
+ * BetsAPI fixtures for the "Matches With More Markets" section, sorted by depth.
+ *
+ * Returns the rich-market fixtures (flagged `featuredMatch`) whenever any exist,
+ * so the section keeps showing genuine "more markets" matches. Only when NONE are
+ * flagged — e.g. BetsAPI rich-market enrichment is momentarily thin or empty — it
+ * falls back to all bettable BetsAPI matches (valid teams + 1X2 odds) so the
+ * section never disappears entirely. Sorted by marketScore, then marketCount.
+ */
 export function selectFeaturedEntries(leagues: League[]): FeaturedEntry[] {
-  const entries: FeaturedEntry[] = [];
+  const featured: FeaturedEntry[] = [];
+  const fallback: FeaturedEntry[] = [];
   for (const league of leagues) {
     for (const match of league.matches) {
       if (!match.id.startsWith('betsapi_')) continue;
-      if (!match.featuredMatch) continue;
-      entries.push({ match, leagueName: league.name });
+      // Require a real, bettable fixture: both teams + valid home/away odds.
+      if (!match.team1 || !match.team2) continue;
+      const home = match.odds?.home ?? 0;
+      const away = match.odds?.away ?? 0;
+      if (home <= 1 || away <= 1) continue;
+      const entry: FeaturedEntry = { match, leagueName: league.name };
+      fallback.push(entry);
+      if (match.featuredMatch) featured.push(entry);
     }
   }
-  entries.sort(
-    (a, b) => (b.match.richMarkets?.marketScore ?? 0) - (a.match.richMarkets?.marketScore ?? 0),
+  const chosen = featured.length > 0 ? featured : fallback;
+  chosen.sort(
+    (a, b) =>
+      (b.match.richMarkets?.marketScore ?? 0) - (a.match.richMarkets?.marketScore ?? 0) ||
+      (b.match.marketCount ?? 0) - (a.match.marketCount ?? 0),
   );
-  return entries;
+  return chosen;
 }
 
 export interface SportGroup {

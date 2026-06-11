@@ -32,3 +32,17 @@ let the sort surface the richest matches.
 **How to apply:** `featuredMatch` is a DERIVED field baked into each localStorage-
 persisted Match. Any change to how it (or any derived Match field) is computed must bump
 the client STORAGE_KEY, or existing clients serve stale values until the cache TTL lapses.
+
+## 3. Selector must fall back so the section never fully vanishes
+The shared selector (`selectFeaturedEntries`, the single source of truth for BOTH the
+homepage carousel and the /more-markets page) returns featured fixtures when any exist,
+but falls back to ALL bettable BetsAPI matches (valid teams + home/away odds > 1) when
+none are flagged.
+
+**Why:** gating the entire section on `featuredMatch` means a momentarily-empty
+enrichment pass makes the whole "Matches With More Markets" block + its hero-adjacent
+slot disappear, which users notice. Fallback keeps the section present (clickable,
+bettable) and featured matches still lead via the marketScore→marketCount sort.
+**How to apply:** never let a section's existence depend solely on an intermittently-empty
+derived flag — prefer-but-fall-back. Keep carousel/page copy ("more markets") honest: the
+fallback is a degraded state, not the steady state.
