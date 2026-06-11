@@ -11,6 +11,7 @@ import { useOddsData } from '../hooks/useOddsData';
 import { useLiveMatchScore } from '../hooks/useLiveMatchScore';
 import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
 import { findMatchInLeagues } from '../lib/matchUtils';
+import { getGroupColor } from '../data/groupColors';
 import { Receipt, TrendingUp, Users, RefreshCw, Flame, CheckCircle2, Shield } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle, DrawerDescription } from '../components/ui/drawer';
 import { cn } from '../lib/utils';
@@ -373,7 +374,7 @@ export function MatchDetail() {
 
 // Height of the sticky MarketNav bar (h-[54px]). Used for scroll offset calculation
 // and for the scroll-spy threshold.
-const NAV_HEIGHT = 54;
+const NAV_HEIGHT = 58;
 
 function MatchDetailBody({
   match, league, sportKey, matchName, groups,
@@ -446,15 +447,22 @@ function MatchDetailBody({
 
     isScrollingRef.current = true;
 
-    // Compute scroll target: element top relative to the container viewport, minus nav
-    const containerRect = container.getBoundingClientRect();
-    const elRect        = el.getBoundingClientRect();
-    const scrollTarget  = container.scrollTop + (elRect.top - containerRect.top) - NAV_HEIGHT - 6;
+    // Walk the offsetParent chain from the group element up to the scroll container,
+    // accumulating offsetTop values. This gives the element's true distance from the
+    // top of the scroll container's content — reliable regardless of sticky positioning,
+    // getBoundingClientRect viewport shifts, or any ancestor transforms.
+    let offsetTop = 0;
+    let curr: HTMLElement | null = el;
+    while (curr && curr !== container) {
+      offsetTop += curr.offsetTop;
+      curr = curr.offsetParent as HTMLElement | null;
+    }
 
-    container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+    const scrollTarget = Math.max(0, offsetTop - NAV_HEIGHT - 6);
+    container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
 
-    // Release the scroll-spy lock once the smooth scroll animation finishes (~600ms)
-    setTimeout(() => { isScrollingRef.current = false; }, 700);
+    // Release scroll-spy lock after smooth scroll finishes (~700ms)
+    setTimeout(() => { isScrollingRef.current = false; }, 800);
   }, []);
 
   // ── FAB pulse when selection added ─────────────────────────────────────────
@@ -582,6 +590,7 @@ function MatchDetailBody({
                     homeTeam={match.homeTeamName}
                     awayTeam={match.awayTeamName}
                     commenceTime={match.startTime}
+                    accentColor={getGroupColor(group.id)}
                   />
                 </div>
               ))}

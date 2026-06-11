@@ -346,6 +346,23 @@ wcm-modal::part(backdrop) {
   background: rgba(148, 163, 184, 0.32);
 }
 
+/* ── Market nav horizontal scrollbar ───────────────────────────────────────── */
+.market-nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56,189,248,0.35) rgba(17,26,40,0.6);
+}
+.market-nav-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+.market-nav-scroll::-webkit-scrollbar-track {
+  background: rgba(17,26,40,0.4);
+  border-radius: 2px;
+}
+.market-nav-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #FACC15, #00DFA9, #38BDF8, #A78BFA);
+  border-radius: 2px;
+}
+
 /* ── LiveScoresTicker infinite scroll ───────────────────────────────────────── */
 @keyframes tickerScroll {
   0%   { transform: translateX(0); }

@@ -17,6 +17,7 @@ interface MarketGroupProps {
   homeTeam?:    string;
   awayTeam?:    string;
   commenceTime?: string;
+  accentColor?:  string;
 }
 
 function updatedLabel(groupId: string): string {
@@ -25,9 +26,18 @@ function updatedLabel(groupId: string): string {
   return min === 1 ? 'Just updated' : `${min}m ago`;
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace('#', '');
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
+}
+
 export function MarketGroup({
   group, matchId, matchName, leagueName, defaultOpen, isFeatured, groupIndex = 0,
-  sportKey, homeTeam, awayTeam, commenceTime,
+  sportKey, homeTeam, awayTeam, commenceTime, accentColor,
 }: MarketGroupProps) {
   const [isOpen, setIsOpen]   = useState(defaultOpen ?? group.isDefaultOpen);
   const contentRef            = useRef<HTMLDivElement>(null);
@@ -36,39 +46,45 @@ export function MarketGroup({
   const isTrending            = groupIndex === 0 || (groupIndex % 4 === 1);
   const isHot                 = groupIndex === 0;
 
+  const color  = accentColor ?? '#38BDF8';
+  const { r, g, b } = hexToRgb(color);
+
   return (
     <div
       id={`mg-${group.id}`}
-      className={cn(
-        'rounded-2xl overflow-hidden border transition-all duration-200',
-        isFeatured
-          ? 'border-[#00DFA9]/20 shadow-[0_0_24px_rgba(0,223,169,0.06),0_2px_12px_rgba(0,0,0,0.3)]'
-          : 'border-[#1E2D3D] shadow-[0_2px_8px_rgba(0,0,0,0.2)]',
-      )}
-      style={{ background: 'linear-gradient(180deg, #111827 0%, #0f1520 100%)' }}
+      className="rounded-2xl overflow-hidden border transition-all duration-200"
+      style={{
+        background:  'linear-gradient(180deg, #101825 0%, #0C1219 100%)',
+        borderColor: isOpen ? `rgba(${r},${g},${b},0.22)` : 'rgba(25,37,52,0.8)',
+        boxShadow:   isOpen
+          ? `0 0 28px rgba(${r},${g},${b},0.07), 0 4px 16px rgba(0,0,0,0.3)`
+          : '0 2px 8px rgba(0,0,0,0.2)',
+      }}
     >
-      {/* Featured left accent bar */}
-      {isFeatured && (
-        <div className="h-[2px] w-full"
-          style={{ background: 'linear-gradient(90deg, #00DFA9 0%, #38BDF8 60%, transparent 100%)' }} />
-      )}
+      {/* Top accent bar — always shown, color matches category */}
+      <div
+        className="h-[2px] w-full"
+        style={{ background: `linear-gradient(90deg, ${color} 0%, rgba(${r},${g},${b},0.1) 70%, transparent 100%)` }}
+      />
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <button
         onClick={() => setIsOpen(v => !v)}
         className={cn(
-          'w-full flex items-center justify-between px-4 py-3.5 min-h-[52px] transition-colors duration-150 group',
-          isOpen ? 'bg-[#0D1520]/80' : 'bg-transparent hover:bg-[#0D1520]/60'
+          'w-full flex items-center justify-between px-4 py-3.5 min-h-[54px] transition-colors duration-150 group',
+          isOpen ? 'bg-[#0D1520]/60' : 'bg-transparent hover:bg-[#0D1520]/40'
         )}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {/* Icon */}
-          <div className={cn(
-            'w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 transition-colors duration-150',
-            isFeatured
-              ? 'bg-[#00DFA9]/10 border border-[#00DFA9]/20'
-              : 'bg-[#1A2433] border border-[#253241]/60'
-          )}>
+          {/* Icon box */}
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 transition-all duration-150"
+            style={{
+              background:   `rgba(${r},${g},${b},0.10)`,
+              border:       `1px solid rgba(${r},${g},${b},0.22)`,
+              boxShadow:    isOpen ? `0 0 10px rgba(${r},${g},${b},0.12)` : 'none',
+            }}
+          >
             {group.icon}
           </div>
 
@@ -81,12 +97,14 @@ export function MarketGroup({
           </span>
 
           {/* Count pill */}
-          <span className={cn(
-            'text-[10px] font-bold px-1.5 py-0.5 rounded-full tabular-nums shrink-0',
-            isFeatured
-              ? 'bg-[#00DFA9]/10 text-[#00DFA9]/80 border border-[#00DFA9]/15'
-              : 'bg-[#1A2433] text-[#94A3B8]/50 border border-[#253241]/60'
-          )}>
+          <span
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full tabular-nums shrink-0"
+            style={{
+              background: `rgba(${r},${g},${b},0.10)`,
+              color:       `rgba(${r},${g},${b},0.75)`,
+              border:      `1px solid rgba(${r},${g},${b},0.18)`,
+            }}
+          >
             {totalSelections}
           </span>
 
@@ -116,16 +134,20 @@ export function MarketGroup({
             <Clock className="h-2.5 w-2.5" />
             {label}
           </span>
-          <div className={cn(
-            'w-6 h-6 rounded-full flex items-center justify-center border transition-all duration-200',
-            isOpen
-              ? 'bg-[#00DFA9]/10 border-[#00DFA9]/25'
-              : 'bg-[#1A2433]/60 border-[#253241]/60 group-hover:border-[#253241]'
-          )}>
-            <ChevronDown className={cn(
-              'h-3.5 w-3.5 transition-all duration-200',
-              isOpen ? 'rotate-180 text-[#00DFA9]' : 'text-[#94A3B8]/50'
-            )} />
+          <div
+            className="w-6 h-6 rounded-full flex items-center justify-center border transition-all duration-200"
+            style={isOpen ? {
+              background:  `rgba(${r},${g},${b},0.12)`,
+              borderColor: `rgba(${r},${g},${b},0.30)`,
+            } : {
+              background:  'rgba(26,36,51,0.6)',
+              borderColor: 'rgba(37,50,65,0.6)',
+            }}
+          >
+            <ChevronDown
+              className={cn('h-3.5 w-3.5 transition-all duration-200', isOpen ? 'rotate-180' : 'text-[#94A3B8]/50')}
+              style={isOpen ? { color } : {}}
+            />
           </div>
         </div>
       </button>
@@ -137,7 +159,7 @@ export function MarketGroup({
         style={{ maxHeight: isOpen ? '9999px' : '0px', opacity: isOpen ? 1 : 0 }}
       >
         {isOpen && (
-          <div className="divide-y divide-[#1E2D3D]/60">
+          <div className="divide-y divide-[#1A2433]/50">
             {group.markets.map(market => (
               <MarketSection
                 key={market.id}
@@ -149,6 +171,7 @@ export function MarketGroup({
                 homeTeam={homeTeam}
                 awayTeam={awayTeam}
                 commenceTime={commenceTime}
+                accentColor={color}
               />
             ))}
           </div>
@@ -169,40 +192,44 @@ type MarketSectionProps = {
   homeTeam?:    string;
   awayTeam?:    string;
   commenceTime?: string;
+  accentColor?:  string;
 };
 
-function MarketSection({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
+function MarketSection({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime, accentColor }: MarketSectionProps) {
   const isCorrectScore = market.marketTypeId === 'mt_correct_score';
   const isGoalScorer   = market.marketTypeId === 'mt_first_scorer' || market.marketTypeId === 'mt_anytime_scorer';
   const isRunners      = market.marketTypeId === 'mt_win_only' || market.marketTypeId === 'mt_place' || market.marketTypeId === 'mt_each_way';
   const isWide         = market.selections.length <= 3;
 
-  if (isCorrectScore)  return <CorrectScoreLayout  {...{ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }} />;
-  if (isGoalScorer || isRunners) return <PlayerListLayout {...{ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }} />;
-  if (isWide)          return <WideLayout          {...{ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }} />;
-  return                      <GridLayout          {...{ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }} />;
+  const props = { market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime, accentColor };
+
+  if (isCorrectScore)              return <CorrectScoreLayout {...props} />;
+  if (isGoalScorer || isRunners)   return <PlayerListLayout  {...props} />;
+  if (isWide)                      return <WideLayout        {...props} />;
+  return                                  <GridLayout        {...props} />;
 }
 
 // ── Section label ─────────────────────────────────────────────────────────────
 
-function SectionLabel({ name }: { name: string }) {
+function SectionLabel({ name, color }: { name: string; color?: string }) {
   if (!name) return null;
+  const c = color ?? '#38BDF8';
   return (
-    <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8]/40 mb-3 flex items-center gap-2">
-      <span className="h-px flex-1 bg-[#1E2D3D]" />
-      {name}
-      <span className="h-px flex-1 bg-[#1E2D3D]" />
+    <p className="text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+      <span className="h-px flex-1" style={{ background: 'rgba(30,45,61,0.8)' }} />
+      <span style={{ color: `${c}90` }}>{name}</span>
+      <span className="h-px flex-1" style={{ background: 'rgba(30,45,61,0.8)' }} />
     </p>
   );
 }
 
 // ── Wide layout: 2–3 selections ───────────────────────────────────────────────
 
-function WideLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
+function WideLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime, accentColor }: MarketSectionProps) {
   const count = market.selections.length;
   return (
     <div className="px-4 xl:px-5 py-4">
-      <SectionLabel name={market.name} />
+      <SectionLabel name={market.name} color={accentColor} />
       <div className={cn('grid gap-2.5', count === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1.5">
@@ -225,14 +252,14 @@ function WideLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam
 
 // ── Grid layout: 4+ selections ────────────────────────────────────────────────
 
-function GridLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
+function GridLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime, accentColor }: MarketSectionProps) {
   const count    = market.selections.length;
   const gridCols = count <= 6
     ? 'grid-cols-2 sm:grid-cols-4 xl:grid-cols-6'
     : 'grid-cols-2 sm:grid-cols-4 xl:grid-cols-5';
   return (
     <div className="px-4 xl:px-5 py-4">
-      <SectionLabel name={market.name} />
+      <SectionLabel name={market.name} color={accentColor} />
       <div className={`grid ${gridCols} gap-2`}>
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1.5">
@@ -255,10 +282,10 @@ function GridLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam
 
 // ── Correct score grid ────────────────────────────────────────────────────────
 
-function CorrectScoreLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
+function CorrectScoreLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime, accentColor }: MarketSectionProps) {
   return (
     <div className="px-4 xl:px-5 py-4">
-      <SectionLabel name={market.name} />
+      <SectionLabel name={market.name} color={accentColor} />
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
         {market.selections.map(sel => (
           <div key={sel.id} className="flex flex-col items-center gap-1">
@@ -279,26 +306,28 @@ function CorrectScoreLayout({ market, matchId, matchName, leagueName, sportKey, 
 
 // ── Player / runner list layout ───────────────────────────────────────────────
 
-function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime }: MarketSectionProps) {
+function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey, homeTeam, awayTeam, commenceTime, accentColor }: MarketSectionProps) {
   const [showAll, setShowAll] = useState(false);
   const displayed             = showAll ? market.selections : market.selections.slice(0, 8);
   const hasMore               = market.selections.length > 8;
+  const color                 = accentColor ?? '#38BDF8';
+  const { r, g, b }           = { r: parseInt(color.slice(1,3),16), g: parseInt(color.slice(3,5),16), b: parseInt(color.slice(5,7),16) };
 
   return (
     <div className="px-4 xl:px-5 py-4">
-      <SectionLabel name={market.name} />
+      <SectionLabel name={market.name} color={accentColor} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
         {displayed.map((sel, i) => (
           <div
             key={sel.id}
             className="flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 border transition-all duration-150 min-h-[48px] group"
             style={{
-              background:   'linear-gradient(135deg, #0D1520, #0B1018)',
-              borderColor:  'rgba(30,45,61,0.8)',
+              background:  'linear-gradient(135deg, #0D1520, #0B1018)',
+              borderColor: 'rgba(30,45,61,0.8)',
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(56,189,248,0.2)';
-              (e.currentTarget as HTMLElement).style.background  = 'linear-gradient(135deg, #0F1825, #0D1520)';
+              (e.currentTarget as HTMLElement).style.borderColor = `rgba(${r},${g},${b},0.22)`;
+              (e.currentTarget as HTMLElement).style.background  = `linear-gradient(135deg, rgba(${r},${g},${b},0.04), #0D1520)`;
             }}
             onMouseLeave={e => {
               (e.currentTarget as HTMLElement).style.borderColor = 'rgba(30,45,61,0.8)';
@@ -322,9 +351,22 @@ function PlayerListLayout({ market, matchId, matchName, leagueName, sportKey, ho
       {hasMore && !showAll && (
         <button
           onClick={() => setShowAll(true)}
-          className="mt-3 w-full py-3 rounded-xl text-[11px] font-bold text-[#38BDF8] bg-[#38BDF8]/5 hover:bg-[#38BDF8]/10 border border-[#38BDF8]/15 hover:border-[#38BDF8]/25 transition-all duration-150"
+          className="mt-3 w-full py-3 rounded-xl text-[11px] font-bold transition-all duration-150"
+          style={{
+            color:        color,
+            background:   `rgba(${r},${g},${b},0.05)`,
+            border:       `1px solid rgba(${r},${g},${b},0.15)`,
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.background = `rgba(${r},${g},${b},0.10)`;
+            (e.currentTarget as HTMLElement).style.borderColor = `rgba(${r},${g},${b},0.28)`;
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.background = `rgba(${r},${g},${b},0.05)`;
+            (e.currentTarget as HTMLElement).style.borderColor = `rgba(${r},${g},${b},0.15)`;
+          }}
         >
-          Show {market.selections.length - 8} more runners →
+          Show {market.selections.length - 8} more →
         </button>
       )}
     </div>
