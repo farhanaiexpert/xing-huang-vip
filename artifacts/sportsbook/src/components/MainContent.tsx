@@ -729,9 +729,9 @@ export function MainContent({
               )}
               {showFeatured && <WorldCupHero />}
               {showFeatured && <LiveEventsBanner />}
+              {showFeatured && <FeaturedMatchesCarousel leagues={allLeagues} />}
               {showFeatured && <USDTDepositBanner onDeposit={() => requestDeposit(isAuthenticated, navigate)} />}
               {showFeatured && <PopularBets />}
-              {showFeatured && <FeaturedMatchesCarousel leagues={allLeagues} />}
               {showFeatured && (
                 <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
               )}

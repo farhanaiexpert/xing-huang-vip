@@ -67,13 +67,17 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
   return (
     <div className="mb-4" data-testid="featured-carousel">
       {/* Heading */}
-      <div className="flex items-center gap-2 mb-2.5">
-        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#FACC15]">
-          <Sparkles className="w-3.5 h-3.5" />
-          Featured Matches
-        </span>
-        <span className="text-[10px] font-semibold text-[#94A3B8]/50">Most markets available</span>
-        <div className="flex-1 h-px bg-gradient-to-r from-[#FACC15]/20 to-transparent" />
+      <div className="mb-3">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-[15px] sm:text-base font-extrabold text-[#FACC15]">
+            <Sparkles className="w-4 h-4" />
+            Matches With More Markets
+          </span>
+          <div className="flex-1 h-px bg-gradient-to-r from-[#FACC15]/30 to-transparent" />
+        </div>
+        <p className="mt-1 text-[11px] font-medium text-[#94A3B8]/80">
+          Tap any match to bet on handicaps, totals, BTTS, correct score, corners &amp; more
+        </p>
       </div>
 
       {/* Horizontal scroller */}
