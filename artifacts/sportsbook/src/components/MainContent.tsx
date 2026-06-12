@@ -681,24 +681,6 @@ export function MainContent({
           </div>
         </div>
 
-        {/* ── Stale data banner ───────────────────────────────────────── */}
-        {!isLoading && isStale && hasRealData && !oddsError && (
-          <div className="mx-4 mt-3 flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#FACC15]/6 border border-[#FACC15]/20">
-            <span className="text-[11px] text-[#FACC15]/70 flex-1">
-              Odds data is over 24 hours old.
-            </span>
-            <button
-              onClick={refreshOdds}
-              disabled={oddsRefreshing}
-              className="flex items-center gap-1.5 text-[11px] font-semibold text-[#FACC15]/80 hover:text-[#FACC15] disabled:opacity-40 transition-colors"
-            >
-              <RefreshCw
-                className={`h-3 w-3 ${oddsRefreshing ? "animate-spin" : ""}`}
-              />
-              Refresh now
-            </button>
-          </div>
-        )}
 
         {/* ── Live scores ticker (full-width, above hero) ─────────────── */}
         {!isLoading && <LiveScoresTicker />}
