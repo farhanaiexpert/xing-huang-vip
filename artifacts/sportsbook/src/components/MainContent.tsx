@@ -21,6 +21,7 @@ import { PriceBoostsStrip } from "./PriceBoostsStrip";
 import { LiveScoresTicker } from "./LiveScoresTicker";
 import { LiveEventsBanner } from "./LiveEventsBanner";
 import { WorldCupHero } from "./WorldCupHero";
+import { HeroBannerSlider } from "./HeroBannerSlider";
 import { MatchOfTheDay } from "./MatchOfTheDay";
 import { SportDetailPage, SPORT_DETAIL_IDS } from "./SportDetailPage";
 import { ConnectWalletModal } from "./ConnectWalletModal";
@@ -749,16 +750,7 @@ export function MainContent({
               {showFeatured && (
                 <FeaturedMatchesCarousel leagues={allLeagues} />
               )}
-              {showFeatured && (
-                <div className="mb-5 rounded-2xl overflow-hidden shadow-2xl">
-                  <img
-                    src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-hero-banner.webp"
-                    alt="Xing Huang — Sports Betting"
-                    className="w-full h-auto block"
-                    draggable={false}
-                  />
-                </div>
-              )}
+              {showFeatured && <HeroBannerSlider />}
               {showFeatured && <WorldCupHero />}
               {showFeatured && <LiveEventsBanner />}
               {showFeatured && <USDTDepositBanner onDeposit={() => requestDeposit(isAuthenticated, navigate)} />}
