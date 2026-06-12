@@ -37,9 +37,6 @@ import {
   Users,
   BarChart2,
   Award,
-  Twitter,
-  Github,
-  Instagram,
   Wifi,
   WifiOff,
   RefreshCw,
@@ -1159,11 +1156,6 @@ const FOOTER_NAV = [
   },
 ];
 
-const SOCIAL_LINKS = [
-  { icon: <Twitter className="h-3.5 w-3.5" />, label: "Twitter" },
-  { icon: <Instagram className="h-3.5 w-3.5" />, label: "Instagram" },
-  { icon: <Github className="h-3.5 w-3.5" />, label: "GitHub" },
-] as const;
 
 function SiteFooter() {
   return (
@@ -1181,17 +1173,6 @@ function SiteFooter() {
             <p className="text-[11px] text-[#94A3B8]/50 leading-snug">
               Live odds · instant settlement · provably fair
             </p>
-          </div>
-          <div className="flex gap-1.5 shrink-0 pt-0.5">
-            {SOCIAL_LINKS.map((s) => (
-              <button
-                key={s.label}
-                aria-label={s.label}
-                className="w-8 h-8 rounded-lg border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150"
-              >
-                {s.icon}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -1244,17 +1225,6 @@ function SiteFooter() {
                 Licensed by the Malta Gaming Authority · MGA/B2C/123/2021
               </p>
             </div>
-            <div className="flex gap-1.5 pt-1">
-              {SOCIAL_LINKS.map((s) => (
-                <button
-                  key={s.label}
-                  aria-label={s.label}
-                  className="w-7 h-7 rounded-md border border-[#253241] bg-[#121821] flex items-center justify-center text-[#94A3B8]/40 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 transition-colors duration-150"
-                >
-                  {s.icon}
-                </button>
-              ))}
-            </div>
           </div>
           {FOOTER_NAV.map((col) => (
             <div key={col.heading}>
@@ -1285,7 +1255,7 @@ function SiteFooter() {
               {" "}
               · 18+ · Gamble responsibly.
             </span>
-            <span className="block text-[#94A3B8]/40" translate="no">This is latest version</span>
+            <span className="block text-[#94A3B8]/40" translate="no">This is the latest version</span>
           </p>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             {["18+", "BeGambleAware", "GamCare", "Gamble Responsibly"].map(
