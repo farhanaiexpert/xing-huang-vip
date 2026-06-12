@@ -639,7 +639,7 @@ router.get("/wallet/bonus/welcome/status", authenticate, async (req, res): Promi
 // ── POST /wallet/bonus/welcome ────────────────────────────────────────────────
 router.post("/wallet/bonus/welcome", authenticate, async (req, res): Promise<void> => {
   const userId = req.user!.userId;
-  const BONUS_AMOUNT = "188.00";
+  const BONUS_AMOUNT = "88.88";
 
   try {
     // Atomic: insert transaction first — the unique partial index rejects duplicates

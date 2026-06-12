@@ -99,7 +99,7 @@ export function PromoPopup() {
   const initRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const counterVal = useCounter(188, showCongrats);
+  const counterVal = useCounter(88.88, showCongrats);
 
   // Check claimed status on mount (when authenticated)
   useEffect(() => {
@@ -224,7 +224,7 @@ export function PromoPopup() {
           <span className="w-2.5 h-2.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
           <div className="min-w-0">
             <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
-              Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 188 USDT</span>
+              Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 88.88 USDT</span>
             </p>
             <p className="text-[10px] text-[#64748B]">Join 50,000+ players on <span translate="no">Xing Huang</span> Sports Trading</p>
           </div>
@@ -477,7 +477,7 @@ export function PromoPopup() {
                 style={{ background: 'rgba(250,204,21,0.08)', animation: 'pPillPulse 2.2s ease-in-out infinite' }}
               >
                 <span className="text-[#FACC15] text-[10px]">✦</span>
-                <span className="text-[11px] sm:text-[12px] font-black text-[#FACC15] tracking-wide">WELCOME BONUS — FREE 188 USDT</span>
+                <span className="text-[11px] sm:text-[12px] font-black text-[#FACC15] tracking-wide">WELCOME BONUS — FREE 88.88 USDT</span>
               </div>
             </div>
 
@@ -487,7 +487,7 @@ export function PromoPopup() {
               <span style={{ background: 'linear-gradient(90deg,#00DFA9 0%,#38BDF8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Claim FREE
               </span>{' '}
-              <span className="text-[#FACC15]">188 USDT</span>
+              <span className="text-[#FACC15]">88.88 USDT</span>
             </h2>
 
             {/* Subtext — shorter on mobile */}
@@ -541,7 +541,7 @@ export function PromoPopup() {
                 style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
               >
                 <Gift className="w-4 h-4 shrink-0" />
-                {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : isAuthenticated ? 'Claim Now — Get 188 USDT' : 'Sign Up & Claim 188 USDT'}
+                {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : isAuthenticated ? 'Claim Now — Get 88.88 USDT' : 'Sign Up & Claim 88.88 USDT'}
                 <div className="absolute inset-0 pointer-events-none"
                   style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
               </button>

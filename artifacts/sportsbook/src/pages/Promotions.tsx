@@ -357,7 +357,7 @@ export function Promotions() {
   const [claiming, setClaiming] = useState(false);
   const [alreadyClaimed, setAlreadyClaimed] = useState(false);
   const [showCongrats, setShowCongrats] = useState(false);
-  const counterVal = useCounter(188, showCongrats);
+  const counterVal = useCounter(88.88, showCongrats);
 
   // Check on mount if already claimed
   useEffect(() => {
@@ -472,7 +472,7 @@ export function Promotions() {
             </div>
             <div>
               <p className="text-sm font-black text-[#00DFA9]">Welcome Bonus Received</p>
-              <p className="text-xs text-[#94A3B8]/60 mt-0.5">Your 188 USDT bonus is in your account and ready to use on any market.</p>
+              <p className="text-xs text-[#94A3B8]/60 mt-0.5">Your 88.88 USDT bonus is in your account and ready to use on any market.</p>
             </div>
           </div>
         ) : (
@@ -497,7 +497,7 @@ export function Promotions() {
                 disabled={claiming}
                 className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-[#00DFA9] hover:bg-[#00DFA9]/90 active:scale-95 text-[#0B0F14] font-black text-sm px-6 py-3.5 sm:py-3 rounded-xl transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {claiming ? 'Claiming…' : 'Claim Now — 188 USDT Free'}
+                {claiming ? 'Claiming…' : 'Claim Now — 88.88 USDT Free'}
                 {!claiming && <ChevronRight className="h-4 w-4" />}
               </button>
             </div>
