@@ -16,6 +16,8 @@ import { SportName } from './SportName';
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from './ui/drawer';
 import { BetSlip } from './BetSlip';
 import { SPORTS } from '../data/mockData';
+import { SPORTS_CATALOG } from '../data/catalog';
+import { useOddsData } from '../hooks/useOddsData';
 import { cn } from '../lib/utils';
 
 
@@ -52,6 +54,7 @@ export function MobileBottomNav() {
   const { isConnected, shortAddress, balance, connect } = useWallet();
   const { format, setFormat } = useOddsFormat();
   const { t } = useI18n();
+  const { matchCountBySportId } = useOddsData();
   const [betSlipOpen, setBetSlipOpen] = useState(false);
   const [sportsOpen,  setSportsOpen]  = useState(false);
   const [moreOpen,    setMoreOpen]    = useState(false);
@@ -170,32 +173,71 @@ export function MobileBottomNav() {
 
       {/* ── Sports browser sheet ─────────────────────────────────────────── */}
       <Drawer open={sportsOpen} onOpenChange={setSportsOpen}>
-        <DrawerContent className="xl:hidden bg-[#0D1117] border-t border-[#253241] h-[88vh] p-0 flex flex-col overflow-hidden">
+        <DrawerContent className="xl:hidden bg-[#0D1117] border-t border-[#253241] h-[90vh] p-0 flex flex-col overflow-hidden">
           <div className="sr-only">
             <DrawerTitle>Browse Sports</DrawerTitle>
             <DrawerDescription>Select a sport to filter matches</DrawerDescription>
           </div>
+
+          {/* Drag handle */}
           <div className="flex items-center justify-center pt-3 pb-2 shrink-0">
             <div className="w-10 h-1 rounded-full bg-[#253241]" />
           </div>
-          <div className="px-4 pb-3 shrink-0 border-b border-[#253241]/60">
-            <h2 className="text-[15px] font-bold text-[#F8FAFC]">Browse Sports</h2>
-            <p className="text-[12px] text-[#94A3B8]/60 mt-0.5">Tap a sport to filter matches</p>
+
+          {/* Header */}
+          <div className="px-4 pb-3 shrink-0 flex items-center justify-between border-b border-[#253241]/60">
+            <div>
+              <h2 className="text-[15px] font-bold text-[#F8FAFC]">Browse Sports</h2>
+              <p className="text-[11px] text-[#94A3B8]/50 mt-0.5">All sports A–Z · tap to filter</p>
+            </div>
+            <button onClick={() => setSportsOpen(false)}
+              className="w-8 h-8 rounded-xl bg-[#1A2333] border border-[#2A3A4E]/70 flex items-center justify-center text-[#94A3B8]">
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-3 gap-2.5 p-4 pb-8">
-              <button onClick={() => handleSelectSport('all')}
-                className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/30 transition-all active:scale-95">
-                <span className="text-2xl">🏆</span>
-                <span className="text-[11px] font-semibold text-[#00DFA9] text-center leading-tight">All Sports</span>
+
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {/* All Sports button */}
+            <div className="px-4 pt-3 pb-2">
+              <button
+                onClick={() => handleSelectSport('all')}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/30 active:scale-[0.98] transition-all"
+              >
+                <span className="text-xl">🏆</span>
+                <span className="text-[13px] font-bold text-[#00DFA9] flex-1 text-left">All Sports</span>
+                <span className="text-[10px] font-semibold text-[#00DFA9]/60 bg-[#00DFA9]/10 px-2 py-0.5 rounded-full">
+                  {Object.values(matchCountBySportId).reduce((a, b) => a + b, 0)} matches
+                </span>
               </button>
-              {SPORTS.map(sport => (
-                <button key={sport.id} onClick={() => handleSelectSport(sport.id)}
-                  className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl bg-[#121821] border border-[#253241] hover:border-[#00DFA9]/30 hover:bg-[#18212B] active:scale-95 transition-all duration-150">
-                  <span className="text-2xl">{sport.icon}</span>
-                  <span className="text-[11px] font-medium text-[#94A3B8] text-center leading-tight"><SportName name={sport.name} /></span>
-                </button>
-              ))}
+            </div>
+
+            {/* A-Z Sports list */}
+            <div className="px-4 pb-2">
+              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#94A3B8]/35 mb-2">A – Z Sports</p>
+            </div>
+            <div className="px-4 pb-8 space-y-1">
+              {[...SPORTS_CATALOG]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(sport => {
+                  const count = matchCountBySportId[sport.id] ?? 0;
+                  return (
+                    <button
+                      key={sport.id}
+                      onClick={() => handleSelectSport(sport.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#121821] border border-[#253241]/60 hover:border-[#00DFA9]/25 hover:bg-[#18212B] active:scale-[0.98] transition-all duration-150"
+                    >
+                      <span className="text-[20px] leading-none w-7 text-center shrink-0">{sport.icon}</span>
+                      <span className="text-[13px] font-medium text-[#C8D6E5] flex-1 text-left">
+                        <SportName name={sport.name} />
+                      </span>
+                      {count > 0 && (
+                        <span className="shrink-0 text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full bg-[#253241] text-[#94A3B8]/80">
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
           </div>
         </DrawerContent>
