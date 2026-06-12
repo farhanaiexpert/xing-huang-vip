@@ -678,7 +678,7 @@ runMigrations().then(() => {
   //  4. Interval doubled from 30 → 60 min.
   let isBetsApiRefreshing = false;
   let lastBetsApiRefreshAt = 0;
-  const BETSAPI_INTERVAL_MS = 60 * 60 * 1000; // 60 min (was 30 min)
+  const BETSAPI_INTERVAL_MS = 30 * 60 * 1000; // 30 min — 2 batches/hr for fresher odds
 
   // How long cached events persist in the DB as a fallback (Option A: 12h).
   // Decoupled from refresh frequency — we still re-fetch every ~60 min via the
@@ -708,11 +708,11 @@ runMigrations().then(() => {
         const meta = BETSAPI_SPORT_MAP[sportId];
         if (!meta) continue;
 
-        // Skip if this sport was fetched less than 50 min ago.
+        // Skip if this sport was fetched less than 25 min ago.
         // Uses fetched_at age (not expires_at) so the refresh frequency is
         // independent of the 12-hour data-persistence TTL.
         const age = await getBetsApiCacheAgeMs(String(sportId));
-        if (age < 50 * 60 * 1000) { skipped++; continue; }
+        if (age < 25 * 60 * 1000) { skipped++; continue; }
 
         const events = await fetchBetsApiUpcoming(sportId);
 
@@ -756,10 +756,10 @@ runMigrations().then(() => {
           continue;
         }
 
-        // Enrich top 20 events with real prematch odds + rich market flags.
+        // Enrich top 30 events with real prematch odds + rich market flags.
         // Uses fetchPrematchData which parses ALL market types from the same API call — no extra credits.
         if (!meta.countOnly) {
-          const toEnrich = events.slice(0, 20);
+          const toEnrich = events.slice(0, 30);
           for (let i = 0; i < toEnrich.length; i += 10) {
             const batch = toEnrich.slice(i, i + 10);
             await Promise.all(
@@ -814,7 +814,7 @@ runMigrations().then(() => {
       if (isOddsRefreshing || oddsBatchAge < 2 * 60 * 1000) return;
       runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
     });
-    logger.info("BetsAPI cron started (every 60 minutes — age-based skip, 12h data TTL, empty preserves existing)");
+    logger.info("BetsAPI cron started (every 30 minutes — age-based skip, 12h data TTL, top-30 enrichment, empty preserves existing)");
 
     // Warm BetsAPI cache on startup — 2-minute delay after Odds API warm starts
     setTimeout(() => {
