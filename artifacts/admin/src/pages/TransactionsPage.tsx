@@ -27,7 +27,6 @@ function amountSign(type: string) {
   return "+";
 }
 
-// ── Type badge ────────────────────────────────────────────────────────────────
 const TYPE_STYLES: Record<string, { bg: string; color: string; border: string }> = {
   deposit:    { bg: "rgba(0,223,169,0.08)",   color: "#00DFA9", border: "rgba(0,223,169,0.20)" },
   withdrawal: { bg: "rgba(239,68,68,0.08)",   color: "#F87171", border: "rgba(239,68,68,0.20)" },
@@ -52,7 +51,6 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
-// ── TxHash / Payment IDs cell ─────────────────────────────────────────────────
 function CopyBtn({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -82,7 +80,6 @@ function TxRefCell({ txn }: { txn: AdminTransaction }) {
     setTimeout(() => setCopiedHash(false), 2000);
   }
 
-  // Bonus row: show reference prominently
   if (txn.type === "bonus" && txn.reference) {
     const promoNum = txn.reference.replace("promo_", "");
     const isPromo = txn.reference.startsWith("promo_");
@@ -133,7 +130,6 @@ function TxRefCell({ txn }: { txn: AdminTransaction }) {
   return <span className="text-[#334155] text-xs">—</span>;
 }
 
-// ── Gateway notes cell ────────────────────────────────────────────────────────
 function GatewayCell({ txn }: { txn: AdminTransaction }) {
   const parts: React.ReactNode[] = [];
 
@@ -187,6 +183,8 @@ function GatewayCell({ txn }: { txn: AdminTransaction }) {
     : <span className="text-[#334155] text-xs">—</span>;
 }
 
+const sel = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors w-full sm:w-auto";
+
 export default function TransactionsPage() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -218,81 +216,159 @@ export default function TransactionsPage() {
 
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  const sel = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors";
+  const hasFilters = !!(typeFilter || status);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Transactions</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Transactions</h1>
           <p className="text-sm text-[#475569] mt-0.5">{total.toLocaleString()} total records</p>
-        </div>
-        <div className="flex gap-2 flex-wrap items-center">
-          <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }} className={sel}>
-            <option value="">All types</option>
-            <option value="deposit">Deposit</option>
-            <option value="withdrawal">Withdrawal</option>
-            <option value="bonus">Bonus (Promo)</option>
-            <option value="credit">Credit</option>
-            <option value="debit">Debit</option>
-            <option value="bet_stake">Bet Stake</option>
-            <option value="bet_win">Bet Win</option>
-            <option value="commission">Commission</option>
-            <option value="refund">Refund</option>
-          </select>
-          <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className={sel}>
-            <option value="">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          {(typeFilter || status) && (
-            <button onClick={() => { setTypeFilter(""); setStatus(""); setPage(1); }}
-              className="px-3 py-2 rounded-lg text-sm text-[#475569] hover:text-white border border-white/10 hover:bg-white/5 transition-colors">
-              Clear
-            </button>
-          )}
         </div>
       </div>
 
       {/* ── Pending totals ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="flex items-center gap-3 bg-[#00DFA9]/6 border border-[#00DFA9]/15 rounded-xl px-4 py-3">
-          <div className="p-2 rounded-lg bg-[#00DFA9]/10">
-            <ArrowDownCircle className="w-4 h-4 text-[#00DFA9]" />
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 bg-[#00DFA9]/6 border border-[#00DFA9]/15 rounded-xl px-3 sm:px-4 py-3">
+          <div className="p-1.5 sm:p-2 rounded-lg bg-[#00DFA9]/10 shrink-0">
+            <ArrowDownCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#00DFA9]" />
           </div>
-          <div className="flex-1">
-            <div className="text-xs text-[#475569]">Pending Deposits</div>
-            <div className="text-sm font-bold text-[#00DFA9] font-mono">
-              ${fmt(pendingTotals?.pendingDepositTotal ?? "0")} USDT
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] sm:text-xs text-[#475569]">Pending Deposits</div>
+            <div className="text-xs sm:text-sm font-bold text-[#00DFA9] font-mono truncate">
+              ${fmt(pendingTotals?.pendingDepositTotal ?? "0")}
             </div>
           </div>
-          <div className="text-xs text-[#00DFA9] font-semibold">
-            {pendingTotals?.pendingDepositCount ?? 0} pending
+          <div className="text-[10px] sm:text-xs text-[#00DFA9] font-semibold shrink-0">
+            {pendingTotals?.pendingDepositCount ?? 0}
           </div>
         </div>
-        <div className="flex items-center gap-3 bg-red-500/5 border border-red-500/15 rounded-xl px-4 py-3">
-          <div className="p-2 rounded-lg bg-red-500/10">
-            <ArrowUpCircle className="w-4 h-4 text-red-400" />
+        <div className="flex items-center gap-2 sm:gap-3 bg-red-500/5 border border-red-500/15 rounded-xl px-3 sm:px-4 py-3">
+          <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/10 shrink-0">
+            <ArrowUpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" />
           </div>
-          <div className="flex-1">
-            <div className="text-xs text-[#475569]">Pending Withdrawals</div>
-            <div className="text-sm font-bold text-red-400 font-mono">
-              ${fmt(pendingTotals?.pendingWithdrawalTotal ?? "0")} USDT
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] sm:text-xs text-[#475569]">Pending Withdrawals</div>
+            <div className="text-xs sm:text-sm font-bold text-red-400 font-mono truncate">
+              ${fmt(pendingTotals?.pendingWithdrawalTotal ?? "0")}
             </div>
           </div>
-          <div className="text-xs text-red-400 font-semibold">
-            {pendingTotals?.pendingWithdrawalCount ?? 0} pending
+          <div className="text-[10px] sm:text-xs text-red-400 font-semibold shrink-0">
+            {pendingTotals?.pendingWithdrawalCount ?? 0}
           </div>
         </div>
       </div>
 
-      {/* ── Table ── */}
+      {/* ── Filters ── */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }} className={sel}>
+          <option value="">All types</option>
+          <option value="deposit">Deposit</option>
+          <option value="withdrawal">Withdrawal</option>
+          <option value="bonus">Bonus (Promo)</option>
+          <option value="credit">Credit</option>
+          <option value="debit">Debit</option>
+          <option value="bet_stake">Bet Stake</option>
+          <option value="bet_win">Bet Win</option>
+          <option value="commission">Commission</option>
+          <option value="refund">Refund</option>
+        </select>
+        <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className={sel}>
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        {hasFilters && (
+          <button onClick={() => { setTypeFilter(""); setStatus(""); setPage(1); }}
+            className="px-3 py-2 rounded-lg text-sm text-[#475569] hover:text-white border border-white/10 hover:bg-white/5 transition-colors">
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* ── Data container ── */}
       <div className="rounded-xl border border-white/8 bg-[#0E1520] overflow-hidden">
-        <div className="overflow-x-auto">
+
+        {/* ── Mobile cards (< sm) ── */}
+        <div className="sm:hidden">
+          {isLoading && (
+            <div className="p-10 text-center text-[#334155] text-sm">
+              <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#00DFA9]" />
+              Loading…
+            </div>
+          )}
+          {!isLoading && (!data?.transactions || data.transactions.length === 0) && (
+            <div className="p-10 text-center text-[#334155] text-sm">No transactions found</div>
+          )}
+          <div className="divide-y divide-white/6">
+            {data?.transactions.map(txn => {
+              const isBonus = txn.type === "bonus";
+              return (
+                <div key={txn.id} className={cn(
+                  "p-4 space-y-2.5",
+                  isBonus && "bg-[#FACC15]/[0.02]",
+                  txn.status === "pending" && !isBonus && "bg-[#00DFA9]/[0.02]",
+                )}>
+                  {/* Top row: ID + user + type */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-white text-sm">{txn.username ?? `uid:${txn.userId}`}</span>
+                        <TypeBadge type={txn.type} />
+                      </div>
+                      <div className="text-[10px] text-[#475569] font-mono mt-0.5">#{txn.id} · {fmtDate(txn.createdAt)}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className={cn("font-mono font-bold text-base", amountColor(txn.type))}>
+                        {amountSign(txn.type)}${fmt(txn.amount)}
+                      </div>
+                      {isBonus && <div className="text-[9px] text-[#FACC15]/50">non-withdrawable</div>}
+                    </div>
+                  </div>
+
+                  {/* Status + network */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium whitespace-nowrap", statusBg(txn.status))}>
+                      {txn.status}
+                    </span>
+                    {txn.network && (
+                      <span className="text-[10px] text-[#38BDF8] bg-[#38BDF8]/10 px-1.5 py-0.5 rounded-md">
+                        {txn.network}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Ref */}
+                  <TxRefCell txn={txn} />
+
+                  {/* Actions */}
+                  {txn.status === "pending" && (
+                    <div className="flex gap-2 pt-0.5" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => approveMut.mutate({ id: txn.id, txStatus: "completed" })}
+                        disabled={approveMut.isPending}
+                        className="flex-1 py-2 rounded-lg text-xs bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 transition-colors font-semibold disabled:opacity-50">
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => approveMut.mutate({ id: txn.id, txStatus: "rejected" })}
+                        disabled={approveMut.isPending}
+                        className="flex-1 py-2 rounded-lg text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-semibold disabled:opacity-50">
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Desktop table (sm+) ── */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/6 bg-white/2">
@@ -336,13 +412,11 @@ export default function TransactionsPage() {
                     <td className="px-4 py-3">
                       <span className="text-[#475569] font-mono text-xs">#{txn.id}</span>
                     </td>
-
                     <td className="px-4 py-3">
                       <span className="text-sm font-semibold text-white whitespace-nowrap">
                         {txn.username ?? `uid:${txn.userId}`}
                       </span>
                     </td>
-
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         <TypeBadge type={txn.type} />
@@ -353,7 +427,6 @@ export default function TransactionsPage() {
                         )}
                       </div>
                     </td>
-
                     <td className="px-4 py-3">
                       <span className={cn("font-mono text-sm font-bold whitespace-nowrap", amountColor(txn.type))}>
                         {amountSign(txn.type)}${fmt(txn.amount)}
@@ -362,25 +435,20 @@ export default function TransactionsPage() {
                         <p className="text-[9px] text-[#FACC15]/50 mt-0.5">non-withdrawable</p>
                       )}
                     </td>
-
                     <td className="px-4 py-3">
                       <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium whitespace-nowrap", statusBg(txn.status))}>
                         {txn.status}
                       </span>
                     </td>
-
                     <td className="px-4 py-3">
                       <TxRefCell txn={txn} />
                     </td>
-
                     <td className="px-4 py-3">
                       <GatewayCell txn={txn} />
                     </td>
-
                     <td className="px-4 py-3">
                       <span className="text-[#475569] text-xs whitespace-nowrap">{fmtDate(txn.createdAt)}</span>
                     </td>
-
                     <td className="px-4 py-3">
                       {txn.status === "pending" ? (
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
@@ -408,7 +476,7 @@ export default function TransactionsPage() {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* ── Pagination ── */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/6 bg-white/[0.01]">
           <span className="text-xs text-[#334155]">Page {page} of {pages} · {total} total</span>
           <div className="flex items-center gap-1">

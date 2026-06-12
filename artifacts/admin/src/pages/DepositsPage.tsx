@@ -12,7 +12,6 @@ import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
 
-// ── Gateway detection ─────────────────────────────────────────────────────────
 type GatewayKind = "nowpayments" | "cryptomus" | "plisio" | "manual" | "none";
 
 function detectGateway(txn: AdminTransaction): GatewayKind {
@@ -44,7 +43,6 @@ function GatewayBadge({ txn }: { txn: AdminTransaction }) {
   );
 }
 
-// ── Copy helper ───────────────────────────────────────────────────────────────
 function CopyBtn({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
   function doCopy() {
@@ -59,7 +57,6 @@ function CopyBtn({ value, label }: { value: string; label: string }) {
   );
 }
 
-// ── Payment details cell ──────────────────────────────────────────────────────
 const CRYPTOMUS_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
   paid:          { bg: "rgba(0,223,169,0.08)",   text: "#00DFA9", border: "rgba(0,223,169,0.20)",   label: "Paid ✓" },
   paid_over:     { bg: "rgba(0,223,169,0.08)",   text: "#00DFA9", border: "rgba(0,223,169,0.20)",   label: "Paid Over" },
@@ -114,7 +111,6 @@ function PaymentDetailsCell({ txn }: { txn: AdminTransaction }) {
 
   return (
     <div className="flex flex-col gap-1.5 min-w-[180px]">
-      {/* Manual on-chain hash */}
       {txn.txHash && (
         <div className="flex items-center gap-1.5">
           <Hash className="w-3 h-3 text-[#475569] shrink-0" />
@@ -130,8 +126,6 @@ function PaymentDetailsCell({ txn }: { txn: AdminTransaction }) {
           </a>
         </div>
       )}
-
-      {/* NOWPayments */}
       {txn.nowpaymentsPaymentId && (
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1.5">
@@ -149,8 +143,6 @@ function PaymentDetailsCell({ txn }: { txn: AdminTransaction }) {
           {txn.nowpaymentsStatus && <StatusPill status={txn.nowpaymentsStatus} colors={NPP_STATUS_COLORS} />}
         </div>
       )}
-
-      {/* Cryptomus */}
       {txn.cryptomusUuid && (
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1.5">
@@ -168,8 +160,6 @@ function PaymentDetailsCell({ txn }: { txn: AdminTransaction }) {
           {txn.cryptomusStatus && <StatusPill status={txn.cryptomusStatus} colors={CRYPTOMUS_STATUS_COLORS} />}
         </div>
       )}
-
-      {/* Plisio */}
       {txn.plisioPaymentId && (
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1.5">
@@ -186,7 +176,6 @@ function PaymentDetailsCell({ txn }: { txn: AdminTransaction }) {
           )}
         </div>
       )}
-
       {!txn.txHash && !txn.nowpaymentsPaymentId && !txn.cryptomusUuid && !txn.plisioPaymentId && (
         <span className="text-[#334155] text-xs">—</span>
       )}
@@ -194,7 +183,6 @@ function PaymentDetailsCell({ txn }: { txn: AdminTransaction }) {
   );
 }
 
-// ── Network badge ─────────────────────────────────────────────────────────────
 const NETWORK_STYLES: Record<string, { color: string; border: string; bg: string }> = {
   "TRC-20": { color: "#00DFA9", border: "rgba(0,223,169,0.25)",   bg: "rgba(0,223,169,0.08)" },
   "ERC-20": { color: "#627EEA", border: "rgba(98,126,234,0.25)",  bg: "rgba(98,126,234,0.08)" },
@@ -216,7 +204,6 @@ function NetworkBadge({ network }: { network: string | null }) {
   );
 }
 
-// ── Verification badge ────────────────────────────────────────────────────────
 function VerificationBadge({ verified, note }: { verified: boolean | null; note: string | null }) {
   if (verified === true) return (
     <span title={note ?? "Auto-verified on-chain"}
@@ -241,7 +228,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-const selClass = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors";
+const selClass = "bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00DFA9] transition-colors w-full sm:w-auto";
 
 export default function DepositsPage() {
   const qc = useQueryClient();
@@ -288,7 +275,7 @@ export default function DepositsPage() {
   const hasFilters = !!(status || network || gateway);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -297,7 +284,7 @@ export default function DepositsPage() {
             <div className="w-8 h-8 rounded-lg bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center">
               <ArrowDownCircle className="w-4 h-4 text-[#00DFA9]" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Deposits</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Deposits</h1>
           </div>
           <p className="text-sm text-[#475569] mt-1 ml-[42px]">{total.toLocaleString()} total deposits</p>
         </div>
@@ -307,40 +294,40 @@ export default function DepositsPage() {
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-[#94A3B8] hover:text-white hover:bg-white/8 transition-colors disabled:opacity-50"
         >
           <RefreshCw className={cn("w-3.5 h-3.5", isFetching && "animate-spin")} />
-          Refresh
+          <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
 
       {/* ── KPI cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="rounded-xl border border-[#00DFA9]/20 bg-[#00DFA9]/5 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold text-[#475569] uppercase tracking-wider">Pending Review</span>
-            <Clock className="w-3.5 h-3.5 text-[#00DFA9]" />
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-xl border border-[#00DFA9]/20 bg-[#00DFA9]/5 p-3 sm:p-4">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-[#475569] uppercase tracking-wider leading-tight">Pending</span>
+            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#00DFA9] shrink-0" />
           </div>
-          <p className="text-2xl font-black text-[#00DFA9]">{pendingCount}</p>
-          <p className="text-[11px] text-[#475569] mt-0.5">deposits awaiting approval</p>
+          <p className="text-xl sm:text-2xl font-black text-[#00DFA9]">{pendingCount}</p>
+          <p className="text-[10px] text-[#475569] mt-0.5 hidden sm:block">awaiting approval</p>
         </div>
-        <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold text-[#475569] uppercase tracking-wider">Pending USDT</span>
-            <ArrowDownCircle className="w-3.5 h-3.5 text-[#38BDF8]" />
+        <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-[#475569] uppercase tracking-wider leading-tight">Pending USDT</span>
+            <ArrowDownCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#38BDF8] shrink-0" />
           </div>
-          <p className="text-2xl font-black text-white">${fmt(pendingTotal)}</p>
-          <p className="text-[11px] text-[#475569] mt-0.5">waiting to be credited</p>
+          <p className="text-xl sm:text-2xl font-black text-white">${fmt(pendingTotal)}</p>
+          <p className="text-[10px] text-[#475569] mt-0.5 hidden sm:block">to be credited</p>
         </div>
-        <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold text-[#475569] uppercase tracking-wider">Total Records</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#94A3B8]" />
+        <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-[#475569] uppercase tracking-wider leading-tight">Total</span>
+            <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#94A3B8] shrink-0" />
           </div>
-          <p className="text-2xl font-black text-white">{total.toLocaleString()}</p>
-          <p className="text-[11px] text-[#475569] mt-0.5">all-time deposits</p>
+          <p className="text-xl sm:text-2xl font-black text-white">{total.toLocaleString()}</p>
+          <p className="text-[10px] text-[#475569] mt-0.5 hidden sm:block">all-time</p>
         </div>
       </div>
 
       {/* ── Filters ── */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-col sm:flex-row gap-2">
         <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }} className={selClass}>
           <option value="">All statuses</option>
           <option value="pending">Pending</option>
@@ -372,9 +359,82 @@ export default function DepositsPage() {
         )}
       </div>
 
-      {/* ── Table ── */}
+      {/* ── Data container ── */}
       <div className="rounded-xl border border-white/8 bg-[#0E1520] overflow-hidden">
-        <div className="overflow-x-auto">
+
+        {/* ── Mobile cards (< sm) ── */}
+        <div className="sm:hidden">
+          {isLoading && (
+            <div className="p-10 text-center text-[#334155] text-sm">
+              <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#00DFA9]" />
+              Loading…
+            </div>
+          )}
+          {!isLoading && (!data?.transactions || data.transactions.length === 0) && (
+            <div className="p-10 text-center text-[#334155] text-sm">No deposits found</div>
+          )}
+          <div className="divide-y divide-white/6">
+            {data?.transactions.map(txn => (
+              <div key={txn.id} className={cn(
+                "p-4 space-y-3",
+                txn.status === "pending" && "bg-[#00DFA9]/[0.025]"
+              )}>
+                {/* Top row: user + amount */}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-white text-sm leading-tight">{txn.username ?? `uid:${txn.userId}`}</div>
+                    <div className="text-[10px] text-[#334155] font-mono mt-0.5">#{txn.id} · {fmtDate(txn.createdAt)}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-mono font-bold text-[#00DFA9] text-base">+${fmt(txn.amount)}</div>
+                    <div className="text-[10px] text-[#475569]">USDT</div>
+                  </div>
+                </div>
+
+                {/* Badges row */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <GatewayBadge txn={txn} />
+                  {txn.network && <NetworkBadge network={txn.network} />}
+                  <StatusBadge status={txn.status} />
+                </div>
+
+                {/* Payment reference */}
+                {(txn.txHash || txn.nowpaymentsPaymentId || txn.cryptomusUuid || txn.plisioPaymentId) && (
+                  <div className="bg-white/3 rounded-lg p-2.5">
+                    <div className="text-[10px] text-[#475569] mb-1.5 font-semibold uppercase tracking-wider">Payment Details</div>
+                    <PaymentDetailsCell txn={txn} />
+                  </div>
+                )}
+
+                {/* Verification */}
+                <VerificationBadge verified={txn.verified} note={txn.verificationNote} />
+
+                {/* Actions */}
+                {txn.status === "pending" && (
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => approveMut.mutate({ id: txn.id, txStatus: "completed" })}
+                      disabled={approveMut.isPending}
+                      className="flex-1 py-2.5 rounded-lg text-xs font-bold bg-[#00DFA9]/10 text-[#00DFA9] hover:bg-[#00DFA9]/20 border border-[#00DFA9]/20 hover:border-[#00DFA9]/40 transition-all disabled:opacity-50"
+                    >
+                      ✓ Approve
+                    </button>
+                    <button
+                      onClick={() => approveMut.mutate({ id: txn.id, txStatus: "rejected" })}
+                      disabled={approveMut.isPending}
+                      className="flex-1 py-2.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all disabled:opacity-50"
+                    >
+                      ✕ Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Desktop table (sm+) ── */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/6 bg-white/2">
@@ -412,53 +472,36 @@ export default function DepositsPage() {
                     txn.status === "pending" && "bg-[#00DFA9]/[0.025]"
                   )}
                 >
-                  {/* User */}
                   <td className="px-4 py-3">
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-white">{txn.username ?? `uid:${txn.userId}`}</span>
                       <span className="text-[10px] text-[#334155] font-mono">#{txn.id}</span>
                     </div>
                   </td>
-
-                  {/* Amount */}
                   <td className="px-4 py-3">
                     <span className="font-mono text-sm font-bold text-[#00DFA9] whitespace-nowrap">
                       +${fmt(txn.amount)}
                     </span>
                     <p className="text-[10px] text-[#475569]">USDT</p>
                   </td>
-
-                  {/* Gateway */}
                   <td className="px-4 py-3">
                     <GatewayBadge txn={txn} />
                   </td>
-
-                  {/* Network */}
                   <td className="px-4 py-3">
                     <NetworkBadge network={txn.network} />
                   </td>
-
-                  {/* Payment details */}
                   <td className="px-4 py-3">
                     <PaymentDetailsCell txn={txn} />
                   </td>
-
-                  {/* Verification */}
                   <td className="px-4 py-3">
                     <VerificationBadge verified={txn.verified} note={txn.verificationNote} />
                   </td>
-
-                  {/* Status */}
                   <td className="px-4 py-3">
                     <StatusBadge status={txn.status} />
                   </td>
-
-                  {/* Date */}
                   <td className="px-4 py-3">
                     <span className="text-xs text-[#475569] whitespace-nowrap">{fmtDate(txn.createdAt)}</span>
                   </td>
-
-                  {/* Action */}
                   <td className="px-4 py-3">
                     {txn.status === "pending" ? (
                       <div className="flex items-center gap-1.5">
@@ -472,7 +515,7 @@ export default function DepositsPage() {
                         <button
                           onClick={() => approveMut.mutate({ id: txn.id, txStatus: "rejected" })}
                           disabled={approveMut.isPending}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 transition-all disabled:opacity-50 whitespace-nowrap"
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all disabled:opacity-50 whitespace-nowrap"
                         >
                           ✕ Reject
                         </button>
@@ -487,7 +530,7 @@ export default function DepositsPage() {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* ── Pagination ── */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/6 bg-white/[0.01]">
           <span className="text-xs text-[#334155]">Page {page} of {pages} · {total} total</span>
           <div className="flex items-center gap-1">
