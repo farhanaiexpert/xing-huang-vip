@@ -375,7 +375,7 @@ export function UpcomingMatchesCarousel() {
       </div>
 
       {/* Cards row */}
-      <ScrollArea className="w-full">
+      <ScrollArea className="w-full" showFade>
         <div className="flex gap-3 w-max pb-3">
           {items.map(({ match, league }) => (
             <MatchCard key={`${league.id}__${match.id}`} match={match} league={league} />

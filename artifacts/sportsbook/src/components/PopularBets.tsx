@@ -419,7 +419,7 @@ export function PopularBets() {
 
       {/* Cards carousel */}
       {bets.length > 0 ? (
-        <ScrollArea className="w-full">
+        <ScrollArea className="w-full" showFade>
           <div className="flex gap-2.5 sm:gap-3 w-max pb-2">
             {bets.map((bet, i) => (
               <PopularBetCard key={bet.id} bet={bet} rank={i} />

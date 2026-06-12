@@ -179,7 +179,7 @@ export function PriceBoostsStrip() {
         <span className="text-[10px] text-[#94A3B8]/40 ml-0.5">Enhanced odds · limited time</span>
         <span className="ml-auto text-[10px] text-[#FACC15]/60 font-semibold">{boosts.length} live</span>
       </div>
-      <ScrollArea className="w-full">
+      <ScrollArea className="w-full" showFade>
         <div className="flex gap-2.5 w-max pb-3">
           {boosts.map(b => <BoostCard key={b.id} boost={b} />)}
         </div>

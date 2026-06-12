@@ -230,7 +230,7 @@ function FeaturedStrip({ entries }: { entries: FeaturedEntry[] }) {
   if (entries.length === 0) return null;
   return (
     <div className="mb-5">
-      <ScrollArea className="w-full">
+      <ScrollArea className="w-full" showFade>
         <div className="flex gap-3 w-max pb-2">
           {entries.map(e => <FeaturedCard key={e.match.id} entry={e} />)}
         </div>
@@ -675,7 +675,7 @@ function ComingSoonSection({ entries, onViewAll }: { entries: ComingSoonEntry[];
           View All <ChevronRight className="h-3 w-3" />
         </button>
       </div>
-      <ScrollArea className="w-full">
+      <ScrollArea className="w-full" showFade>
         <div className="flex gap-3 w-max pb-2 pt-3">
           {entries.map(e => <CountdownCard key={e.match.id} entry={e} />)}
         </div>

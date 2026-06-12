@@ -135,7 +135,7 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
       )}
 
       {/* Horizontal scroller */}
-      <ScrollArea className="w-full">
+      <ScrollArea className="w-full" showFade>
         <div className="flex gap-2.5 w-max pb-3 snap-x snap-mandatory">
         {visible.map(({ match, leagueName }) => {
           const { marketId, marketName } = marketMeta(match);
