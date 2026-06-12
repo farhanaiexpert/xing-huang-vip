@@ -121,6 +121,14 @@ export function Header() {
   const langRef   = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Auto-trigger Chinese on first visit (no saved language preference)
+  useEffect(() => {
+    const saved = localStorage.getItem('cupbett_lang');
+    if (!saved) {
+      triggerTranslate('zh-CN');
+    }
+  }, []);
+
   function handleSelectLanguage(code: string) {
     setLang(code);
     setShowLang(false);
