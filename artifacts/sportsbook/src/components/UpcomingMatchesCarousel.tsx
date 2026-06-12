@@ -381,7 +381,7 @@ export function UpcomingMatchesCarousel() {
             <MatchCard key={`${league.id}__${match.id}`} match={match} league={league} />
           ))}
         </div>
-        <ScrollBar orientation="horizontal" className="invisible" />
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
   );

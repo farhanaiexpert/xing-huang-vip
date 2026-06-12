@@ -425,7 +425,7 @@ export function PopularBets() {
               <PopularBetCard key={bet.id} bet={bet} rank={i} />
             ))}
           </div>
-          <ScrollBar orientation="horizontal" className="invisible" />
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       ) : (
         <div className="flex items-center gap-2 px-3 py-4 rounded-xl bg-[#0D1320] border border-[#253241]/50">

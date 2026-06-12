@@ -14,6 +14,7 @@
 import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Sparkles, ChevronRight, ArrowRight } from 'lucide-react';
+import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import type { League } from '../types';
 import { OddsButton } from './OddsButton';
 import { TeamBadge } from './TeamBadge';
@@ -134,7 +135,8 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
       )}
 
       {/* Horizontal scroller */}
-      <div className="flex gap-2.5 overflow-x-auto pb-1.5 -mx-1 px-1 snap-x snap-mandatory">
+      <ScrollArea className="w-full">
+        <div className="flex gap-2.5 w-max pb-3 snap-x snap-mandatory">
         {visible.map(({ match, leagueName }) => {
           const { marketId, marketName } = marketMeta(match);
           const isSel = match.id === selectedId;
@@ -231,7 +233,9 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
             </div>
           );
         })}
-      </div>
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
 
       {/* Selected match drawer (full width below the strip) */}
       {selected && (

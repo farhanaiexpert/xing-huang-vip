@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { Zap, Clock, ChevronRight } from 'lucide-react';
 import { useBetSlip } from '@/hooks/useBetSlip';
 import { toast } from 'sonner';
@@ -178,9 +179,12 @@ export function PriceBoostsStrip() {
         <span className="text-[10px] text-[#94A3B8]/40 ml-0.5">Enhanced odds · limited time</span>
         <span className="ml-auto text-[10px] text-[#FACC15]/60 font-semibold">{boosts.length} live</span>
       </div>
-      <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {boosts.map(b => <BoostCard key={b.id} boost={b} />)}
-      </div>
+      <ScrollArea className="w-full">
+        <div className="flex gap-2.5 w-max pb-3">
+          {boosts.map(b => <BoostCard key={b.id} boost={b} />)}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </div>
   );
 }

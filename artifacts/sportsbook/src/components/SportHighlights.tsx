@@ -234,7 +234,7 @@ function FeaturedStrip({ entries }: { entries: FeaturedEntry[] }) {
         <div className="flex gap-3 w-max pb-2">
           {entries.map(e => <FeaturedCard key={e.match.id} entry={e} />)}
         </div>
-        <ScrollBar orientation="horizontal" className="invisible" />
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
   );
@@ -679,7 +679,7 @@ function ComingSoonSection({ entries, onViewAll }: { entries: ComingSoonEntry[];
         <div className="flex gap-3 w-max pb-2 pt-3">
           {entries.map(e => <CountdownCard key={e.match.id} entry={e} />)}
         </div>
-        <ScrollBar orientation="horizontal" className="invisible" />
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
   );
