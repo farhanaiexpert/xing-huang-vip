@@ -12,8 +12,8 @@ const SLIDES = [
   },
 ];
 
-const INTERVAL_MS = 3000;
-const FADE_MS     = 800;
+const INTERVAL_MS = 10000;
+const FADE_MS     = 900;
 
 export function HeroBannerSlider() {
   const [active, setActive] = useState(0);
@@ -32,11 +32,23 @@ export function HeroBannerSlider() {
   return (
     <div
       className="mb-5 rounded-2xl overflow-hidden shadow-2xl relative select-none"
-      style={{ aspectRatio: '1200 / 500' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Slides */}
+      {/*
+        Invisible first-banner copy — stays in normal flow so the container
+        height always equals the first banner's natural height at any width.
+        All slides are then stacked absolutely on top of it.
+      */}
+      <img
+        src={SLIDES[0].src}
+        aria-hidden
+        alt=""
+        draggable={false}
+        className="w-full h-auto block invisible"
+      />
+
+      {/* Slides — absolutely positioned over the spacer */}
       {SLIDES.map((slide, i) => (
         <img
           key={slide.src}
@@ -52,10 +64,10 @@ export function HeroBannerSlider() {
         />
       ))}
 
-      {/* Bottom gradient for dots legibility */}
+      {/* Bottom gradient scrim for dot legibility */}
       <div
         className="absolute inset-x-0 bottom-0 h-12 pointer-events-none"
-        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, transparent 100%)' }}
+        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.50) 0%, transparent 100%)' }}
       />
 
       {/* Navigation dots */}
