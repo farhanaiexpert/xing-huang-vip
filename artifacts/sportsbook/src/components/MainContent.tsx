@@ -460,50 +460,76 @@ export function MainContent({
             </div>
           </div>
 
-          {/* Sport carousel */}
-          <div className="px-3 sm:px-4 pb-1 sm:pb-2">
-            <ScrollArea className="w-full">
-              <div className="flex gap-0.5 sm:gap-1 w-max pb-1">
+          {/* Sport carousel — 2-row grid on mobile, horizontal scroll on desktop */}
+          <div className="px-3 sm:px-4 pb-2 sm:pb-2">
+            {/* MOBILE: 2-row grid — all sports visible at once */}
+            <div className="grid grid-cols-6 gap-1 sm:hidden">
+              {CAROUSEL_SPORTS.map((sport) => {
+                const isActive = selectedSportId === sport.id;
+                const realCount = sportMatchCounts[sport.id] ?? 0;
+                return (
+                  <button
+                    key={sport.id}
+                    onClick={() => onSelectSport(sport.id === selectedSportId ? null : sport.id)}
+                    data-testid={`sport-tab-${sport.id}`}
+                    className={cn(
+                      "group flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl transition-all duration-200 select-none w-full",
+                      isActive
+                        ? "bg-[#18212B] ring-1 ring-[#00DFA9]/40 shadow-[0_0_12px_rgba(0,223,169,0.1)]"
+                        : "hover:bg-[#121821]/80",
+                    )}
+                  >
+                    <span className="text-[18px] leading-none">{sport.icon}</span>
+                    <span className={cn(
+                      "text-[9px] font-medium leading-tight text-center transition-colors line-clamp-1",
+                      isActive ? "text-[#00DFA9]" : "text-[#94A3B8]",
+                    )}>
+                      <SportName name={sport.name} />
+                    </span>
+                    {realCount > 0 && (
+                      <span className={cn(
+                        "text-[8px] font-bold leading-none tabular-nums",
+                        isActive ? "text-[#00DFA9]/70" : "text-[#94A3B8]/40",
+                      )}>
+                        {realCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* DESKTOP: horizontal scroll — unchanged */}
+            <ScrollArea className="w-full hidden sm:block">
+              <div className="flex gap-1 w-max pb-1">
                 {CAROUSEL_SPORTS.map((sport) => {
                   const isActive = selectedSportId === sport.id;
                   const realCount = sportMatchCounts[sport.id] ?? 0;
                   return (
                     <button
                       key={sport.id}
-                      onClick={() =>
-                        onSelectSport(
-                          sport.id === selectedSportId ? null : sport.id,
-                        )
-                      }
+                      onClick={() => onSelectSport(sport.id === selectedSportId ? null : sport.id)}
                       data-testid={`sport-tab-${sport.id}`}
                       className={cn(
-                        "group flex flex-col items-center gap-0.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl min-w-[54px] sm:min-w-[68px] transition-all duration-200 select-none",
+                        "group flex flex-col items-center gap-0.5 py-2 px-2.5 rounded-xl min-w-[68px] transition-all duration-200 select-none",
                         isActive
                           ? "bg-[#18212B] ring-1 ring-[#00DFA9]/40 shadow-[0_0_16px_rgba(0,223,169,0.1)]"
                           : "hover:bg-[#121821]/80",
                       )}
                     >
-                      <span className="text-[17px] sm:text-xl leading-none">{sport.icon}</span>
-                      <span
-                        className={cn(
-                          "text-[10px] sm:text-[11px] font-medium leading-none transition-colors",
-                          isActive
-                            ? "text-[#00DFA9]"
-                            : "text-[#94A3B8] group-hover:text-[#F8FAFC]",
-                        )}
-                      >
+                      <span className="text-xl leading-none">{sport.icon}</span>
+                      <span className={cn(
+                        "text-[11px] font-medium leading-none transition-colors",
+                        isActive ? "text-[#00DFA9]" : "text-[#94A3B8] group-hover:text-[#F8FAFC]",
+                      )}>
                         <SportName name={sport.name} />
                       </span>
-                      <span
-                        className={cn(
-                          "hidden sm:block text-[9px] font-semibold leading-none tabular-nums transition-colors",
-                          realCount > 0
-                            ? isActive
-                              ? "text-[#00DFA9]/60"
-                              : "text-[#94A3B8]/35 group-hover:text-[#94A3B8]/60"
-                            : "text-[#94A3B8]/20",
-                        )}
-                      >
+                      <span className={cn(
+                        "text-[9px] font-semibold leading-none tabular-nums transition-colors",
+                        realCount > 0
+                          ? isActive ? "text-[#00DFA9]/60" : "text-[#94A3B8]/35 group-hover:text-[#94A3B8]/60"
+                          : "text-[#94A3B8]/20",
+                      )}>
                         {realCount > 0 ? realCount : "—"}
                       </span>
                     </button>
