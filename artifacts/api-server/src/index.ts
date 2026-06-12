@@ -740,7 +740,10 @@ runMigrations().then(() => {
     if (!BETSAPI_KEY || isBetsApiRefreshing) return;
     isBetsApiRefreshing = true;
     logger.info({ sportCount: BETSAPI_SPORT_IDS.length }, "BetsAPI cron: starting batch");
-    let fetched = 0, skipped = 0, empty = 0;
+    // errors    = null returned (auth fail / out of request volume / 429)
+    // offSeason = [] returned (API success but no fixtures scheduled)
+    // fetched   = events returned and cached successfully
+    let fetched = 0, skipped = 0, errors = 0, offSeason = 0;
     try {
       for (const sportId of BETSAPI_SPORT_IDS) {
         const meta = BETSAPI_SPORT_MAP[sportId];
@@ -766,13 +769,13 @@ runMigrations().then(() => {
             ON CONFLICT (cache_key) DO UPDATE SET
               expires_at = NOW() + INTERVAL '15 minutes'
           `);
-          empty++;
+          errors++;
           await new Promise(r => setTimeout(r, 300));
           continue;
         }
 
         if (events.length === 0) {
-          // Option B: API returned empty list (off-season / no fixtures scheduled).
+          // API returned empty list (off-season / no fixtures scheduled).
           // DO NOT overwrite existing cached events with []. Instead, keep whatever
           // data is already there and only extend the TTL. Only write [] when no
           // row exists yet (first-time insert). This prevents "matches disappeared"
@@ -789,7 +792,7 @@ runMigrations().then(() => {
               fetched_at = NOW(),
               expires_at = NOW() + INTERVAL '4 hours'
           `);
-          empty++;
+          offSeason++;
           await new Promise(r => setTimeout(r, 300));
           continue;
         }
@@ -829,7 +832,14 @@ runMigrations().then(() => {
         await new Promise(r => setTimeout(r, 400));
       }
       lastBetsApiRefreshAt = Date.now();
-      logger.info({ fetched, skipped, empty }, "BetsAPI cron: batch complete");
+      if (errors > 0) {
+        logger.warn(
+          { fetched, skipped, errors, offSeason },
+          "BetsAPI cron: batch complete — auth/volume errors detected (check BETSAPI_KEY subscription/credits)"
+        );
+      } else {
+        logger.info({ fetched, skipped, offSeason }, "BetsAPI cron: batch complete");
+      }
     } catch (err) {
       logger.error({ err }, "BetsAPI cron: unhandled error");
     } finally {
