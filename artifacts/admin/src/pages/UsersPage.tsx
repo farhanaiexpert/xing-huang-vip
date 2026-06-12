@@ -241,33 +241,35 @@ export default function UsersPage() {
     <div className="space-y-5">
       {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} />}
 
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Users</h1>
-          <p className="text-sm text-[#475569] mt-0.5">{total.toLocaleString()} total · click a row to open full profile</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Users</h1>
+          <p className="text-sm text-[#475569] mt-0.5">{total.toLocaleString()} total · tap a row to open full profile</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <form onSubmit={doSearch} className="flex gap-2">
-            <div className="relative">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#475569]" />
               <input
                 value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Email or username…"
-                className="pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] w-56 transition-colors"
+                className="pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] w-full sm:w-52 transition-colors"
               />
             </div>
-            <button type="submit" className="px-4 py-2 bg-white/8 border border-white/10 text-[#94A3B8] rounded-lg text-sm hover:bg-white/12 transition-colors">
+            <button type="submit" className="px-4 py-2 bg-white/8 border border-white/10 text-[#94A3B8] rounded-lg text-sm hover:bg-white/12 transition-colors shrink-0">
               Search
             </button>
           </form>
-          <button onClick={() => navigate("/login-history")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-[#94A3B8] hover:text-white rounded-lg text-sm hover:bg-white/10 transition-colors">
-            <History className="w-4 h-4" /> Login History
-          </button>
-          <button onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#00DFA9] text-[#0B0F14] rounded-lg text-sm font-semibold hover:bg-[#00DFA9]/90 transition-colors">
-            <UserPlus className="w-4 h-4" /> New User
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => navigate("/login-history")}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-[#94A3B8] hover:text-white rounded-lg text-sm hover:bg-white/10 transition-colors">
+              <History className="w-4 h-4" /><span className="hidden sm:inline">Login History</span>
+            </button>
+            <button onClick={() => setShowCreate(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#00DFA9] text-[#0B0F14] rounded-lg text-sm font-semibold hover:bg-[#00DFA9]/90 transition-colors flex-1 sm:flex-none justify-center">
+              <UserPlus className="w-4 h-4" /> New User
+            </button>
+          </div>
         </div>
       </div>
 

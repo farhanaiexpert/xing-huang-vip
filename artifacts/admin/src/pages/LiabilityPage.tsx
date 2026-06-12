@@ -71,8 +71,8 @@ export default function LiabilityPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
             <Activity className="w-5 h-5 text-[#38BDF8]" /> Liability Monitor
@@ -111,6 +111,7 @@ export default function LiabilityPage() {
         </div>
       ) : (
         <div className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/8 text-[#64748B] text-xs uppercase tracking-wide">
@@ -184,6 +185,7 @@ export default function LiabilityPage() {
                 })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

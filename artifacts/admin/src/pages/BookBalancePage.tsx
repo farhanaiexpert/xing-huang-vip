@@ -73,7 +73,7 @@ export default function BookBalancePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Book Balance</h1>
           <p className="text-sm text-[#6B7280] mt-1">Stakes vs payouts vs settled — overall and per sport</p>
@@ -134,7 +134,7 @@ export default function BookBalancePage() {
             {(data?.openBySport?.length ?? 0) === 0 ? (
               <p className="text-center text-[#6B7280] py-10 text-sm">No open bets</p>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead>
                   <tr className="text-[#6B7280] text-xs border-b border-white/5">
                     <th className="text-left px-5 py-3">Sport</th>
@@ -160,7 +160,7 @@ export default function BookBalancePage() {
                     );
                   })}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
 
@@ -174,7 +174,7 @@ export default function BookBalancePage() {
             {(data?.settledBySport?.length ?? 0) === 0 ? (
               <p className="text-center text-[#6B7280] py-10 text-sm">No settled bets yet</p>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead>
                   <tr className="text-[#6B7280] text-xs border-b border-white/5">
                     <th className="text-left px-5 py-3">Sport</th>
@@ -206,7 +206,7 @@ export default function BookBalancePage() {
                     );
                   })}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
         </>
