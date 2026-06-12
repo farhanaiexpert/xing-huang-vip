@@ -10,7 +10,7 @@ import { useLocation } from 'wouter';
 import { SportName } from './SportName';
 import {
   ArrowLeft, RefreshCw, ChevronRight, Trophy, Tag, Star,
-  Flame, Zap, ChevronDown, MonitorPlay, Gamepad2, BarChart2,
+  Flame, Zap, ChevronDown, MonitorPlay, Gamepad2, BarChart2, List,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import type { League } from '../types';
@@ -19,6 +19,7 @@ import {
   type MockMatchCard, type TabId,
 } from '../data/sportDetailData';
 import { useBetSlip } from '../hooks/useBetSlip';
+import { LeagueSection } from './LeagueSection';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -500,15 +501,42 @@ function MainTab({
 
       {hasData ? (
         <div className="space-y-6">
-          {/* Featured section header */}
+          {/* Featured section — top cards grid */}
           <div>
             <SectionHeader label={featuredLabel} />
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {groups.flatMap(g => g.matches).slice(0, 6).map(match => (
                 <MatchCard key={match.id} match={match} leagueName={match.leagueName} />
               ))}
             </div>
           </div>
+
+          {/* All Matches by Competition */}
+          {leagues.length > 0 && (() => {
+            const totalMatches = leagues.reduce((s, l) => s + l.matches.length, 0);
+            if (totalMatches === 0) return null;
+            return (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-md flex items-center justify-center bg-[#38BDF8]/10 border border-[#38BDF8]/25">
+                    <List className="h-2.5 w-2.5 text-[#38BDF8]" />
+                  </div>
+                  <span className="text-[13px] font-black text-[#F8FAFC] uppercase tracking-wide">
+                    All Matches
+                  </span>
+                  <span className="text-[10px] font-bold text-[#38BDF8]/60 bg-[#38BDF8]/10 border border-[#38BDF8]/20 px-1.5 py-0.5 rounded-full tabular-nums">
+                    {totalMatches}
+                  </span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-[#38BDF8]/15 to-transparent" />
+                </div>
+                <div className="space-y-2">
+                  {leagues.map(league => (
+                    <LeagueSection key={league.id} league={league} />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       ) : (
         <div className="flex flex-col items-center text-center py-16 px-6 bg-[#121821] rounded-xl border border-[#253241]">
