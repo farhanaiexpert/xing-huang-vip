@@ -276,16 +276,19 @@ async function setDbCachedOdds(sportKey: string, data: unknown[], ttlMinutes = 4
  * Returns the number of events cached (0 for off-season sports).
  * Empty sports are cached with a 6-hour TTL to avoid wasting credits.
  */
-/** Returns the extra market query string for a given sport key. */
+/** Returns the extra market query string for a given sport key.
+ *  Odds API silently ignores markets a sport doesn't support, so it's safe
+ *  to request totals for everything — zero extra credits, free extra data. */
 function getExtraMarkets(sportKey: string): string {
-  if (sportKey.startsWith('soccer_')) return ',totals';
   if (
     sportKey.startsWith('americanfootball_') ||
     sportKey.startsWith('basketball_') ||
     sportKey.startsWith('baseball_') ||
     sportKey.startsWith('icehockey_')
   ) return ',totals,spreads';
-  return '';
+  // All other sports (soccer, tennis, cricket, golf, etc.) get totals.
+  // If the sport doesn't support it the API just omits it — no error, no credit cost.
+  return ',totals';
 }
 
 // ─── Typed result for Odds API fetch ─────────────────────────────────────────
@@ -364,8 +367,8 @@ export async function fetchAndCacheOdds(sportKey: string): Promise<number> {
 
     const { data } = result;
     // Empty sports (off-season) get a 6-hour TTL so we don't re-hit the API next cycle.
-    // Active sports use a 120-minute TTL (2 h) — reduces refresh frequency ~3× vs old 40 min.
-    const ttlMinutes = data.length > 0 ? 120 : 360;
+    // Active sports use a 60-minute TTL — matches the new ~60 min batch interval.
+    const ttlMinutes = data.length > 0 ? 60 : 360;
     await setDbCachedOdds(sportKey, data, ttlMinutes);
     await upsertSportControl(sportKey, formatLeagueName(sportKey));
     return data.length;
