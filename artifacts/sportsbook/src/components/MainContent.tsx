@@ -951,6 +951,7 @@ const SPORT_EMOJI: Record<string, string> = {
 };
 
 function TopMatchesBanner({ leagues }: { leagues: League[] }) {
+  const [, navigate] = useLocation();
   const topMatches = useMemo(() => {
     const now = Date.now();
     return leagues
@@ -992,8 +993,12 @@ function TopMatchesBanner({ leagues }: { leagues: League[] }) {
         {topMatches.map((match, i) => (
           <div
             key={match.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/match/${match.id}`)}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/match/${match.id}`); } }}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 hover:bg-[#1E2A38]/60 transition-colors cursor-pointer",
+              "flex items-center gap-3 px-3 py-2.5 hover:bg-[#1E2A38]/60 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00DFA9]/40",
               i > 0 && "border-t border-[#253241]/40",
             )}
           >

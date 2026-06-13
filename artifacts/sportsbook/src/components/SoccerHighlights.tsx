@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useLocation } from 'wouter';
 import { ChevronRight, BarChart2, Zap, ShieldCheck, TrendingUp } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { useOddsData } from '../hooks/useOddsData';
@@ -23,6 +24,8 @@ function TeamInitials({ name, size = 20 }: { name: string; size?: number }) {
 
 // ── Single match row ──────────────────────────────────────────────────────────
 function MatchRow({ match, league }: { match: Match; league: League }) {
+  const [, setLocation] = useLocation();
+  const goToMatch = () => setLocation(`/match/${match.id}`);
   const matchName = `${match.team1} v ${match.team2}`;
   const timeLabel = match.kickoffTime ?? (match.date.includes(', ') ? match.date.split(', ')[1] : match.date);
   const shared = {
@@ -36,7 +39,11 @@ function MatchRow({ match, league }: { match: Match; league: League }) {
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2.5 border-b transition-colors"
+      role="button"
+      tabIndex={0}
+      onClick={goToMatch}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToMatch(); } }}
+      className="flex items-center gap-3 px-3 py-2.5 border-b transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00DFA9]/40"
       style={{ borderColor: 'rgba(37,50,65,0.5)' }}
       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(18,24,33,0.6)'; }}
       onMouseLeave={e => { e.currentTarget.style.background = ''; }}
@@ -83,7 +90,7 @@ function MatchRow({ match, league }: { match: Match; league: League }) {
       </div>
 
       {/* 1X2 odds */}
-      <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
         <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
         {match.odds.draw != null && (
           <OddsButton {...shared} selectionType="X" selectionName="Draw" odds={match.odds.draw} />

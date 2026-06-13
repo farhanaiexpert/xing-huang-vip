@@ -391,7 +391,7 @@ export function PopularBets() {
     return allLeagues.filter(l => getSportCategory(l) === activeTab);
   }, [allLeagues, activeTab]);
 
-  const bets = useMemo(() => buildPopularBets(filteredLeagues, 120), [filteredLeagues]);
+  const bets = useMemo(() => buildPopularBets(filteredLeagues, 60), [filteredLeagues]);
 
   if (matchCountBySport.all === 0) return null;
 
@@ -426,7 +426,7 @@ export function PopularBets() {
 
       {/* Cards grid — top to bottom, no carousel */}
       {bets.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
           {bets.map((bet, i) => (
             <PopularBetCard key={bet.id} bet={bet} rank={i} />
           ))}

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useLocation } from 'wouter';
 import { ChevronRight } from 'lucide-react';
 import { OddsButton } from './OddsButton';
 import { useOddsData } from '../hooks/useOddsData';
@@ -16,6 +17,8 @@ function isTennisLeague(l: League): boolean {
 
 // ── Single match row ──────────────────────────────────────────────────────────
 function TennisMatchRow({ match, league }: { match: Match; league: League }) {
+  const [, setLocation] = useLocation();
+  const goToMatch = () => setLocation(`/match/${match.id}`);
   const matchName = `${match.team1} v ${match.team2}`;
   const timeLabel = match.kickoffTime ?? (match.date.includes(', ') ? match.date.split(', ')[1] : match.date);
   const shared = {
@@ -28,7 +31,13 @@ function TennisMatchRow({ match, league }: { match: Match; league: League }) {
   };
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 border-b border-[#253241]/50 hover:bg-[#121821]/60 transition-colors group cursor-pointer">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={goToMatch}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToMatch(); } }}
+      className="flex items-center gap-3 px-3 py-2.5 border-b border-[#253241]/50 hover:bg-[#121821]/60 transition-colors group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00DFA9]/40"
+    >
       {/* Players + time */}
       <div className="flex flex-col gap-1.5 flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -50,7 +59,7 @@ function TennisMatchRow({ match, league }: { match: Match; league: League }) {
       )}
 
       {/* Odds buttons */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
         <OddsButton {...shared} selectionType="1" selectionName={match.team1} odds={match.odds.home} />
         <OddsButton {...shared} selectionType="2" selectionName={match.team2} odds={match.odds.away} />
         <div className="w-3" />
