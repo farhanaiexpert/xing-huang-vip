@@ -4,7 +4,7 @@
  * and anything else returned by the Odds API that isn't already handled by the
  * sport-specific Soccer / Tennis / Basketball components.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ChevronRight } from 'lucide-react';
 import { OddsButton } from './OddsButton';
@@ -187,14 +187,23 @@ interface SportSection {
   label:   string;
 }
 
+const INITIAL_MATCHES = 8;
+const MAX_MATCHES = 40;
+
 function SportBlock({ section, onSelectSport }: { section: SportSection; onSelectSport?: (id: string) => void }) {
   const { config, leagues, label } = section;
+  const [expanded, setExpanded] = useState(false);
   const handleViewAll = () => {
     const sportId = config.prefix.endsWith('_') ? config.prefix.slice(0, -1) : config.prefix;
     onSelectSport?.(sportId);
     document.getElementById('main-content-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const hex = config.color;
+
+  // Cap the section at MAX_MATCHES; reveal them in two steps via "View More".
+  const cappedLeagues = leagues.slice(0, MAX_MATCHES);
+  const visibleLeagues = expanded ? cappedLeagues : cappedLeagues.slice(0, INITIAL_MATCHES);
+  const hiddenCount = cappedLeagues.length - visibleLeagues.length;
 
   return (
     <div className="mb-5">
@@ -241,9 +250,24 @@ function SportBlock({ section, onSelectSport }: { section: SportSection; onSelec
           </div>
         </div>
 
-        {leagues.slice(0, 8).map(({ match, league }) => (
+        {visibleLeagues.map(({ match, league }) => (
           <MatchRow key={match.id} match={match} league={league} config={config} />
         ))}
+
+        {/* View More / Show Less */}
+        {cappedLeagues.length > INITIAL_MATCHES && (
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-semibold transition-colors border-t"
+            style={{ borderColor: '#1E2D3D', color: `${hex}`, background: 'rgba(11,15,20,0.4)' }}
+          >
+            {expanded ? (
+              <>Show Less <ChevronRight className="w-3.5 h-3.5 -rotate-90" /></>
+            ) : (
+              <>View More ({hiddenCount}) <ChevronRight className="w-3.5 h-3.5 rotate-90" /></>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ChevronRight, BarChart2 } from 'lucide-react';
 import { OddsButton } from './OddsButton';
@@ -95,8 +95,12 @@ function MatchRow({ match, league }: { match: Match; league: League }) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
+const INITIAL_MATCHES = 8;
+const MAX_MATCHES = 40;
+
 export function NBAHighlights({ onViewAll }: { onViewAll?: () => void } = {}) {
   const { allLeagues } = useOddsData();
+  const [expanded, setExpanded] = useState(false);
 
   const { pairs, leagueLabel } = useMemo(() => {
     const result: { match: Match; league: League }[] = [];
@@ -150,9 +154,24 @@ export function NBAHighlights({ onViewAll }: { onViewAll?: () => void } = {}) {
           </div>
         </div>
 
-        {pairs.slice(0, 8).map(({ match, league }) => (
+        {(expanded ? pairs.slice(0, MAX_MATCHES) : pairs.slice(0, INITIAL_MATCHES)).map(({ match, league }) => (
           <MatchRow key={match.id} match={match} league={league} />
         ))}
+
+        {/* View More / Show Less */}
+        {Math.min(pairs.length, MAX_MATCHES) > INITIAL_MATCHES && (
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-semibold text-[#38BDF8] transition-colors border-t"
+            style={{ borderColor: '#1E2D3D', background: 'rgba(11,15,20,0.4)' }}
+          >
+            {expanded ? (
+              <>Show Less <ChevronRight className="w-3.5 h-3.5 -rotate-90" /></>
+            ) : (
+              <>View More ({Math.min(pairs.length, MAX_MATCHES) - INITIAL_MATCHES}) <ChevronRight className="w-3.5 h-3.5 rotate-90" /></>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
