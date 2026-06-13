@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useLocation } from 'wouter';
 import { SportName } from './SportName';
 import { OddsButton } from './OddsButton';
 import { Flame, TrendingUp, Clock } from 'lucide-react';
@@ -143,8 +144,11 @@ type MarketMode = '1x2' | 'ou';
 
 // ── Card component ────────────────────────────────────────────────────────────
 function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
+  const [, setLocation] = useLocation();
   const [mode, setMode] = useState<MarketMode>('1x2');
   const accent   = getSportAccent(bet.sportKey);
+
+  const goToMatch = () => setLocation(`/match/${bet.matchId}`);
   const hasDraw  = bet.drawOdds != null && bet.awayTeam;
   const hasOU    = bet.ouOver25 != null && bet.ouUnder25 != null;
   const showOU   = mode === 'ou' && hasOU;
@@ -166,7 +170,11 @@ function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
 
   return (
     <div
-      className="w-full flex flex-col rounded-xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5"
+      role="button"
+      tabIndex={0}
+      onClick={goToMatch}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToMatch(); } }}
+      className="w-full flex flex-col rounded-xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00DFA9]/40"
       style={{ background: '#0D1320', borderColor: 'rgba(37,50,65,0.6)' }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
@@ -235,7 +243,7 @@ function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
 
         {/* Market toggle (only when O/U is available) */}
         {hasOU && (
-          <div className="flex items-center gap-1 -mb-1" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-1 -mb-1" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
             <button
               onClick={() => setMode('1x2')}
               className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border transition-all duration-100 ${
@@ -260,7 +268,7 @@ function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
         )}
 
         {/* Odds */}
-        <div onClick={e => e.stopPropagation()}>
+        <div onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
           {showOU ? (
             <>
               {/* O/U labels */}
