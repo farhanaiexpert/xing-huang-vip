@@ -24,11 +24,21 @@ Canonical scheme (keyed by `match.sportId`):
 this exact scheme, not invent a `_1x2`/`_h2h` suffix.
 
 ## Rule: one "featured" predicate
-"Featured" = `Match.featuredMatch` (computed in `useOddsApi` normalise as
-`marketScore >= 4`). Both the Featured carousel inclusion and the "Show Featured
-only" filter must use `featuredMatch`, NOT an ad-hoc `marketScore >= 1`.
-The per-row **expand toggle** is separate and intentionally uses
-`marketScore >= 1` (expand = "has any extra markets", not "is featured").
+"Featured" = `Match.featuredMatch` (computed in `useOddsApi` normalise from
+`marketScore`). Both the Featured carousel inclusion and the "Show Featured
+only" filter must use `featuredMatch`, NOT an ad-hoc inline comparison.
+**Why:** the gate value has been re-tuned over time (was `>= 4`, then `>= 2`,
+now `>= 1` to maximise cross-sport coverage) — centralising on `featuredMatch`
+keeps every surface in sync when the threshold moves.
+**How to apply:** to change how aggressive "featured" is, edit ONLY the
+`marketScore >= N` line in `useOddsApi` and bump `STORAGE_KEY` so cached
+`featuredMatch` flags recompute; never re-derive featured from `marketScore`
+elsewhere. The carousel is uncapped and sorts by `marketScore` desc, so a low
+gate just lengthens the tail rather than hiding the richest matches.
+Coverage also depends on the **server enrichment window** (cron in api-server
+`index.ts`): only events kicking off within that window (currently 48h, cap
+30/sport) get a `marketScore` at all, so sports with no near-term fixtures
+contribute zero featured matches until the window reaches them.
 
 ## Other notes
 - Drawer fetches `/api/betsapi/markets/:fixtureId` (cache-only, 0 extra credits);

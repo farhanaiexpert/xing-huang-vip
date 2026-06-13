@@ -846,20 +846,24 @@ runMigrations().then(() => {
 
         // Enrich up to 30 events with real prematch odds + rich market flags.
         // Strategy: sort by soonest kickoff, keep only events starting within
-        // the next 24 hours, hard-cap at 30. This ensures:
-        //   - "Matches With More Markets" always shows genuinely imminent games
+        // the next 48 hours, hard-cap at 30. This ensures:
+        //   - "Matches With More Markets" surfaces matches across ALL sports,
+        //     including those whose next fixtures are >24h out (which previously
+        //     got zero enrichment and so never appeared in the section)
         //   - Lower-league same-day matches are enriched ahead of prestige games
         //     days away (which Bet365's default sort would favour)
-        //   - Quiet days with <30 fixtures in 24h spend fewer credits automatically
+        //   - Quiet windows with <30 fixtures in 48h spend fewer credits automatically
+        //   - The 30/sport cap keeps the per-window credit budget bounded so a few
+        //     busy sports (soccer/tennis) can't starve enrichment for the rest
         // Uses fetchPrematchData which parses ALL market types from one API call —
         // no extra credits vs the old approach.
         if (!meta.countOnly) {
           const nowSec   = Math.floor(Date.now() / 1000);
-          const in24hSec = nowSec + 24 * 60 * 60;
+          const in48hSec = nowSec + 48 * 60 * 60;
           const toEnrich = events
             .filter(ev => {
               const ts = parseInt(ev.time, 10);
-              return !isNaN(ts) && ts > nowSec && ts <= in24hSec;
+              return !isNaN(ts) && ts > nowSec && ts <= in48hSec;
             })
             .sort((a, b) => parseInt(a.time, 10) - parseInt(b.time, 10))
             .slice(0, 30);
