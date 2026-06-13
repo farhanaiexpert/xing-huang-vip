@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Zap, Shield, Users, TrendingUp, Star, Gift, PartyPopper } from 'lucide-react';
+import { X, Zap, Shield, Users, TrendingUp, Star, Gift, PartyPopper, CheckCircle2 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../hooks/useWallet';
@@ -7,6 +7,9 @@ import { api } from '../lib/apiClient';
 
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imgi_15_Promo-Banner-2.webp';
 const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ronaldo11.webp';
+
+const SNOOZE_KEY = 'promo_snoozed_until';
+const SNOOZE_MS  = 3 * 60 * 60 * 1000; // 3 hours
 
 const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
   id: i,
@@ -109,8 +112,10 @@ export function PromoPopup() {
       .catch(() => { /* silent — don't block popup */ });
   }, [isAuthenticated]);
 
-  // Show popup after 3 s
+  // Show popup after 3 s — skip if user snoozed within the last 3 hours
   useEffect(() => {
+    const snoozedUntil = parseInt(localStorage.getItem(SNOOZE_KEY) ?? '0', 10);
+    if (Date.now() < snoozedUntil) return;
     const t = setTimeout(() => setVisible(true), 3000);
     return () => clearTimeout(t);
   }, []);
@@ -144,6 +149,8 @@ export function PromoPopup() {
 
   function close() {
     if (showCongrats) return;
+    // Snooze for 3 hours on any manual dismiss (X or Maybe Later)
+    localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_MS));
     setClosing(true);
     setTimeout(() => {
       setVisible(false);
@@ -534,24 +541,44 @@ export function PromoPopup() {
 
             {/* CTAs */}
             <div className="flex flex-col gap-2 mb-3">
-              <button
-                onClick={handleClaim}
-                disabled={claiming || alreadyClaimed}
-                className="relative w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl font-black text-[14px] text-[#071210] overflow-hidden transition-transform duration-150 hover:scale-[1.015] active:scale-[0.975] disabled:opacity-60 cursor-pointer"
-                style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
-              >
-                <Gift className="w-4 h-4 shrink-0" />
-                {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : isAuthenticated ? 'Claim Now — Get 88.88 USDT' : 'Sign Up & Claim 88.88 USDT'}
-                <div className="absolute inset-0 pointer-events-none"
-                  style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
-              </button>
-
-              <button
-                onClick={close}
-                className="w-full py-2.5 rounded-2xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#0F1620] transition-all duration-150 cursor-pointer"
-              >
-                Maybe Later
-              </button>
+              {alreadyClaimed ? (
+                <>
+                  {/* Already claimed state */}
+                  <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-[#00DFA9]/25 bg-[#00DFA9]/8">
+                    <CheckCircle2 className="w-5 h-5 text-[#00DFA9] shrink-0" />
+                    <div>
+                      <p className="text-[13px] font-black text-[#00DFA9] leading-tight">Bonus Already Claimed!</p>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">Your 88.88 USDT welcome bonus is already in your account.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={close}
+                    className="w-full py-2.5 rounded-2xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#0F1620] transition-all duration-150 cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleClaim}
+                    disabled={claiming}
+                    className="relative w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl font-black text-[14px] text-[#071210] overflow-hidden transition-transform duration-150 hover:scale-[1.015] active:scale-[0.975] disabled:opacity-60 cursor-pointer"
+                    style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
+                  >
+                    <Gift className="w-4 h-4 shrink-0" />
+                    {claiming ? 'Claiming…' : isAuthenticated ? 'Claim Now — Get 88.88 USDT' : 'Sign Up & Claim 88.88 USDT'}
+                    <div className="absolute inset-0 pointer-events-none"
+                      style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
+                  </button>
+                  <button
+                    onClick={close}
+                    className="w-full py-2.5 rounded-2xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#0F1620] transition-all duration-150 cursor-pointer"
+                  >
+                    Maybe Later
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Trust strip — compact single row, always */}
