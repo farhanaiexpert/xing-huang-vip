@@ -17,6 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/apiClient';
 import { userDisplayLabel, addressInitials, shortAddress } from '@/lib/utils';
 
+const GUEST_AVATAR_KEY = 'guest_avatar';
+
 function fmtDate(iso?: string) {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -37,6 +39,12 @@ export function OverviewPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [guestAvatar, setGuestAvatar] = useState<string | null>(() =>
+    localStorage.getItem(GUEST_AVATAR_KEY)
+  );
+
+  // Effective avatar: server value for logged-in users, localStorage for guests
+  const avatarSrc = user ? (user.avatar ?? null) : guestAvatar;
 
   const wonBets      = bets.filter(b => b.status === 'won' || b.status === 'settled').length;
   const openBets     = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
@@ -68,8 +76,14 @@ export function OverviewPage() {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      const { avatar } = await api.put<{ avatar: string }>('/auth/avatar', { avatar: dataUrl });
-      updateUser({ avatar });
+
+      if (user) {
+        const { avatar } = await api.put<{ avatar: string }>('/auth/avatar', { avatar: dataUrl });
+        updateUser({ avatar });
+      } else {
+        localStorage.setItem(GUEST_AVATAR_KEY, dataUrl);
+        setGuestAvatar(dataUrl);
+      }
       toast({ title: 'Profile picture updated!' });
     } catch {
       toast({ title: 'Upload failed', description: 'Please try again.', variant: 'destructive' });
@@ -81,8 +95,13 @@ export function OverviewPage() {
   async function handleRemoveAvatar() {
     setAvatarUploading(true);
     try {
-      await api.delete('/auth/avatar');
-      updateUser({ avatar: null });
+      if (user) {
+        await api.delete('/auth/avatar');
+        updateUser({ avatar: null });
+      } else {
+        localStorage.removeItem(GUEST_AVATAR_KEY);
+        setGuestAvatar(null);
+      }
       toast({ title: 'Profile picture removed.' });
     } catch {
       toast({ title: 'Failed to remove picture.', variant: 'destructive' });
@@ -144,8 +163,8 @@ export function OverviewPage() {
             <div className="relative shrink-0 group">
               <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-[#00DFA9]/25 to-[#38BDF8]/15 border-2 border-[#00DFA9]/45 flex items-center justify-center"
                 style={{ boxShadow: '0 0 20px rgba(0,223,169,0.18)' }}>
-                {user?.avatar ? (
-                  <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-[22px] font-black text-[#00DFA9]">{initials}</span>
                 )}
@@ -203,9 +222,9 @@ export function OverviewPage() {
                   className="flex items-center gap-1 text-[9px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors disabled:opacity-40 cursor-pointer"
                 >
                   <Camera className="h-2.5 w-2.5" />
-                  {user?.avatar ? 'Change photo' : 'Add photo'}
+                  {avatarSrc ? 'Change photo' : 'Add photo'}
                 </button>
-                {user?.avatar && (
+                {avatarSrc && (
                   <button
                     onClick={handleRemoveAvatar}
                     disabled={avatarUploading}

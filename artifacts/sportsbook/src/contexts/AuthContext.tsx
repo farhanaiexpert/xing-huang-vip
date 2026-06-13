@@ -102,6 +102,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(authedUser);
     // No username = brand-new wallet account → trigger profile setup
     if (!authedUser.username) setIsNewUser(true);
+    // Migrate guest avatar → account (fire-and-forget)
+    if (!authedUser.avatar) {
+      const guestAvatar = localStorage.getItem('guest_avatar');
+      if (guestAvatar) {
+        api.put<{ avatar: string }>('/auth/avatar', { avatar: guestAvatar })
+          .then(({ avatar }) => setUser(prev => prev ? { ...prev, avatar } : prev))
+          .catch(() => {})
+          .finally(() => localStorage.removeItem('guest_avatar'));
+      }
+    }
   }, []);
 
   const logout = useCallback(async () => {
