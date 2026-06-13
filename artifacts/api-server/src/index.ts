@@ -831,10 +831,25 @@ runMigrations().then(() => {
           continue;
         }
 
-        // Enrich top 30 events with real prematch odds + rich market flags.
-        // Uses fetchPrematchData which parses ALL market types from the same API call — no extra credits.
+        // Enrich up to 30 events with real prematch odds + rich market flags.
+        // Strategy: sort by soonest kickoff, keep only events starting within
+        // the next 24 hours, hard-cap at 30. This ensures:
+        //   - "Matches With More Markets" always shows genuinely imminent games
+        //   - Lower-league same-day matches are enriched ahead of prestige games
+        //     days away (which Bet365's default sort would favour)
+        //   - Quiet days with <30 fixtures in 24h spend fewer credits automatically
+        // Uses fetchPrematchData which parses ALL market types from one API call —
+        // no extra credits vs the old approach.
         if (!meta.countOnly) {
-          const toEnrich = events.slice(0, 30);
+          const nowSec   = Math.floor(Date.now() / 1000);
+          const in24hSec = nowSec + 24 * 60 * 60;
+          const toEnrich = events
+            .filter(ev => {
+              const ts = parseInt(ev.time, 10);
+              return !isNaN(ts) && ts > nowSec && ts <= in24hSec;
+            })
+            .sort((a, b) => parseInt(a.time, 10) - parseInt(b.time, 10))
+            .slice(0, 30);
           for (let i = 0; i < toEnrich.length; i += 10) {
             const batch = toEnrich.slice(i, i + 10);
             await Promise.all(
