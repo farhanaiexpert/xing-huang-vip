@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { clearToken, getStoredUser, api, PendingTotals, isTokenStored } from "@/lib/api";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { useQuery } from "@tanstack/react-query";
+import { startChineseTranslation, stopChineseTranslation } from "@/i18n/translator";
 import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
@@ -30,15 +31,12 @@ const LANGUAGES = [
 
 const LANG_STORAGE_KEY = 'admin_lang';
 
-function triggerTranslate(langCode: string) {
-  if (langCode === 'en') {
-    const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
-    if (select) { select.value = langCode; select.dispatchEvent(new Event('change')); }
-    document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    window.location.reload();
-    return;
-  }
+function clearGoogleTranslateCookies() {
+  document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+  document.cookie = `googtrans=; path=/; domain=${location.hostname}; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+}
+
+function triggerGoogleTranslate(langCode: string) {
   const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
   if (select) {
     select.value = langCode;
@@ -186,16 +184,40 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const langRef = useRef<HTMLDivElement>(null);
 
   function handleSelectLanguage(code: string) {
+    const prev = currentLang;
     setCurrentLang(code);
     try { localStorage.setItem(LANG_STORAGE_KEY, code); } catch { /* ignore */ }
     setShowLang(false);
-    triggerTranslate(code);
+
+    if (code === 'en') {
+      stopChineseTranslation();
+      clearGoogleTranslateCookies();
+      window.location.reload();
+      return;
+    }
+
+    if (code === 'zh-CN') {
+      clearGoogleTranslateCookies();
+      window.location.reload();
+      return;
+    }
+
+    if (prev === 'zh-CN') {
+      stopChineseTranslation();
+      window.location.reload();
+      return;
+    }
+
+    triggerGoogleTranslate(code);
   }
 
-  useEffect(() => {
+  useEffect((): (() => void) | void => {
     const lang = currentLang;
+    if (lang === 'zh-CN') {
+      return () => stopChineseTranslation();
+    }
     if (lang !== 'en') {
-      const delay = setTimeout(() => triggerTranslate(lang), 800);
+      const delay = setTimeout(() => triggerGoogleTranslate(lang), 800);
       return () => clearTimeout(delay);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
