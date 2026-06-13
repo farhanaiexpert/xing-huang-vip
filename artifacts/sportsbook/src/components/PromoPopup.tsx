@@ -217,6 +217,7 @@ export function PromoPopup() {
 
       {/* ── Desktop (xl+): fixed bottom bar ── */}
       <div
+        translate="no"
         className="hidden xl:flex fixed bottom-0 left-0 right-[260px] z-[9998] items-center justify-between gap-3 px-6 py-3.5"
         style={{
           background: 'linear-gradient(90deg,#061A14 0%,#091820 50%,#061A14 100%)',
@@ -232,9 +233,9 @@ export function PromoPopup() {
           <span className="w-2.5 h-2.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
           <div className="min-w-0">
             <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
-              Connect your crypto wallet &amp; claim <span className="text-[#FACC15]">FREE 88.88 USDT</span>
+              连接您的加密钱包，免费领取 <span className="text-[#FACC15]">88.88 USDT</span>
             </p>
-            <p className="text-[10px] text-[#64748B]">Join 50,000+ players on <span translate="no">Xing Huang</span> Sports Trading</p>
+            <p className="text-[10px] text-[#64748B]">加入 <span translate="no">杏凰体育</span> 50,000+ 玩家</p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
@@ -245,13 +246,13 @@ export function PromoPopup() {
             style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)', animation: 'pCTAPulse 2.4s ease-in-out infinite' }}
           >
             <Gift className="w-3.5 h-3.5 shrink-0" />
-            {alreadyClaimed ? 'Already Claimed' : claiming ? 'Claiming…' : 'Claim Now'}
+            {alreadyClaimed ? '已领取' : claiming ? '领取中…' : '立即领取'}
             <div className="absolute inset-0 pointer-events-none"
               style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.2) 50%,transparent 62%)', animation: 'pShimmer 2.8s ease-in-out infinite' }} />
           </button>
           <button
             onClick={dismissBar}
-            title="Dismiss"
+            title="关闭"
             className="flex items-center justify-center w-9 h-9 rounded-xl border border-[#253241] bg-[#0D1520] text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1E2A38] hover:border-[#2E3D50] transition-all duration-150 cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
@@ -268,6 +269,7 @@ export function PromoPopup() {
     <>
     {StickyBar}
     <div
+      translate="no"
       className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"
       style={{ animation: closing ? 'pBdOut .36s ease forwards' : 'pBdIn .38s ease forwards' }}
     >
@@ -368,14 +370,14 @@ export function PromoPopup() {
           </div>
           <h2 className="text-[26px] sm:text-[32px] font-black text-[#FACC15] leading-tight mb-2"
             style={{ animation: 'goldPulse 2s ease-in-out infinite' }}>
-            Congratulations! 🎉
+            恭喜！🎉
           </h2>
           <p className="text-[13px] sm:text-[14px] text-[#94A3B8] mb-6 leading-relaxed">
-            Your welcome bonus has been credited to your account
+            您的欢迎奖金已存入您的账户
           </p>
           <div className="mb-8 px-8 py-5 rounded-2xl border border-[#FACC15]/30 w-full"
             style={{ background: 'rgba(250,204,21,0.07)' }}>
-            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest mb-1">Bonus Balance</p>
+            <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest mb-1">奖金余额</p>
             <div className="flex items-baseline justify-center gap-2">
               <span className="text-[48px] sm:text-[56px] font-black text-[#FACC15] leading-none tabular-nums"
                 style={{ textShadow: '0 0 40px rgba(250,204,21,0.4)' }}>
@@ -383,7 +385,7 @@ export function PromoPopup() {
               </span>
               <span className="text-[20px] font-bold text-[#FACC15]/80">USDT</span>
             </div>
-            <p className="text-[10px] text-[#64748B] mt-2">Non-withdrawable · Used for betting only</p>
+            <p className="text-[10px] text-[#64748B] mt-2">不可提现 · 仅用于投注</p>
           </div>
           <button
             onClick={() => { setShowCongrats(false); close(); }}
@@ -391,7 +393,7 @@ export function PromoPopup() {
             style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
           >
             <Zap className="w-4 h-4 shrink-0" />
-            Start Playing →
+            开始游戏 →
             <div className="absolute inset-0 pointer-events-none"
               style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
           </button>
@@ -457,7 +459,7 @@ export function PromoPopup() {
             <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 border border-[#00DFA9]/30 pointer-events-none"
               style={{ background: 'rgba(0,0,0,0.68)', backdropFilter: 'blur(8px)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
-              <span className="text-[9px] font-bold text-[#00DFA9] tracking-[0.12em] uppercase">Live Promo</span>
+              <span className="text-[9px] font-bold text-[#00DFA9] tracking-[0.12em] uppercase">实时优惠</span>
             </div>
 
             {/* Stars bottom-left */}
@@ -485,15 +487,14 @@ export function PromoPopup() {
                 style={{ background: 'rgba(250,204,21,0.08)', animation: 'pPillPulse 2.2s ease-in-out infinite' }}
               >
                 <span className="text-[#FACC15] text-[10px]">✦</span>
-                <span className="text-[11px] sm:text-[12px] font-black text-[#FACC15] tracking-wide">WELCOME BONUS — FREE 88.88 USDT</span>
+                <span className="text-[11px] sm:text-[12px] font-black text-[#FACC15] tracking-wide">欢迎奖金 — 免费领取 88.88 USDT</span>
               </div>
             </div>
 
             {/* Headline */}
             <h2 className="text-[20px] sm:text-[24px] font-black text-[#F8FAFC] leading-[1.18] mb-1.5">
-              Sign Up &amp;{' '}
               <span style={{ background: 'linear-gradient(90deg,#00DFA9 0%,#38BDF8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Claim FREE
+                注册即送
               </span>{' '}
               <span className="text-[#FACC15]">88.88 USDT</span>
             </h2>
@@ -501,12 +502,12 @@ export function PromoPopup() {
             {/* Subtext — shorter on mobile */}
             <p className="text-[11px] sm:text-[13px] text-[#94A3B8] leading-snug mb-3">
               <span className="md:hidden">
-                Instant crypto deposits · real-time odds · provably fair.
+                即时充值 · 实时赔率 · 公平透明。
               </span>
               <span className="hidden md:inline">
-                Join thousands of winning players on{' '}
-                <span translate="no" className="text-[#00DFA9] font-semibold">Xing Huang Sports Trading</span>.
-                Instant deposits · real-time odds · provably fair.
+                加入数千名正在{' '}
+                <span translate="no" className="text-[#00DFA9] font-semibold">杏凰体育</span>{' '}
+                获利的玩家。即时充值 · 实时赔率 · 公平透明。
               </span>
             </p>
 
@@ -527,9 +528,9 @@ export function PromoPopup() {
                 ))}
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[#00DFA9] font-black text-[11px]">+127 players</span>
-                <span className="text-[#CBD5E1] text-[11px]"> joined in the last hour</span>
-                <div className="text-[9px] text-[#64748B] mt-0.5 leading-none">50,000+ active players worldwide</div>
+                <span className="text-[#00DFA9] font-black text-[11px]">+127 名玩家</span>
+                <span className="text-[#CBD5E1] text-[11px]"> 在过去 1 小时内加入</span>
+                <div className="text-[9px] text-[#64748B] mt-0.5 leading-none">全球超过 50,000 名活跃玩家</div>
               </div>
             </div>
 
@@ -548,15 +549,15 @@ export function PromoPopup() {
                   <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-[#00DFA9]/25 bg-[#00DFA9]/8">
                     <CheckCircle2 className="w-5 h-5 text-[#00DFA9] shrink-0" />
                     <div>
-                      <p className="text-[13px] font-black text-[#00DFA9] leading-tight">Bonus Already Claimed!</p>
-                      <p className="text-[11px] text-[#64748B] mt-0.5">Your 88.88 USDT welcome bonus is already in your account.</p>
+                      <p className="text-[13px] font-black text-[#00DFA9] leading-tight">奖金已领取！</p>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">您的 88.88 USDT 欢迎奖金已在您的账户中。</p>
                     </div>
                   </div>
                   <button
                     onClick={close}
                     className="w-full py-2.5 rounded-2xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#0F1620] transition-all duration-150 cursor-pointer"
                   >
-                    Close
+                    关闭
                   </button>
                 </>
               ) : (
@@ -568,7 +569,7 @@ export function PromoPopup() {
                     style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
                   >
                     <Gift className="w-4 h-4 shrink-0" />
-                    {claiming ? 'Claiming…' : isAuthenticated ? 'Claim Now — Get 88.88 USDT' : 'Sign Up & Claim 88.88 USDT'}
+                    {claiming ? '领取中…' : isAuthenticated ? '立即领取 — 获得 88.88 USDT' : '注册即送 88.88 USDT'}
                     <div className="absolute inset-0 pointer-events-none"
                       style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
                   </button>
@@ -576,7 +577,7 @@ export function PromoPopup() {
                     onClick={close}
                     className="w-full py-2.5 rounded-2xl font-medium text-[12px] text-[#64748B] hover:text-[#94A3B8] border border-[#1E2A38] hover:border-[#253241] hover:bg-[#0F1620] transition-all duration-150 cursor-pointer"
                   >
-                    Maybe Later
+                    稍后再说
                   </button>
                 </>
               )}
@@ -585,9 +586,9 @@ export function PromoPopup() {
             {/* Trust strip — compact single row, always */}
             <div className="flex items-center justify-center gap-4 pt-2.5 border-t border-[#1A2535]">
               {([
-                { icon: Users,      label: '50K+ Players',   color: '#00DFA9' },
-                { icon: TrendingUp, label: 'Instant Crypto', color: '#38BDF8' },
-                { icon: Shield,     label: 'Provably Fair',  color: '#FACC15' },
+                { icon: Users,      label: '50,000+ 玩家',   color: '#00DFA9' },
+                { icon: TrendingUp, label: '即时加密货币', color: '#38BDF8' },
+                { icon: Shield,     label: '公平透明',  color: '#FACC15' },
               ] as const).map(({ icon: Icon, label, color }) => (
                 <div key={label} className="flex items-center gap-1">
                   <Icon className="w-3 h-3 shrink-0" style={{ color }} />
