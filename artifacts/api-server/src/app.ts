@@ -173,7 +173,7 @@ app.get(`${BASE}/init-admin`, async (req, res): Promise<void> => {
     return;
   }
   const ADMIN_EMAIL    = "admin@xinghuang.vip";
-  const ADMIN_PASSWORD = "XingAdmin2026!";
+  const ADMIN_PASSWORD = "XH@X72GEKNaPN!!*";
   const hash = await bcrypt.hash(ADMIN_PASSWORD, 12);
   const existing = await db.select({ id: usersTable.id })
     .from(usersTable).where(eq(usersTable.email, ADMIN_EMAIL)).limit(1);
