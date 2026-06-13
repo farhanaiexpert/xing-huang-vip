@@ -117,7 +117,6 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Chain tab definitions ──────────────────────────────────────────────────────
 const CHAIN_TABS = [
-  { key: 'ethereum', name: 'Ethereum', chainId: 1 },
   { key: 'bsc',      name: 'BSC',      chainId: 56 },
   { key: 'trc20',    name: 'TRC-20',   chainId: null, color: '#00DFA9' },
   { key: 'polygon',  name: 'Polygon',  chainId: 137 },
@@ -129,11 +128,11 @@ const CHAIN_TABS = [
 type ChainTabKey = typeof CHAIN_TABS[number]['key'];
 
 const MIN_NATIVE_GAS: Record<number, number> = {
-  1: 0.001, 56: 0.003, 137: 0.5, 42161: 0.0005, 10: 0.0005, 8453: 0.0005, 59144: 0.0005,
+  56: 0.003, 137: 0.5, 42161: 0.0005, 10: 0.0005, 8453: 0.0005, 59144: 0.0005,
 };
 
 // EVM networks supported by the Reown wallet deposit flow (ordered for switch buttons)
-const SUPPORTED_CHAIN_IDS = [1, 56, 137, 42161, 10, 8453, 59144];
+const SUPPORTED_CHAIN_IDS = [56, 137, 42161, 10, 8453, 59144];
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export function WalletPage() {
@@ -241,7 +240,7 @@ export function WalletPage() {
   // Withdrawal form
   const [wdAmount, setWdAmount]       = useState('');
   const [wdAddress, setWdAddress]     = useState('');
-  const [wdNetwork, setWdNetwork]     = useState<'TRC-20' | 'ERC-20' | 'BTC'>('TRC-20');
+  const [wdNetwork, setWdNetwork]     = useState<'TRC-20' | 'TRX' | 'BSC' | 'BTC'>('TRC-20');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   const [wdSubmitting, setWdSubmitting] = useState(false);
   const [wdProcessing, setWdProcessing] = useState(false);
@@ -1556,7 +1555,7 @@ export function WalletPage() {
                     >
                       <Wallet className="w-4 h-4" /> Connect Wallet <ChevronRight className="w-4 h-4" />
                     </button>
-                    <p className="text-[10px] text-[#64748B]">Supports 300+ wallets · Ethereum · BSC · Polygon · Arbitrum · Optimism · Base · Linea</p>
+                    <p className="text-[10px] text-[#64748B]">Supports 300+ wallets · BSC · Polygon · Arbitrum · Optimism · Base · Linea</p>
                     {isMobileDevice && !hasInjectedProvider && (() => {
                       const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
                       const hostPath = typeof window !== 'undefined' ? `${window.location.host}${window.location.pathname}` : '';
@@ -2760,11 +2759,12 @@ export function WalletPage() {
                       <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">1</span>
                       <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">Select Network</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {([
-                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron Network', color: '#00DFA9', desc: 'Low fees' },
-                        { id: 'ERC-20', label: 'ERC-20', chain: 'Ethereum', color: '#627EEA', desc: 'Wide support' },
-                        { id: 'BTC',    label: 'BTC',    chain: 'Bitcoin',   color: '#F7931A', desc: 'Bitcoin' },
+                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron (USDT)',      color: '#00DFA9', desc: 'Low fees',    icon: 'TRX' },
+                        { id: 'TRX',    label: 'TRX',    chain: 'Tron Coin',        color: '#EF4444', desc: 'Native TRX',  icon: 'TRX' },
+                        { id: 'BSC',    label: 'BEP-20', chain: 'BNB Smart Chain',  color: '#F0B90B', desc: 'Low fees',    icon: 'BNB' },
+                        { id: 'BTC',    label: 'BTC',    chain: 'Bitcoin',          color: '#F7931A', desc: 'Bitcoin',     icon: '₿'   },
                       ] as const).map(net => (
                         <button
                           key={net.id}
@@ -2780,9 +2780,9 @@ export function WalletPage() {
                             <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#38BDF8] flex items-center justify-center">
                               <span className="text-[7px] font-black text-[#0B0F14]">✓</span>
                             </span>
-                          )}
+                        )}
                           <div className="w-6 h-6 rounded-lg mb-2 flex items-center justify-center" style={{ backgroundColor: net.color + '22', border: `1px solid ${net.color}44` }}>
-                            <span className="text-[8px] font-black" style={{ color: net.color }}>{net.id === 'BTC' ? '₿' : net.id.split('-')[0]}</span>
+                            <span className="text-[8px] font-black" style={{ color: net.color }}>{net.icon}</span>
                           </div>
                           <p className="text-[11px] font-bold text-[#F8FAFC]">{net.label}</p>
                           <p className="text-[9px] text-[#64748B]">{net.chain}</p>
@@ -2790,6 +2790,18 @@ export function WalletPage() {
                         </button>
                       ))}
                     </div>
+                    {wdNetwork === 'TRX' && (
+                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)' }}>
+                        <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-red-400/80 leading-relaxed">TRX withdrawals are processed as native Tron coin. Admin will convert your USDT balance and send TRX to your Tron address.</p>
+                      </div>
+                    )}
+                    {wdNetwork === 'BSC' && (
+                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(240,185,11,0.06)', border: '1px solid rgba(240,185,11,0.18)' }}>
+                        <AlertCircle className="h-3.5 w-3.5 text-[#F0B90B] shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-[#F0B90B]/80 leading-relaxed">Send your BSC (BEP-20) wallet address. Only send USDT on BNB Smart Chain to this address.</p>
+                      </div>
+                    )}
                     {wdNetwork === 'BTC' && (
                       <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(247,147,26,0.06)', border: '1px solid rgba(247,147,26,0.18)' }}>
                         <AlertCircle className="h-3.5 w-3.5 text-[#F7931A] shrink-0 mt-0.5" />
@@ -2857,7 +2869,13 @@ export function WalletPage() {
                         type="text"
                         value={wdAddress}
                         onChange={e => setWdAddress(e.target.value)}
-                        placeholder={wdNetwork === 'TRC-20' ? 'e.g. TQn5m… Tron USDT address' : wdNetwork === 'BTC' ? 'e.g. bc1q… or 1… or 3… Bitcoin address' : 'e.g. 0x742d… Ethereum USDT address'}
+                        placeholder={
+                          wdNetwork === 'TRC-20' ? 'e.g. TQn5m… Tron USDT (TRC-20) address' :
+                          wdNetwork === 'TRX'    ? 'e.g. TQn5m… Tron (TRX) address' :
+                          wdNetwork === 'BSC'    ? 'e.g. 0x742d… BNB Smart Chain address' :
+                          wdNetwork === 'BTC'    ? 'e.g. bc1q… or 1… or 3… Bitcoin address' :
+                          'e.g. 0x742d… wallet address'
+                        }
                         className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/50 transition-colors"
                       />
                     </div>
