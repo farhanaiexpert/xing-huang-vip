@@ -1367,7 +1367,7 @@ router.post("/auth/admin/totp/challenge", async (req, res): Promise<void> => {
 
   const isValid = speakeasy.totp.verify({ secret: user.totpSecret, encoding: "base32", token: code, window: 1 });
   if (!isValid) {
-    res.status(401).json({ error: "Incorrect code — please try again" });
+    res.status(400).json({ error: "Incorrect code — please try again" });
     return;
   }
 
@@ -1431,7 +1431,7 @@ router.post("/auth/admin/totp/confirm", authenticate, async (req, res): Promise<
 });
 
 // ── TOTP: remove 2FA (requires current valid code) ───────────────────────────
-router.post("/auth/admin/totp/remove", authenticate, async (req, res): Promise<void> => {
+router.delete("/auth/admin/totp", authenticate, async (req, res): Promise<void> => {
   const userId = (req as unknown as { user: { userId: number; role: string } }).user.userId;
   const { code } = req.body as { code?: string };
   if (!code) {

@@ -112,7 +112,7 @@ function TotpCard() {
     setRemoveError("");
     setRemoveLoading(true);
     try {
-      await api.post("/auth/admin/totp/remove", { code: removeCode });
+      await api.delete("/auth/admin/totp", { code: removeCode });
       toast.success("Two-factor authentication removed");
       qc.invalidateQueries({ queryKey: ["totp-status"] });
       setRemoveOpen(false);
