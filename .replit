@@ -55,4 +55,3 @@ CI = "true"
 
 [userenv.production]
 ALLOWED_ORIGINS = "https://gobet.mywebpage.pro,https://sports-odds-platform.replit.app"
-ADMIN_INIT_TOKEN = "initadmin-l03w0z2rgnl"
