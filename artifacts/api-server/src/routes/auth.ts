@@ -1013,6 +1013,7 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
     country: usersTable.country,
     referralCode: usersTable.referralCode,
     createdAt: usersTable.createdAt,
+    avatar: usersTable.avatar,
   }).from(usersTable).where(eq(usersTable.id, req.user!.userId)).limit(1);
 
   if (!user) {
@@ -1026,6 +1027,47 @@ router.get("/auth/me", authenticate, async (req, res): Promise<void> => {
       ? shortAddress(user.walletAddress)
       : (user.username ?? user.email ?? "User"),
   });
+});
+
+// ── PUT /auth/avatar ───────────────────────────────────────────────────────────
+// Accepts { avatar: "data:image/webp;base64,..." } — max 100 KB decoded, webp or png only.
+const MAX_AVATAR_BYTES = 100 * 1024; // 100 KB
+
+router.put("/auth/avatar", authenticate, async (req, res): Promise<void> => {
+  const { avatar } = req.body as { avatar?: string };
+  if (!avatar || typeof avatar !== "string") {
+    res.status(400).json({ error: "avatar field (base64 data URL) is required" });
+    return;
+  }
+
+  // Validate data URL format and MIME type
+  const match = avatar.match(/^data:(image\/(?:webp|png));base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) {
+    res.status(400).json({ error: "Only webp and png images are allowed" });
+    return;
+  }
+
+  // Validate decoded size
+  const base64Data = match[2];
+  const decodedBytes = Math.floor((base64Data.length * 3) / 4);
+  if (decodedBytes > MAX_AVATAR_BYTES) {
+    res.status(400).json({ error: "Image must be 100 KB or smaller" });
+    return;
+  }
+
+  await db.update(usersTable)
+    .set({ avatar })
+    .where(eq(usersTable.id, req.user!.userId));
+
+  res.json({ avatar });
+});
+
+// ── DELETE /auth/avatar ────────────────────────────────────────────────────────
+router.delete("/auth/avatar", authenticate, async (req, res): Promise<void> => {
+  await db.update(usersTable)
+    .set({ avatar: null })
+    .where(eq(usersTable.id, req.user!.userId));
+  res.sendStatus(204);
 });
 
 // ── PATCH /auth/update-profile ────────────────────────────────────────────────

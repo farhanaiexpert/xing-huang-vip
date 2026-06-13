@@ -16,6 +16,7 @@ export const usersTable = pgTable("users", {
   isTestAccount: boolean("is_test_account").notNull().default(false),
   referralCode: text("referral_code").unique(),
   registrationIp: text("registration_ip"),
+  avatar: text("avatar"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

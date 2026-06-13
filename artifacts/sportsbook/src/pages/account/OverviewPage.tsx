@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { requestDeposit } from '@/lib/depositGate';
@@ -7,13 +7,14 @@ import { useBetHistory } from '@/hooks/useBetHistory';
 import { useReferral } from '@/hooks/useReferral';
 import { cn } from '@/lib/utils';
 import {
-  Copy, Check, Wallet, Receipt, ArrowLeftRight,
+  Wallet, Receipt, ArrowLeftRight,
   Users, Gift, Star, Trophy, Settings,
   Calendar, ShieldCheck, TrendingUp, Activity,
   ArrowDownLeft, ArrowUpRight, Lock, ChevronRight,
-  BarChart2, Percent,
+  BarChart2, Percent, Camera, X, Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { api } from '@/lib/apiClient';
 import { userDisplayLabel, addressInitials, shortAddress } from '@/lib/utils';
 
 function fmtDate(iso?: string) {
@@ -28,13 +29,14 @@ function fmtUSDT(n: number): string {
 }
 
 export function OverviewPage() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [, navigate] = useLocation();
   const { balance, bonusBalance } = useWallet();
   const { bets } = useBetHistory();
   const ref = useReferral();
   const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const wonBets      = bets.filter(b => b.status === 'won' || b.status === 'settled').length;
   const openBets     = bets.filter(b => !b.status || b.status === 'open' || b.status === 'pending').length;
@@ -44,12 +46,49 @@ export function OverviewPage() {
   const displayLabel = userDisplayLabel(user);
   const initials     = addressInitials(displayLabel);
 
-  function handleCopyRef() {
-    if (!user?.referralCode) return;
-    navigator.clipboard.writeText(user.referralCode).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ title: 'Referral code copied!' });
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    if (!['image/webp', 'image/png'].includes(file.type)) {
+      toast({ title: 'Invalid format', description: 'Only PNG and WebP images are allowed.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 100 * 1024) {
+      toast({ title: 'File too large', description: 'Maximum allowed size is 100 KB.', variant: 'destructive' });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const { avatar } = await api.put<{ avatar: string }>('/auth/avatar', { avatar: dataUrl });
+      updateUser({ avatar });
+      toast({ title: 'Profile picture updated!' });
+    } catch {
+      toast({ title: 'Upload failed', description: 'Please try again.', variant: 'destructive' });
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setAvatarUploading(true);
+    try {
+      await api.delete('/auth/avatar');
+      updateUser({ avatar: null });
+      toast({ title: 'Profile picture removed.' });
+    } catch {
+      toast({ title: 'Failed to remove picture.', variant: 'destructive' });
+    } finally {
+      setAvatarUploading(false);
+    }
   }
 
   const STATS = [
@@ -91,13 +130,42 @@ export function OverviewPage() {
           style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%)' }} />
 
         <div className="relative p-4">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/webp,image/png"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
+
           <div className="flex items-center gap-3.5">
             {/* Avatar */}
-            <div className="relative shrink-0">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#00DFA9]/25 to-[#38BDF8]/15 border-2 border-[#00DFA9]/45 flex items-center justify-center"
+            <div className="relative shrink-0 group">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br from-[#00DFA9]/25 to-[#38BDF8]/15 border-2 border-[#00DFA9]/45 flex items-center justify-center"
                 style={{ boxShadow: '0 0 20px rgba(0,223,169,0.18)' }}>
-                <span className="text-[22px] font-black text-[#00DFA9]">{initials}</span>
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[22px] font-black text-[#00DFA9]">{initials}</span>
+                )}
+                {avatarUploading && (
+                  <div className="absolute inset-0 bg-[#0B0F14]/70 flex items-center justify-center rounded-2xl">
+                    <Loader2 className="h-5 w-5 text-[#00DFA9] animate-spin" />
+                  </div>
+                )}
               </div>
+              {/* Camera overlay button */}
+              {!avatarUploading && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Change profile picture"
+                  className="absolute inset-0 rounded-2xl bg-[#0B0F14]/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <Camera className="h-5 w-5 text-white" />
+                </button>
+              )}
+              {/* KYC badge */}
               <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#0B0F14]"
                 style={{ background: user?.kycStatus === 'verified' ? '#00DFA9' : '#475569' }}>
                 <ShieldCheck className="h-2.5 w-2.5 text-[#0B0F14]" />
@@ -125,6 +193,27 @@ export function OverviewPage() {
                     <Calendar className="h-2.5 w-2.5 shrink-0" />
                     {fmtDate(user.createdAt as string)}
                   </span>
+                )}
+              </div>
+              {/* Avatar action buttons */}
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="flex items-center gap-1 text-[9px] font-semibold text-[#38BDF8] hover:text-[#38BDF8]/80 transition-colors disabled:opacity-40 cursor-pointer"
+                >
+                  <Camera className="h-2.5 w-2.5" />
+                  {user?.avatar ? 'Change photo' : 'Add photo'}
+                </button>
+                {user?.avatar && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    disabled={avatarUploading}
+                    className="flex items-center gap-1 text-[9px] font-semibold text-[#EF4444]/70 hover:text-[#EF4444] transition-colors disabled:opacity-40 cursor-pointer"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                    Remove
+                  </button>
                 )}
               </div>
             </div>

@@ -12,6 +12,7 @@ export interface AuthUser {
   referralCode: string | null;
   createdAt?: string;
   kycStatus?: string;
+  avatar?: string | null;
 }
 
 interface AuthState {

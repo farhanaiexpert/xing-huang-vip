@@ -596,6 +596,15 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v32 skipped");
   }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT
+    `);
+    logger.info("DB migration v33 applied (users.avatar)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v33 skipped");
+  }
 }
 
 runMigrations().then(() => {
