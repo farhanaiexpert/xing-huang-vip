@@ -705,17 +705,21 @@ runMigrations().then(() => {
     }
   }
 
-  cron.schedule("*/5 * * * *", async () => {
-    const now = Date.now();
-    if (now - lastOddsRefreshAt < nextIntervalMs) return;
-    runOddsBatch().catch((err) => logger.error({ err }, "Odds refresh cron: unhandled error"));
-  });
-  logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron started (every 55-65 minutes — totals for all sports, 1h active TTL, 6h empty TTL, smart skip)");
+  if (process.env.ODDS_CRON_DISABLED === "1") {
+    logger.warn("Odds refresh cron DISABLED (ODDS_CRON_DISABLED=1) — no automatic odds fetches");
+  } else {
+    cron.schedule("*/5 * * * *", async () => {
+      const now = Date.now();
+      if (now - lastOddsRefreshAt < nextIntervalMs) return;
+      runOddsBatch().catch((err) => logger.error({ err }, "Odds refresh cron: unhandled error"));
+    });
+    logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length }, "Odds refresh cron started (every 55-65 minutes — totals for all sports, 1h active TTL, 6h empty TTL, smart skip)");
 
-  // ── Warm the cache immediately on startup (non-blocking) ─────────────────
-  setImmediate(() => {
-    runOddsBatch().catch((err) => logger.error({ err }, "Startup odds warm: unhandled error"));
-  });
+    // ── Warm the cache immediately on startup (non-blocking) ───────────────
+    setImmediate(() => {
+      runOddsBatch().catch((err) => logger.error({ err }, "Startup odds warm: unhandled error"));
+    });
+  }
 
   // ── BetsAPI cron: refresh upcoming events every 60 minutes ───────────────
   // Optimisations vs old 30 min cycle:
