@@ -99,6 +99,7 @@ export function AccountLayout() {
 
   const displayLabel = user ? userDisplayLabel(user) : 'Guest';
   const initials     = user ? addressInitials(displayLabel) : 'G';
+  const avatarSrc    = user ? (user.avatar ?? null) : (localStorage.getItem('guest_avatar') ?? null);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -134,8 +135,11 @@ export function AccountLayout() {
           style={{ borderBottomColor: menuOpen ? 'transparent' : undefined }}
         >
           {/* Avatar */}
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0">
-            <span className="text-[9px] font-black text-[#00DFA9]">{initials}</span>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0 overflow-hidden">
+            {avatarSrc
+              ? <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
+              : <span className="text-[9px] font-black text-[#00DFA9]">{initials}</span>
+            }
           </div>
 
           {/* Active section info */}
@@ -249,8 +253,11 @@ export function AccountLayout() {
             {/* Avatar card */}
             <div className="rounded-2xl bg-[#0E1520] border border-white/[0.07] p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0">
-                  <span className="text-[15px] font-black text-[#00DFA9]">{initials}</span>
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#00DFA9]/20 to-[#38BDF8]/10 border border-[#00DFA9]/30 flex items-center justify-center shrink-0 overflow-hidden">
+                  {avatarSrc
+                    ? <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
+                    : <span className="text-[15px] font-black text-[#00DFA9]">{initials}</span>
+                  }
                 </div>
                 <div className="min-w-0">
                   <p className="text-[13px] font-bold text-[#F8FAFC] truncate">{displayLabel}</p>
