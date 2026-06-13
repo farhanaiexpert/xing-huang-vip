@@ -5,7 +5,9 @@ import { z } from "zod";
 import { verifyMessage, isAddress, getAddress } from "viem";
 import { randomBytes, verify as cryptoVerify, createPublicKey, createHash } from "crypto";
 import { db, usersTable, walletsTable, sessionsTable, referralsTable, selfExclusionsTable, noncesTable, riskFlagsTable } from "@workspace/db";
-import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken } from "../lib/auth.js";
+import { signAccessToken, signRefreshToken, refreshTokenExpiresAt, verifyToken, signTotpChallengeToken, verifyTotpChallengeToken } from "../lib/auth.js";
+import speakeasy from "speakeasy";
+import QRCode from "qrcode";
 import { authenticate } from "../middleware/authenticate.js";
 import { isTronAddress, verifyTronSignature } from "../lib/tronUtils.js";
 
@@ -1318,6 +1320,14 @@ router.post("/auth/admin/login", async (req, res): Promise<void> => {
   }
 
   const payload = { userId: user.id, role: user.role };
+
+  // If TOTP is enabled, issue a short-lived challenge token instead
+  if (user.totpSecret) {
+    const totpToken = signTotpChallengeToken(payload);
+    res.json({ requiresTotp: true, totpToken });
+    return;
+  }
+
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
   await db.insert(sessionsTable).values({
@@ -1331,6 +1341,129 @@ router.post("/auth/admin/login", async (req, res): Promise<void> => {
     refreshToken,
     user: { id: user.id, email: user.email, username: user.username, role: user.role, referralCode: user.referralCode },
   });
+});
+
+// ── TOTP: complete login challenge ────────────────────────────────────────────
+router.post("/auth/admin/totp/challenge", async (req, res): Promise<void> => {
+  const { totpToken, code } = req.body as { totpToken?: string; code?: string };
+  if (!totpToken || !code) {
+    res.status(400).json({ error: "totpToken and code are required" });
+    return;
+  }
+
+  let payload: ReturnType<typeof verifyTotpChallengeToken>;
+  try {
+    payload = verifyTotpChallengeToken(totpToken);
+  } catch {
+    res.status(401).json({ error: "Challenge token expired or invalid — please sign in again" });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.userId)).limit(1);
+  if (!user?.totpSecret) {
+    res.status(401).json({ error: "Invalid session" });
+    return;
+  }
+
+  const isValid = speakeasy.totp.verify({ secret: user.totpSecret, encoding: "base32", token: code, window: 1 });
+  if (!isValid) {
+    res.status(401).json({ error: "Incorrect code — please try again" });
+    return;
+  }
+
+  const accessToken = signAccessToken({ userId: user.id, role: user.role });
+  const refreshToken = signRefreshToken({ userId: user.id, role: user.role });
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    refreshToken,
+    expiresAt: refreshTokenExpiresAt(),
+  });
+
+  res.json({
+    accessToken,
+    refreshToken,
+    user: { id: user.id, email: user.email, username: user.username, role: user.role, referralCode: user.referralCode },
+  });
+});
+
+// ── TOTP: generate setup QR (does NOT save — returns pending secret) ──────────
+router.post("/auth/admin/totp/setup", authenticate, async (req, res): Promise<void> => {
+  const userId = (req as unknown as { user: { userId: number; role: string } }).user.userId;
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user || !["admin", "super_admin"].includes(user.role)) {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+
+  const issuer = "Xing Huang Admin";
+  const accountName = user.email ?? user.username ?? `admin-${user.id}`;
+  const generated = speakeasy.generateSecret({ name: `${issuer}:${accountName}`, length: 20 });
+  const secret = generated.base32;
+  const otpAuthUrl = generated.otpauth_url!;
+  const qrDataUri = await QRCode.toDataURL(otpAuthUrl);
+
+  res.json({ secret, qrDataUri });
+});
+
+// ── TOTP: confirm setup (verify first code, then save secret) ─────────────────
+router.post("/auth/admin/totp/confirm", authenticate, async (req, res): Promise<void> => {
+  const userId = (req as unknown as { user: { userId: number; role: string } }).user.userId;
+  const { secret, code } = req.body as { secret?: string; code?: string };
+  if (!secret || !code) {
+    res.status(400).json({ error: "secret and code are required" });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user || !["admin", "super_admin"].includes(user.role)) {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+
+  const isValid = speakeasy.totp.verify({ secret, encoding: "base32", token: code, window: 1 });
+  if (!isValid) {
+    res.status(400).json({ error: "Code is incorrect or expired — scan the QR code again and try a fresh code" });
+    return;
+  }
+
+  await db.update(usersTable).set({ totpSecret: secret }).where(eq(usersTable.id, userId));
+  res.json({ success: true });
+});
+
+// ── TOTP: remove 2FA (requires current valid code) ───────────────────────────
+router.post("/auth/admin/totp/remove", authenticate, async (req, res): Promise<void> => {
+  const userId = (req as unknown as { user: { userId: number; role: string } }).user.userId;
+  const { code } = req.body as { code?: string };
+  if (!code) {
+    res.status(400).json({ error: "code is required" });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user || !["admin", "super_admin"].includes(user.role)) {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  if (!user.totpSecret) {
+    res.status(400).json({ error: "2FA is not enabled" });
+    return;
+  }
+
+  const isValid = speakeasy.totp.verify({ secret: user.totpSecret, encoding: "base32", token: code, window: 1 });
+  if (!isValid) {
+    res.status(401).json({ error: "Incorrect code" });
+    return;
+  }
+
+  await db.update(usersTable).set({ totpSecret: null }).where(eq(usersTable.id, userId));
+  res.json({ success: true });
+});
+
+// ── TOTP: check status (is 2FA enabled for this admin?) ───────────────────────
+router.get("/auth/admin/totp/status", authenticate, async (req, res): Promise<void> => {
+  const userId = (req as unknown as { user: { userId: number; role: string } }).user.userId;
+  const [user] = await db.select({ totpSecret: usersTable.totpSecret }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  res.json({ enabled: !!user?.totpSecret });
 });
 
 export default router;

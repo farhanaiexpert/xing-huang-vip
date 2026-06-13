@@ -605,6 +605,15 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v33 skipped");
   }
+
+  try {
+    await db.execute(sql`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT
+    `);
+    logger.info("DB migration v34 applied (users.totp_secret)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v34 skipped");
+  }
 }
 
 runMigrations().then(() => {
