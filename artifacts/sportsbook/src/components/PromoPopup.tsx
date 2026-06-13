@@ -8,8 +8,9 @@ import { api } from '../lib/apiClient';
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imgi_15_Promo-Banner-2.webp';
 const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ronaldo11.webp';
 
-const SNOOZE_KEY = 'promo_snoozed_until';
-const SNOOZE_MS  = 3 * 60 * 60 * 1000; // 3 hours
+const SNOOZE_KEY          = 'promo_snoozed_until';
+const SNOOZE_NOT_CLAIMED  = 30 * 60 * 1000;        // 30 minutes
+const SNOOZE_CLAIMED      = 12 * 60 * 60 * 1000;   // 12 hours
 
 const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
   id: i,
@@ -149,8 +150,8 @@ export function PromoPopup() {
 
   function close() {
     if (showCongrats) return;
-    // Snooze for 3 hours on any manual dismiss (X or Maybe Later)
-    localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_MS));
+    const snooze = alreadyClaimed ? SNOOZE_CLAIMED : SNOOZE_NOT_CLAIMED;
+    localStorage.setItem(SNOOZE_KEY, String(Date.now() + snooze));
     setClosing(true);
     setTimeout(() => {
       setVisible(false);
