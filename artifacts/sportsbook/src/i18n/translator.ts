@@ -339,6 +339,13 @@ export function startChineseTranslation(): void {
   scheduleEnrich(1500);
 }
 
+// Synchronously translate the current DOM. Call this right after the initial
+// React render (before the browser paints) so Chinese shows on first paint with
+// no English flash. Safe to call repeatedly.
+export function applyChineseTranslations(): void {
+  walkAndApply();
+}
+
 export function stopChineseTranslation(): void {
   mo?.disconnect();
   mo = null;
