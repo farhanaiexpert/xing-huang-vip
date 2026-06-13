@@ -50,7 +50,7 @@ function BetsTab({ userId }: { userId: number }) {
 
   const settleMut = useMutation({
     mutationFn: ({ id, result }: { id: number; result: string }) =>
-      api.patch(`/admin/bets/${id}/settle`, { status: result }),
+      api.patch(`/admin/bets/${id}`, { status: result }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile-bets", userId] }); toast.success("Bet settled"); },
     onError: (e: Error) => toast.error(e.message),
   });
