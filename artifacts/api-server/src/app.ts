@@ -179,7 +179,7 @@ app.get(`${BASE}/init-admin`, async (req, res): Promise<void> => {
     .from(usersTable).where(eq(usersTable.email, ADMIN_EMAIL)).limit(1);
   if (existing.length > 0) {
     await db.update(usersTable)
-      .set({ passwordHash: hash, role: "super_admin", username: "superadmin" })
+      .set({ passwordHash: hash, role: "super_admin" })
       .where(eq(usersTable.email, ADMIN_EMAIL));
   } else {
     await db.insert(usersTable).values({
