@@ -180,7 +180,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const storedUser = getStoredUser();
 
   const [currentLang, setCurrentLang] = useState<string>(() => {
-    try { return localStorage.getItem(LANG_STORAGE_KEY) || 'en'; } catch { return 'en'; }
+    try { return localStorage.getItem(LANG_STORAGE_KEY) || 'zh-CN'; } catch { return 'zh-CN'; }
   });
   const [showLang, setShowLang] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -191,6 +191,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setShowLang(false);
     triggerTranslate(code);
   }
+
+  useEffect(() => {
+    const lang = currentLang;
+    if (lang !== 'en') {
+      const delay = setTimeout(() => triggerTranslate(lang), 800);
+      return () => clearTimeout(delay);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
