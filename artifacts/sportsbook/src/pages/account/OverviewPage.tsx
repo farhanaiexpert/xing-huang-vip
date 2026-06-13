@@ -130,21 +130,6 @@ export function OverviewPage() {
             </div>
           </div>
 
-          {/* Referral code strip */}
-          {user?.referralCode && (
-            <div className="mt-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 border border-[#00DFA9]/20 bg-[#00DFA9]/5">
-              <div className="min-w-0">
-                <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#64748B] leading-none mb-1">Referral Code</p>
-                <p className="text-[15px] font-black text-[#00DFA9] font-mono tracking-[0.18em] leading-none">{user.referralCode}</p>
-              </div>
-              <button
-                onClick={handleCopyRef}
-                className="shrink-0 w-8 h-8 rounded-lg bg-[#00DFA9]/12 border border-[#00DFA9]/25 flex items-center justify-center hover:bg-[#00DFA9]/20 transition-colors active:scale-95 cursor-pointer"
-              >
-                {copied ? <Check className="h-3.5 w-3.5 text-[#00DFA9]" /> : <Copy className="h-3.5 w-3.5 text-[#00DFA9]/70" />}
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
