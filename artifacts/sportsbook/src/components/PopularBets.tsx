@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { SportName } from './SportName';
-import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { OddsButton } from './OddsButton';
 import { Flame, TrendingUp, Clock } from 'lucide-react';
 import { useOddsData } from '../hooks/useOddsData';
@@ -167,7 +166,7 @@ function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
 
   return (
     <div
-      className="w-[178px] sm:w-[230px] shrink-0 flex flex-col rounded-xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5"
+      className="w-full flex flex-col rounded-xl overflow-hidden border transition-all duration-200 hover:-translate-y-0.5"
       style={{ background: '#0D1320', borderColor: 'rgba(37,50,65,0.6)' }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
@@ -384,7 +383,7 @@ export function PopularBets() {
     return allLeagues.filter(l => getSportCategory(l) === activeTab);
   }, [allLeagues, activeTab]);
 
-  const bets = useMemo(() => buildPopularBets(filteredLeagues, 10), [filteredLeagues]);
+  const bets = useMemo(() => buildPopularBets(filteredLeagues, 120), [filteredLeagues]);
 
   if (matchCountBySport.all === 0) return null;
 
@@ -417,16 +416,13 @@ export function PopularBets() {
         </div>
       )}
 
-      {/* Cards carousel */}
+      {/* Cards grid — top to bottom, no carousel */}
       {bets.length > 0 ? (
-        <ScrollArea className="w-full" showFade>
-          <div className="flex gap-2.5 sm:gap-3 w-max pb-2">
-            {bets.map((bet, i) => (
-              <PopularBetCard key={bet.id} bet={bet} rank={i} />
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
+          {bets.map((bet, i) => (
+            <PopularBetCard key={bet.id} bet={bet} rank={i} />
+          ))}
+        </div>
       ) : (
         <div className="flex items-center gap-2 px-3 py-4 rounded-xl bg-[#0D1320] border border-[#253241]/50">
           <span className="text-[#475569] text-[12px]">No matches available for this sport yet.</span>

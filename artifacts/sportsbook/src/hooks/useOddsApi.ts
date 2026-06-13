@@ -17,7 +17,7 @@ import { fetchBetsApiUpcoming, type BetsApiEvent, type BetsApiSportMeta } from '
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v10'; // v10 — force re-fetch to pick up enriched richMarkets for More Markets section
+const STORAGE_KEY  = 'oddschain_v11'; // v11 — force re-fetch for larger BetsAPI per-league slice (Popular Bets grid)
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
 const CACHE_TTL_MS = 35 * 60 * 1000;
 
@@ -179,7 +179,7 @@ function normaliseBetsApiLeagues(
           const ts = parseInt(ev.time, 10);
           return !isNaN(ts) && ts * 1000 > now;
         })
-        .slice(0, 10)
+        .slice(0, 40)
         .map((ev): Match => {
           const ts       = parseInt(ev.time, 10);
           const real     = ev.prematchOdds;
