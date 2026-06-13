@@ -72,7 +72,7 @@ const IMG_BASE: React.CSSProperties = {
   objectFit: 'contain',
   objectPosition: 'bottom center',
   display: 'block',
-  transform: 'scale(1.044)',
+  transform: 'scale(1.0)',
   transformOrigin: 'bottom center',
   transition: 'opacity 1.4s cubic-bezier(0.4,0,0.2,1)',
 };
@@ -280,12 +280,12 @@ export function PromoPopup() {
         .promo-noscroll::-webkit-scrollbar { display:none }
         .promo-noscroll { -ms-overflow-style:none; scrollbar-width:none }
         /* Mobile: fixed image section height */
-        .promo-img-wrap { height:190px; min-height:190px; }
-        @media(max-width:767px){ .promo-celeb-img { top:20px!important; height:calc(100% - 20px)!important } }
+        .promo-img-wrap { height:152px; min-height:152px; }
+        @media(max-width:767px){ .promo-celeb-img { top:16px!important; height:calc(100% - 16px)!important } }
         /* Desktop: image section stretches full modal height, athlete fills the column */
         @media(min-width:768px){
-          .promo-img-wrap { height:auto!important; min-height:480px!important; align-self:stretch; }
-          .promo-celeb-img { object-fit:cover!important; object-position:top center!important; transform:scale(1.06)!important; transform-origin:top center!important; top:0!important; height:100%!important; }
+          .promo-img-wrap { height:auto!important; min-height:384px!important; align-self:stretch; }
+          .promo-celeb-img { object-fit:cover!important; object-position:top center!important; transform:scale(1.0)!important; transform-origin:top center!important; top:0!important; height:100%!important; }
         }
       `}</style>
 
@@ -426,7 +426,7 @@ export function PromoPopup() {
 
           {/* ── IMAGE SECTION ── */}
           <div
-            className="promo-img-wrap relative shrink-0 w-full md:w-[44%] overflow-hidden"
+            className="promo-img-wrap relative shrink-0 w-full md:w-[35%] overflow-hidden"
             style={{ background: DOT_BG }}
             onMouseEnter={() => { setHovered(true); setShowAlt(true); }}
             onMouseLeave={() => { setHovered(false); setShowAlt(false); }}
