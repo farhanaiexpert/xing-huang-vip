@@ -1,7 +1,8 @@
-import staticDict from "./zh-CN.json";
+import { zh } from "./zh";
+import { API_BASE } from "../lib/apiBase";
 
-const STATIC: Record<string, string> = staticDict;
-const CACHE_KEY = "admin_zh_deepl_v1";
+const STATIC: Record<string, string> = zh;
+const CACHE_KEY = "sportsbook_zh_deepl_v1";
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const SKIP_TAGS = new Set([
@@ -70,26 +71,33 @@ function collectUntranslated(): string[] {
     const t = n as Text;
     if (shouldSkip(t)) continue;
     const trimmed = (t.textContent ?? "").trim();
-    if (trimmed && !dict[trimmed] && trimmed.length < 200) {
+    // Skip pure numbers, currency, very short tokens, and overly long strings
+    if (
+      trimmed &&
+      !dict[trimmed] &&
+      trimmed.length >= 2 &&
+      trimmed.length <= 200 &&
+      /[a-zA-Z]/.test(trimmed) &&
+      !/^[\d.,:%+\-$/\s]+$/.test(trimmed)
+    ) {
       missing.add(trimmed);
     }
   }
   return [...missing];
 }
 
-// ── DeepL enrichment (server-side proxy) ─────────────────────────────────
+// ── DeepL enrichment (public server proxy) ─────────────────────────────────
 
 async function enrichFromDeepL(strings: string[]): Promise<void> {
   if (!strings.length) return;
 
-  // Split into chunks of 50 (DeepL accepts up to 50 texts per request)
   const CHUNK = 50;
   const newEntries: Record<string, string> = {};
 
   for (let i = 0; i < strings.length; i += CHUNK) {
     const chunk = strings.slice(i, i + CHUNK);
     try {
-      const resp = await fetch(`/api/translate`, {
+      const resp = await fetch(`${API_BASE}/api/translate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texts: chunk, targetLang: "ZH" }),
@@ -107,7 +115,6 @@ async function enrichFromDeepL(strings: string[]): Promise<void> {
   if (Object.keys(newEntries).length) {
     dict = { ...dict, ...newEntries };
     saveCache(dict);
-    // Re-apply with fresh dictionary
     walkAndApply();
   }
 }
@@ -115,6 +122,7 @@ async function enrichFromDeepL(strings: string[]): Promise<void> {
 // ── MutationObserver ───────────────────────────────────────────────────────
 
 let mo: MutationObserver | null = null;
+let enrichTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function startChineseTranslation(): void {
   // 1. Merge cached DeepL translations (if any)
@@ -124,30 +132,34 @@ export function startChineseTranslation(): void {
   // 2. Apply immediately
   walkAndApply();
 
-  // 3. Observe DOM mutations
+  // 3. Observe DOM mutations (re-applies on SPA navigation / async content)
   mo = new MutationObserver(() => {
     mo!.disconnect();
     walkAndApply();
     mo!.observe(document.body, { childList: true, subtree: true });
+
+    // Debounced enrichment: pick up newly-rendered untranslated strings
+    if (enrichTimer) clearTimeout(enrichTimer);
+    enrichTimer = setTimeout(() => {
+      const missing = collectUntranslated();
+      if (missing.length) enrichFromDeepL(missing);
+    }, 1200);
   });
   mo.observe(document.body, { childList: true, subtree: true });
 
-  // 4. After a short delay, collect untranslated strings and hit DeepL
-  //    (only if we have no cache yet — avoids repeated API calls)
-  if (!cached) {
-    setTimeout(() => {
-      const missing = collectUntranslated();
-      if (missing.length) enrichFromDeepL(missing);
-    }, 1500);
-  }
+  // 4. Initial enrichment pass for whatever the static dict missed
+  setTimeout(() => {
+    const missing = collectUntranslated();
+    if (missing.length) enrichFromDeepL(missing);
+  }, 1500);
 }
 
 export function stopChineseTranslation(): void {
   mo?.disconnect();
   mo = null;
+  if (enrichTimer) { clearTimeout(enrichTimer); enrichTimer = null; }
 }
 
-// Expose for manual cache-busting (e.g. from browser console)
 export function clearTranslationCache(): void {
   try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
   dict = { ...STATIC };

@@ -22,7 +22,11 @@ const STORAGE_KEY = 'cupbett_lang';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<string>(() => {
-    try { return localStorage.getItem(STORAGE_KEY) || 'zh-CN'; } catch { return 'zh-CN'; }
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      // Only English + Chinese are supported; sanitize any stale value.
+      return stored === 'en' || stored === 'zh-CN' ? stored : 'zh-CN';
+    } catch { return 'zh-CN'; }
   });
 
   const setLang = useCallback((code: string) => {

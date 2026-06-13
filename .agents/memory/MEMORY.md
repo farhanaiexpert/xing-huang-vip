@@ -21,3 +21,4 @@
 - [TeamBadge sport fallback](teambadge-sport-fallback.md) — shared <TeamBadge> is the one source of team avatars; pass sportId (resolved via sportIconFor) so logo→flag→sport-emoji→initials never shows a broken img or bare initials when sport is known.
 - [Trending Now rail mix](trending-rail-mix.md) — homepage Trending Now blends BetsAPI (id betsapi_*) + Odds API events, Fisher–Yates shuffled with per-source top-up; cards clickable to /match/:id but odds container must stopPropagation on BOTH click AND keydown.
 - [VPS deployment config](vps-config.md) — path /var/www/xing-huang-vip, port 3000, nginx must use single location / block proxying to Express; admin routes missing = old build, fix: git pull + pnpm build + pm2 restart.
+- [DeepL DOM translator](deepl-dom-translator.md) — EN+ZH only, Google Translate fully removed; both apps DOM-walk + static dict + public POST /api/translate (DeepL); init in main.tsx before render; translate="no" survives.

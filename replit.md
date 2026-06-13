@@ -28,7 +28,7 @@ A premium frontend-only sportsbook dashboard built with React, Vite, and Tailwin
 - Backend: Express 5 API server + PostgreSQL database (odds cache, users, bets, wallet)
 - All wallet interactions are mocked (no real Web3)
 - Real match odds fetched via The Odds API (ODDS_API_KEY), cached in PostgreSQL odds_cache table; server cron refreshes every 25–35 min; client localStorage TTL 35 min
-- Google Translate used for multi-language support (no i18n library)
+- Translation: English + Chinese only. DeepL-backed DOM translator (no Google Translate, no i18n library). Static dictionary applied instantly via TreeWalker + MutationObserver, then uncovered strings enriched via DeepL (public POST /api/translate, DEEPL_API_KEY), cached in localStorage 7-day TTL. Sportsbook key cupbett_lang / sportsbook_zh_deepl_v1; admin key admin_lang / admin_zh_deepl_v1.
 
 ## Product
 

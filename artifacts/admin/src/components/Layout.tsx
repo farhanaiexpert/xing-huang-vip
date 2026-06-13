@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { clearToken, getStoredUser, api, PendingTotals, isTokenStored } from "@/lib/api";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { useQuery } from "@tanstack/react-query";
-import { startChineseTranslation, stopChineseTranslation } from "@/i18n/translator";
+import { stopChineseTranslation } from "@/i18n/translator";
 import {
   LayoutDashboard, Users, Receipt, CreditCard, Share2,
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
@@ -19,23 +19,6 @@ const LANGUAGES = [
 ];
 
 const LANG_STORAGE_KEY = 'admin_lang';
-
-function clearGoogleTranslateCookies() {
-  document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-  document.cookie = `googtrans=; path=/; domain=${location.hostname}; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
-}
-
-function triggerGoogleTranslate(langCode: string) {
-  const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
-  if (select) {
-    select.value = langCode;
-    select.dispatchEvent(new Event('change'));
-  } else {
-    document.cookie = `googtrans=/en/${langCode}; path=/`;
-    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${location.hostname}`;
-    window.location.reload();
-  }
-}
 
 function NavSections({
   sections,
@@ -167,47 +150,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const storedUser = getStoredUser();
 
   const [currentLang, setCurrentLang] = useState<string>(() => {
-    try { return localStorage.getItem(LANG_STORAGE_KEY) || 'zh-CN'; } catch { return 'zh-CN'; }
+    try {
+      const stored = localStorage.getItem(LANG_STORAGE_KEY);
+      // Only English + Chinese are supported; sanitize any stale value.
+      return stored === 'en' || stored === 'zh-CN' ? stored : 'zh-CN';
+    } catch { return 'zh-CN'; }
   });
   const [showLang, setShowLang] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
   function handleSelectLanguage(code: string) {
-    const prev = currentLang;
     setCurrentLang(code);
     try { localStorage.setItem(LANG_STORAGE_KEY, code); } catch { /* ignore */ }
     setShowLang(false);
-
-    if (code === 'en') {
-      stopChineseTranslation();
-      clearGoogleTranslateCookies();
-      window.location.reload();
-      return;
-    }
-
-    if (code === 'zh-CN') {
-      clearGoogleTranslateCookies();
-      window.location.reload();
-      return;
-    }
-
-    if (prev === 'zh-CN') {
-      stopChineseTranslation();
-      window.location.reload();
-      return;
-    }
-
-    triggerGoogleTranslate(code);
+    // The DeepL DOM translator is initialised at boot in main.tsx based on the
+    // stored language. Reload so the page renders cleanly in the chosen language
+    // (Chinese → translated, English → original).
+    stopChineseTranslation();
+    window.location.reload();
   }
 
   useEffect((): (() => void) | void => {
-    const lang = currentLang;
-    if (lang === 'zh-CN') {
+    if (currentLang === 'zh-CN') {
       return () => stopChineseTranslation();
-    }
-    if (lang !== 'en') {
-      const delay = setTimeout(() => triggerGoogleTranslate(lang), 800);
-      return () => clearTimeout(delay);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -229,7 +194,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
-  const activeLang = LANGUAGES.find(l => l.code === currentLang) ?? LANGUAGES[2];
+  const activeLang = LANGUAGES.find(l => l.code === currentLang) ?? LANGUAGES[0];
 
   const handleCountChange = useCallback((count: number) => {
     setPendingCount(count);

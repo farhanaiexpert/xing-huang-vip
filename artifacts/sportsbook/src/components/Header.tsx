@@ -44,45 +44,9 @@ function usePendingNppDeposit() {
 }
 
 const LANGUAGES = [
-  { code: 'ar',    label: 'Arabic',      native: 'العربية',    flag: '🇸🇦', short: 'AR' },
-  { code: 'zh-CN', label: 'Chinese',     native: '中文',        flag: '🇨🇳', short: 'ZH' },
-  { code: 'en',    label: 'English',     native: 'English',    flag: '🇬🇧', short: 'EN' },
-  { code: 'fr',    label: 'French',      native: 'Français',   flag: '🇫🇷', short: 'FR' },
-  { code: 'de',    label: 'German',      native: 'Deutsch',    flag: '🇩🇪', short: 'DE' },
-  { code: 'hi',    label: 'Hindi',       native: 'हिन्दी',      flag: '🇮🇳', short: 'HI' },
-  { code: 'ja',    label: 'Japanese',    native: '日本語',       flag: '🇯🇵', short: 'JP' },
-  { code: 'ko',    label: 'Korean',      native: '한국어',       flag: '🇰🇷', short: 'KO' },
-  { code: 'pt',    label: 'Portuguese',  native: 'Português',  flag: '🇧🇷', short: 'PT' },
-  { code: 'ru',    label: 'Russian',     native: 'Русский',    flag: '🇷🇺', short: 'RU' },
-  { code: 'es',    label: 'Spanish',     native: 'Español',    flag: '🇪🇸', short: 'ES' },
-  { code: 'th',    label: 'Thai',        native: 'ไทย',         flag: '🇹🇭', short: 'TH' },
-  { code: 'vi',    label: 'Vietnamese',  native: 'Tiếng Việt', flag: '🇻🇳', short: 'VI' },
+  { code: 'en',    label: 'English', native: 'English', flag: '🇬🇧', short: 'EN' },
+  { code: 'zh-CN', label: 'Chinese', native: '中文',     flag: '🇨🇳', short: 'ZH' },
 ];
-
-function triggerTranslate(langCode: string) {
-  if (langCode === 'en') {
-    // Restore original language
-    const restore = document.querySelector<HTMLAnchorElement>('.goog-te-banner-frame') ??
-      document.querySelector<HTMLAnchorElement>('a.VIpgJd-ZVi9od-ORHb-OEVmcd');
-    const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
-    if (select) { select.value = langCode; select.dispatchEvent(new Event('change')); }
-    // Also try the cookie method for resetting
-    document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    window.location.reload();
-    return;
-  }
-  const select = document.querySelector<HTMLSelectElement>('.goog-te-combo');
-  if (select) {
-    select.value = langCode;
-    select.dispatchEvent(new Event('change'));
-  } else {
-    // Widget not ready yet — set cookie and reload so Google picks it up
-    document.cookie = `googtrans=/en/${langCode}; path=/`;
-    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${location.hostname}`;
-    window.location.reload();
-  }
-}
 
 
 export function Header() {
@@ -121,18 +85,13 @@ export function Header() {
   const langRef   = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Auto-trigger Chinese on first visit (no saved language preference)
-  useEffect(() => {
-    const saved = localStorage.getItem('cupbett_lang');
-    if (!saved) {
-      triggerTranslate('zh-CN');
-    }
-  }, []);
-
   function handleSelectLanguage(code: string) {
     setLang(code);
     setShowLang(false);
-    triggerTranslate(code);
+    // The DeepL DOM translator is initialised at boot in main.tsx based on the
+    // stored language. Switching languages reloads so the page renders cleanly
+    // in the chosen language (Chinese → translated, English → original).
+    window.location.reload();
   }
 
   // Close dropdowns on outside click
