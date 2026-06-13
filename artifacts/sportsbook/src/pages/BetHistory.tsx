@@ -261,31 +261,21 @@ function StatCard({ label, value, sub, icon, color }: {
 
 function kickoffCountdown(kt: string): string | null {
   if (!kt) return null;
-  const [dayPart, timePart] = kt.split(', ');
-  if (!timePart) return null;
-  const [hStr, mStr] = timePart.split(':');
-  const h = parseInt(hStr, 10), m = parseInt(mStr, 10);
-  if (isNaN(h) || isNaN(m)) return null;
-  const now = new Date();
-  const target = new Date(now);
-  if (dayPart === 'Today') {
-    target.setHours(h, m, 0, 0);
-  } else if (dayPart === 'Tomorrow') {
-    target.setDate(target.getDate() + 1);
-    target.setHours(h, m, 0, 0);
-  } else {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const idx = days.indexOf(dayPart);
-    if (idx === -1) return null;
-    const diff = ((idx - now.getDay() + 7) % 7) || 7;
-    target.setDate(target.getDate() + diff);
-    target.setHours(h, m, 0, 0);
-  }
-  const diffMins = Math.round((target.getTime() - now.getTime()) / 60000);
+  const target = new Date(kt);
+  if (isNaN(target.getTime())) return null;
+  const diffMins = Math.round((target.getTime() - Date.now()) / 60000);
   if (diffMins <= 0) return null;
   if (diffMins < 60) return `Kicks off in ${diffMins}m`;
   const hrs = Math.floor(diffMins / 60), mins = diffMins % 60;
   return mins > 0 ? `Kicks off in ${hrs}h ${mins}m` : `Kicks off in ${hrs}h`;
+}
+
+function formatMatchDate(kt: string): string | null {
+  if (!kt) return null;
+  const d = new Date(kt);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    + ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -391,6 +381,15 @@ function BetCard({ bet }: { bet: PlacedBet }) {
           {mainSel.leagueName && (
             <p className="text-[10px] text-[#94A3B8]/50 mt-0.5"><SportName name={mainSel.leagueName} /></p>
           )}
+          {mainSel.kickoffTime && (() => {
+            const dateStr = formatMatchDate(mainSel.kickoffTime);
+            return dateStr ? (
+              <p className="text-[10px] text-[#38BDF8]/70 mt-1 flex items-center gap-1">
+                <Calendar className="h-2.5 w-2.5 shrink-0" />
+                {dateStr}
+              </p>
+            ) : null;
+          })()}
         </div>
 
         {/* Odds / Stake / Return pills */}
