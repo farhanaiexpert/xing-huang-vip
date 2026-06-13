@@ -14,19 +14,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const LANGUAGES = [
-  { code: 'ar',    label: 'Arabic',      native: 'العربية',    flag: '🇸🇦', short: 'AR' },
-  { code: 'zh-CN', label: 'Chinese',     native: '中文',        flag: '🇨🇳', short: 'ZH' },
-  { code: 'en',    label: 'English',     native: 'English',    flag: '🇬🇧', short: 'EN' },
-  { code: 'fr',    label: 'French',      native: 'Français',   flag: '🇫🇷', short: 'FR' },
-  { code: 'de',    label: 'German',      native: 'Deutsch',    flag: '🇩🇪', short: 'DE' },
-  { code: 'hi',    label: 'Hindi',       native: 'हिन्दी',      flag: '🇮🇳', short: 'HI' },
-  { code: 'ja',    label: 'Japanese',    native: '日本語',       flag: '🇯🇵', short: 'JP' },
-  { code: 'ko',    label: 'Korean',      native: '한국어',       flag: '🇰🇷', short: 'KO' },
-  { code: 'pt',    label: 'Portuguese',  native: 'Português',  flag: '🇧🇷', short: 'PT' },
-  { code: 'ru',    label: 'Russian',     native: 'Русский',    flag: '🇷🇺', short: 'RU' },
-  { code: 'es',    label: 'Spanish',     native: 'Español',    flag: '🇪🇸', short: 'ES' },
-  { code: 'th',    label: 'Thai',        native: 'ไทย',         flag: '🇹🇭', short: 'TH' },
-  { code: 'vi',    label: 'Vietnamese',  native: 'Tiếng Việt', flag: '🇻🇳', short: 'VI' },
+  { code: 'zh-CN', label: 'Chinese', native: '中文',   flag: '🇨🇳', short: 'ZH' },
+  { code: 'en',    label: 'English', native: 'English', flag: '🇬🇧', short: 'EN' },
 ];
 
 const LANG_STORAGE_KEY = 'admin_lang';
