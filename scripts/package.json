@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "seed:super-admin": "tsx ./src/seed-super-admin.ts",
     "test:tron": "tsx ./src/test-tron-utils.ts",
+    "bake:translations": "tsx ./src/bake-translations.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -18,6 +19,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "typescript": "~5.9.3"
   }
 }
