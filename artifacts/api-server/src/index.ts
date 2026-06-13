@@ -745,6 +745,27 @@ runMigrations().then(() => {
     } catch { return Infinity; }
   }
 
+  /**
+   * Returns true if the cached events for this sport contain at least one
+   * match starting within the next 2 hours. Used to lower the skip threshold
+   * from 25 min → 15 min so odds are re-enriched closer to kickoff.
+   */
+  async function sportHasImminentEvents(cacheKey: string): Promise<boolean> {
+    try {
+      const result = await db.execute(sql`
+        SELECT 1
+        FROM betsapi_cache,
+             jsonb_array_elements(data) AS ev
+        WHERE cache_key = ${cacheKey}
+          AND (ev->>'time')::bigint
+              BETWEEN EXTRACT(EPOCH FROM NOW())
+                  AND EXTRACT(EPOCH FROM NOW()) + 7200
+        LIMIT 1
+      `);
+      return result.rows.length > 0;
+    } catch { return false; }
+  }
+
   async function runBetsApiBatch() {
     if (!BETSAPI_KEY || isBetsApiRefreshing) return;
     isBetsApiRefreshing = true;
@@ -758,11 +779,15 @@ runMigrations().then(() => {
         const meta = BETSAPI_SPORT_MAP[sportId];
         if (!meta) continue;
 
-        // Skip if this sport was fetched less than 25 min ago.
-        // Uses fetched_at age (not expires_at) so the refresh frequency is
+        // Skip if this sport was fetched recently enough.
+        // Threshold: 15 min when any event kicks off within 2 hours (odds shift
+        // most dramatically close to kickoff), 25 min otherwise.
+        // Uses fetched_at age (not expires_at) so refresh frequency is
         // independent of the 12-hour data-persistence TTL.
         const age = await getBetsApiCacheAgeMs(String(sportId));
-        if (age < 25 * 60 * 1000) { skipped++; continue; }
+        const imminent = await sportHasImminentEvents(String(sportId));
+        const skipThresholdMs = imminent ? 15 * 60 * 1000 : 25 * 60 * 1000;
+        if (age < skipThresholdMs) { skipped++; continue; }
 
         const events = await fetchBetsApiUpcoming(sportId);
 
@@ -871,7 +896,7 @@ runMigrations().then(() => {
       if (isOddsRefreshing || oddsBatchAge < 2 * 60 * 1000) return;
       runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
     });
-    logger.info("BetsAPI cron started (every 30 minutes — age-based skip, 12h data TTL, top-30 enrichment, empty preserves existing)");
+    logger.info("BetsAPI cron started (every 30 min normal / 15 min when imminent events within 2h — 12h data TTL, top-30 enrichment, empty preserves existing)");
 
     // Warm BetsAPI cache on startup — 2-minute delay after Odds API warm starts
     setTimeout(() => {
