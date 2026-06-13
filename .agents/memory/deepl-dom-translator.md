@@ -18,3 +18,8 @@ Both apps (sportsbook + admin) translate to Chinese via a client-side DOM-walkin
 **Why public, not /admin/translate:** an earlier admin-only `/admin/translate` (requireAdmin) was removed — public pages have no token, and admin 2FA blocks curl testing anyway.
 
 **Reuse note:** sportsbook reuses its existing `src/i18n/zh.ts` (English→Chinese map) as the static dict; admin has its own `zh-CN.json`.
+
+**Number-templating + protected-term masking (both translators, kept in lockstep):**
+- Strings with digits collapse to one cache key: digits are masked to `\u0000idx\u0000` and mapped back. `makeTemplatePair` MUST map each translated number to the next *unused* source occurrence of that value (per-index `used[]`), NOT `indexOf` — `indexOf` collides on repeated numbers ("10 ... 10") and caches a corrupt template that mis-renders later instances with different values.
+- Allowlisted tokens (tickers/codes/brand/payment-provider names in `PROTECTED`) are masked with sentinel `@@P{idx}@@` before the DeepL POST and restored after, so they stay verbatim even when embedded in a phrase. **Empirical DeepL behavior (not derivable from code):** `@@N@@` and `<x>N</x>` survive verbatim; smart/straight quotes get reformatted (don't use quotes as sentinels). Restore is fail-closed: if the sentinel count is wrong or any `@@P\d+@@` remnant survives, skip caching that entry → string stays English rather than rendering mangled.
+- **Why:** any change to how templates/values are stored must bump `CACHE_KEY` (`*_zh_deepl_vN`) in lockstep or stale localStorage entries serve the old/corrupt shape.

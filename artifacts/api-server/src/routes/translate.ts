@@ -9,7 +9,7 @@ const ALLOWED_TARGET_LANGS = new Set(["ZH"]);
 // Public endpoint proxying a paid upstream — throttle hard per IP to cap cost.
 const translateLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many translation requests — please slow down" },
