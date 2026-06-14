@@ -1305,6 +1305,8 @@ function SiteFooter() {
               {" "}
               · 18+ · Gamble responsibly.
             </span>
+            {" · "}
+            Latest Version
           </p>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             {["18+", "BeGambleAware", "GamCare", "Gamble Responsibly"].map(
