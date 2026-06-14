@@ -424,6 +424,7 @@ router.get("/odds/all", async (_req, res): Promise<void> => {
 //    served with `stale: true` so the section never goes blank.
 const WC_SPORT_KEY      = "soccer_fifa_world_cup";
 const WC_FRESH_TTL_MS   = 2 * 60 * 1000;          // near-real-time window
+const WC_STALE_BACKOFF_MS = 30 * 1000;            // outage backoff — re-probe upstream at most this often
 const WC_INPLAY_WINDOW_MS = 3.5 * 60 * 60 * 1000; // a match can be in-play up to ~3.5h
 
 interface WcPayload {
@@ -530,18 +531,23 @@ router.get("/odds/worldcup", async (_req, res): Promise<void> => {
       wcInFlight.finally(() => { wcInFlight = null; });
     }
     const payload = await wcInFlight;
-    // Only cache successful (non-stale) payloads against the fresh window.
-    if (!payload.stale) {
-      wcMemCache = { payload, expiresAt: Date.now() + WC_FRESH_TTL_MS };
-    }
+    // Fresh success → hold for the full near-real-time window.
+    // Stale fallback → memoize briefly so an upstream outage doesn't re-trigger a
+    // fresh upstream fetch on every request (credit-safe backoff); we re-probe
+    // once the short window lapses.
+    wcMemCache = {
+      payload,
+      expiresAt: Date.now() + (payload.stale ? WC_STALE_BACKOFF_MS : WC_FRESH_TTL_MS),
+    };
     res.json(payload);
   } catch (err) {
     logger.warn({ err }, "WC odds: build failed");
-    if (wcMemCache) {
-      res.json({ ...wcMemCache.payload, stale: true });
-      return;
-    }
-    res.json({ events: [], scores: [], updatedAt: new Date().toISOString(), stale: true });
+    const fallback: WcPayload = wcMemCache
+      ? { ...wcMemCache.payload, stale: true }
+      : { events: [], scores: [], updatedAt: new Date().toISOString(), stale: true };
+    // Brief backoff so a hard failure doesn't rebuild (and re-hit upstream/DB) on every request.
+    wcMemCache = { payload: fallback, expiresAt: Date.now() + WC_STALE_BACKOFF_MS };
+    res.json(fallback);
   }
 });
 

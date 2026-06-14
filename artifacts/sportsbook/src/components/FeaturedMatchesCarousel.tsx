@@ -30,6 +30,7 @@ import {
   marketPillsFor,
   marketScoreFor,
   isBetsApiMatch,
+  orderFeaturedForDisplay,
   type FeaturedEntry,
 } from '../lib/featuredMarkets';
 
@@ -42,8 +43,16 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
 
-  // All rich-market matches, sorted by depth (no cap — drives the count + chips).
-  const allFeatured = useMemo<FeaturedEntry[]>(() => selectFeaturedEntries(leagues), [leagues]);
+  // Fresh seed per mount → matches re-shuffle on every page reload, but stay put
+  // across background odds refreshes within the same session.
+  const [shuffleSeed] = useState(() => (Math.random() * 0xffffffff) >>> 0);
+
+  // All rich-market matches, grouped BetsAPI → World Cup → Odds API and shuffled
+  // within each group (no cap — drives the count + chips).
+  const allFeatured = useMemo<FeaturedEntry[]>(
+    () => orderFeaturedForDisplay(selectFeaturedEntries(leagues), shuffleSeed),
+    [leagues, shuffleSeed],
+  );
 
   // Sports present among the featured matches, with counts (most matches first).
   const sportGroups = useMemo(() => groupFeaturedBySport(allFeatured), [allFeatured]);

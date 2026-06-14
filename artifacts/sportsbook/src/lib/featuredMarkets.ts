@@ -188,6 +188,57 @@ function interleave<T>(lists: T[][]): T[] {
   return out;
 }
 
+/** Small deterministic PRNG (mulberry32) — same seed → same shuffle. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** In-place Fisher–Yates shuffle driven by a seeded RNG. */
+function shuffleSeeded<T>(arr: T[], rng: () => number): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/**
+ * Display order for the homepage "Matches With More Markets" rail.
+ *
+ * Groups by source in a fixed sequence — BetsAPI → FIFA World Cup → Odds API —
+ * and Fisher–Yates shuffles the matches WITHIN each group using `seed`.
+ *
+ * Pass a fresh seed per page load so matches re-shuffle on every reload; keeping
+ * the same seed for a session means the order stays stable across background
+ * odds refreshes (cards don't jump around while the user is reading them).
+ * De-duplicates by match id (first occurrence wins).
+ */
+export function orderFeaturedForDisplay(entries: FeaturedEntry[], seed: number): FeaturedEntry[] {
+  const seen = new Set<string>();
+  const bets:  FeaturedEntry[] = [];
+  const wc:    FeaturedEntry[] = [];
+  const world: FeaturedEntry[] = [];
+  for (const e of entries) {
+    if (seen.has(e.match.id)) continue;
+    seen.add(e.match.id);
+    if (isBetsApiMatch(e.match))        bets.push(e);
+    else if (isWorldCupMatch(e.match))  wc.push(e);
+    else                                world.push(e);
+  }
+  const rng = mulberry32(seed);
+  return [
+    ...shuffleSeeded(bets, rng),
+    ...shuffleSeeded(wc, rng),
+    ...shuffleSeeded(world, rng),
+  ];
+}
+
 export interface SportGroup {
   id:    string;
   count: number;
