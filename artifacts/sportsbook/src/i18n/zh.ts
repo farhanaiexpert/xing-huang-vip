@@ -2804,4 +2804,19 @@ export const zh: Record<string, string> = {
   "🔥 LIVE NOW": "🔥 正在直播",
   "🔴 Live Now": "🔴 正在直播",
   "🕐 Review": "🕐 评论",
+
+  // ── Auto-baked (DeepL) 2026-06-14 ──────────────────────
+  "Add to favourites": "添加到收藏夹",
+  "Enter stake (USDT)…": "输入赌注 (USDT)…",
+  "Remove from favourites": "从收藏中移除",
+  "Show more markets": "显示更多市场",
+  "e.g. 0.001 BTC": "例如：0.001 BTC",
+  "e.g. 0x742d… BNB Smart Chain address": "例如：0x742d… BNB 智能链地址",
+  "e.g. 0x742d… wallet address": "例如：0x742d… 钱包地址",
+  "e.g. 50 XRP": "例如：50 XRP",
+  "e.g. TQn5m… Tron (TRX) address": "例如：TQn5m… Tron (TRX) 地址",
+  "e.g. TQn5m… Tron USDT (TRC-20) address": "例如：TQn5m… Tron USDT (TRC-20) 地址",
+  "e.g. bc1q… or 1… or 3… Bitcoin address": "例如：bc1q… 或 1… 或 3… 比特币地址",
+  "您的 88.88 USDT 欢迎奖金已在您的账户中。": "您的 88.88 USDT 欢迎奖金已存入您的账户。",
+  "输入投注金额（USDT）…": "请输入投注金额（USDT）…",
 };

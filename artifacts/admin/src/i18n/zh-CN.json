@@ -1211,5 +1211,15 @@
   "✕ Reject": "✕ 拒绝",
   "✗ Lost": "✗ 丢失",
   "❌ Deposit rejected": "❌ 存款被拒",
-  "❌ Withdrawal rejected": "❌ 提款被拒"
+  "❌ Withdrawal rejected": "❌ 提款被拒",
+  "Activate (show to users)": "启用（向用户显示）",
+  "Auto-verified on-chain": "链上自动验证",
+  "Deactivate (hide from users)": "停用（对用户隐藏）",
+  "Hide from sportsbook": "从体育博彩中隐藏",
+  "Manual review required": "需要人工审核",
+  "Resume betting": "恢复投注",
+  "Show in sportsbook": "在体育博彩中显示",
+  "Suspend betting": "暂停投注",
+  "email": "电子邮件",
+  "username": "用户名"
 }
