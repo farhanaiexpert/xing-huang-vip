@@ -145,9 +145,6 @@ export const customOverrides: Record<string, Record<string, string>> = {
     Stake: "投注金额",
     "Potential Win": "预计盈利",
 
-    // ── Footer ──────────────────────────────────────────────────────────────
-    "Latest Version": "最新版本",
-
     // ── Match Details Page ────────────────────────────────────────────────
     "Estonia Meistriliiga": "爱沙尼亚甲级联赛",
 
@@ -173,6 +170,52 @@ export const customOverrides: Record<string, Record<string, string>> = {
     "BTTS (Both Teams To Score)": "两队都进球",
     "Next Goal": "下一粒进球",
     "FIFA World Cup 2026": "2026国际足联世界杯",
+
+    "Brazil Serie B": "巴西乙级联赛",
+
+    "Juventude vs Ponte Preta": "Juventude 对阵 Ponte Preta",
+
+    VS: "对阵",
+
+    "Today, 19:00": "今天 19:00",
+
+    "JUVENTUDE TOTAL GOALS — OVER/UNDER 1.5": "Juventude总进球数 — 大小球 1.5",
+
+    "PONTE PRETA TOTAL GOALS — OVER/UNDER 1.5":
+      "Ponte Preta总进球数 — 大小球 1.5",
+
+    "ASIAN HANDICAP JUVENTUDE -2.5": "亚洲让球 Juventude -2.5",
+    "ASIAN HANDICAP JUVENTUDE -2": "亚洲让球 Juventude -2",
+    "ASIAN HANDICAP JUVENTUDE -1.5": "亚洲让球 Juventude -1.5",
+    "ASIAN HANDICAP JUVENTUDE -1": "亚洲让球 Juventude -1",
+    "ASIAN HANDICAP JUVENTUDE -0.5": "亚洲让球 Juventude -0.5",
+    "ASIAN HANDICAP JUVENTUDE 0": "亚洲让球 Juventude 0",
+    "ASIAN HANDICAP JUVENTUDE +0.5": "亚洲让球 Juventude +0.5",
+    "ASIAN HANDICAP JUVENTUDE +1": "亚洲让球 Juventude +1",
+    "ASIAN HANDICAP JUVENTUDE +1.5": "亚洲让球 Juventude +1.5",
+    "ASIAN HANDICAP JUVENTUDE +2": "亚洲让球 Juventude +2",
+    "ASIAN HANDICAP JUVENTUDE +2.5": "亚洲让球 Juventude +2.5",
+
+    "EUROPEAN HANDICAP JUVENTUDE -2": "欧洲让球 Juventude -2",
+    "EUROPEAN HANDICAP JUVENTUDE -1": "欧洲让球 Juventude -1",
+    "EUROPEAN HANDICAP JUVENTUDE 0": "欧洲让球 Juventude 0",
+    "EUROPEAN HANDICAP JUVENTUDE +1": "欧洲让球 Juventude +1",
+    "EUROPEAN HANDICAP JUVENTUDE +2": "欧洲让球 Juventude +2",
+
+    "CORNERS HANDICAP — JUVENTUDE -2.5": "角球让球 — Juventude -2.5",
+
+    "JUVENTUDE — CLEAN SHEET": "Juventude 零封",
+    "PONTE PRETA — CLEAN SHEET": "Ponte Preta 零封",
+
+    "Player A (Juventude)": "球员A（Juventude）",
+    "Player B (Juventude)": "球员B（Juventude）",
+    "Player C (Juventude)": "球员C（Juventude）",
+    "Player D (Juventude)": "球员D（Juventude）",
+    "Player E (Juventude)": "球员E（Juventude）",
+
+    "Player A (Ponte Preta)": "球员A（Ponte Preta）",
+    "Player B (Ponte Preta)": "球员B（Ponte Preta）",
+    "Player C (Ponte Preta)": "球员C（Ponte Preta）",
   },
 
   // ── Future: Traditional Chinese (uncomment + translate when launching) ─────
