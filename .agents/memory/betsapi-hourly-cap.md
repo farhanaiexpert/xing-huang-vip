@@ -32,7 +32,17 @@ a DB outage silently stops ALL BetsAPI data until the DB recovers.
   inplay, inplay_filter). Any NEW BetsAPI fetch must also call
   `reserveBetsApiCredit()` first or it bypasses the cap.
 - Failed upstream calls (e.g. 429) STILL consume a reserve — we cap attempts, not
-  successes, so an exhausted key burns the hourly budget on retries. Acceptable
-  by design; keep the cron disabled (`BETSAPI_CRON_DISABLED=1`) to avoid waste.
+  successes, so an exhausted key burns the hourly budget on retries.
+- **Cron toggle trade-off:** `BETSAPI_CRON_DISABLED` is stored as a SECRET (global,
+  not env-scoped; agent cannot flip it — user changes it in the Secrets pane, and
+  the live host Render/VPS needs the same change separately). Disabling it to "save
+  credits" silently STARVES the "Matches With More Markets" section: enrichment only
+  ever touches the 30 SOONEST-kickoff events per sport, and those are the first to
+  kick off and get filtered out client-side as past, so the future-enriched pool
+  dwindles to ~2 within hours of the last fetch = "section shows only a few matches".
+  **Why:** keeping it on is required for that feature to work at all. After deleting
+  the secret, RESTART api-server (env is read once at boot; cron is scheduled at
+  startup) — a 2-min-delayed startup warm batch then refills it (~38 future featured,
+  ~600 credits). User accepted the recurring credit cost on 2026-06-14.
 - Admin `/admin/api-status` surfaces `hourlyLimit/hourlyUsed/hourlyRemaining`
   for the betsapi provider via `getBetsApiHourlyUsage()`.
