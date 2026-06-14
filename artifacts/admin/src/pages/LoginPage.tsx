@@ -212,7 +212,7 @@ export default function LoginPage() {
             <img
               src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp"
               alt="Xing Huang"
-              className="h-12 object-contain drop-shadow-[0_4px_20px_rgba(0,223,169,0.15)]"
+              className="h-[50px] object-contain drop-shadow-[0_4px_20px_rgba(0,223,169,0.15)]"
               onError={e => {
                 e.currentTarget.style.display = "none";
               }}
@@ -377,8 +377,20 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-[11px] text-[#334155] mt-6 flex items-center justify-center gap-1.5">
-          <ShieldCheck className="h-3 w-3" />
+        {/* ── Trust / security strip ── */}
+        <div className="mt-5 flex items-center justify-center gap-3 text-[11px] text-[#475569]">
+          <span className="flex items-center gap-1.5">
+            <Lock className="h-3 w-3 text-[#00DFA9]/70" />
+            End-to-end encrypted
+          </span>
+          <span className="h-3 w-px bg-white/10" />
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="h-3 w-3 text-[#00DFA9]/70" />
+            2FA protected
+          </span>
+        </div>
+
+        <p className="text-center text-[11px] text-[#334155] mt-3">
           Xing Huang Admin · Restricted access
         </p>
       </div>
