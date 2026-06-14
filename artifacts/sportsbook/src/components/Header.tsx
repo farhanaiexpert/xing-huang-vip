@@ -45,7 +45,7 @@ function usePendingNppDeposit() {
 
 const LANGUAGES = [
   { code: 'en',    label: 'English', native: 'English', flag: '🇬🇧', short: 'EN' },
-  { code: 'zh-CN', label: 'Chinese', native: '中文',     flag: '🇨🇳', short: 'ZH' },
+  { code: 'zh-CN', label: '简体中文', native: '中文',     flag: '🇨🇳', short: 'ZH' },
 ];
 
 

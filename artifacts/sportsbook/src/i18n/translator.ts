@@ -2,7 +2,7 @@ import { zh } from "./zh";
 import { API_BASE } from "../lib/apiBase";
 
 const STATIC: Record<string, string> = zh;
-const CACHE_KEY = "sportsbook_zh_deepl_v3";
+const CACHE_KEY = "sportsbook_zh_deepl_v4";
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const TRANSLATE_ENDPOINT = `${API_BASE}/api/translate`;
@@ -318,9 +318,11 @@ function scheduleEnrich(delay: number) {
 }
 
 export function startChineseTranslation(): void {
-  // 1. Merge cached DeepL translations (if any)
+  // 1. Merge cached DeepL translations (if any). STATIC is merged LAST so the
+  //    curated/locked dictionary is always authoritative over DeepL cache —
+  //    locked sportsbook terms never drift to a stale auto-translation.
   const cached = loadCache();
-  if (cached) dict = { ...STATIC, ...cached };
+  if (cached) dict = { ...cached, ...STATIC };
 
   // 2. Apply immediately
   walkAndApply();
