@@ -19,7 +19,9 @@ interface DataTableProps<T> {
   skeletonRows?: number;
   rowKey: (row: T) => string | number;
   onRowClick?: (row: T) => void;
-  empty?: string;
+  rowClassName?: (row: T) => string;
+  maxHeight?: string;
+  empty?: React.ReactNode;
   footer?: React.ReactNode;
 }
 
@@ -30,6 +32,8 @@ export function DataTable<T>({
   skeletonRows = 8,
   rowKey,
   onRowClick,
+  rowClassName,
+  maxHeight,
   empty = "No data",
   footer,
 }: DataTableProps<T>) {
@@ -62,7 +66,10 @@ export function DataTable<T>({
 
   return (
     <div className="bg-[#0D1117] border border-white/8 rounded-xl overflow-hidden">
-      <div className="overflow-x-auto">
+      <div
+        className="overflow-auto"
+        style={maxHeight ? { maxHeight } : undefined}
+      >
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-white/8 text-[#475569] text-[11px] uppercase tracking-wider bg-[#0D1117]">
@@ -70,7 +77,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={cn(
-                    "text-left px-4 py-3 font-medium whitespace-nowrap",
+                    "text-left px-4 py-3 font-medium whitespace-nowrap bg-[#0D1117] shadow-[inset_0_-1px_0_rgba(255,255,255,0.08)]",
                     col.sortable &&
                       "cursor-pointer select-none hover:text-[#94A3B8] transition-colors",
                     col.headerClassName
@@ -123,7 +130,8 @@ export function DataTable<T>({
                   key={rowKey(row)}
                   className={cn(
                     "border-b border-white/5 transition-colors",
-                    onRowClick && "cursor-pointer hover:bg-white/2"
+                    onRowClick && "cursor-pointer hover:bg-white/[0.03]",
+                    rowClassName?.(row)
                   )}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                 >

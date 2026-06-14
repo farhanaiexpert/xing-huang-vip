@@ -636,6 +636,37 @@ router.get("/admin/bets", async (req, res): Promise<void> => {
   res.json({ bets, total: Number(total.count), page: pageNum, limit: limitNum });
 });
 
+// ─── Bets summary (status breakdown + total wagered) ──────────────────────────
+// Registered BEFORE /admin/bets/:id so "summary" is not parsed as an id.
+// Respects the optional username `search` filter but NOT the status filter, so
+// the cards always present a full open/won/lost breakdown for the current scope.
+router.get("/admin/bets/summary", async (req, res): Promise<void> => {
+  const { search } = req.query as Record<string, string>;
+  const where = search ? ilike(usersTable.username, `%${search}%`) : undefined;
+
+  const [row] = await db
+    .select({
+      total: count(),
+      open: sql<number>`COUNT(*) FILTER (WHERE ${betsTable.status} = 'open')::int`,
+      won: sql<number>`COUNT(*) FILTER (WHERE ${betsTable.status} = 'won')::int`,
+      lost: sql<number>`COUNT(*) FILTER (WHERE ${betsTable.status} = 'lost')::int`,
+      voided: sql<number>`COUNT(*) FILTER (WHERE ${betsTable.status} = 'void')::int`,
+      totalWagered: sql<string>`COALESCE(SUM(${betsTable.stake}), 0)::text`,
+    })
+    .from(betsTable)
+    .leftJoin(usersTable, eq(usersTable.id, betsTable.userId))
+    .where(where);
+
+  res.json({
+    total: Number(row.total),
+    open: Number(row.open),
+    won: Number(row.won),
+    lost: Number(row.lost),
+    void: Number(row.voided),
+    totalWagered: row.totalWagered ?? "0",
+  });
+});
+
 router.get("/admin/bets/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const [bet] = await db.select().from(betsTable).where(eq(betsTable.id, id)).limit(1);
