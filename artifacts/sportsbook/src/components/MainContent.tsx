@@ -393,10 +393,29 @@ export function MainContent({
       : filteredLeagues,
     [filteredLeagues, showFeatured],
   );
-  const displayedLeagues = useMemo(
-    () => showFeatured ? sortedLeagues.slice(0, leagueVisibleCount) : filteredLeagues,
-    [sortedLeagues, filteredLeagues, showFeatured, leagueVisibleCount],
-  );
+  // Default homepage view shows a bounded, rotating subset of matches (Task #243).
+  // The server already rotates ordering every 30 min via /api/homepage/matches;
+  // here we cap the MAIN list to ~20–50 matches so it stays a digestible subset.
+  // Load-more grows the cap so the full pool is still reachable. The rails and
+  // carousels keep the complete `allLeagues` pool (handled by their own props).
+  const HOMEPAGE_SUBSET_MIN = 20;
+  const displayedLeagues = useMemo(() => {
+    if (!showFeatured) return filteredLeagues;
+    // Match-count target grows with each "load more" click (leagueVisibleCount
+    // starts at 5 → 50 matches; +10 leagues → +100). Clamped to a 20-match floor.
+    const matchTarget = Math.max(HOMEPAGE_SUBSET_MIN, leagueVisibleCount * 10);
+    const out: League[] = [];
+    let count = 0;
+    for (const league of sortedLeagues) {
+      if (count >= matchTarget) break;
+      const remaining = matchTarget - count;
+      const matches = league.matches.slice(0, remaining);
+      if (matches.length === 0) continue;
+      out.push(matches.length === league.matches.length ? league : { ...league, matches });
+      count += matches.length;
+    }
+    return out;
+  }, [sortedLeagues, filteredLeagues, showFeatured, leagueVisibleCount]);
   const hiddenCount = showFeatured ? Math.max(0, filteredLeagues.length - leagueVisibleCount) : 0;
   const nextBatch   = Math.min(hiddenCount, LEAGUE_PAGE);
 

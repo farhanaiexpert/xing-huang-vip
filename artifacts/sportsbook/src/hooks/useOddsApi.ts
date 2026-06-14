@@ -17,9 +17,12 @@ import { fetchBetsApiUpcoming, type BetsApiEvent, type BetsApiSportMeta } from '
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 
-const STORAGE_KEY  = 'oddschain_v12'; // v12 — wider featured gate (marketScore>=1) + 48h enrichment window; force recompute of featuredMatch flags
+const STORAGE_KEY  = 'oddschain_v13'; // v13 — homepage now reads /api/homepage/matches (cache-only, 30-min server shuffle); force re-fetch from new endpoint
 const QUOTA_KEY    = 'oddschain_quota_exhausted';
-const CACHE_TTL_MS = 35 * 60 * 1000;
+// Aligned to the 30-min server shuffle window: cache is considered fresh within a
+// window and a background re-fetch picks up the next window's rotated ordering.
+const CACHE_TTL_MS = 30 * 60 * 1000;
+const SHUFFLE_REFRESH_MS = 30 * 60 * 1000;
 
 interface StoredEntry {
   leagues:        League[];
@@ -410,7 +413,16 @@ export function useOddsApi(): UseOddsApiResult {
       void doFetch(false);
     }
 
-    return () => { isMounted.current = false; };
+    // Rotate with the 30-min server shuffle window: a cache-only background
+    // re-fetch (zero upstream BetsAPI calls) pulls the next window's order.
+    const rotateTimer = setInterval(() => {
+      void doFetch(true);
+    }, SHUFFLE_REFRESH_MS);
+
+    return () => {
+      isMounted.current = false;
+      clearInterval(rotateTimer);
+    };
   }, [doFetch]);
 
   const isStale = fetchedAt

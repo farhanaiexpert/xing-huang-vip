@@ -499,7 +499,17 @@ const prematchOddsCache = new Map<string, PrematchCacheEntry>();
  *   Prematch: success=1 (any outcome) → cache 30 min.
  *             Non-2xx / timeout / success≠1 → do NOT cache (transient).
  */
-async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEventRaw[]> {
+async function enrichWithLiveOdds(
+  events: BetsApiEventRaw[],
+  allowedIds?: Set<string>,
+): Promise<BetsApiEventRaw[]> {
+  // Bet-scoped enrichment (Task #243): when a caller passes an allow-list, only
+  // fixtures with an active user bet are enriched with live/prematch odds. This
+  // is where the per-fixture upstream calls happen, so filtering here is what
+  // actually saves credits when most live matches have no bets on them.
+  if (allowedIds) {
+    events = events.filter(ev => allowedIds.has(String(ev.id)));
+  }
   const now             = Date.now();
   const INPLAY_TTL_MS   = 5 * 60 * 1000;    // 5 min — cuts per-fixture inplay calls by ~60% vs 2 min
   const PREMATCH_TTL_MS = 30 * 60 * 1000;   // 30 min — stable opening lines
@@ -599,10 +609,25 @@ async function enrichWithLiveOdds(events: BetsApiEventRaw[]): Promise<BetsApiEve
  * then enrich each event with real Bet365 prematch 1X2 odds.
  * Events for which no real odds are available are excluded from the result.
  */
-export async function fetchBetsApiInplay(): Promise<BetsApiEventRaw[]> {
+export async function fetchBetsApiInplay(
+  allowedIds?: Set<string>,
+  allowedSportIds?: Set<number>,
+): Promise<BetsApiEventRaw[]> {
   if (!BETSAPI_KEY) return [];
 
-  const liveSportIds = [1, 3, 8, 12, 13, 14, 16, 17, 19, 92, 94, 95];
+  // Bet-scoped (Task #243): when an allow-list is supplied and it is empty, there
+  // are no live matches with active user bets — skip ALL upstream calls entirely.
+  if (allowedIds && allowedIds.size === 0) return [];
+
+  const ALL_LIVE_SPORT_IDS = [1, 3, 8, 12, 13, 14, 16, 17, 19, 92, 94, 95];
+  // Bet-scoped fan-out: when we know the sports the active-bet fixtures belong to,
+  // only poll those sports' inplay lists (e.g. 1 call instead of 12 for a single
+  // soccer bet). Fall back to all live sports when the sport set can't be resolved
+  // so we never miss live data for a genuinely active bet.
+  const liveSportIds =
+    allowedSportIds && allowedSportIds.size > 0
+      ? ALL_LIVE_SPORT_IDS.filter(id => allowedSportIds.has(id))
+      : ALL_LIVE_SPORT_IDS;
 
   const fetchSport = async (sportId: number): Promise<BetsApiEventRaw[]> => {
     try {
@@ -623,6 +648,7 @@ export async function fetchBetsApiInplay(): Promise<BetsApiEventRaw[]> {
   const results = await Promise.all(liveSportIds.map(fetchSport));
   const allEvents = results.flat();
 
-  // Enrich with live inplay odds (prematch fallback); events without real odds are dropped
-  return enrichWithLiveOdds(allEvents);
+  // Enrich with live inplay odds (prematch fallback); events without real odds are dropped.
+  // When bet-scoped, only fixtures in the allow-list incur per-fixture enrichment calls.
+  return enrichWithLiveOdds(allEvents, allowedIds);
 }

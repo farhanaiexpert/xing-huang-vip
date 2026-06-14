@@ -96,15 +96,32 @@ interface LiveResponse {
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
-/** Fetch all upcoming/pre-match events from server cache */
+/**
+ * Fetch homepage matches from the dedicated cache-only endpoint.
+ * `/api/homepage/matches` serves ONLY cached prematch data (never an upstream
+ * BetsAPI call), with the 30-minute server-side shuffle applied and already-started
+ * matches removed. Response shape matches AllResponse (plus an ignored `meta`).
+ */
 export async function fetchBetsApiUpcoming(): Promise<AllResponse> {
-  const res = await fetch(`${API_BASE}/api/betsapi/all`);
+  const res = await fetch(`${API_BASE}/api/homepage/matches`);
   if (res.status === 503) throw new Error('BetsAPI not configured');
   if (!res.ok) throw new Error(`BetsAPI HTTP ${res.status}`);
   const json = await res.json() as AllResponse;
   // Ensure countBySportId always exists (older cache may not have it)
   if (!json.countBySportId) json.countBySportId = {};
   return json;
+}
+
+/**
+ * On-demand single-match refresh (Task #243). Returns cached fixture data
+ * immediately when odds are present; otherwise the server refreshes just this one
+ * fixture (credit-limited). Never triggers a global refresh. Returns null on 404.
+ */
+export async function refreshBetsApiMatch(fixtureId: string): Promise<BetsApiMarketsResponse | null> {
+  const id = fixtureId.replace(/^betsapi_/, '');
+  const res = await fetch(`${API_BASE}/api/betsapi/refresh/${id}`);
+  if (!res.ok) return null;
+  return await res.json() as BetsApiMarketsResponse;
 }
 
 /** Fetch live inplay events */

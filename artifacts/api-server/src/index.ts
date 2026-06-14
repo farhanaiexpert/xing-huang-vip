@@ -730,21 +730,44 @@ runMigrations().then(() => {
     });
   }
 
-  // ── BetsAPI cron: refresh upcoming events every 60 minutes ───────────────
-  // Optimisations vs old 30 min cycle:
-  //  1. Check betsapi_cache TTL before fetching each sport — skip if still fresh (>15 min).
-  //  2. Empty sports cached with 4-hour TTL instead of being skipped silently.
-  //  3. Prematch odds enrichment reduced from top-50 to top-20 events per sport.
-  //  4. Interval doubled from 30 → 60 min.
+  // ── BetsAPI cron: refresh upcoming events at most once every 6 hours ──────
+  // Credit-efficient design (Task #243):
+  //  1. Fetch prematch fixtures ≤ once / 6h; store ALL fetched matches (hundreds).
+  //  2. Cache lifetime (24h) >> refresh interval so a failed cycle never empties.
+  //  3. Empty/off-season sports preserve existing data (never overwrite with []).
+  //  4. Per-sport rich-market enrichment is bounded (BETSAPI_ENRICH_PER_SPORT).
+  //  5. The homepage reads this cache only — it never triggers an upstream call.
   let isBetsApiRefreshing = false;
   let lastBetsApiRefreshAt = 0;
-  const BETSAPI_INTERVAL_MS = 30 * 60 * 1000; // 30 min — 2 batches/hr for fresher odds
 
-  // How long cached events persist in the DB as a fallback (Option A: 12h).
-  // Decoupled from refresh frequency — we still re-fetch every ~60 min via the
-  // age-based skip guard below, but if a refresh cycle fails the data survives
-  // for 12 h instead of disappearing after 70 min.
-  const BETSAPI_DATA_TTL = '12 hours';
+  // ── Credit-efficient cadence (Task #243) ─────────────────────────────────
+  // Prematch fixtures are fetched at most ONCE every 6 hours. The homepage reads
+  // only the resulting cache (via /api/homepage/matches) and rotates the order
+  // locally every 30 min — so no BetsAPI call happens between 6-hourly refreshes.
+  // Tunables are env-overridable so the live host (Render/VPS) can adjust without
+  // a code change; defaults are safe and credit-frugal.
+  const BETSAPI_INTERVAL_MS = Math.max(
+    60 * 60 * 1000,
+    Number(process.env.BETSAPI_REFRESH_INTERVAL_MS) || 6 * 60 * 60 * 1000,
+  ); // default 6h
+
+  // Cache lifetime is decoupled from (and well beyond) the refresh interval so a
+  // failed refresh cycle never empties the homepage — the previous matches keep
+  // showing until the next successful 6-hourly fetch.
+  const BETSAPI_DATA_TTL_HOURS = Math.max(
+    12,
+    Number(process.env.BETSAPI_DATA_TTL_HOURS) || 24,
+  ); // default 24h (> 6h cadence)
+  const BETSAPI_DATA_TTL = `${BETSAPI_DATA_TTL_HOURS} hours`;
+
+  // Per-sport rich-market enrichment budget per 6-hourly batch. Each enriched
+  // match costs one upstream call; with a 6h cadence (12× fewer batches than the
+  // old 30-min cycle) we can afford a larger per-sport cap to surface more rich
+  // matches while staying inside reserveBetsApiCredit()'s hard cap.
+  const BETSAPI_ENRICH_PER_SPORT = Math.max(
+    1,
+    Number(process.env.BETSAPI_ENRICH_PER_SPORT) || 50,
+  ); // default 50
 
   /** Returns milliseconds since a betsapi_cache entry was last fetched (Infinity = missing). */
   async function getBetsApiCacheAgeMs(cacheKey: string): Promise<number> {
@@ -758,26 +781,11 @@ runMigrations().then(() => {
     } catch { return Infinity; }
   }
 
-  /**
-   * Returns true if the cached events for this sport contain at least one
-   * match starting within the next 2 hours. Used to lower the skip threshold
-   * from 25 min → 15 min so odds are re-enriched closer to kickoff.
-   */
-  async function sportHasImminentEvents(cacheKey: string): Promise<boolean> {
-    try {
-      const result = await db.execute(sql`
-        SELECT 1
-        FROM betsapi_cache,
-             jsonb_array_elements(data) AS ev
-        WHERE cache_key = ${cacheKey}
-          AND (ev->>'time')::bigint
-              BETWEEN EXTRACT(EPOCH FROM NOW())
-                  AND EXTRACT(EPOCH FROM NOW()) + 7200
-        LIMIT 1
-      `);
-      return result.rows.length > 0;
-    } catch { return false; }
-  }
+  // Per-sport skip guard: never re-fetch a sport that was refreshed less than
+  // (interval − 30 min) ago. With the 6-hourly interval this only ever allows
+  // one fetch per sport per 6h window, and prevents a staggered/manual re-trigger
+  // inside the same window from spending extra credits.
+  const BETSAPI_SKIP_THRESHOLD_MS = Math.max(30 * 60 * 1000, BETSAPI_INTERVAL_MS - 30 * 60 * 1000);
 
   async function runBetsApiBatch() {
     if (!BETSAPI_KEY || isBetsApiRefreshing) return;
@@ -792,15 +800,11 @@ runMigrations().then(() => {
         const meta = BETSAPI_SPORT_MAP[sportId];
         if (!meta) continue;
 
-        // Skip if this sport was fetched recently enough.
-        // Threshold: 15 min when any event kicks off within 2 hours (odds shift
-        // most dramatically close to kickoff), 25 min otherwise.
-        // Uses fetched_at age (not expires_at) so refresh frequency is
-        // independent of the 12-hour data-persistence TTL.
+        // Skip if this sport was fetched within the current 6h window. Uses
+        // fetched_at age (not expires_at) so refresh cadence stays independent of
+        // the (much longer) data-persistence TTL.
         const age = await getBetsApiCacheAgeMs(String(sportId));
-        const imminent = await sportHasImminentEvents(String(sportId));
-        const skipThresholdMs = imminent ? 15 * 60 * 1000 : 25 * 60 * 1000;
-        if (age < skipThresholdMs) { skipped++; continue; }
+        if (age < BETSAPI_SKIP_THRESHOLD_MS) { skipped++; continue; }
 
         const events = await fetchBetsApiUpcoming(sportId);
 
@@ -866,7 +870,7 @@ runMigrations().then(() => {
               return !isNaN(ts) && ts > nowSec && ts <= in48hSec;
             })
             .sort((a, b) => parseInt(a.time, 10) - parseInt(b.time, 10))
-            .slice(0, 30);
+            .slice(0, BETSAPI_ENRICH_PER_SPORT);
           for (let i = 0; i < toEnrich.length; i += 10) {
             const batch = toEnrich.slice(i, i + 10);
             await Promise.all(
@@ -928,7 +932,10 @@ runMigrations().then(() => {
       if (isOddsRefreshing || oddsBatchAge < 2 * 60 * 1000) return;
       runBetsApiBatch().catch((err) => logger.error({ err }, "BetsAPI cron: unhandled error"));
     });
-    logger.info("BetsAPI cron started (every 30 min normal / 15 min when imminent events within 2h — 12h data TTL, top-30 enrichment, empty preserves existing)");
+    logger.info(
+      { intervalMs: BETSAPI_INTERVAL_MS, dataTtlHours: BETSAPI_DATA_TTL_HOURS, enrichPerSport: BETSAPI_ENRICH_PER_SPORT },
+      "BetsAPI cron started (≤ once / 6h — long data TTL, bounded enrichment, empty preserves existing, homepage reads cache only)",
+    );
 
     // Warm BetsAPI cache on startup — 2-minute delay after Odds API warm starts
     setTimeout(() => {

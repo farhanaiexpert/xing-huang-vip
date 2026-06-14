@@ -12,6 +12,7 @@ import { useOddsData } from '../hooks/useOddsData';
 import { useLiveMatchScore } from '../hooks/useLiveMatchScore';
 import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
 import { findMatchInLeagues } from '../lib/matchUtils';
+import { refreshBetsApiMatch, type BetsApiMarketsResponse } from '../lib/betsApi';
 import { getGroupColor } from '../data/groupColors';
 import { Receipt, TrendingUp, Users, RefreshCw, Flame, CheckCircle2, Shield } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTrigger, DrawerTitle, DrawerDescription } from '../components/ui/drawer';
@@ -327,6 +328,41 @@ function MatchDetailSkeleton() {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+/**
+ * Overlay an on-demand single-match refresh (Task #243) onto the cached Match:
+ * fresh prematch odds and rich-market flags fetched for THIS fixture only.
+ */
+function applyMatchRefresh(match: Match, refreshed: BetsApiMarketsResponse): Match {
+  const rm = refreshed.richMarkets;
+  const odds = refreshed.prematchOdds;
+  return {
+    ...match,
+    odds: odds
+      ? {
+          home: odds.home,
+          ...(match.odds.draw !== undefined && odds.draw != null ? { draw: odds.draw } : {}),
+          away: odds.away,
+        }
+      : match.odds,
+    richMarkets: rm
+      ? {
+          hasHcp: rm.hasHcp, hasOU: rm.hasOU, hasHT: rm.hasHT, hasBTTS: rm.hasBTTS,
+          hasCS: rm.hasCS, hasCorners: rm.hasCorners, hasCards: rm.hasCards, hasNextGoal: rm.hasNextGoal,
+          marketScore: rm.marketScore,
+          hcpHome: rm.hcpHome, hcpAway: rm.hcpAway, hcpLine: rm.hcpLine,
+          ou25Over: rm.ou25Over, ou25Under: rm.ou25Under,
+          htHome: rm.htHome, htDraw: rm.htDraw, htAway: rm.htAway,
+          bttsY: rm.bttsY, bttsN: rm.bttsN,
+        }
+      : match.richMarkets,
+    featuredMatch: rm ? rm.marketScore >= 1 : match.featuredMatch,
+    ...(rm?.ou25Over  != null ? { ouOver25:  rm.ou25Over  } : {}),
+    ...(rm?.ou25Under != null ? { ouUnder25: rm.ou25Under } : {}),
+    ...(rm?.bttsY     != null ? { bttsYes:   rm.bttsY     } : {}),
+    ...(rm?.bttsN     != null ? { bttsNo:    rm.bttsN     } : {}),
+  };
+}
+
 export function MatchDetail() {
   const [, params]      = useRoute<{ id: string }>('/match/:id');
   const [, setLocation] = useLocation();
@@ -334,17 +370,42 @@ export function MatchDetail() {
 
   const { allLeagues, loading } = useOddsData();
 
+  // On-demand single-match refresh: when a BetsAPI match lacks rich markets,
+  // fetch fresh data for THIS fixture only (server respects the credit limiter
+  // and never does a global refresh).
+  const [refreshed, setRefreshed] = useState<BetsApiMarketsResponse | null>(null);
+  const refreshAttempted = useRef<string | null>(null);
+
   const resolved = useMemo(() => {
     if (!matchId) return null;
     const found = findMatchInLeagues(matchId, allLeagues);
     if (found) {
+      const overlaid =
+        refreshed && `betsapi_${refreshed.fixtureId}` === matchId
+          ? applyMatchRefresh(found.match, refreshed)
+          : found.match;
       return {
-        match:    matchToEntity(found.match),
+        match:    matchToEntity(overlaid),
         league:   leagueToEntity(found.league),
         sportKey: found.match.sportKey ?? found.match.sportId ?? '',
       };
     }
     return null;
+  }, [matchId, allLeagues, refreshed]);
+
+  useEffect(() => {
+    if (!matchId || !matchId.startsWith('betsapi_')) return;
+    if (refreshAttempted.current === matchId) return;
+    const found = findMatchInLeagues(matchId, allLeagues);
+    if (!found) return; // wait until cache is loaded
+    // Only refresh if the cached match has no rich markets yet ("if needed").
+    if (found.match.richMarkets && found.match.richMarkets.marketScore > 0) return;
+    refreshAttempted.current = matchId;
+    let cancelled = false;
+    void refreshBetsApiMatch(matchId).then((data) => {
+      if (!cancelled && data) setRefreshed(data);
+    });
+    return () => { cancelled = true; };
   }, [matchId, allLeagues]);
 
   const groups = useMemo(
