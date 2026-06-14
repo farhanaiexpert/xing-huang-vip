@@ -292,6 +292,42 @@
     background-color: var(--elevate-2);
   }
 
+  /* ── Login page ambient / micro-interaction animations ───────────────── */
+  @keyframes login-orb-drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(40px, -30px, 0) scale(1.08); }
+  }
+  @keyframes login-orb-drift-alt {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+    50%      { transform: translate3d(-35px, 25px, 0) scale(0.95); }
+  }
+  @keyframes login-sheen {
+    0%   { transform: translateX(-120%) skewX(-12deg); opacity: 0; }
+    25%  { opacity: 0.5; }
+    100% { transform: translateX(220%) skewX(-12deg); opacity: 0; }
+  }
+  .animate-login-orb     { animation: login-orb-drift 16s ease-in-out infinite; }
+  .animate-login-orb-alt { animation: login-orb-drift-alt 20s ease-in-out infinite; }
+  .login-sheen::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, rgba(11, 15, 20, 0.35), transparent);
+    transform: translateX(-120%) skewX(-12deg);
+    pointer-events: none;
+  }
+  .login-sheen:hover:not(:disabled)::after {
+    animation: login-sheen 0.9s ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-login-orb,
+    .animate-login-orb-alt { animation: none; }
+    .login-sheen:hover::after { animation: none; }
+  }
+
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
   .border.active-elevate:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
