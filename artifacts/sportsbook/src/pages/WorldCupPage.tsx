@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { SportsSidebar } from '@/components/SportsSidebar';
 import { BetSlip } from '@/components/BetSlip';
 import { useBetSlipSidebar } from '@/contexts/BetSlipSidebarContext';
-import { useOddsData } from '@/hooks/useOddsData';
+import { useWorldCupOdds } from '@/hooks/useWorldCupOdds';
 import { useBetSlip } from '@/hooks/useBetSlip';
 import { useOddsFormat } from '@/hooks/useOddsFormat';
 import { formatOdds } from '@/lib/oddsFormat';
@@ -331,18 +331,13 @@ interface DateGroup {
 
 export function WorldCupPage() {
   const [, navigate]  = useLocation();
-  const { allLeagues, loading, lastUpdatedLabel, refreshing } = useOddsData();
+  const { matches: rawWcMatches, loading, lastUpdatedLabel, refreshing, refresh } = useWorldCupOdds();
   const { collapsed: betSlipCollapsed } = useBetSlipSidebar();
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
 
   const wcMatches = useMemo<Match[]>(() => {
-    const matches: Match[] = [];
-    for (const league of allLeagues) {
-      if (league.sportKey === 'soccer_fifa_world_cup') {
-        matches.push(...league.matches);
-      }
-    }
+    const matches = [...rawWcMatches];
     matches.sort((a, b) => {
       if (a.isLive && !b.isLive) return -1;
       if (!a.isLive && b.isLive) return 1;
@@ -351,7 +346,7 @@ export function WorldCupPage() {
       return ta < tb ? -1 : ta > tb ? 1 : 0;
     });
     return matches;
-  }, [allLeagues]);
+  }, [rawWcMatches]);
 
   const counts = useMemo(() => ({
     all:      wcMatches.length,
@@ -430,12 +425,15 @@ export function WorldCupPage() {
                     {counts.live > 0 && <Stat label="Live" value={counts.live} color="#EF4444" pulse />}
                     <Stat label="Today"    value={counts.today}    color="#00DFA9" />
                     <Stat label="Tomorrow" value={counts.tomorrow} color="#38BDF8" />
-                    {lastUpdatedLabel && (
-                      <span className="flex items-center gap-1 text-[10px] text-[#334155]">
-                        <RefreshCw className={cn('h-2.5 w-2.5', refreshing && 'animate-spin')} />
-                        {lastUpdatedLabel}
-                      </span>
-                    )}
+                    <button
+                      onClick={refresh}
+                      disabled={refreshing}
+                      className="flex items-center gap-1 text-[10px] text-[#475569] hover:text-[#00DFA9] transition-colors disabled:opacity-60"
+                      title="Refresh World Cup matches"
+                    >
+                      <RefreshCw className={cn('h-2.5 w-2.5', refreshing && 'animate-spin')} />
+                      {lastUpdatedLabel || 'Refresh'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -542,7 +540,7 @@ export function WorldCupPage() {
             {wcMatches.length > 0 && (
               <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-[#334155]">
                 <TrendingUp className="h-3.5 w-3.5" />
-                <span>All odds update every 25–30 min · Real-time from The Odds API</span>
+                <span>Live odds &amp; scores refresh every ~90s · Real-time from The Odds API</span>
               </div>
             )}
           </div>

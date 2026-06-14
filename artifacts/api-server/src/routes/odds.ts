@@ -413,6 +413,138 @@ router.get("/odds/all", async (_req, res): Promise<void> => {
   }
 });
 
+// ─── World Cup 2026 — dedicated near-real-time endpoint ──────────────────────
+// ISOLATED from the shared odds pipeline. Only soccer_fifa_world_cup is touched.
+//  - 2-minute in-memory fresh window keeps the section near real-time.
+//  - In-flight dedup prevents burst Odds API calls under concurrent traffic.
+//  - Scores are fetched ONLY when an in-play WC fixture exists (credit saving).
+//  - Odds are written back to odds_cache with the normal 60-min TTL so the
+//    homepage WC entry and /match/:id detail stay populated (no regression).
+//  - On upstream quota/failure the last good payload (memory → DB cache) is
+//    served with `stale: true` so the section never goes blank.
+const WC_SPORT_KEY      = "soccer_fifa_world_cup";
+const WC_FRESH_TTL_MS   = 2 * 60 * 1000;          // near-real-time window
+const WC_INPLAY_WINDOW_MS = 3.5 * 60 * 60 * 1000; // a match can be in-play up to ~3.5h
+
+interface WcPayload {
+  events:    unknown[];
+  scores:    unknown[];
+  updatedAt: string;
+  stale:     boolean;
+}
+
+let wcMemCache: { payload: WcPayload; expiresAt: number } | null = null;
+let wcInFlight: Promise<WcPayload> | null = null;
+
+async function fetchWcScores(): Promise<unknown[]> {
+  const url = `${ODDS_API_BASE}/sports/${WC_SPORT_KEY}/scores?apiKey=${ODDS_API_KEY}&daysFrom=1&dateFormat=iso`;
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  } catch {
+    recordApiCall("odds_api", false, "network", `wc scores → network/timeout`);
+    return [];
+  }
+  if (!response.ok) {
+    recordApiCall("odds_api", false, `HTTP ${response.status}`, `wc scores → HTTP ${response.status}`);
+    return [];
+  }
+  const raw = (await response.json()) as Record<string, unknown>[];
+  recordApiCall("odds_api", true, "ok");
+  if (!Array.isArray(raw)) return [];
+  // Keep both live and just-completed so the client can settle/clear finished rows.
+  return raw.filter(ev => Array.isArray(ev.scores) && (ev.scores as unknown[]).length > 0);
+}
+
+async function buildWcPayload(): Promise<WcPayload> {
+  const globalMargin = await getGlobalMarginPct();
+  const [control] = await db.select().from(sportControlsTable)
+    .where(eq(sportControlsTable.sportKey, WC_SPORT_KEY));
+  const effectiveMargin = control?.marginOverride && parseFloat(control.marginOverride) > 0
+    ? Math.max(0, Math.min(100, parseFloat(control.marginOverride)))
+    : globalMargin;
+  const multiplier = control ? parseFloat(control.oddsMultiplier) : 1;
+  const adjust = (data: unknown[]) =>
+    applyMultiplier(applyMargin(data, effectiveMargin), multiplier) as unknown[];
+
+  // ── 1. Fresh odds from Odds API (h2h + totals) ──────────────────────────────
+  const oddsResult = await fetchOddsFromApi(WC_SPORT_KEY, ",totals");
+
+  if ("data" in oddsResult) {
+    const oddsData = oddsResult.data;
+    // Persist for homepage WC + /match/:id detail + settlement (normal TTL).
+    await setDbCachedOdds(WC_SPORT_KEY, oddsData, 60);
+    await upsertSportControl(WC_SPORT_KEY, formatLeagueName(WC_SPORT_KEY));
+
+    // Only spend score credits when at least one fixture is plausibly in-play.
+    const now = Date.now();
+    const hasInPlay = oddsData.some(ev => {
+      const ct = (ev as { commence_time?: string }).commence_time;
+      if (typeof ct !== "string") return false;
+      const t = new Date(ct).getTime();
+      return t <= now && now - t <= WC_INPLAY_WINDOW_MS;
+    });
+    const scores = hasInPlay ? await fetchWcScores() : [];
+
+    return { events: adjust(oddsData), scores, updatedAt: new Date().toISOString(), stale: false };
+  }
+
+  // ── 2. Upstream failure (quota / network / non-ok) — fall back ──────────────
+  if (wcMemCache) {
+    return { ...wcMemCache.payload, stale: true };
+  }
+  const dbCached = await getDbCachedOdds(WC_SPORT_KEY);
+  return {
+    events:    dbCached ? adjust(dbCached) : [],
+    scores:    [],
+    updatedAt: new Date().toISOString(),
+    stale:     true,
+  };
+}
+
+// ─── GET /odds/worldcup ──────────────────────────────────────────────────────
+// Must be registered BEFORE /odds/:sport or "worldcup" is treated as a sport key.
+router.get("/odds/worldcup", async (_req, res): Promise<void> => {
+  if (!ODDS_API_KEY) {
+    res.status(503).json({ error: "Odds API not configured" });
+    return;
+  }
+
+  // Respect admin sport controls — disabled/suspended returns empty (no upstream).
+  const [control] = await db.select().from(sportControlsTable)
+    .where(eq(sportControlsTable.sportKey, WC_SPORT_KEY));
+  if (control && (!control.isEnabled || control.isSuspended)) {
+    res.json({ events: [], scores: [], updatedAt: new Date().toISOString(), stale: false, disabled: true });
+    return;
+  }
+
+  // Fresh in-memory window — near-real-time without hammering the upstream.
+  if (wcMemCache && wcMemCache.expiresAt > Date.now()) {
+    res.json(wcMemCache.payload);
+    return;
+  }
+
+  try {
+    if (!wcInFlight) {
+      wcInFlight = buildWcPayload();
+      wcInFlight.finally(() => { wcInFlight = null; });
+    }
+    const payload = await wcInFlight;
+    // Only cache successful (non-stale) payloads against the fresh window.
+    if (!payload.stale) {
+      wcMemCache = { payload, expiresAt: Date.now() + WC_FRESH_TTL_MS };
+    }
+    res.json(payload);
+  } catch (err) {
+    logger.warn({ err }, "WC odds: build failed");
+    if (wcMemCache) {
+      res.json({ ...wcMemCache.payload, stale: true });
+      return;
+    }
+    res.json({ events: [], scores: [], updatedAt: new Date().toISOString(), stale: true });
+  }
+});
+
 // ─── GET /odds/margin — read current global margin % ─────────────────────────
 // Must be registered BEFORE /odds/:sport or "margin" is treated as a sport key.
 router.get("/odds/margin", async (_req, res): Promise<void> => {
