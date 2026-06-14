@@ -9,6 +9,7 @@ import { useBetSlip } from '@/hooks/useBetSlip';
 import { useOddsFormat } from '@/hooks/useOddsFormat';
 import { formatOdds } from '@/lib/oddsFormat';
 import { cn } from '@/lib/utils';
+import { getTeamFlag } from '@/lib/countryFlags';
 import { RefreshCw, ChevronRight, TrendingUp } from 'lucide-react';
 import type { Match } from '@/types';
 
@@ -58,6 +59,29 @@ function teamFlag(name: string): string {
       String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
     ).join('');
   } catch { return '🏳️'; }
+}
+
+/**
+ * Team flag — prefers a real flag image (countryFlags.ts → flagcdn) so it renders
+ * consistently across platforms (emoji country flags don't render on Windows).
+ * Falls back to the emoji flag if the country can't be resolved or the image
+ * fails to load.
+ */
+function TeamFlag({ name }: { name: string }) {
+  const url = getTeamFlag(name);
+  const [failed, setFailed] = useState(false);
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="w-[26px] h-[18px] rounded-sm object-cover shrink-0 ring-1 ring-white/10"
+      />
+    );
+  }
+  return <span className="text-[18px] leading-none shrink-0">{teamFlag(name)}</span>;
 }
 
 type DateFilter = 'all' | 'live' | 'today' | 'tomorrow' | 'upcoming';
@@ -149,8 +173,6 @@ function WCMatchCard({ match }: { match: Match }) {
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<MarketTab>('1x2');
 
-  const homeFlag = teamFlag(match.team1);
-  const awayFlag = teamFlag(match.team2);
   const matchId  = `${match.id}`;
 
   const sec = useMemo(
@@ -206,7 +228,7 @@ function WCMatchCard({ match }: { match: Match }) {
         <div className="flex items-center gap-2">
           {/* Home team */}
           <div className="flex-1 flex items-center gap-2 min-w-0">
-            <span className="text-[18px] leading-none shrink-0">{homeFlag}</span>
+            <TeamFlag name={match.team1} />
             <span className="text-[12px] font-bold text-[#E2E8F0] truncate">{match.team1}</span>
           </div>
           {/* VS separator */}
@@ -214,7 +236,7 @@ function WCMatchCard({ match }: { match: Match }) {
           {/* Away team */}
           <div className="flex-1 flex items-center gap-2 justify-end min-w-0">
             <span className="text-[12px] font-bold text-[#E2E8F0] truncate text-right">{match.team2}</span>
-            <span className="text-[18px] leading-none shrink-0">{awayFlag}</span>
+            <TeamFlag name={match.team2} />
           </div>
         </div>
       </div>
