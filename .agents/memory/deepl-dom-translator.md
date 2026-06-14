@@ -19,6 +19,8 @@ Both apps (sportsbook + admin) translate to Chinese via a client-side DOM-walkin
 
 **Reuse note:** sportsbook reuses its existing `src/i18n/zh.ts` (English→Chinese map) as the static dict; admin has its own `zh-CN.json`.
 
+**Route code-splitting constraint:** the sportsbook splits secondary routes via `React.lazy` + `<Suspense>` for faster initial load, but the `Home`/`/` route MUST stay eagerly imported (no lazy, no Suspense suspension on first paint). If Home were lazy, its first render would be the Suspense fallback and the synchronous `applyChineseTranslations()` would translate an empty shell → English flash returns once the chunk resolves. Keep initial route eager whenever changing routing.
+
 **Number-templating + protected-term masking (both translators, kept in lockstep):**
 - Strings with digits collapse to one cache key: digits are masked to `\u0000idx\u0000` and mapped back. `makeTemplatePair` MUST map each translated number to the next *unused* source occurrence of that value (per-index `used[]`), NOT `indexOf` — `indexOf` collides on repeated numbers ("10 ... 10") and caches a corrupt template that mis-renders later instances with different values.
 - Allowlisted tokens (tickers/codes/brand/payment-provider names in `PROTECTED`) are masked with sentinel `@@P{idx}@@` before the DeepL POST and restored after, so they stay verbatim even when embedded in a phrase. **Empirical DeepL behavior (not derivable from code):** `@@N@@` and `<x>N</x>` survive verbatim; smart/straight quotes get reformatted (don't use quotes as sentinels). Restore is fail-closed: if the sentinel count is wrong or any `@@P\d+@@` remnant survives, skip caching that entry → string stays English rather than rendering mangled.
