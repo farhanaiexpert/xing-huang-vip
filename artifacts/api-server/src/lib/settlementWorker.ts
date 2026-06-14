@@ -41,11 +41,7 @@ import {
 } from "@workspace/db";
 import { logger } from "./logger.js";
 import { nextResetAt } from "./depositGuard.js";
-import {
-  fetchCompletedScoresApiFootball,
-  isApiFootballSport,
-  type CompletedEvent,
-} from "./apiFootball.js";
+import type { CompletedEvent } from "./scoreTypes.js";
 import { fetchBetsApiResult } from "./betsApiResult.js";
 
 const ODDS_API_KEY  = process.env.ODDS_API_KEY;
@@ -329,7 +325,7 @@ export function mapSelectionOutcome(
   awayTeam:   string,
   storedHome?: string,
   storedAway?: string,
-): "won" | "lost" | "void" {
+): "won" | "lost" | "void" | "review" {
   if (outcome === "void") return "void";
   const sel  = normalizeTeam(selection);
   const home = normalizeTeam(homeTeam);
@@ -367,36 +363,46 @@ export function mapSelectionOutcome(
     return false;
   };
 
-  // Detect ambiguity: if sel matches BOTH home and away (e.g. shared word like "city")
-  // prefer the more specific match (more words matched) before falling through
   const homeMatchCount = homeWords.filter(w => sel.includes(w)).length;
   const awayMatchCount = awayWords.filter(w => sel.includes(w)).length;
 
   const selIsHome = isHomeAlias(sel);
   const selIsAway = isAwayAlias(sel);
+  const isDraw    = sel === "draw" || sel === "x";
 
-  // Resolve ambiguity by word-overlap count
+  // ── Ambiguity guard ─────────────────────────────────────────────────────────
+  // If the selection matches BOTH teams and the word-overlap count can't break
+  // the tie (e.g. a shared token like "City"/"United"), we cannot safely tell
+  // which side the bet was on. Return "review" so the bet is routed to a human
+  // instead of guessing and risking a wrong payout.
+  if (!isDraw && selIsHome && selIsAway && homeMatchCount === awayMatchCount) {
+    return "review";
+  }
+
+  // Resolve which side the selection refers to by word-overlap count
   const resolvedHome = selIsHome && (!selIsAway || homeMatchCount >= awayMatchCount);
   const resolvedAway = selIsAway && (!selIsHome || awayMatchCount >  homeMatchCount);
 
   if (outcome === "home") {
     if (resolvedHome) return "won";
     if (resolvedAway) return "lost";
-    if (sel === "draw" || sel === "x") return "lost";
+    if (isDraw) return "lost";
+    return "review"; // selection couldn't be matched to either team — hold for human
   }
   if (outcome === "away") {
     if (resolvedAway) return "won";
     if (resolvedHome) return "lost";
-    if (sel === "draw" || sel === "x") return "lost";
+    if (isDraw) return "lost";
+    return "review";
   }
   if (outcome === "draw") {
-    if (sel === "draw" || sel === "x") return "won";
-    // Any team selection loses on a draw
+    if (isDraw) return "won";
+    // Any clearly-identified team selection loses on a draw
     if (resolvedHome || resolvedAway) return "lost";
-    return "lost";
+    return "review"; // unidentifiable selection on a draw — hold for human
   }
 
-  return "void";
+  return "review";
 }
 
 export function mapBttsOutcome(
@@ -667,7 +673,7 @@ async function settleBetsForEvent(
 /**
  * Escalates all open bets for an event to 'manual_review' status.
  * Used when 48h have elapsed since commence_time and neither Odds API nor
- * API-Football returned a completed result.
+ * BetsAPI returned a completed result.
  * The bet's selections stay 'open' so an admin can settle them manually.
  */
 async function markBetsAsManualReview(
@@ -716,7 +722,7 @@ async function markBetsAsManualReview(
 async function processEvent(
   event:         CompletedEvent,
   sport:         string,
-  source:        "odds_api" | "api_football" | "betsapi",
+  source:        "odds_api" | "betsapi",
   commenceTime?: Date | null,
 ): Promise<number> {
   const matchOutcome = determineMatchOutcome(event);
@@ -730,6 +736,7 @@ async function processEvent(
 
   const numericScores = getNumericScores(event);
   const outcomes: EventOutcome[] = [];
+  const reviewSelections: { marketType: string; selection: string }[] = [];
 
   for (const row of openSelectionsResult.rows as {
     market_type: string;
@@ -738,7 +745,7 @@ async function processEvent(
     home_team:   string;
     away_team:   string;
   }[]) {
-    let result: "won" | "lost" | "void";
+    let result: "won" | "lost" | "void" | "review";
     const mt          = normalizeMarketType(row.market_type);
     const storedPoint = row.point != null ? parseFloat(row.point) : null;
     const storedHome  = row.home_team || undefined;
@@ -766,18 +773,68 @@ async function processEvent(
     } else {
       result = "void";
     }
+
+    // Ambiguous / unidentifiable grading → never auto-settle; hold for a human.
+    if (result === "review") {
+      reviewSelections.push({ marketType: row.market_type, selection: row.selection });
+      continue;
+    }
     outcomes.push({ marketType: row.market_type, selection: row.selection, result });
   }
-
-  if (outcomes.length === 0) return 0;
 
   const nameLookup = await db.execute(sql`
     SELECT event_name FROM bet_selections WHERE event_id = ${event.id} LIMIT 1
   `);
   const eventName = (nameLookup.rows[0] as { event_name: string } | undefined)?.event_name ?? event.id;
 
+  // ── Escalate ambiguous selections to manual_review ───────────────────────────
+  // Any bet touching a selection we couldn't grade with confidence is flagged for
+  // an admin to settle by hand, rather than risking a wrong payout. Its selections
+  // are left untouched so the admin has the full picture.
+  let reviewedBets = 0;
+  if (reviewSelections.length > 0) {
+    const betIdSet = new Set<number>();
+    for (const rs of reviewSelections) {
+      const affected = await db.execute(sql`
+        SELECT DISTINCT bet_id FROM bet_selections
+        WHERE event_id = ${event.id} AND market_type = ${rs.marketType}
+          AND selection = ${rs.selection} AND status = 'open'
+      `);
+      for (const r of affected.rows as { bet_id: number }[]) betIdSet.add(r.bet_id);
+    }
+    for (const betId of betIdSet) {
+      const [bet] = await db.select().from(betsTable).where(eq(betsTable.id, betId)).limit(1);
+      if (!bet || bet.status !== "open") continue;
+      await db.update(betsTable).set({ status: "manual_review" }).where(eq(betsTable.id, betId));
+      reviewedBets++;
+    }
+    if (reviewedBets > 0) {
+      await db.insert(settlementLogTable).values({
+        eventId:      event.id,
+        eventName,
+        sport,
+        result:       "manual_review",
+        homeTeam:     event.home_team,
+        awayTeam:     event.away_team,
+        commenceTime: commenceTime ?? null,
+        betsSettled:  reviewedBets,
+        betsWon:      0,
+        betsLost:     0,
+        betsVoided:   0,
+        totalPayout:  "0",
+        source,
+      });
+      logger.warn(
+        { eventId: event.id, eventName, reviewedBets, reviewSelections },
+        "Settlement worker: ambiguous team-name grading — escalated to manual_review",
+      );
+    }
+  }
+
+  if (outcomes.length === 0) return reviewedBets;
+
   const stats = await settleBetsForEvent(event.id, outcomes);
-  if (stats.settled === 0) return 0;
+  if (stats.settled === 0) return reviewedBets;
 
   const homeEntry = event.scores?.find(s => s.name === event.home_team);
   const awayEntry = event.scores?.find(s => s.name === event.away_team);
@@ -818,7 +875,7 @@ async function processEvent(
     },
     "Settlement worker: event settled",
   );
-  return stats.settled;
+  return stats.settled + reviewedBets;
 }
 
 // ─── Core processing loop ─────────────────────────────────────────────────────

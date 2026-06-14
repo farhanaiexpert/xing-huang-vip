@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 /** External API providers whose usage we track for the admin status dashboard. */
-export type ApiProvider = "odds_api" | "betsapi" | "api_football" | "nowpayments";
+export type ApiProvider = "odds_api" | "betsapi" | "nowpayments";
 
 /**
  * Record a single external API call into the api_usage_daily rollup table.

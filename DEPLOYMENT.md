@@ -212,7 +212,6 @@ docker compose up -d --build
 | `JWT_SECRET` | ✅ | 64-char hex — `openssl rand -hex 32` |
 | `ODDS_API_KEY` | Recommended | The Odds API — live match odds |
 | `BETSAPI_KEY` | Recommended | BetsAPI — in-play data |
-| `API_FOOTBALL_KEY` | Optional | Settlement fallback |
 | `NOWPAYMENTS_API_KEY` | Optional | NOWPayments gateway |
 | `NOWPAYMENTS_IPN_SECRET` | Optional | NOWPayments webhooks |
 | `CRYPTOMUS_API_KEY` | Optional | Cryptomus gateway |

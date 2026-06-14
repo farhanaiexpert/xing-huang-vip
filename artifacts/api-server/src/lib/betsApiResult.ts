@@ -23,7 +23,7 @@ import { recordApiCall } from './apiUsage.js';
 import { reserveBetsApiCredit } from './betsApiRateLimiter.js';
 import { BETSAPI_KEY } from './betsapi.js';
 import { logger } from './logger.js';
-import type { CompletedEvent } from './apiFootball.js';
+import type { CompletedEvent } from './scoreTypes.js';
 
 const BETSAPI_BASE = 'https://api.betsapi.com';
 

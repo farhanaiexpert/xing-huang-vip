@@ -16,7 +16,7 @@ import {
   shouldEscalateToManualReview,
   combineAccumulatorOutcome,
 } from "./settlementWorker.js";
-import type { CompletedEvent } from "./apiFootball.js";
+import type { CompletedEvent } from "./scoreTypes.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -124,6 +124,27 @@ describe("mapSelectionOutcome", () => {
   });
   it("void outcome propagates", () => {
     expect(mapSelectionOutcome("Arsenal", "void", HOME, AWAY)).toBe("void");
+  });
+
+  // ── Ambiguity guard: never guess when the name can't be resolved ────────────
+  it('ambiguous shared token ("City") matches both teams equally → review', () => {
+    // Both teams share the token "City"; word-overlap is tied, so we can't tell
+    // which side the bet was on. Must hold for a human, not guess a winner.
+    expect(
+      mapSelectionOutcome("City", "home", "Manchester City", "Leicester City"),
+    ).toBe("review");
+  });
+  it("unidentifiable selection on a home win → review (not a wrong loss/void)", () => {
+    expect(mapSelectionOutcome("Tottenham", "home", HOME, AWAY)).toBe("review");
+  });
+  it("unidentifiable selection on a draw → review (not a wrong loss)", () => {
+    expect(mapSelectionOutcome("Tottenham", "draw", HOME, AWAY)).toBe("review");
+  });
+  it("clearly distinguishable shared-token teams still auto-resolve", () => {
+    // "Manchester City" has a non-shared distinguishing word → no ambiguity.
+    expect(
+      mapSelectionOutcome("Manchester City", "home", "Manchester City", "Leicester City"),
+    ).toBe("won");
   });
 });
 

@@ -101,7 +101,6 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
     const DEFS = [
       { id: "odds_api",     name: "The Odds API",     envKey: "ODDS_API_KEY",        purpose: "Primary match odds & live scores" },
       { id: "betsapi",      name: "BetsAPI (Bet365)", envKey: "BETSAPI_KEY",         purpose: "Live in-play data & Bet365 markets" },
-      { id: "api_football", name: "API-Football",     envKey: "API_FOOTBALL_KEY",    purpose: "Settlement fallback for soccer" },
       { id: "nowpayments",  name: "NOWPayments",      envKey: "NOWPAYMENTS_API_KEY", purpose: "Crypto deposit gateway" },
     ] as const;
 
