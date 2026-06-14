@@ -7,6 +7,7 @@ import {
   Target, Zap, Wallet, TrendingUp, Trophy, ChevronDown, ChevronUp,
   Play, CheckCircle2,
 } from "lucide-react";
+import { GuideModal, GuideButton } from "@/components/GuideModal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -268,12 +269,52 @@ function RequirementBuilder({ promoId, requirements }: { promoId: number; requir
   );
 }
 
+const PROMOS_GUIDE = [
+  {
+    title: "Creating a Promotion",
+    items: [
+      'Click "New Promotion" and fill in the title, description, promo type, and reward type.',
+      "Promo Type describes the campaign category shown to players (e.g. Deposit Bonus, Free Bet, Cashback, Referral Boost).",
+      "Reward Type controls how the reward is calculated: Flat Bonus pays a fixed USDT amount, Percentage/Cashback pays a % of deposit or losses, Pool Split distributes a shared prize pool among all eligible claimants.",
+      "Set a Min Deposit if the promotion requires a deposit to unlock. Set Wagering Requirement (e.g. 3×) if players must wager the bonus before withdrawing.",
+      "Max Claims caps how many users can claim it in total. Leave blank for unlimited.",
+      "Toggle a promotion Active/Inactive at any time without deleting it.",
+    ],
+  },
+  {
+    title: "Mission Tasks (Requirements)",
+    items: [
+      "After creating a promotion, expand its card and add Mission Tasks under the requirements section.",
+      "Tasks gate the Claim button — a player must complete all tasks before they can receive the reward.",
+      "Available task types: Place N bets, Deposit amount, Refer N friends, Bets with min stake, Bets at min odds.",
+      "If no tasks are added, any eligible user can claim immediately.",
+    ],
+  },
+  {
+    title: "Pool Split Promotions",
+    items: [
+      'Set Reward Type to "Pool Split" and enter a Total Pool amount in USDT.',
+      'When you are ready to pay out, click the "Settle Pool" button (trophy icon) on the promotion card.',
+      "All users who have claimed the promotion share the pool equally. The settled amount per person is shown in the success toast.",
+    ],
+  },
+  {
+    title: "Eligibility",
+    items: [
+      { text: "All users", note: "every registered account can claim" },
+      { text: "New users", note: "only accounts that signed up after the promotion was created" },
+      { text: "VIP users", note: "accounts with the VIP role flag" },
+    ],
+  },
+];
+
 export default function PromotionsPage() {
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [form, setForm] = useState<PromoForm>(EMPTY_FORM);
+  const [showGuide, setShowGuide] = useState(false);
 
   const { data: promotions = [], isLoading } = useQuery<AdminPromotion[]>({
     queryKey: ["admin-promotions"],
@@ -350,6 +391,14 @@ export default function PromotionsPage() {
 
   return (
     <div className="space-y-5">
+      <GuideModal
+        open={showGuide}
+        onClose={() => setShowGuide(false)}
+        title="Promotions Guide"
+        subtitle="How to create and manage player promotions"
+        accent="#00DFA9"
+        sections={PROMOS_GUIDE}
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Promotions</h1>
@@ -357,10 +406,13 @@ export default function PromotionsPage() {
             {promotions.length} total · <span className="text-[#00DFA9]">{active} active</span>
           </p>
         </div>
-        <button onClick={() => { setShowCreate(!showCreate); setEditingId(null); setExpandedId(null); }}
+        <div className="flex items-center gap-2">
+          <GuideButton onClick={() => setShowGuide(true)} accent="#00DFA9" />
+          <button onClick={() => { setShowCreate(!showCreate); setEditingId(null); setExpandedId(null); }}
           className="flex items-center gap-2 px-4 py-2 bg-[#00DFA9] text-[#0B0F14] rounded-lg text-sm font-semibold hover:bg-[#00DFA9]/90 transition-colors">
           <Plus className="w-4 h-4" /> New Promotion
         </button>
+        </div>
       </div>
 
       {showCreate && (

@@ -10,6 +10,7 @@ import {
   RotateCcw, ClipboardList, Bot, UserCog, Filter,
   ChevronLeft, ChevronRight as ChevronRightIcon, ShieldAlert, X,
 } from "lucide-react";
+import { GuideModal, GuideButton } from "@/components/GuideModal";
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -646,10 +647,48 @@ function SettlementLogTab() {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+const SETTLEMENT_GUIDE = [
+  {
+    title: "How Auto-Settlement Works",
+    items: [
+      "A background cron job runs every 5 minutes and checks completed events against the Odds API (by event ID) and BetsAPI (by betsapi_* prefix).",
+      "When a result is found, every open bet on that event is settled automatically — winners are credited, losers are marked lost.",
+      "Events with no result after 48 hours are flagged for manual review so nothing is left open indefinitely.",
+    ],
+  },
+  {
+    title: "Manual Batch Settlement",
+    items: [
+      "The Batch Settlement tab lists every event that has open bets waiting for a result.",
+      "Click an event to open the settlement panel. Each market (Match Result, BTTS, etc.) shows all selections with their open bet count, total staked, and maximum liability.",
+      "Use the Quick-set buttons to mark all selections Won, Lost, or Void at once — or set each selection individually from the dropdown.",
+      'Once every selection has a result, click "Settle Bets". Winners are paid out immediately and the event disappears from the list.',
+      "Voiding a selection refunds the full stake to each affected player.",
+    ],
+  },
+  {
+    title: "Settlement Log & Overrides",
+    items: [
+      "The Settlement Log tab records every settlement action — auto or manual — with the source badge (Auto / Manual / Override).",
+      "If a result was entered incorrectly, click the Override button on any log entry. The system reverses all payouts/refunds for that event and re-settles every bet with the new outcomes you provide.",
+      "Overrides are clearly flagged in the log so you always have a full audit trail.",
+    ],
+  },
+  {
+    title: "Key Terms",
+    items: [
+      { text: "Staked", note: "total USDT wagered by players on that selection" },
+      { text: "Liability", note: "maximum payout owed if that selection wins (stake × odds)" },
+      { text: "Void", note: "bet is cancelled and the full stake is returned to the player" },
+    ],
+  },
+];
+
 export default function SettlementPage() {
   const [search, setSearch] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"batch" | "log">("batch");
+  const [showGuide, setShowGuide] = useState(false);
 
   const { data: events = [], isLoading } = useQuery<SettlementEvent[]>({
     queryKey: ["settlement-events"],
@@ -669,11 +708,20 @@ export default function SettlementPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-5 pb-10">
+      <GuideModal
+        open={showGuide}
+        onClose={() => setShowGuide(false)}
+        title="Settlement Guide"
+        subtitle="How bet results are processed and paid out"
+        accent="#00DFA9"
+        sections={SETTLEMENT_GUIDE}
+      />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Settlement</h1>
           <p className="text-sm text-[#475569] mt-0.5">Auto-settlement runs every 5 min · Manual batch tool below</p>
         </div>
+        <GuideButton onClick={() => setShowGuide(true)} accent="#00DFA9" />
       </div>
 
       {/* Tabs */}

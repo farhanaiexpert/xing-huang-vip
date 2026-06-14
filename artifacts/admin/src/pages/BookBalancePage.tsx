@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { DollarSign, TrendingUp, TrendingDown, Scale, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GuideModal, GuideButton } from "@/components/GuideModal";
 
 interface SportOpenRow {
   sport: string;
@@ -58,7 +60,44 @@ function StatCard({
   );
 }
 
+const BOOK_BALANCE_GUIDE = [
+  {
+    title: "What This Page Shows",
+    items: [
+      "Book Balance is a real-time financial health dashboard — it shows the total money wagered by players, total paid out in winnings, and the resulting house profit (or loss).",
+      "Data refreshes automatically every 60 seconds. Click Refresh at any time for an immediate update.",
+      "All figures are in USDT.",
+    ],
+  },
+  {
+    title: "Top KPI Cards",
+    items: [
+      { text: "Lifetime Staked", note: "total USDT wagered across all bets ever placed" },
+      { text: "Lifetime Paid Out", note: "total USDT paid to winning players plus void refunds" },
+      { text: "House Edge (Net)", note: "Staked − Paid Out = net profit for the house. Green = house is up, red = house is down" },
+      { text: "Open Exposure", note: "number of bets still awaiting settlement — these represent potential future payouts" },
+    ],
+  },
+  {
+    title: "Open Exposure by Sport",
+    items: [
+      "Lists every sport with at least one unsettled bet, showing open bet count, total staked, and the maximum payout the house would owe if every open bet wins.",
+      "Exposure Ratio = Max Payout Owed ÷ Total Staked. A ratio above 3× means the house is carrying significant risk on that sport.",
+      "This table resets as bets are settled — use it to identify sports where you may want to limit new bets or boost margins.",
+    ],
+  },
+  {
+    title: "Settled P&L by Sport",
+    items: [
+      "Shows the house profit per sport on all completed bets: House P&L = Staked − Paid Out.",
+      "Green P&L means the house made money on that sport. Red means the house paid out more than it took in.",
+      "Voided bets are refunded and do not contribute to house P&L — they are shown in their own column for transparency.",
+    ],
+  },
+];
+
 export default function BookBalancePage() {
+  const [showGuide, setShowGuide] = useState(false);
   const { data, isLoading, refetch, isFetching } = useQuery<BookBalance>({
     queryKey: ["book-balance"],
     queryFn: () => api.get("/admin/reports/book-balance"),
@@ -73,12 +112,22 @@ export default function BookBalancePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
+      <GuideModal
+        open={showGuide}
+        onClose={() => setShowGuide(false)}
+        title="Book Balance Guide"
+        subtitle="Understanding your platform's financial health"
+        accent="#38BDF8"
+        sections={BOOK_BALANCE_GUIDE}
+      />
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Book Balance</h1>
           <p className="text-sm text-[#6B7280] mt-1">Stakes vs payouts vs settled — overall and per sport</p>
         </div>
-        <button
+        <div className="flex items-center gap-2">
+          <GuideButton onClick={() => setShowGuide(true)} accent="#38BDF8" />
+          <button
           onClick={() => refetch()}
           disabled={isFetching}
           className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white hover:bg-white/8 transition-colors disabled:opacity-50"
@@ -86,6 +135,7 @@ export default function BookBalancePage() {
           <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
           Refresh
         </button>
+        </div>
       </div>
 
       {isLoading ? (

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Zap, Plus, Trash2, ToggleLeft, ToggleRight, Clock, Pencil, X, TrendingUp, Info } from "lucide-react";
+import { GuideModal, GuideButton } from "@/components/GuideModal";
 import { cn } from "@/lib/utils";
 
 interface PriceBoost {
@@ -235,10 +236,48 @@ function BoostForm({
   );
 }
 
+const BOOSTS_GUIDE = [
+  {
+    title: "What is a Price Boost?",
+    items: [
+      "A Price Boost gives players enhanced odds on a specific match selection for a limited time — it appears as a featured card on the sportsbook home page.",
+      "When a player bets on the boost, they are paid out at the boosted odds (not the normal market price). The difference in liability is absorbed by the house.",
+      "Use Price Boosts to drive betting volume on specific matches or to reward loyal players with better value.",
+    ],
+  },
+  {
+    title: "Creating a Boost",
+    items: [
+      "Fill in the Boost Title (the headline players see), Match Name (e.g. Arsenal vs Chelsea), and the exact Event ID from the Odds API or BetsAPI — this ID links the boost to the right event for settlement.",
+      "Set the Normal Odds (current market price, shown crossed-out) and the Boosted Odds (must be strictly higher).",
+      "The uplift percentage is calculated automatically and shown in real time as you type.",
+      "Max Stake caps how much a single player can bet at the boosted price — use this to control your liability. Leave blank for no limit.",
+      "Expires At: the boost auto-deactivates at this time. Leave blank to keep it live until you turn it off manually.",
+    ],
+  },
+  {
+    title: "Managing Boosts",
+    items: [
+      "Toggle the switch on any boost to activate or deactivate it instantly — deactivated boosts are hidden from players.",
+      "Edit a boost to update odds, extend the expiry, or change the max stake at any time.",
+      "Bets Placed counter shows how many bets have been placed using this boost — useful for tracking popularity and exposure.",
+      "Delete a boost to remove it permanently. This does not affect bets already placed on it.",
+    ],
+  },
+  {
+    title: "Settlement",
+    items: [
+      "Boosted bets settle the same way as regular bets — the settlement system uses the Event ID you provided to match the result.",
+      "Make sure the Event ID exactly matches the ID stored with the player's bet (from the Odds API or BetsAPI, depending on where the match originated).",
+    ],
+  },
+];
+
 export default function BoostsPage() {
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId]   = useState<number | null>(null);
+  const [showGuide, setShowGuide]   = useState(false);
 
   const { data: boosts = [], isLoading } = useQuery<PriceBoost[]>({
     queryKey: ["admin-boosts"],
@@ -309,6 +348,14 @@ export default function BoostsPage() {
 
   return (
     <div className="space-y-6">
+      <GuideModal
+        open={showGuide}
+        onClose={() => setShowGuide(false)}
+        title="Price Boosts Guide"
+        subtitle="How to create and manage enhanced odds for players"
+        accent="#FACC15"
+        sections={BOOSTS_GUIDE}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -320,15 +367,18 @@ export default function BoostsPage() {
             Set enhanced odds on specific match outcomes — they appear on the sportsbook home page
           </p>
         </div>
-        {!showCreate && (
-          <button
-            onClick={() => { setShowCreate(true); setEditingId(null); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FACC15] text-[#0B0F14] text-sm font-bold hover:bg-[#FDE047] transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            New Boost
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <GuideButton onClick={() => setShowGuide(true)} accent="#FACC15" />
+          {!showCreate && (
+            <button
+              onClick={() => { setShowCreate(true); setEditingId(null); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FACC15] text-[#0B0F14] text-sm font-bold hover:bg-[#FDE047] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New Boost
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats row */}

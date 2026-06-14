@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, AdminPool } from "@/lib/api";
 import { fmt, fmtDate, statusBg } from "@/lib/utils";
 import { Plus, Trash2, CheckSquare } from "lucide-react";
+import { GuideModal, GuideButton } from "@/components/GuideModal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -13,11 +14,48 @@ function toIso(localDatetime: string): string {
   return new Date(localDatetime).toISOString();
 }
 
+const POOLS_GUIDE = [
+  {
+    title: "What is a Prediction Pool?",
+    items: [
+      'A Prediction Pool is a pay-to-enter competition where players submit a pick (e.g. "home_win") before a deadline.',
+      "All entry fees collected go into a shared pot. When the event ends, you enter the correct outcome and the system distributes the prize pool among all players whose pick matched.",
+      "If no entry matches the correct outcome, all entrants share the prize pool equally — no one walks away empty-handed.",
+    ],
+  },
+  {
+    title: "Creating a Pool",
+    items: [
+      'Click "New Pool" and fill in the title, sport, prize pool (USDT), entry fee (USDT), and deadline.',
+      "Prize Pool is the total amount split among winners. Entry Fee is what each player pays to enter.",
+      "Once created the pool is immediately open — players on the sportsbook can see it and submit their picks.",
+    ],
+  },
+  {
+    title: "Settling a Pool",
+    items: [
+      'After the event ends, click "Settle" next to the pool in the table.',
+      "Enter the correct outcome exactly as players would have typed it (e.g. home_win, away_win, draw, player_a).",
+      "The system finds all entries whose pick matches that string and splits the prize pool equally among them. Winners are credited instantly.",
+      "If you need to cancel (postponed event, etc.), click Cancel instead — all entry fees are refunded.",
+    ],
+  },
+  {
+    title: "Pool Status",
+    items: [
+      { text: "Open", note: "accepting entries, players can still join" },
+      { text: "Settled", note: "correct outcome entered, winnings paid out" },
+      { text: "Cancelled", note: "pool voided, entry fees refunded" },
+    ],
+  },
+];
+
 export default function PoolsPage() {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [settlingPool, setSettlingPool] = useState<AdminPool | null>(null);
   const [outcome, setOutcome] = useState("");
+  const [showGuide, setShowGuide] = useState(false);
   const [form, setForm] = useState({
     title: "", sport: "football", prizePool: "", entryFee: "", deadline: "",
   });
@@ -106,15 +144,26 @@ export default function PoolsPage() {
         </DialogContent>
       </Dialog>
 
+      <GuideModal
+        open={showGuide}
+        onClose={() => setShowGuide(false)}
+        title="Prediction Pools Guide"
+        subtitle="How to create, run, and settle player prediction pools"
+        accent="#FACC15"
+        sections={POOLS_GUIDE}
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Prediction Pools</h1>
           <p className="text-sm text-[#94A3B8] mt-1">{pools.length} total</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)}
+        <div className="flex items-center gap-2">
+          <GuideButton onClick={() => setShowGuide(true)} accent="#FACC15" />
+          <button onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-4 py-2 bg-[#00DFA9] text-[#0B0F14] rounded-lg text-sm font-semibold hover:bg-[#00DFA9]/90 transition-colors">
           <Plus className="w-4 h-4" /> New Pool
         </button>
+        </div>
       </div>
 
       {showForm && (
