@@ -169,6 +169,13 @@ export const customOverrides: Record<string, Record<string, string>> = {
     "Over / Under": "大小球",
     "BTTS (Both Teams To Score)": "两队都进球",
     "Next Goal": "下一粒进球",
+
+    // Generic market group / selection labels (all sports)
+    "Draw No Bet": "和局退款",
+    "Total — Odd / Even": "总数 — 单 / 双",
+    Odd: "单",
+    Even: "双",
+    Map: "地图",
     "FIFA World Cup 2026": "2026国际足联世界杯",
 
     "Brazil Serie B": "巴西乙级联赛",

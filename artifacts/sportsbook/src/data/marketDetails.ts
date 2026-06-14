@@ -702,18 +702,97 @@ function horseRacingMarkets(match: MatchEntity): MarketDetailGroup[] {
 }
 
 // ── Generic fallback ──────────────────────────────────────────────────────────
+//
+// Used for every sport without a dedicated generator (American football, baseball,
+// cricket, MMA, ice hockey, rugby, boxing, darts, golf, handball, snooker,
+// volleyball, etc.). Derives a full set of market types from the primary market
+// so EVERY match shows rich markets — never just the single 1X2 / winner line.
 
 function genericMarkets(match: MatchEntity): MarketDetailGroup[] {
-  return [
-    { id: 'popular', name: 'Popular', icon: '⭐', category: 'popular', markets: [match.primaryMarket], isDefaultOpen: true },
+  const { id: mid, homeTeamName: ht, awayTeamName: at, primaryMarket: pm } = match;
+  const v = vs(mid);
+  const sels = pm.selections;
+  const threeWay = sels.length >= 3;
+
+  const hOdds = sels[0]?.odds ?? 2.0;
+  const aOdds = sels[sels.length - 1]?.odds ?? 2.0;
+  const dOdds = threeWay ? (sels[1]?.odds ?? 3.3) : 0;
+
+  const ih = 1 / hOdds, ia = 1 / aOdds, idr = threeWay ? 1 / dOdds : 0;
+  const tot = ih + ia + idr;
+  const ph = ih / tot, pa = ia / tot, pdr = threeWay ? idr / tot : 0;
+
+  // ── Match result / winner (primary) ──────────────────────────────────────
+  const mMR = pm;
+
+  // ── Double chance (three-way only) ───────────────────────────────────────
+  const mDC = market(`mkt_${mid}_dc`, mid, 'mt_double_chance', 'Double Chance', [
+    sel(`mkt_${mid}_dc1x`, `mkt_${mid}_dc`, `${ht} or Draw`,  '1X', o(1 / (ph + pdr) * 1.06 * v)),
+    sel(`mkt_${mid}_dc12`, `mkt_${mid}_dc`, `${ht} or ${at}`, '12', o(1 / (ph + pa)  * 1.06 * v)),
+    sel(`mkt_${mid}_dcx2`, `mkt_${mid}_dc`, `Draw or ${at}`,  'X2', o(1 / (pdr + pa) * 1.06 * v)),
+  ]);
+
+  // ── Draw No Bet (three-way only) ─────────────────────────────────────────
+  const mDNB = market(`mkt_${mid}_dnb`, mid, 'mt_draw_no_bet', 'Draw No Bet', [
+    sel(`mkt_${mid}_dnbh`, `mkt_${mid}_dnb`, ht, ht, o(1 / (ph / (ph + pa)) * 1.04 * v)),
+    sel(`mkt_${mid}_dnba`, `mkt_${mid}_dnb`, at, at, o(1 / (pa / (ph + pa)) * 1.04 * v)),
+  ]);
+
+  // ── Handicap — derive from base probabilities ────────────────────────────
+  const fmt = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+  const hcpLines = threeWay ? [-2, -1, 1, 2] : [-2.5, -1.5, 1.5, 2.5];
+  const hcpMarkets = hcpLines.map((line, i) => {
+    const hp = Math.min(0.92, Math.max(0.08, ph - line * 0.11));
+    const apw = 1 - hp;
+    return market(`mkt_${mid}_hcp${i}`, mid, 'mt_handicap', `Handicap ${fmt(line)}`, [
+      sel(`mkt_${mid}_hcp${i}h`, `mkt_${mid}_hcp${i}`, `${ht} ${fmt(line)}`,  ht, o(1 / hp  * 1.05 * v)),
+      sel(`mkt_${mid}_hcp${i}a`, `mkt_${mid}_hcp${i}`, `${at} ${fmt(-line)}`, at, o(1 / apw * 1.05 * v)),
+    ]);
+  });
+
+  // ── Totals — Over/Under ──────────────────────────────────────────────────
+  const totalDefs = [
+    { line: '1.5', ov: 1.30, un: 3.40 },
+    { line: '2.5', ov: 1.85, un: 1.95 },
+    { line: '3.5', ov: 2.90, un: 1.42 },
+    { line: '4.5', ov: 4.60, un: 1.18 },
   ];
+  const totalMarkets = totalDefs.map((t, i) =>
+    market(`mkt_${mid}_tot${i}`, mid, 'mt_total', `Total — Over/Under ${t.line}`, [
+      sel(`mkt_${mid}_tot${i}o`, `mkt_${mid}_tot${i}`, `Over ${t.line}`,  `O ${t.line}`, o(t.ov * v)),
+      sel(`mkt_${mid}_tot${i}u`, `mkt_${mid}_tot${i}`, `Under ${t.line}`, `U ${t.line}`, o(t.un / v)),
+    ]),
+  );
+
+  // ── Total Odd / Even ─────────────────────────────────────────────────────
+  const mOE = market(`mkt_${mid}_oe`, mid, 'mt_odd_even', 'Total — Odd / Even', [
+    sel(`mkt_${mid}_oeo`, `mkt_${mid}_oe`, 'Odd',  'Odd',  o(1.95 * v)),
+    sel(`mkt_${mid}_oee`, `mkt_${mid}_oe`, 'Even', 'Even', o(1.85 / v)),
+  ]);
+
+  const popularMarkets = threeWay
+    ? [mMR, mDC, hcpMarkets[1], totalMarkets[1]]
+    : [mMR, hcpMarkets[1], totalMarkets[1]];
+  const resultMarkets = threeWay ? [mMR, mDC, mDNB] : [mMR];
+
+  const groups: MarketDetailGroup[] = [
+    { id: 'popular',  name: 'Popular',      icon: '⭐', category: 'popular',  markets: popularMarkets,        isDefaultOpen: true  },
+  ];
+  if (threeWay) {
+    groups.push({ id: 'result', name: 'Match Result', icon: '🏆', category: 'result', markets: resultMarkets, isDefaultOpen: true });
+  }
+  groups.push(
+    { id: 'handicap', name: 'Handicap',     icon: '⚖️', category: 'handicap', markets: hcpMarkets,            isDefaultOpen: false },
+    { id: 'totals',   name: 'Over / Under', icon: '📈', category: 'goals',    markets: [...totalMarkets, mOE], isDefaultOpen: false },
+  );
+  return groups;
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function generateDetailMarkets(match: MatchEntity): MarketDetailGroup[] {
   const sport = match.sportId;
-  if (sport === 'sp_soccer')       return soccerMarkets(match);
+  if (sport === 'sp_soccer' || sport === 'sp_ucl') return soccerMarkets(match);
   if (sport === 'sp_tennis')       return tennisMarkets(match);
   if (sport === 'sp_nba' || sport === 'sp_basketball') return basketballMarkets(match);
   if (sport === 'sp_esports')      return esportsMarkets(match);
