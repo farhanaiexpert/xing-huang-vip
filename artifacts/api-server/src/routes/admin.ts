@@ -433,6 +433,41 @@ router.post("/admin/users", async (req, res): Promise<void> => {
   res.status(201).json(newUser);
 });
 
+// ─── Users summary (status / KYC breakdown + total balance) ───────────────────
+// Registered BEFORE /admin/users/:id so "summary" is not parsed as an id.
+// Respects the optional email/username `search` filter so the cards scope to the
+// current search. Scope matches the table (test accounts NOT excluded).
+router.get("/admin/users/summary", async (req, res): Promise<void> => {
+  const { search } = req.query as Record<string, string>;
+  const where = search
+    ? or(ilike(usersTable.email, `%${search}%`), ilike(usersTable.username, `%${search}%`))
+    : undefined;
+
+  const [row] = await db
+    .select({
+      total: count(),
+      active: sql<number>`COUNT(*) FILTER (WHERE ${usersTable.isSuspended} = false)::int`,
+      suspended: sql<number>`COUNT(*) FILTER (WHERE ${usersTable.isSuspended} = true)::int`,
+      kycVerified: sql<number>`COUNT(*) FILTER (WHERE ${usersTable.kycStatus} IN ('verified','approved'))::int`,
+      kycPending: sql<number>`COUNT(*) FILTER (WHERE ${usersTable.kycStatus} = 'pending')::int`,
+      newThisWeek: sql<number>`COUNT(*) FILTER (WHERE ${usersTable.createdAt} >= NOW() - INTERVAL '7 days')::int`,
+      totalBalance: sql<string>`COALESCE(SUM(${walletsTable.balanceUsdt}), 0)::text`,
+    })
+    .from(usersTable)
+    .leftJoin(walletsTable, eq(walletsTable.userId, usersTable.id))
+    .where(where);
+
+  res.json({
+    total: Number(row.total),
+    active: Number(row.active),
+    suspended: Number(row.suspended),
+    kycVerified: Number(row.kycVerified),
+    kycPending: Number(row.kycPending),
+    newThisWeek: Number(row.newThisWeek),
+    totalBalance: row.totalBalance ?? "0",
+  });
+});
+
 router.get("/admin/users/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const [user] = await db

@@ -3,13 +3,26 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { api, AdminUser } from "@/lib/api";
 import { fmt, fmtDate, statusBg } from "@/lib/utils";
-import { Search, Ban, CheckCircle, ChevronLeft, ChevronRight, User, UserPlus, X, History, Wallet, Network, Copy, Check } from "lucide-react";
+import {
+  Search, Ban, CheckCircle, ChevronLeft, ChevronRight, User, UserPlus, X, History,
+  Wallet, Network, Copy, Check, Users as UsersIcon, UserCheck, ShieldX, BadgeCheck, Coins, Inbox,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DataTable, ColDef } from "@/components/DataTable";
 
 const PAGE_SIZE = 20;
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
+
+interface UsersSummary {
+  total: number;
+  active: number;
+  suspended: number;
+  kycVerified: number;
+  kycPending: number;
+  newThisWeek: number;
+  totalBalance: string;
+}
 
 const NETWORK_COLORS: Record<string, string> = {
   Ethereum:  "bg-[#627EEA]/10 text-[#627EEA] border-[#627EEA]/20",
@@ -21,6 +34,46 @@ const NETWORK_COLORS: Record<string, string> = {
   Base:      "bg-[#0052FF]/10 text-[#60A5FA] border-[#60A5FA]/20",
   Fantom:    "bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/20",
 };
+
+function SummaryCard({
+  label, value, sub, icon: Icon, accent, loading,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  accent: string;
+  loading?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-white/8 bg-[#0D1117] p-4 hover:border-white/15 transition-colors">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-[#64748B] font-medium">{label}</span>
+        <span className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${accent}1a`, color: accent }}>
+          <Icon className="w-4 h-4" />
+        </span>
+      </div>
+      {loading ? (
+        <div className="h-7 w-20 bg-white/5 rounded animate-pulse mt-2.5" />
+      ) : (
+        <div className="text-2xl font-bold text-white mt-2 tabular-nums tracking-tight">{value}</div>
+      )}
+      {sub && <div className="text-[11px] text-[#475569] mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function StatusBadge({ suspended }: { suspended: boolean }) {
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border font-semibold",
+      suspended ? statusBg("rejected") : statusBg("active"),
+    )}>
+      <span className={cn("w-1.5 h-1.5 rounded-full", suspended ? "bg-red-400" : "bg-[#00DFA9] animate-pulse")} />
+      {suspended ? "Suspended" : "Active"}
+    </span>
+  );
+}
 
 function WalletCell({ u }: { u: AdminUser }) {
   const [copied, setCopied] = useState(false);
@@ -72,6 +125,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
     mutationFn: () => api.post("/admin/users", form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["admin-users-summary"] });
       toast.success("User created successfully");
       onClose();
     },
@@ -129,28 +183,54 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+const STATUS_TABS = [
+  { value: "", label: "All" },
+  { value: "false", label: "Active" },
+  { value: "true", label: "Suspended" },
+];
+
+const ROLE_TABS = [
+  { value: "", label: "All roles" },
+  { value: "user", label: "Users" },
+  { value: "admins", label: "Admins" },
+];
+
 export default function UsersPage() {
   const qc = useQueryClient();
   const [, navigate] = useLocation();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
+  const [suspended, setSuspended] = useState("");
+  const [role, setRole] = useState("");
   const [showCreate, setShowCreate] = useState(false);
 
   const { data, isLoading } = useQuery<{ users: AdminUser[]; total: number }>({
-    queryKey: ["admin-users", page, q],
-    queryFn: () => api.get(`/admin/users?page=${page}&limit=${PAGE_SIZE}${q ? `&search=${encodeURIComponent(q)}` : ""}`),
+    queryKey: ["admin-users", page, q, suspended, role],
+    queryFn: () => api.get(
+      `/admin/users?page=${page}&limit=${PAGE_SIZE}${q ? `&search=${encodeURIComponent(q)}` : ""}${suspended ? `&suspended=${suspended}` : ""}${role ? `&role=${role}` : ""}`
+    ),
+  });
+
+  const { data: summary, isLoading: summaryLoading } = useQuery<UsersSummary>({
+    queryKey: ["admin-users-summary", q],
+    queryFn: () => api.get(`/admin/users/summary${q ? `?search=${encodeURIComponent(q)}` : ""}`),
   });
 
   const suspendMut = useMutation({
     mutationFn: ({ id, suspend }: { id: number; suspend: boolean }) =>
       api.patch(`/admin/users/${id}`, { isSuspended: suspend }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-users"] }); toast.success("User updated"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["admin-users-summary"] });
+      toast.success("User updated");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasFilters = !!(q || suspended || role);
 
   function doSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -167,7 +247,7 @@ export default function UsersPage() {
             <User className="w-3.5 h-3.5 text-[#475569]" />
           </div>
           <div>
-            <div className="font-medium text-white text-sm">{u.username ?? <span className="text-[#475569] italic">no username</span>}</div>
+            <div className="font-medium text-white text-sm group-hover:text-[#00DFA9] transition-colors">{u.username ?? <span className="text-[#475569] italic">no username</span>}</div>
             <div className="text-[11px] text-[#475569]">{u.email ?? "—"}</div>
           </div>
         </div>
@@ -181,7 +261,7 @@ export default function UsersPage() {
       key: "role", label: "Role", sortable: true,
       getValue: u => u.role,
       render: u => (
-        <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", roleBadge(u.role))}>
+        <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium capitalize", roleBadge(u.role))}>
           {u.role.replace(/_/g, " ")}
         </span>
       ),
@@ -190,7 +270,7 @@ export default function UsersPage() {
       key: "kyc", label: "KYC", sortable: true,
       getValue: u => u.kycStatus,
       render: u => (
-        <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium", kycBadge(u.kycStatus))}>
+        <span className={cn("px-2 py-0.5 rounded-full text-[11px] border font-medium capitalize", kycBadge(u.kycStatus))}>
           {u.kycStatus}
         </span>
       ),
@@ -207,11 +287,7 @@ export default function UsersPage() {
     {
       key: "status", label: "Status", sortable: true,
       getValue: u => u.isSuspended ? "suspended" : "active",
-      render: u => (
-        <span className={cn("px-2 py-0.5 rounded-full text-[11px] border", u.isSuspended ? statusBg("rejected") : statusBg("active"))}>
-          {u.isSuspended ? "Suspended" : "Active"}
-        </span>
-      ),
+      render: u => <StatusBadge suspended={u.isSuspended} />,
     },
     {
       key: "joined", label: "Joined", sortable: true,
@@ -241,36 +317,73 @@ export default function UsersPage() {
     <div className="space-y-5">
       {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} />}
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
         <div className="flex-1 min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Users</h1>
-          <p className="text-sm text-[#475569] mt-0.5">{total.toLocaleString()} total · tap a row to open full profile</p>
+          <p className="text-sm text-[#475569] mt-0.5">Manage accounts, KYC, balances and access — tap a row for the full profile.</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <form onSubmit={doSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#475569]" />
-              <input
-                value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Email or username…"
-                className="pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] w-full sm:w-52 transition-colors"
-              />
-            </div>
-            <button type="submit" className="px-4 py-2 bg-white/8 border border-white/10 text-[#94A3B8] rounded-lg text-sm hover:bg-white/12 transition-colors shrink-0">
-              Search
-            </button>
-          </form>
-          <div className="flex gap-2">
-            <button onClick={() => navigate("/login-history")}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-[#94A3B8] hover:text-white rounded-lg text-sm hover:bg-white/10 transition-colors">
-              <History className="w-4 h-4" /><span className="hidden sm:inline">Login History</span>
-            </button>
-            <button onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#00DFA9] text-[#0B0F14] rounded-lg text-sm font-semibold hover:bg-[#00DFA9]/90 transition-colors flex-1 sm:flex-none justify-center">
-              <UserPlus className="w-4 h-4" /> New User
-            </button>
+        <div className="flex gap-2 shrink-0">
+          <button onClick={() => navigate("/login-history")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-[#94A3B8] hover:text-white rounded-lg text-sm hover:bg-white/10 transition-colors">
+            <History className="w-4 h-4" /><span className="hidden sm:inline">Login History</span>
+          </button>
+          <button onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#00DFA9] text-[#0B0F14] rounded-lg text-sm font-semibold hover:bg-[#00DFA9]/90 transition-colors justify-center">
+            <UserPlus className="w-4 h-4" /> New User
+          </button>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <SummaryCard label="Total Users" value={fmt(summary?.total ?? 0, 0)} icon={UsersIcon} accent="#94A3B8" loading={summaryLoading}
+          sub={summary ? `+${fmt(summary.newThisWeek, 0)} this week` : undefined} />
+        <SummaryCard label="Active" value={fmt(summary?.active ?? 0, 0)} icon={UserCheck} accent="#00DFA9" loading={summaryLoading}
+          sub="not suspended" />
+        <SummaryCard label="Suspended" value={fmt(summary?.suspended ?? 0, 0)} icon={ShieldX} accent="#F87171" loading={summaryLoading}
+          sub="access blocked" />
+        <SummaryCard label="KYC Verified" value={fmt(summary?.kycVerified ?? 0, 0)} icon={BadgeCheck} accent="#38BDF8" loading={summaryLoading}
+          sub={summary ? `${fmt(summary.kycPending, 0)} pending` : undefined} />
+        <SummaryCard label="Total Balance" value={`$${fmt(summary?.totalBalance ?? 0, 0)}`} icon={Coins} accent="#FACC15" loading={summaryLoading}
+          sub="USDT held" />
+      </div>
+
+      {/* Filter toolbar */}
+      <div className="flex items-center justify-between flex-wrap gap-3 bg-[#0D1117] border border-white/8 rounded-xl px-3 py-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+            {STATUS_TABS.map(t => (
+              <button key={t.value} onClick={() => { setSuspended(t.value); setPage(1); }}
+                className={cn("px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                  suspended === t.value ? "bg-[#00DFA9]/15 text-[#00DFA9]" : "text-[#64748B] hover:text-[#94A3B8]")}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+            {ROLE_TABS.map(t => (
+              <button key={t.value} onClick={() => { setRole(t.value); setPage(1); }}
+                className={cn("px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                  role === t.value ? "bg-[#38BDF8]/15 text-[#38BDF8]" : "text-[#64748B] hover:text-[#94A3B8]")}>
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
+        <form onSubmit={doSearch} className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#475569]" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Email or username…"
+              className="pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] w-full sm:w-52 transition-colors" />
+          </div>
+          {q && (
+            <button type="button" onClick={() => { setQ(""); setSearch(""); setPage(1); }}
+              className="p-2 bg-white/5 text-[#475569] rounded-lg hover:bg-white/10 transition-colors" title="Clear search">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+          <button type="submit" className="px-3 py-2 bg-white/8 border border-white/10 text-[#94A3B8] rounded-lg text-sm hover:bg-white/12 transition-colors shrink-0">Search</button>
+        </form>
       </div>
 
       <DataTable
@@ -279,10 +392,22 @@ export default function UsersPage() {
         loading={isLoading}
         rowKey={u => u.id}
         onRowClick={u => navigate(`/users/${u.id}`)}
-        empty="No users found"
+        maxHeight="calc(100vh - 380px)"
+        empty={
+          <div className="flex flex-col items-center gap-3 py-6">
+            <span className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
+              <Inbox className="w-6 h-6 text-[#334155]" />
+            </span>
+            <div className="text-[#64748B] text-sm">No users found</div>
+            {hasFilters && (
+              <button onClick={() => { setQ(""); setSearch(""); setSuspended(""); setRole(""); setPage(1); }}
+                className="text-xs text-[#38BDF8] hover:underline">Clear filters</button>
+            )}
+          </div>
+        }
         footer={
           <div className="flex items-center justify-between">
-            <span className="text-xs">Page {page} of {pages}</span>
+            <span className="text-xs">Page {page} of {pages} · {total.toLocaleString()} users total</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
                 className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-25 transition-colors">
