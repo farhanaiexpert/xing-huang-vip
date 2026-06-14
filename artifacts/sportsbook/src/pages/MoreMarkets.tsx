@@ -17,15 +17,18 @@ import { OddsButton } from '@/components/OddsButton';
 import { TeamBadge } from '@/components/TeamBadge';
 import { SportName } from '@/components/SportName';
 import { BetsApiMarketDrawer } from '@/components/BetsApiMarketDrawer';
+import { GenericMarketDrawer } from '@/components/GenericMarketDrawer';
 import { useOddsData } from '@/hooks/useOddsData';
 import { useBetSlipSidebar } from '@/contexts/BetSlipSidebarContext';
 import { cn } from '@/lib/utils';
 import {
-  MARKET_PILLS,
   marketMeta,
   sportMetaFor,
   selectFeaturedEntries,
   groupFeaturedBySport,
+  marketPillsFor,
+  marketScoreFor,
+  isBetsApiMatch,
   type FeaturedEntry,
 } from '@/lib/featuredMarkets';
 
@@ -171,8 +174,7 @@ export function MoreMarkets() {
             {visible.map(({ match, leagueName }) => {
               const { marketId, marketName } = marketMeta(match);
               const isSel = match.id === selectedId;
-              const rm = match.richMarkets;
-              const pills = MARKET_PILLS.filter((p) => rm && rm[p.key]);
+              const pills = marketPillsFor(match);
               const sportIcon = sportMetaFor(match.sportId).icon;
               const base = {
                 matchId: match.id, marketId,
@@ -197,7 +199,7 @@ export function MoreMarkets() {
                     </span>
                     <span className="shrink-0 flex items-center gap-0.5 text-[9px] font-bold text-[#FACC15] bg-[#FACC15]/10 px-1.5 py-0.5 rounded">
                       <Sparkles className="w-2.5 h-2.5" />
-                      {rm?.marketScore ?? 0}
+                      {marketScoreFor(match)}
                     </span>
                   </div>
 
@@ -263,7 +265,9 @@ export function MoreMarkets() {
                   {/* Inline drawer */}
                   {isSel && (
                     <div className="rounded-lg border border-[#FACC15]/30 overflow-hidden -mx-0.5">
-                      <BetsApiMarketDrawer match={match} leagueName={leagueName} />
+                      {isBetsApiMatch(match)
+                        ? <BetsApiMarketDrawer match={match} leagueName={leagueName} />
+                        : <GenericMarketDrawer match={match} leagueName={leagueName} />}
                     </div>
                   )}
                 </div>

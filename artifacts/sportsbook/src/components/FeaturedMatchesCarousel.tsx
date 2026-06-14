@@ -20,13 +20,16 @@ import { OddsButton } from './OddsButton';
 import { TeamBadge } from './TeamBadge';
 import { SportName } from './SportName';
 import { BetsApiMarketDrawer } from './BetsApiMarketDrawer';
+import { GenericMarketDrawer } from './GenericMarketDrawer';
 import { cn } from '../lib/utils';
 import {
-  MARKET_PILLS,
   marketMeta,
   sportMetaFor,
   selectFeaturedEntries,
   groupFeaturedBySport,
+  marketPillsFor,
+  marketScoreFor,
+  isBetsApiMatch,
   type FeaturedEntry,
 } from '../lib/featuredMarkets';
 
@@ -140,8 +143,7 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
         {visible.map(({ match, leagueName }) => {
           const { marketId, marketName } = marketMeta(match);
           const isSel = match.id === selectedId;
-          const rm = match.richMarkets;
-          const pills = MARKET_PILLS.filter(p => rm && rm[p.key]);
+          const pills = marketPillsFor(match);
           const sportIcon = sportMetaFor(match.sportId).icon;
           const base = {
             matchId: match.id, marketId, matchName: match.team2 ? `${match.team1} vs ${match.team2}` : match.team1,
@@ -165,7 +167,7 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
                 </span>
                 <span className="shrink-0 flex items-center gap-0.5 text-[9px] font-bold text-[#FACC15] bg-[#FACC15]/10 px-1.5 py-0.5 rounded">
                   <Sparkles className="w-2.5 h-2.5" />
-                  {rm?.marketScore ?? 0}
+                  {marketScoreFor(match)}
                 </span>
               </div>
 
@@ -252,7 +254,9 @@ export function FeaturedMatchesCarousel({ leagues }: Props) {
               Close
             </button>
           </div>
-          <BetsApiMarketDrawer match={selected.match} leagueName={selected.leagueName} />
+          {isBetsApiMatch(selected.match)
+            ? <BetsApiMarketDrawer match={selected.match} leagueName={selected.leagueName} />
+            : <GenericMarketDrawer match={selected.match} leagueName={selected.leagueName} />}
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import { MarketGroup } from '../components/match/MarketGroup';
 import { MarketNav } from '../components/match/MarketNav';
 import { MarketSidebar } from '../components/match/MarketSidebar';
 import { generateDetailMarkets } from '../data/marketDetails';
+import { matchToEntity } from '../data/matchEntity';
 import { useBetSlip } from '../hooks/useBetSlip';
 import { useOddsData } from '../hooks/useOddsData';
 import { useLiveMatchScore } from '../hooks/useLiveMatchScore';
@@ -21,45 +22,6 @@ import type { MatchEntity, LeagueEntity } from '../data/types';
 import type { Match, League } from '../types';
 
 // ─── Bridge: UI types → Entity types ──────────────────────────────────────────
-
-function matchToEntity(match: Match): MatchEntity {
-  const hasDraw = match.odds.draw !== undefined;
-  const primaryMarketId = `mkt_${match.id}_primary`;
-  return {
-    id:            match.id,
-    leagueId:      match.leagueId,
-    sportId:       match.sportId,
-    homeTeamId:    null,
-    awayTeamId:    null,
-    homeTeamName:  match.team1,
-    awayTeamName:  match.team2 ?? '',
-    startTime:     match.commenceIso ?? new Date().toISOString(),
-    dateTag:       match.dateTag,
-    displayDate:   match.date,
-    status:        match.isLive ? 'live' : 'upcoming',
-    isLive:        match.isLive ?? false,
-    liveMinute:    match.liveMinute,
-    score:         match.score,
-    isFeatured:    false,
-    marketCount:   match.marketCount ?? 22,
-    primaryMarket: {
-      id:           primaryMarketId,
-      matchId:      match.id,
-      marketTypeId: hasDraw ? 'mt_match_result' : 'mt_match_winner',
-      name:         hasDraw ? 'Match Result' : 'Match Winner',
-      status:       'active',
-      selections: [
-        { id: `${match.id}_h`, marketId: primaryMarketId, name: match.team1,          shortName: '1', odds: match.odds.home,       oddsStatus: 'active', oddsMovement: 'stable' },
-        ...(hasDraw ? [{ id: `${match.id}_d`, marketId: primaryMarketId, name: 'Draw', shortName: 'X', odds: match.odds.draw!,      oddsStatus: 'active' as const, oddsMovement: 'stable' as const }] : []),
-        { id: `${match.id}_a`, marketId: primaryMarketId, name: match.team2 ?? 'Away', shortName: '2', odds: match.odds.away,       oddsStatus: 'active', oddsMovement: 'stable' },
-      ],
-    },
-    ouOver25:  match.ouOver25,
-    ouUnder25: match.ouUnder25,
-    bttsYes:   match.bttsYes,
-    bttsNo:    match.bttsNo,
-  };
-}
 
 function leagueToEntity(league: League): LeagueEntity {
   return {
