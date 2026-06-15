@@ -92,9 +92,15 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
     }
 
     const settingRows = await db.select().from(platformSettingsTable)
-      .where(inArray(platformSettingsTable.key, ['odds_credits_remaining', 'odds_credits_updated_at']));
+      .where(inArray(platformSettingsTable.key, [
+        'odds_credits_remaining', 'odds_credits_updated_at',
+        'odds_api_enabled', 'betsapi_enabled',
+      ]));
     const settings = Object.fromEntries(settingRows.map(r => [r.key, r.value]));
     const oddsRemaining = settings.odds_credits_remaining != null ? Number(settings.odds_credits_remaining) : null;
+    // A missing key = enabled by default (fail-open). Only 'false' means paused.
+    const oddsApiPaused   = settings.odds_api_enabled === 'false';
+    const betsApiPaused   = settings.betsapi_enabled  === 'false';
 
     const betsApiHourly = await getBetsApiWindowUsage();
 
@@ -114,10 +120,18 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
       const lastAt = u?.lastAt ?? null;
       const ls = (lastStatus ?? "").toLowerCase();
 
-      let status: "operational" | "degraded" | "throttled" | "down" | "idle";
+      // Admin pause flag — only betsapi and odds_api are toggleable
+      const paused = def.id === "odds_api" ? oddsApiPaused
+                   : def.id === "betsapi"  ? betsApiPaused
+                   : false;
+
+      let status: "operational" | "degraded" | "throttled" | "down" | "idle" | "paused";
       let headline: string;
 
-      if (!configured) {
+      if (paused) {
+        status = "paused";
+        headline = "Manually paused by admin — no outbound calls until re-enabled. Existing cache continues to serve data.";
+      } else if (!configured) {
         status = "down";
         headline = "Not configured — API key is missing.";
       } else if (/401|403|authorize|unauthor|forbidden/.test(ls)) {
@@ -142,7 +156,7 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
       if (def.id === "odds_api") {
         quotaRemaining = oddsRemaining;
         quotaUpdatedAt = settings.odds_credits_updated_at ?? null;
-        if (configured && quotaRemaining !== null) {
+        if (!paused && configured && quotaRemaining !== null) {
           if (quotaRemaining < 50 && status !== "down") {
             status = "throttled";
             headline = `Critically low — only ${quotaRemaining} credits left.`;
@@ -161,7 +175,7 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
         extra.hourlyRemaining = betsApiHourly.remaining;
         extra.hourlyLimitNote = `Hard cap: ${betsApiHourly.limit} requests per 3-hour window, enforced system-wide. ${betsApiHourly.used}/${betsApiHourly.limit} used this window.`;
         extra.windowExhaustedUntil = betsApiHourly.exhaustedUntil;
-        if (configured && betsApiHourly.remaining === 0 && status !== "down") {
+        if (!paused && configured && betsApiHourly.remaining === 0 && status !== "down") {
           status = "throttled";
           const resumeAt = betsApiHourly.exhaustedUntil
             ? ` Resumes at ${new Date(betsApiHourly.exhaustedUntil).toUTCString()}.`
@@ -175,6 +189,7 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
         name: def.name,
         purpose: def.purpose,
         configured,
+        paused,
         status,
         headline,
         callsToday,
@@ -192,6 +207,42 @@ router.get("/admin/api-status", async (_req, res): Promise<void> => {
   } catch {
     res.status(500).json({ error: "Failed to read API status" });
   }
+});
+
+// ─── Toggle API provider on/off ───────────────────────────────────────────────
+router.post("/admin/api-toggle", async (req, res): Promise<void> => {
+  const parsed = z.object({
+    provider: z.enum(["betsapi", "odds_api"]),
+    enabled: z.boolean(),
+  }).safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: "provider must be 'betsapi' or 'odds_api', enabled must be boolean" });
+    return;
+  }
+
+  const { provider, enabled } = parsed.data;
+  const key = `${provider}_enabled`;
+  const description = provider === "betsapi"
+    ? "Admin toggle — BetsAPI (Bet365) outbound calls"
+    : "Admin toggle — The Odds API outbound calls";
+
+  await db.insert(platformSettingsTable)
+    .values({ key, value: String(enabled), description })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.key,
+      set: { value: String(enabled), updatedAt: new Date() },
+    });
+
+  await logAdminAction(
+    req.user!.userId,
+    enabled ? "api_enabled" : "api_paused",
+    "api_provider",
+    undefined,
+    { provider },
+  );
+
+  res.json({ provider, enabled });
 });
 
 // ─── Stats ───────────────────────────────────────────────────────────────────

@@ -1,14 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { RefreshCw, AlertTriangle, KeyRound, Clock, PauseCircle } from "lucide-react";
+import { RefreshCw, AlertTriangle, KeyRound, Clock, PauseCircle, PlayCircle, Power } from "lucide-react";
+import { useState } from "react";
 
-type ApiStatus = "operational" | "degraded" | "throttled" | "down" | "idle";
+type ApiStatus = "operational" | "degraded" | "throttled" | "down" | "idle" | "paused";
 
 interface ProviderStatus {
   id: string;
   name: string;
   purpose: string;
   configured: boolean;
+  paused: boolean;
   status: ApiStatus;
   headline: string;
   callsToday: number;
@@ -33,7 +35,10 @@ const STATUS_META: Record<ApiStatus, { label: string; dot: string; text: string;
   degraded:    { label: "Degraded",     dot: "bg-[#FACC15]",   text: "text-[#FACC15]",   ring: "border-[#FACC15]/30 bg-[#FACC15]/[0.04]" },
   throttled:   { label: "Rate-limited", dot: "bg-orange-400",  text: "text-orange-300",  ring: "border-orange-400/30 bg-orange-400/[0.05]" },
   down:        { label: "Down",         dot: "bg-red-500",     text: "text-red-400",     ring: "border-red-500/30 bg-red-500/[0.05]" },
+  paused:      { label: "Paused",       dot: "bg-[#64748B]",   text: "text-[#94A3B8]",   ring: "border-[#64748B]/30 bg-[#64748B]/[0.04]" },
 };
+
+const TOGGLEABLE = new Set(["betsapi", "odds_api"]);
 
 function relTime(iso: string | null): string {
   if (!iso) return "never";
@@ -57,8 +62,18 @@ function StatPill({ label, value, tone }: { label: string; value: string | numbe
   );
 }
 
-function ProviderCard({ p }: { p: ProviderStatus }) {
+function ProviderCard({
+  p,
+  onToggle,
+  toggling,
+}: {
+  p: ProviderStatus;
+  onToggle?: (enabled: boolean) => void;
+  toggling?: boolean;
+}) {
   const meta = STATUS_META[p.status];
+  const canToggle = TOGGLEABLE.has(p.id) && !!onToggle;
+
   return (
     <div className={`rounded-xl border p-5 transition-colors ${meta.ring}`}>
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -66,9 +81,31 @@ function ProviderCard({ p }: { p: ProviderStatus }) {
           <div className="text-base font-semibold text-white">{p.name}</div>
           <div className="text-xs text-[#64748B] mt-0.5">{p.purpose}</div>
         </div>
-        <div className="flex items-center gap-2 shrink-0 rounded-full border border-white/10 bg-black/20 px-3 py-1">
-          <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
-          <span className={`text-xs font-semibold ${meta.text}`}>{meta.label}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {canToggle && (
+            <button
+              onClick={() => onToggle(!p.paused)}
+              disabled={toggling}
+              title={p.paused ? "Resume API calls" : "Pause API calls"}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 border transition-all disabled:opacity-50
+                ${p.paused
+                  ? "bg-[#00DFA9]/[0.08] border-[#00DFA9]/30 text-[#00DFA9] hover:bg-[#00DFA9]/15"
+                  : "bg-white/[0.04] border-white/10 text-[#94A3B8] hover:text-[#FACC15] hover:border-[#FACC15]/30 hover:bg-[#FACC15]/[0.06]"
+                }`}
+            >
+              {toggling ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : p.paused ? (
+                <><PlayCircle className="w-3.5 h-3.5" /> Resume</>
+              ) : (
+                <><Power className="w-3.5 h-3.5" /> Pause</>
+              )}
+            </button>
+          )}
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1">
+            <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
+            <span className={`text-xs font-semibold ${meta.text}`}>{meta.label}</span>
+          </div>
         </div>
       </div>
 
@@ -88,13 +125,19 @@ function ProviderCard({ p }: { p: ProviderStatus }) {
         )}
       </div>
 
-      {p.cronDisabled && (
+      {p.paused && (
+        <div className="flex items-center gap-2 text-xs text-[#94A3B8] bg-[#64748B]/[0.06] border border-[#64748B]/20 rounded-lg px-3 py-2 mb-2">
+          <PauseCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>Paused by admin — background cron and new fetches are blocked. Cache data still served to users.</span>
+        </div>
+      )}
+      {!p.paused && p.cronDisabled && (
         <div className="flex items-center gap-2 text-xs text-[#FACC15] bg-[#FACC15]/[0.06] border border-[#FACC15]/20 rounded-lg px-3 py-2 mb-2">
           <PauseCircle className="w-3.5 h-3.5 shrink-0" />
           <span>Auto-fetch is paused (background cron disabled to conserve quota).</span>
         </div>
       )}
-      {p.hourlyLimitNote && (
+      {p.hourlyLimitNote && !p.paused && (
         <div className="text-[11px] text-[#64748B] mb-2">{p.hourlyLimitNote}</div>
       )}
 
@@ -110,7 +153,7 @@ function ProviderCard({ p }: { p: ProviderStatus }) {
         )}
       </div>
 
-      {p.lastError && p.status !== "operational" && (
+      {p.lastError && p.status !== "operational" && !p.paused && (
         <div className="flex items-start gap-2 text-[11px] text-red-400/90 bg-red-500/[0.05] border border-red-500/15 rounded-lg px-3 py-2 mt-2">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           <span className="break-all">{p.lastError}</span>
@@ -121,10 +164,23 @@ function ProviderCard({ p }: { p: ProviderStatus }) {
 }
 
 export default function ApiStatusPage() {
+  const queryClient = useQueryClient();
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin-api-status"],
     queryFn: () => api.get<ApiStatusResponse>("/admin/api-status"),
     refetchInterval: 20_000,
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ provider, enabled }: { provider: string; enabled: boolean }) =>
+      api.post("/admin/api-toggle", { provider, enabled }),
+    onMutate: ({ provider }) => setTogglingId(provider),
+    onSettled: () => {
+      setTogglingId(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-api-status"] });
+    },
   });
 
   return (
@@ -176,7 +232,18 @@ export default function ApiStatusPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {data?.providers.map((p) => <ProviderCard key={p.id} p={p} />)}
+          {data?.providers.map((p) => (
+            <ProviderCard
+              key={p.id}
+              p={p}
+              onToggle={
+                TOGGLEABLE.has(p.id)
+                  ? (enabled) => toggleMutation.mutate({ provider: p.id, enabled })
+                  : undefined
+              }
+              toggling={togglingId === p.id}
+            />
+          ))}
         </div>
       )}
 

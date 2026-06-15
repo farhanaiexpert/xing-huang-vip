@@ -1,8 +1,8 @@
 import "./env.js"; // must be first — loads .env before any module reads process.env
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { db, platformSettingsTable } from "@workspace/db";
+import { sql, eq } from "drizzle-orm";
 import cron from "node-cron";
 import { runSettlementWorker } from "./lib/settlementWorker.js";
 import { fetchAndCacheOdds, getDbCacheRemainingMs, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
@@ -658,8 +658,21 @@ runMigrations().then(() => {
     } catch { return true; } // fail-open: assume bets exist on DB error
   }
 
+  async function isApiPaused(provider: "odds_api" | "betsapi"): Promise<boolean> {
+    try {
+      const rows = await db.select().from(platformSettingsTable)
+        .where(eq(platformSettingsTable.key, `${provider}_enabled`));
+      if (rows.length === 0) return false; // missing key = enabled by default
+      return rows[0].value === "false";
+    } catch { return false; } // DB error = fail-open (don't block cron)
+  }
+
   async function runOddsBatch() {
     if (isOddsRefreshing) return;
+    if (await isApiPaused("odds_api")) {
+      logger.info("Odds refresh cron: skipped — paused by admin");
+      return;
+    }
     isOddsRefreshing = true;
     nextIntervalMs = (55 + Math.floor(Math.random() * 11)) * 60 * 1000;
     logger.info({ sportCount: ALL_ODDS_SPORT_KEYS.length, nextIntervalMin: Math.round(nextIntervalMs / 60000) }, "Odds refresh cron: starting batch");
@@ -789,6 +802,10 @@ runMigrations().then(() => {
 
   async function runBetsApiBatch() {
     if (!BETSAPI_KEY || isBetsApiRefreshing) return;
+    if (await isApiPaused("betsapi")) {
+      logger.info("BetsAPI cron: skipped — paused by admin");
+      return;
+    }
     isBetsApiRefreshing = true;
     logger.info({ sportCount: BETSAPI_SPORT_IDS.length }, "BetsAPI cron: starting batch");
     // errors    = null returned (auth fail / out of request volume / 429)
