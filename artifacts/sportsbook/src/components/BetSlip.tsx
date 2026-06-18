@@ -178,10 +178,10 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
 
         if (failedCount > 0) {
           toast({
-            title: failedCount === results.length ? 'All bets failed' : `${failedCount} bet${failedCount > 1 ? 's' : ''} failed`,
+            title: failedCount === results.length ? '全部投注失败' : `${failedCount} 笔投注失败`,
             description: failedCount === results.length
-              ? 'Could not place any bets. Please try again.'
-              : `${succeeded.length} of ${results.length} bets placed successfully.`,
+              ? '无法下注，请稍后重试。'
+              : `${results.length} 注中 ${succeeded.length} 注下注成功。`,
             variant: 'destructive',
           });
         }

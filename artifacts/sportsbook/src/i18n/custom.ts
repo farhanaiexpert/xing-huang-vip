@@ -32,6 +32,14 @@
 
 export const customOverrides: Record<string, Record<string, string>> = {
   "zh-CN": {
+    // ── Plural-suffix cleanup ───────────────────────────────────────────────
+    // Chinese has no plural "s"; UI counters split the suffix into its own
+    // text node ({n} word{cond ? 's' : ''}). The base word is already
+    // translated; this drops the leftover standalone "s" node everywhere.
+    s: "",
+    txn: "交易",
+    Limits: "限额",
+
     // ── Top navigation ──────────────────────────────────────────────────────
     "All Sports": "全部体育",
     Promotions: "优惠活动",
@@ -183,6 +191,14 @@ export const customOverrides: Record<string, Record<string, string>> = {
     "Juventude vs Ponte Preta": "Juventude 对阵 Ponte Preta",
 
     VS: "对阵",
+
+    vs: "对阵",
+
+    "Common in the UK. 5/2 means for every 2 USDT you stake, you win 5 USDT profit. To convert: (numerator ÷ denominator) + 1 = decimal equivalent.":
+      "在英国较为常见。5/2 表示您每投注 2 USDT，即可赢得 5 USDT 利润。换算方法：（分子 ÷ 分母）+ 1 = 小数赔率。",
+
+    "Common in the US. Positive (+150) shows profit on a 100 USDT stake. Negative (−200) shows how much you need to stake to win 100 USDT. Use the DEC / FRAC / US toggle in the header to switch formats.":
+      "在美国较为常见。正数（+150）表示投注 100 USDT 可获得的利润。负数（−200）表示您需要投注多少才能赢得 100 USDT。使用顶部的 DEC / FRAC / US 切换按钮即可更改赔率格式。",
 
     "Today, 19:00": "今天 19:00",
 

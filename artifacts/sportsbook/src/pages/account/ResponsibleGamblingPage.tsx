@@ -42,8 +42,8 @@ function timeLeft(endsAt: string): string {
   if (diff <= 0) return 'Expired';
   const h = Math.floor(diff / 3600000);
   const d = Math.floor(h / 24);
-  if (d > 0) return `${d} day${d > 1 ? 's' : ''} remaining`;
-  return `${h} hour${h > 1 ? 's' : ''} remaining`;
+  if (d > 0) return `剩余 ${d} 天`;
+  return `剩余 ${h} 小时`;
 }
 
 export function ResponsibleGamblingPage() {

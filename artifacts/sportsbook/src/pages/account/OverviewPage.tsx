@@ -111,9 +111,9 @@ export function OverviewPage() {
   }
 
   const STATS = [
-    { label: 'Total Bets',  value: String(bets.length),        sub: `${openBets} open`,           icon: Receipt,     color: '#38BDF8' },
-    { label: 'Win Rate',    value: `${winRate}%`,               sub: bets.length > 0 ? `${wonBets} won` : 'no bets yet', icon: Percent, color: '#00DFA9' },
-    { label: 'Bets Won',    value: String(wonBets),             sub: `of ${bets.length} total`,    icon: TrendingUp,  color: '#FACC15' },
+    { label: 'Total Bets',  value: String(bets.length),        sub: `${openBets} 进行中`,         icon: Receipt,     color: '#38BDF8' },
+    { label: 'Win Rate',    value: `${winRate}%`,               sub: bets.length > 0 ? `赢 ${wonBets} 注` : 'no bets yet', icon: Percent, color: '#00DFA9' },
+    { label: 'Bets Won',    value: String(wonBets),             sub: `共 ${bets.length} 注`,        icon: TrendingUp,  color: '#FACC15' },
     { label: 'Wagered',     value: fmtUSDT(totalWagered),       sub: 'USDT total',                 icon: Activity,    color: '#A78BFA' },
   ];
 

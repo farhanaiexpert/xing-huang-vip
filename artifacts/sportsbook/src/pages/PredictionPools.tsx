@@ -630,7 +630,7 @@ function WeeklyChallenge() {
   const currentWeekId = getCurrentWeekId();
   const weekLabel = (() => {
     const parts = currentWeekId.split('-W');
-    return `Week ${parts[1]}, ${parts[0]}`;
+    return `第 ${parts[1]} 周，${parts[0]}`;
   })();
 
   useEffect(() => {
@@ -728,7 +728,7 @@ function WeeklyChallenge() {
                 )}
               </div>
               <p className="text-[11px] text-[#94A3B8]/45">
-                {challengeMatches.length} match{challengeMatches.length !== 1 ? 'es' : ''} · Pick H/X/A for each · Shared prize pool
+                {challengeMatches.length}{' matches'} · Pick H/X/A for each · Shared prize pool
               </p>
             </div>
           </div>

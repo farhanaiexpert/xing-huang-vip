@@ -85,7 +85,7 @@ export function MoreMarkets() {
             Matches With More Markets
           </h1>
           <span className="text-[11px] font-bold tabular-nums text-[#FACC15] bg-[#FACC15]/10 border border-[#FACC15]/20 px-2 py-0.5 rounded-full">
-            {totalCount} match{totalCount !== 1 ? 'es' : ''}
+            {totalCount}{' matches'}
           </span>
         </div>
         <p className="text-[12px] sm:text-[13px] font-medium text-[#94A3B8]/80 mb-4 max-w-2xl">
