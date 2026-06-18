@@ -91,18 +91,38 @@ router.post("/translate", translateLimiter, async (req, res): Promise<void> => {
 // { source: target } map plus a version marker (max updatedAt epoch ms + count)
 // so clients can cache and cheaply detect changes. Public (no auth) so the
 // sportsbook's public pages can fetch their live overrides.
+// This endpoint is polled by EVERY visitor every ~20s (≈3 req/min/client).
+// `trust proxy` is enabled in app.ts so express-rate-limit keys off the real
+// client IP, but a single shared/NAT IP can front many users, so the cap is set
+// generously. Real DB protection is the short-lived in-memory cache below (one
+// query per lang per CACHE_TTL_MS regardless of traffic); the limiter is only a
+// coarse flood guard.
 const overridesLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 300,
+  max: 600,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests — please slow down" },
 });
 
+type OverridesPayload = { version: string; translations: Record<string, string> };
+const OVERRIDES_CACHE_TTL_MS = 5_000;
+const overridesCache = new Map<string, { payload: OverridesPayload; expiresAt: number }>();
+
 router.get("/translations/:lang", overridesLimiter, async (req, res): Promise<void> => {
   const lang = String(req.params.lang ?? "").trim();
   if (!lang || lang.length > 20) {
     res.status(400).json({ error: "invalid lang" });
+    return;
+  }
+  // Never let a CDN/proxy/browser cache this — clients rely on fresh polling to
+  // pick up operator edits "within seconds". DB load is bounded server-side.
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+
+  const now = Date.now();
+  const cached = overridesCache.get(lang);
+  if (cached && cached.expiresAt > now) {
+    res.json(cached.payload);
     return;
   }
   try {
@@ -123,8 +143,9 @@ router.get("/translations/:lang", overridesLimiter, async (req, res): Promise<vo
       const ts = r.updatedAt instanceof Date ? r.updatedAt.getTime() : new Date(r.updatedAt).getTime();
       if (ts > maxTs) maxTs = ts;
     }
-    const version = `${maxTs}-${rows.length}`;
-    res.json({ version, translations });
+    const payload: OverridesPayload = { version: `${maxTs}-${rows.length}`, translations };
+    overridesCache.set(lang, { payload, expiresAt: now + OVERRIDES_CACHE_TTL_MS });
+    res.json(payload);
   } catch (err) {
     req.log.error({ err }, "translation overrides fetch failed");
     res.status(500).json({ error: "Failed to load translation overrides" });

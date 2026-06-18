@@ -81,7 +81,7 @@ function saveOverridesCache(version: string, data: Record<string, string>) {
 // version short-circuit avoids re-walking the DOM on every unchanged poll.
 async function refreshOverrides(): Promise<void> {
   try {
-    const resp = await fetch(OVERRIDES_ENDPOINT, { headers: { Accept: "application/json" } });
+    const resp = await fetch(OVERRIDES_ENDPOINT, { headers: { Accept: "application/json" }, cache: "no-store" });
     if (!resp.ok) return;
     const { version, translations } = await resp.json() as { version: string; translations: Record<string, string> };
     if (version === lastOverridesVersion) return;

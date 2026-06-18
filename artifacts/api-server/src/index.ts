@@ -614,6 +614,38 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v34 skipped");
   }
+
+  // v35: translation_overrides — DB-backed manual EN→ZH overrides, editable from
+  // the admin UI, that take priority over static dicts/DeepL on the live site.
+  // Created here at boot (idempotent) so the table exists on EVERY deploy path
+  // (Replit republish, Render, VPS) regardless of whether a separate migration
+  // step ran. Mirrors lib/db/drizzle/0004_translation_overrides.sql.
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS translation_overrides (
+        id          SERIAL PRIMARY KEY,
+        lang        TEXT NOT NULL,
+        source      TEXT NOT NULL,
+        target      TEXT NOT NULL,
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'translation_overrides_lang_source_unique'
+        ) THEN
+          ALTER TABLE translation_overrides
+            ADD CONSTRAINT translation_overrides_lang_source_unique UNIQUE (lang, source);
+        END IF;
+      END $$
+    `);
+    logger.info("DB migration v35 applied (translation_overrides table)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v35 skipped");
+  }
 }
 
 runMigrations().then(() => {

@@ -62,6 +62,11 @@ const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests — please slow down" },
+  // The public translation-overrides endpoint is polled by every visitor every
+  // ~20s alongside their normal API traffic; it has its own dedicated limiter
+  // and a 5s server-side cache, so exempt it here to keep live override
+  // propagation reliable under load (incl. shared/NAT IPs).
+  skip: (req) => req.method === "GET" && /\/translations\/[^/]+$/.test(req.path),
 });
 
 // ── CORS ───────────────────────────────────────────────────────────────────────

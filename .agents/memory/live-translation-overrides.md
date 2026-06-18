@@ -27,7 +27,10 @@ a merge (not replace) would make deletions impossible.
 - Overrides are exact whole-string matches only (no templating/number substitution).
 - Writes are audit-logged; the unique key is (lang, source) and concurrent
   create/rename races must surface as a clean 409, not a 500.
-- Schema lives in `lib/db`; this repo applies idempotent hand-written
-  `CREATE ... IF NOT EXISTS` SQL migrations that are NOT registered in the drizzle
-  journal (see existing 0003) — add new tables the same way so SQL-based deploys
-  pick them up.
+- Schema lives in `lib/db`. The deploy configs (render.yaml / Replit publish) do
+  NOT run a migration step, so production schema is created by the API's
+  idempotent boot-time `runMigrations()` (a long chain of `... IF NOT EXISTS`
+  blocks in the api-server entrypoint). Any NEW table this feature relies on must
+  be added BOTH as a boot migration block there AND as a hand-written
+  `CREATE ... IF NOT EXISTS` drizzle SQL file (not in the journal, see 0003) — the
+  boot block is what actually guarantees the table on every deploy path.
