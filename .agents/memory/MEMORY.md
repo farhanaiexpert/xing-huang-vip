@@ -1,4 +1,5 @@
-- [Settlement three-source](settlement-dual-source.md) — Odds API exact ID → BetsAPI /v1/bet365/result (betsapi_* IDs) → 48h manual_review; cron every 5 min; id must match stored event_id exactly (betsapi_XXXXXXXX prefix preserved in CompletedEvent.id).
+- [Settlement three-source](settlement-dual-source.md) — Odds API exact ID → BetsAPI bet365/result → 48h manual_review; cron 5 min; id must match stored event_id exactly.
+- [Templated-node i18n](templated-node-i18n.md) — DOM dict only matches whole text nodes; interpolated JSX/strings (`${team} ${n}`, scorer `${p} (${team})`) must be source-hardcoded Chinese.
 - [TON crypto Vite shim](ton-crypto-vite-shim.md) — @ton/core needs @ton/crypto peer dep (sha256_sync); create a browser shim + alias in vite.config.ts.
 - [TON deposit verifier fail-closed](ton-verifier-fail-closed.md) — isUsdtJetton and destinationMatches must return false (not true) when TONapi metadata is absent.
 - [Settlement market_type mismatch](settlement-market-type.md) — frontend stores display names ("Match Result") but worker checked API keys ("h2h"); always normalise before branching.

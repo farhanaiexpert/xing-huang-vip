@@ -73,7 +73,7 @@ const TEAM_PLAYERS: Record<string, string[]> = {
 };
 
 function getPlayers(teamName: string): string[] {
-  return TEAM_PLAYERS[teamName] ?? ['Player A', 'Player B', 'Player C', 'Player D', 'Player E'];
+  return TEAM_PLAYERS[teamName] ?? ['球员 A', '球员 B', '球员 C', '球员 D', '球员 E'];
 }
 
 // ── Soccer markets ────────────────────────────────────────────────────────────
@@ -132,7 +132,7 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
     const safeKey = line.toString().replace('.', 'd').replace('-', 'n').replace('+', 'p');
     return market(
       `mkt_${mid}_hcpA_${safeKey}`, mid, 'mt_asian_handicap',
-      `Asian Handicap   ${ht} ${fmt(line)}`,
+      `亚洲让球   ${ht} ${fmt(line)}`,
       [
         sel(`mkt_${mid}_hcpAh_${safeKey}`, `mkt_${mid}_hcpA_${safeKey}`, `${ht} ${fmt(line)}`,      fmt(line),      homeH),
         sel(`mkt_${mid}_hcpAa_${safeKey}`, `mkt_${mid}_hcpA_${safeKey}`, `${at} ${fmt(awayLine)}`,  fmt(awayLine),  awayH),
@@ -148,7 +148,7 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
     return market(
       `mkt_${mid}_eh${line < 0 ? 'n' : ''}${Math.abs(line)}`,
       mid, 'mt_eur_handicap',
-      `European Handicap   ${ht} ${fmt(line)}`,
+      `欧洲让球   ${ht} ${fmt(line)}`,
       [
         sel(`mkt_${mid}_eh${line}h`, `mkt_${mid}_eh${line}`, `${ht} ${fmt(line)}`,  `1`, o(hOdds * adjF * 1.05 * v)),
         sel(`mkt_${mid}_eh${line}d`, `mkt_${mid}_eh${line}`, `Draw ${fmt(line)}`,   `X`, o(dOdds * 0.90 * v)),
@@ -219,7 +219,7 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
     sel(`mkt_${mid}_ftch`,  `mkt_${mid}_ftc`,  ht, ht, ftcH),
     sel(`mkt_${mid}_ftca`,  `mkt_${mid}_ftc`,  at, at, ftcA),
   ]);
-  const mTHCP = market(`mkt_${mid}_thcp`, mid, 'mt_corners_hcp', `Corners Handicap — ${ht} -2.5`, [
+  const mTHCP = market(`mkt_${mid}_thcp`, mid, 'mt_corners_hcp', `角球让球 — ${ht} -2.5`, [
     sel(`mkt_${mid}_thcph`, `mkt_${mid}_thcp`, `${ht} -2.5`, `H -2.5`, thcpH),
     sel(`mkt_${mid}_thcpa`, `mkt_${mid}_thcp`, `${at} +2.5`, `A +2.5`, thcpA),
   ]);
@@ -232,11 +232,11 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
   const csAY = o(1/csAProb * 1.10 * v);
   const csAN = o(1/(1 - csAProb) * 1.10 * v);
 
-  const mCSH = market(`mkt_${mid}_csh`, mid, 'mt_clean_sheet', `${ht} — Clean Sheet`, [
+  const mCSH = market(`mkt_${mid}_csh`, mid, 'mt_clean_sheet', `${ht} — 零封`, [
     sel(`mkt_${mid}_cshy`, `mkt_${mid}_csh`, 'Yes', 'Yes', csHY),
     sel(`mkt_${mid}_cshn`, `mkt_${mid}_csh`, 'No',  'No',  csHN),
   ]);
-  const mCSA = market(`mkt_${mid}_csa`, mid, 'mt_clean_sheet', `${at} — Clean Sheet`, [
+  const mCSA = market(`mkt_${mid}_csa`, mid, 'mt_clean_sheet', `${at} — 零封`, [
     sel(`mkt_${mid}_csay`, `mkt_${mid}_csa`, 'Yes', 'Yes', csAY),
     sel(`mkt_${mid}_csan`, `mkt_${mid}_csa`, 'No',  'No',  csAN),
   ]);
@@ -274,8 +274,8 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
   const homePlayers = getPlayers(ht);
   const awayPlayers = getPlayers(at);
   const allPlayers = [
-    ...homePlayers.map((p, i) => ({ name: `${p} (${ht})`, baseOdds: 3.00 + i * 0.40 })),
-    ...awayPlayers.map((p, i) => ({ name: `${p} (${at})`, baseOdds: 3.50 + i * 0.45 })),
+    ...homePlayers.map((p, i) => ({ name: `${p}（主队）`, baseOdds: 3.00 + i * 0.40 })),
+    ...awayPlayers.map((p, i) => ({ name: `${p}（客队）`, baseOdds: 3.50 + i * 0.45 })),
   ];
 
   const firstGoalSels  = allPlayers.map((p, i) => sel(`mkt_${mid}_fg_${i}`,  `mkt_${mid}_fg`,  p.name, p.name.split(' ')[0], o(p.baseOdds * v)));
@@ -337,11 +337,11 @@ function soccerMarkets(match: MatchEntity): MarketDetailGroup[] {
   const ttAwayOv = o((2.30 - pa * 1.10) * v);
   const ttAwayUn = o((1.55 + pa * 0.80) / v);
 
-  const mTTHome  = market(`mkt_${mid}_tth`, mid, 'mt_team_total', `${ht} Total Goals — Over/Under 1.5`, [
+  const mTTHome  = market(`mkt_${mid}_tth`, mid, 'mt_team_total', `${ht} 球队总进球 — 大/小 1.5`, [
     sel(`mkt_${mid}_ttho`, `mkt_${mid}_tth`, 'Over 1.5',  'O 1.5', ttHomeOv),
     sel(`mkt_${mid}_tthu`, `mkt_${mid}_tth`, 'Under 1.5', 'U 1.5', ttHomeUn),
   ]);
-  const mTTAway  = market(`mkt_${mid}_tta`, mid, 'mt_team_total', `${at} Total Goals — Over/Under 1.5`, [
+  const mTTAway  = market(`mkt_${mid}_tta`, mid, 'mt_team_total', `${at} 球队总进球 — 大/小 1.5`, [
     sel(`mkt_${mid}_ttao`, `mkt_${mid}_tta`, 'Over 1.5',  'O 1.5', ttAwayOv),
     sel(`mkt_${mid}_ttau`, `mkt_${mid}_tta`, 'Under 1.5', 'U 1.5', ttAwayUn),
   ]);
@@ -587,7 +587,7 @@ function basketballMarkets(match: MatchEntity): MarketDetailGroup[] {
   const q2H = o(hOdds * 0.90 * v);  const q2A = o(aOdds * 0.90 / v);
 
   const mMW   = pm;
-  const mHCP  = market(`mkt_${mid}_hcp`,  mid, 'mt_point_spread', `Point Spread (${spread})`, [
+  const mHCP  = market(`mkt_${mid}_hcp`,  mid, 'mt_point_spread', `分差盘 (${spread})`, [
     sel(`mkt_${mid}_hcph`,  `mkt_${mid}_hcp`,  `${ht} ${spread}`,                          ht, hcpH),
     sel(`mkt_${mid}_hcpa`,  `mkt_${mid}_hcp`,  `${at} ${spread === '-5.5' ? '+5.5' : '-5.5'}`, at, hcpA),
   ]);
@@ -681,11 +681,11 @@ function horseRacingMarkets(match: MatchEntity): MarketDetailGroup[] {
 
   const fakeRunners = [
     { name: runner,         win: winOdds,          place: plOdds },
-    { name: 'Night Star',   win: o(3.50 * v),      place: o(1.60 * v) },
-    { name: 'Thunder Bay',  win: o(5.00 * v),      place: o(1.90 * v) },
-    { name: 'Silver Dawn',  win: o(7.50 * v),      place: o(2.50 * v) },
-    { name: 'Royal Knight', win: o(10.0 * v),      place: o(3.20 * v) },
-    { name: 'Desert Rose',  win: o(14.0 * v),      place: o(4.50 * v) },
+    { name: '夜之星',       win: o(3.50 * v),      place: o(1.60 * v) },
+    { name: '雷霆湾',       win: o(5.00 * v),      place: o(1.90 * v) },
+    { name: '银色黎明',     win: o(7.50 * v),      place: o(2.50 * v) },
+    { name: '皇家骑士',     win: o(10.0 * v),      place: o(3.20 * v) },
+    { name: '沙漠玫瑰',     win: o(14.0 * v),      place: o(4.50 * v) },
   ];
 
   const winSels   = fakeRunners.map((r, i) => sel(`mkt_${mid}_win${i}`,   `mkt_${mid}_win`,   r.name, r.name, r.win));
@@ -744,7 +744,7 @@ function genericMarkets(match: MatchEntity): MarketDetailGroup[] {
   const hcpMarkets = hcpLines.map((line, i) => {
     const hp = Math.min(0.92, Math.max(0.08, ph - line * 0.11));
     const apw = 1 - hp;
-    return market(`mkt_${mid}_hcp${i}`, mid, 'mt_handicap', `Handicap ${fmt(line)}`, [
+    return market(`mkt_${mid}_hcp${i}`, mid, 'mt_handicap', `让球 ${fmt(line)}`, [
       sel(`mkt_${mid}_hcp${i}h`, `mkt_${mid}_hcp${i}`, `${ht} ${fmt(line)}`,  ht, o(1 / hp  * 1.05 * v)),
       sel(`mkt_${mid}_hcp${i}a`, `mkt_${mid}_hcp${i}`, `${at} ${fmt(-line)}`, at, o(1 / apw * 1.05 * v)),
     ]);
@@ -758,7 +758,7 @@ function genericMarkets(match: MatchEntity): MarketDetailGroup[] {
     { line: '4.5', ov: 4.60, un: 1.18 },
   ];
   const totalMarkets = totalDefs.map((t, i) =>
-    market(`mkt_${mid}_tot${i}`, mid, 'mt_total', `Total — Over/Under ${t.line}`, [
+    market(`mkt_${mid}_tot${i}`, mid, 'mt_total', `总分 — 大/小 ${t.line}`, [
       sel(`mkt_${mid}_tot${i}o`, `mkt_${mid}_tot${i}`, `Over ${t.line}`,  `O ${t.line}`, o(t.ov * v)),
       sel(`mkt_${mid}_tot${i}u`, `mkt_${mid}_tot${i}`, `Under ${t.line}`, `U ${t.line}`, o(t.un / v)),
     ]),

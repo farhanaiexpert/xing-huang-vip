@@ -25,7 +25,7 @@ interface MarketGroupProps {
 function updatedLabel(groupId: string): string {
   const n   = groupId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const min = 1 + (n % 14);
-  return min === 1 ? 'Just updated' : `${min}m ago`;
+  return min === 1 ? '刚刚更新' : `${min} 分钟前`;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {

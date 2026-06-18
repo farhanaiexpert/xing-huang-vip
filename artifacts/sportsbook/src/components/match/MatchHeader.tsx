@@ -96,7 +96,7 @@ export function MatchHeader({ match, league, liveData }: MatchHeaderProps) {
           </span>
           <span className="text-[#253241] text-[11px] shrink-0">/</span>
           <span className="text-[11px] text-[#94A3B8]/40 truncate min-w-0">
-            {isHorse ? match.homeTeamName : `${match.homeTeamName} vs ${match.awayTeamName}`}
+            {isHorse ? match.homeTeamName : <>{match.homeTeamName} vs {match.awayTeamName}</>}
           </span>
         </div>
 
@@ -191,7 +191,7 @@ export function MatchHeader({ match, league, liveData }: MatchHeaderProps) {
               <span className="flex items-center gap-1 text-[10px] shrink-0"
                 style={{ color: liveData.isPolling ? '#00DFA9' : '#475569' }}>
                 <RefreshCw className={cn('h-3 w-3', liveData.isPolling && 'animate-spin')} />
-                {liveData.isPolling ? 'updating…' : liveData.lastUpdated ? `next in ${liveData.nextRefreshIn}s` : 'polling…'}
+                {liveData.isPolling ? '更新中…' : liveData.lastUpdated ? `${liveData.nextRefreshIn} 秒后刷新` : '轮询中…'}
               </span>
             </>
           )}
