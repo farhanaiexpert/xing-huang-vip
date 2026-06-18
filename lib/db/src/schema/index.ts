@@ -18,3 +18,4 @@ export * from "./price_boosts";
 export * from "./loyalty";
 export * from "./nonces";
 export * from "./risk_flags";
+export * from "./translation_overrides";

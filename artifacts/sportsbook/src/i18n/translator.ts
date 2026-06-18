@@ -7,6 +7,16 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const TRANSLATE_ENDPOINT = `${API_BASE}/api/translate`;
 
+// Database-backed manual overrides set by an operator in the admin panel.
+// These take the HIGHEST priority — above the curated static dict and DeepL —
+// and apply on the live site within seconds without a rebuild.
+const OVERRIDES_CACHE_KEY = "sportsbook_zh_overrides_v1";
+const OVERRIDES_ENDPOINT = `${API_BASE}/api/translations/zh-CN`;
+const OVERRIDES_POLL_MS = 20 * 1000; // re-check for operator edits every 20s
+let overrides: Record<string, string> = {};
+let overridesTimer: ReturnType<typeof setInterval> | null = null;
+let lastOverridesVersion: string | null = null;
+
 // Tags whose text content must never be translated.
 const SKIP_TAGS = new Set([
   "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "INPUT",
@@ -48,6 +58,38 @@ function loadCache(): Record<string, string> | null {
 
 function saveCache(data: Record<string, string>) {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch { /* quota */ }
+}
+
+// ── Manual override helpers ────────────────────────────────────────────────
+
+function loadOverridesCache(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(OVERRIDES_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as { version?: string; data?: Record<string, string> };
+    lastOverridesVersion = parsed.version ?? null;
+    return parsed.data ?? {};
+  } catch { return {}; }
+}
+
+function saveOverridesCache(version: string, data: Record<string, string>) {
+  try { localStorage.setItem(OVERRIDES_CACHE_KEY, JSON.stringify({ version, data })); } catch { /* quota */ }
+}
+
+// Fetch fresh overrides from the server and re-apply only if they changed. A
+// full replace (not merge) so operator deletions take effect immediately. The
+// version short-circuit avoids re-walking the DOM on every unchanged poll.
+async function refreshOverrides(): Promise<void> {
+  try {
+    const resp = await fetch(OVERRIDES_ENDPOINT, { headers: { Accept: "application/json" } });
+    if (!resp.ok) return;
+    const { version, translations } = await resp.json() as { version: string; translations: Record<string, string> };
+    if (version === lastOverridesVersion) return;
+    lastOverridesVersion = version;
+    overrides = translations ?? {};
+    saveOverridesCache(version, overrides);
+    walkAndApply();
+  } catch { /* offline / server down — keep cached overrides */ }
 }
 
 // ── Number templating ──────────────────────────────────────────────────────
@@ -93,6 +135,9 @@ function makeTemplatePair(src: string, tr: string): { key: string; val: string }
 // ── Lookup ─────────────────────────────────────────────────────────────────
 
 function translateString(trimmed: string): string | null {
+  // Manual operator overrides win over everything else (exact match only).
+  const override = overrides[trimmed];
+  if (override != null) return override;
   const exact = dict[trimmed];
   if (exact != null) return exact;
   const { tmpl, nums } = templatize(trimmed);
@@ -324,8 +369,17 @@ export function startChineseTranslation(): void {
   const cached = loadCache();
   if (cached) dict = { ...cached, ...STATIC };
 
+  // 1b. Load cached operator overrides synchronously for first paint.
+  overrides = loadOverridesCache();
+
   // 2. Apply immediately
   walkAndApply();
+
+  // 2b. Pull fresh overrides from the server, then poll so admin edits appear
+  //     on the live site within seconds (stale-while-revalidate).
+  refreshOverrides();
+  if (overridesTimer) clearInterval(overridesTimer);
+  overridesTimer = setInterval(refreshOverrides, OVERRIDES_POLL_MS);
 
   // 3. Observe DOM mutations (re-applies on SPA navigation / async content,
   //    including portal-rendered popups/modals/toasts mounted under <body>).
@@ -352,9 +406,13 @@ export function stopChineseTranslation(): void {
   mo?.disconnect();
   mo = null;
   if (enrichTimer) { clearTimeout(enrichTimer); enrichTimer = null; }
+  if (overridesTimer) { clearInterval(overridesTimer); overridesTimer = null; }
 }
 
 export function clearTranslationCache(): void {
   try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
+  try { localStorage.removeItem(OVERRIDES_CACHE_KEY); } catch { /* ignore */ }
   dict = { ...STATIC };
+  overrides = {};
+  lastOverridesVersion = null;
 }

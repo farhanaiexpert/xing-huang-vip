@@ -263,6 +263,22 @@ export interface PlatformSetting {
   updatedAt: string;
 }
 
+export interface TranslationOverride {
+  id: number;
+  lang: string;
+  source: string;
+  target: string;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface TranslationOverridesResponse {
+  rows: TranslationOverride[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface RevenueBySport {
   sport: string;
   betCount: number;

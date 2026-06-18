@@ -9,7 +9,7 @@ import {
   Gift, Trophy, ScrollText, LogOut, ChevronLeft, ChevronRight,
   Shield, ShieldCheck, Zap, Globe, BarChart2, Settings, CheckCheck,
   Activity, DollarSign, TrendingUp, ArrowDownCircle, ArrowUpCircle, Clock, Check,
-  Menu, X,
+  Menu, X, Languages,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -136,6 +136,7 @@ function buildNavSections(depositBadge: number, withdrawalBadge: number) {
         { href: "/admin-accounts", icon: ShieldCheck, label: "Admin Accounts", badge: 0 },
         { href: "/api-status",     icon: Activity,    label: "API Status",     badge: 0 },
         { href: "/audit",          icon: ScrollText,  label: "Audit Log",      badge: 0 },
+        { href: "/translations",   icon: Languages,   label: "Translations",   badge: 0 },
         { href: "/settings",       icon: Settings,    label: "Settings",       badge: 0 },
       ],
     },

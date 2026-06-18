@@ -1,5 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import { db, translationOverridesTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 
 const router = Router();
 
@@ -80,6 +82,52 @@ router.post("/translate", translateLimiter, async (req, res): Promise<void> => {
   } catch (err) {
     req.log.error({ err }, "DeepL fetch failed");
     res.status(502).json({ error: "DeepL request failed" });
+  }
+});
+
+// ── Public manual-translation overrides ────────────────────────────────────
+// GET /api/translations/:lang
+// Returns all database-backed overrides for a language as a compact
+// { source: target } map plus a version marker (max updatedAt epoch ms + count)
+// so clients can cache and cheaply detect changes. Public (no auth) so the
+// sportsbook's public pages can fetch their live overrides.
+const overridesLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests — please slow down" },
+});
+
+router.get("/translations/:lang", overridesLimiter, async (req, res): Promise<void> => {
+  const lang = String(req.params.lang ?? "").trim();
+  if (!lang || lang.length > 20) {
+    res.status(400).json({ error: "invalid lang" });
+    return;
+  }
+  try {
+    const rows = await db
+      .select({
+        source: translationOverridesTable.source,
+        target: translationOverridesTable.target,
+        updatedAt: translationOverridesTable.updatedAt,
+      })
+      .from(translationOverridesTable)
+      .where(eq(translationOverridesTable.lang, lang))
+      .orderBy(desc(translationOverridesTable.updatedAt));
+
+    const translations: Record<string, string> = {};
+    let maxTs = 0;
+    for (const r of rows) {
+      translations[r.source] = r.target;
+      const ts = r.updatedAt instanceof Date ? r.updatedAt.getTime() : new Date(r.updatedAt).getTime();
+      if (ts > maxTs) maxTs = ts;
+    }
+    const version = `${maxTs}-${rows.length}`;
+    res.json({ version, translations });
+  } catch (err) {
+    req.log.error({ err }, "translation overrides fetch failed");
+    res.status(500).json({ error: "Failed to load translation overrides" });
   }
 });
 

@@ -18,6 +18,7 @@ import AdminAccountsPage from "@/pages/AdminAccountsPage";
 import WinSpinPage from "@/pages/WinSpinPage";
 import MarketsPage from "@/pages/MarketsPage";
 import SettingsPage from "@/pages/SettingsPage";
+import TranslationsPage from "@/pages/TranslationsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import SettlementPage from "@/pages/SettlementPage";
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/winspin" component={() => <ProtectedRoute component={WinSpinPage} />} />
       <Route path="/markets" component={() => <ProtectedRoute component={MarketsPage} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
+      <Route path="/translations" component={() => <ProtectedRoute component={TranslationsPage} />} />
       <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
       <Route path="/users/:id" component={() => <ProtectedRoute component={UserProfilePage} />} />
       <Route path="/settlement" component={() => <ProtectedRoute component={SettlementPage} />} />

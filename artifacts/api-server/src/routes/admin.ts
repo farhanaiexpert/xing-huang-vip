@@ -28,6 +28,7 @@ import {
   userLimitsTable,
   selfExclusionsTable,
   riskFlagsTable,
+  translationOverridesTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -2844,6 +2845,146 @@ router.delete("/admin/users/:id/risk-flags/:flagId", async (req, res): Promise<v
   await db.delete(riskFlagsTable)
     .where(and(eq(riskFlagsTable.id, flagId), eq(riskFlagsTable.userId, userId)));
   await logAdminAction(req.user!.userId, "risk_flag_dismissed", "risk_flags", flagId, { userId });
+  res.status(204).end();
+});
+
+// ─── Manual translation overrides ─────────────────────────────────────────────
+// Database-backed EN→ZH overrides that take priority over the static dictionaries
+// and apply on the live site without a rebuild.
+
+const DEFAULT_OVERRIDE_LANG = "zh-CN";
+
+// Postgres unique_violation (SQLSTATE 23505) — surfaces when two operators
+// create/rename to the same (lang, source) concurrently, slipping past the
+// pre-check. Translate it into a clean 409 instead of a 500.
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "23505";
+}
+
+const translationBodySchema = z.object({
+  source: z.string().trim().min(1, "English text is required").max(500, "English text is too long"),
+  target: z.string().trim().min(1, "Chinese text is required").max(500, "Chinese text is too long"),
+  lang: z.string().trim().min(1).max(20).optional(),
+});
+
+// List with search + pagination
+router.get("/admin/translations", async (req, res): Promise<void> => {
+  const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+  const lang = typeof req.query.lang === "string" && req.query.lang.trim() ? req.query.lang.trim() : DEFAULT_OVERRIDE_LANG;
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize ?? "50")) || 50));
+
+  const conditions = [eq(translationOverridesTable.lang, lang)];
+  if (search) {
+    conditions.push(
+      or(
+        ilike(translationOverridesTable.source, `%${search}%`),
+        ilike(translationOverridesTable.target, `%${search}%`),
+      )!,
+    );
+  }
+  const where = and(...conditions);
+
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(translationOverridesTable)
+    .where(where);
+
+  const rows = await db
+    .select()
+    .from(translationOverridesTable)
+    .where(where)
+    .orderBy(desc(translationOverridesTable.updatedAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  res.json({ rows, total: Number(total), page, pageSize });
+});
+
+// Create
+router.post("/admin/translations", async (req, res): Promise<void> => {
+  const parsed = translationBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const lang = parsed.data.lang?.trim() || DEFAULT_OVERRIDE_LANG;
+  const source = parsed.data.source.trim();
+  const target = parsed.data.target.trim();
+
+  const existing = await db
+    .select({ id: translationOverridesTable.id })
+    .from(translationOverridesTable)
+    .where(and(eq(translationOverridesTable.lang, lang), eq(translationOverridesTable.source, source)))
+    .limit(1);
+  if (existing.length > 0) {
+    res.status(409).json({ error: "An override for this exact English text already exists" });
+    return;
+  }
+
+  try {
+    const [row] = await db
+      .insert(translationOverridesTable)
+      .values({ lang, source, target })
+      .returning();
+    await logAdminAction(req.user!.userId, "create_translation", "translation_override", row.id, { lang, source, target });
+    res.status(201).json(row);
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      res.status(409).json({ error: "An override for this exact English text already exists" });
+      return;
+    }
+    throw err;
+  }
+});
+
+// Update
+router.patch("/admin/translations/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const parsed = translationBodySchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const updates: Record<string, string> = {};
+  if (parsed.data.source != null) updates.source = parsed.data.source.trim();
+  if (parsed.data.target != null) updates.target = parsed.data.target.trim();
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "Nothing to update" });
+    return;
+  }
+
+  try {
+    const [row] = await db
+      .update(translationOverridesTable)
+      .set(updates)
+      .where(eq(translationOverridesTable.id, id))
+      .returning();
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    await logAdminAction(req.user!.userId, "update_translation", "translation_override", id, updates);
+    res.json(row);
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      res.status(409).json({ error: "An override for this exact English text already exists" });
+      return;
+    }
+    throw err;
+  }
+});
+
+// Delete
+router.delete("/admin/translations/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [row] = await db
+    .delete(translationOverridesTable)
+    .where(eq(translationOverridesTable.id, id))
+    .returning();
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  await logAdminAction(req.user!.userId, "delete_translation", "translation_override", id, { source: row.source });
   res.status(204).end();
 });
 
