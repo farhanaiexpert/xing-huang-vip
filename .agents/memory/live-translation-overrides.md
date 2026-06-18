@@ -5,29 +5,29 @@ description: DB-backed manual EN→ZH overrides editable in admin that apply to 
 
 # Live translation overrides
 
-Operator-managed EN→ZH translation overrides stored in the `translation_overrides`
-table (unique on `(lang, source)`, lang defaults to `zh-CN`). Editable in admin
-under System → Translations.
+Operators manage EN→ZH translation fixes in admin (System → Translations); they
+apply to the live sportsbook + admin with no redeploy.
 
-## Priority (highest first)
-DB override (exact match) > runtime dict (curated static zh.ts / zh-CN.json) > DeepL cache.
-`translateString()` in BOTH translators checks `overrides[trimmed]` FIRST.
+## Priority decision
+DB override (exact match) wins over the curated static dict, which wins over DeepL.
+**Why:** the site is force-locked to zh-CN and the DeepL quota is exhausted, so
+operators need the final say on Chinese strings without touching code.
+**How to apply:** any new lookup path must check overrides FIRST, then the runtime
+dict — keep override checks above all dictionary/templating logic in both translators.
 
-**Why:** site is force-locked to zh-CN and DeepL quota is exhausted; operators need
-a way to fix/add Chinese strings on the live site with no redeploy.
+## No-rebuild propagation
+Clients cache overrides for first paint, then poll a public endpoint on a short
+interval (stale-while-revalidate) and FULL-REPLACE the override map so deletions
+take effect. Treat the override cache as separate from the DeepL cache — never
+reuse/bump the DeepL cache keys when touching overrides.
+**Why:** the whole point of the feature is "edit in admin → visible in seconds";
+a merge (not replace) would make deletions impossible.
 
-## How it propagates without rebuild
-- Public no-auth `GET /api/translations/:lang` returns `{ version, translations:{en:zh} }`
-  where version = `"<maxUpdatedAtEpochMs>-<count>"`.
-- Both translators load an override cache synchronously for first paint, then poll
-  every 20s (stale-while-revalidate). `refreshOverrides()` short-circuits on unchanged
-  `version` to avoid re-walking the DOM; on change it FULL-REPLACES overrides (so
-  deletions take effect) + `walkAndApply()`.
-- Override cache keys: sportsbook `sportsbook_zh_overrides_v1`, admin `admin_zh_overrides_v1`
-  (separate from the DeepL cache keys — do NOT bump DeepL keys when touching overrides).
-
-## Admin CRUD
-- In `admin.ts` under `authenticate + requireAdmin`; every write goes through
-  `logAdminAction` (actions: create/update/delete_translation, entity `translation_override`).
-- POST pre-checks duplicate AND catches Postgres 23505 unique_violation → clean 409
-  (concurrent create / PATCH source-rename race).
+## Constraints
+- Overrides are exact whole-string matches only (no templating/number substitution).
+- Writes are audit-logged; the unique key is (lang, source) and concurrent
+  create/rename races must surface as a clean 409, not a 500.
+- Schema lives in `lib/db`; this repo applies idempotent hand-written
+  `CREATE ... IF NOT EXISTS` SQL migrations that are NOT registered in the drizzle
+  journal (see existing 0003) — add new tables the same way so SQL-based deploys
+  pick them up.
