@@ -76,7 +76,7 @@ export const customOverrides: Record<string, Record<string, string>> = {
     "Profit if Win": "盈利金额",
 
     // ── Bet Builder ─────────────────────────────────────────────────────────
-    BUILDER: "构建",
+    // "BET BUILDER +" stays as an English stylized brand logo (do not split-translate)
     "Player Markets": "球员盘口",
     "Player / Last 5": "球员 / 近5场",
     "Show more": "显示更多",
