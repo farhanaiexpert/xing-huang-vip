@@ -11,12 +11,18 @@ import { startChineseTranslation, applyChineseTranslations } from "./i18n/transl
 
 let zhActive = false;
 try {
-  // The sportsbook frontend is always Chinese. Force zh-CN on every boot so the
-  // stored preference can never drift to another language, then start the DOM
-  // translator unconditionally.
-  localStorage.setItem("cupbett_lang", "zh-CN");
-  startChineseTranslation();
-  zhActive = true;
+  // Read the saved language preference. Only English ("en") and Chinese
+  // ("zh-CN") are supported; anything else (incl. first-time visitors with no
+  // saved value) defaults to Chinese. Persist the sanitized value so the
+  // default sticks. The Chinese DOM translator runs ONLY in Chinese mode —
+  // English mode renders the original source text, no overlay, no DeepL.
+  const stored = localStorage.getItem("cupbett_lang");
+  const lang = stored === "en" || stored === "zh-CN" ? stored : "zh-CN";
+  if (stored !== lang) localStorage.setItem("cupbett_lang", lang);
+  if (lang === "zh-CN") {
+    startChineseTranslation();
+    zhActive = true;
+  }
 } catch {
   /* ignore localStorage errors in sandboxed contexts */
 }
