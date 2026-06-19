@@ -32,4 +32,4 @@
 - [Market primary-id dedupe](market-id-dedupe.md) — matchToEntity primary id must use the same _mr/_mw convention as marketMeta or card 1X2 + detail/drawer add the same pick twice.
 - [i18n split-plural counters](i18n-split-plural-counters.md) — `{n} word{cond?'s':''}` leaves a stray "s" node → global dict `s:""`; templated `${n} word` is one node → source-hardcode (no plain-word dict match).
 - [Live translation overrides](live-translation-overrides.md) — admin-editable DB EN→ZH overrides (translation_overrides, unique lang+source); highest priority over static/DeepL; public GET /api/translations/:lang + 20s stale-while-revalidate poll = live update, no rebuild.
-- [i18n dynamic dates](i18n-dynamic-dates.md) — kickoff times & other per-render strings must be localized at render from ISO + useI18n() lang; static DOM dict only catches fixed/number-templated strings.
+- [i18n dynamic strings](i18n-dynamic-dates.md) — DeepL has a monthly quota; when exhausted, dynamic strings fall back to English. Fix dates at render-time from ISO+lang; cover feed team names via curated dict (suffix variants + dual-form dup filter).
