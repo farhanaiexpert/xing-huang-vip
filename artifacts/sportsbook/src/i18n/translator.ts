@@ -287,6 +287,12 @@ function collectUntranslated(): string[] {
 const requested = new Set<string>();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Circuit breaker: when DeepL is unavailable (429 quota / 5xx), stop hammering
+// the proxy. MutationObserver fires every few seconds, so without this a quota
+// outage produces a continuous stream of failed POST /api/translate requests.
+const DEEPL_COOLDOWN_MS = 10 * 60 * 1000; // 10 min back-off after repeated failure
+let deeplCooldownUntil = 0;
+
 function storeEntry(target: Record<string, string>, src: string, tr: string) {
   if (!tr || tr === src) return;
   const pair = makeTemplatePair(src, tr);
@@ -295,6 +301,7 @@ function storeEntry(target: Record<string, string>, src: string, tr: string) {
 }
 
 async function enrichFromDeepL(strings: string[]): Promise<void> {
+  if (Date.now() < deeplCooldownUntil) return; // backing off after repeated failure
   const fresh = strings.filter((s) => {
     const { tmpl } = templatize(s);
     if (requested.has(tmpl)) return false;
@@ -311,6 +318,7 @@ async function enrichFromDeepL(strings: string[]): Promise<void> {
     const masks = chunk.map(maskProtected);
     const payload = masks.map((m) => m.masked);
     let ok = false;
+    let outage = false; // 429 quota / 5xx / network — distinct from a one-off 4xx
 
     for (let attempt = 0; attempt < 3 && !ok; attempt++) {
       try {
@@ -320,6 +328,7 @@ async function enrichFromDeepL(strings: string[]): Promise<void> {
           body: JSON.stringify({ texts: payload, targetLang: "ZH" }),
         });
         if (resp.status === 429 || resp.status >= 500) {
+          outage = true;
           await sleep(800 * (attempt + 1));
           continue;
         }
@@ -332,6 +341,7 @@ async function enrichFromDeepL(strings: string[]): Promise<void> {
         });
         ok = true;
       } catch {
+        outage = true;
         await sleep(800 * (attempt + 1));
       }
     }
@@ -339,6 +349,17 @@ async function enrichFromDeepL(strings: string[]): Promise<void> {
     // Allow a future pass to retry templates we failed to fetch.
     if (!ok) {
       for (const src of chunk) requested.delete(templatize(src).tmpl);
+      // Only a genuine outage (quota 429 / 5xx / network) trips the circuit
+      // breaker — a one-off non-retryable 4xx for a single chunk shouldn't
+      // silence DeepL for everyone. On outage, back off and drop the rest of
+      // the queue (un-marked, so they retry after the cooldown expires).
+      if (outage) {
+        deeplCooldownUntil = Date.now() + DEEPL_COOLDOWN_MS;
+        for (let j = i + CHUNK; j < fresh.length; j++) {
+          requested.delete(templatize(fresh[j]).tmpl);
+        }
+        break;
+      }
     }
   }
 

@@ -30,6 +30,13 @@ Two classes of dynamic strings, two fixes:
 - Bare ambiguous tokens (province/country words like "Henan") translate anywhere they
   appear as a standalone node — fine in a sportsbook, but a real caveat for generic UI.
 
+**Circuit breaker:** the enrichment runs off a MutationObserver, which fires every
+few seconds. If the translate proxy is down (quota 429 / 5xx), naive retry logic
+produces a non-stop stream of failed POSTs. Gate enrichment behind a timestamp
+cooldown that only trips on genuine OUTAGE failures (429/5xx/network) — never on a
+one-off non-retryable 4xx, or one bad payload silences translation for everyone.
+
 **Why:** matches found that some times rendered Chinese (exact static key existed)
 while others stayed English — the tell that the value is dynamic and must be handled
-by one of the two fixes above, not patched key-by-key.
+by one of the fixes above, not patched key-by-key. The 502 spam was visible in both
+api-server logs and the browser console on every page until the cooldown was added.

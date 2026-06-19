@@ -4,11 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { requestDeposit } from '@/lib/depositGate';
 import { useWallet } from '@/hooks/useWallet';
 import { useBetHistory } from '@/hooks/useBetHistory';
-import { useReferral } from '@/hooks/useReferral';
 import { cn } from '@/lib/utils';
 import {
   Wallet, Receipt, ArrowLeftRight,
-  Users, Gift, Star, Trophy, Settings,
+  Gift, Star, Trophy, Settings,
   Calendar, ShieldCheck, TrendingUp, Activity,
   ArrowDownLeft, ArrowUpRight, Lock, ChevronRight,
   BarChart2, Percent, Camera, X, Loader2,
@@ -35,7 +34,6 @@ export function OverviewPage() {
   const [, navigate] = useLocation();
   const { balance, bonusBalance } = useWallet();
   const { bets } = useBetHistory();
-  const ref = useReferral();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -128,7 +126,6 @@ export function OverviewPage() {
     { label: 'Wallet',     icon: Wallet,         href: '/account/wallet',       color: '#00DFA9' },
     { label: 'My Bets',   icon: Receipt,        href: '/account/bets',         color: '#38BDF8' },
     { label: 'Transfers', icon: ArrowLeftRight, href: '/account/transactions', color: '#A78BFA' },
-    { label: 'Referrals', icon: Users,          href: '/account/referrals',    color: '#FACC15' },
     { label: 'Promos',    icon: Gift,           href: '/account/promotions',   color: '#F97316' },
     { label: 'WinSpin',   icon: Star,           href: '/account/winspin',      color: '#EC4899' },
     { label: 'Pools',     icon: Trophy,         href: '/account/pools',        color: '#10B981' },
@@ -349,24 +346,6 @@ export function OverviewPage() {
           );
         })}
       </div>
-
-      {/* ── REFERRAL EARNINGS (conditional) ──────────────────────────────── */}
-      {ref.isLoaded && ref.totalEarned > 0 && (
-        <Link href="/account/referrals">
-          <div className="flex items-center justify-between px-3.5 py-3 rounded-xl border border-[#FACC15]/20 bg-[#FACC15]/5 cursor-pointer hover:bg-[#FACC15]/8 transition-colors active:scale-[0.99]">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#FACC15]/12 border border-[#FACC15]/25 flex items-center justify-center shrink-0">
-                <Users className="h-3.5 w-3.5 text-[#FACC15]" />
-              </div>
-              <div>
-                <p className="text-[12px] font-bold text-[#F8FAFC]">Referral Earnings</p>
-                <p className="text-[10px] text-[#64748B]">{ref.referrals.length} referral{ref.referrals.length !== 1 ? 's' : ''} · {ref.totalEarned.toFixed(2)} USDT</p>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-[#FACC15]/60 shrink-0" />
-          </div>
-        </Link>
-      )}
 
       {/* ── QUICK ACCESS GRID ────────────────────────────────────────────── */}
       <div>
