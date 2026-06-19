@@ -72,6 +72,27 @@ export const customOverrides: Record<string, Record<string, string>> = {
     "Early Payout": "提前结算",
     "Acca Boost": "串关加成",
 
+    // ── World Cup page ──────────────────────────────────────────────────────
+    "Search teams": "搜索球队",
+    Sort: "排序",
+    "By Time": "按时间",
+    "Highest Odds": "最高赔率",
+    "Team A–Z": "球队 A–Z",
+    Favorites: "收藏",
+    "Featured Match": "精选比赛",
+    "LIVE NOW": "正在直播",
+    "Kicks off in": "距开赛",
+    "View all markets": "查看所有盘口",
+    "No favorites yet": "暂无收藏",
+    "Tap the star on any match to save it here": "点击比赛上的星标即可收藏",
+    "No matches available yet": "暂无可用比赛",
+    "No matches in this filter": "此筛选下暂无比赛",
+    "No matches found": "未找到比赛",
+    "Clear search": "清除搜索",
+    "Show all matches": "显示全部比赛",
+    "Loading World Cup odds…": "正在加载世界杯赔率…",
+    "USA · Canada · Mexico — 48 Teams · Group Stage": "美国 · 加拿大 · 墨西哥 — 48 支球队 · 小组赛",
+
     // ── Search ──────────────────────────────────────────────────────────────
     "Search events, teams or leagues...": "搜索赛事、球队或联赛...",
     Refresh: "刷新",

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Header } from '@/components/Header';
 import { SportsSidebar } from '@/components/SportsSidebar';
@@ -7,13 +7,15 @@ import { useBetSlipSidebar } from '@/contexts/BetSlipSidebarContext';
 import { useWorldCupOdds } from '@/hooks/useWorldCupOdds';
 import { useBetSlip } from '@/hooks/useBetSlip';
 import { useOddsFormat } from '@/hooks/useOddsFormat';
+import { useI18n } from '@/contexts/I18nContext';
 import { formatOdds } from '@/lib/oddsFormat';
 import { cn } from '@/lib/utils';
 import { getTeamFlag } from '@/lib/countryFlags';
-import { RefreshCw, ChevronRight, TrendingUp } from 'lucide-react';
+import { RefreshCw, ChevronRight, TrendingUp, Search, Star, X, Clock } from 'lucide-react';
 import type { Match } from '@/types';
 
 const LOGO_URL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/World-Cup-logo.png';
+const FAVORITES_KEY = 'wc_favorites_v1';
 
 const WC_TEAM_CODES: Record<string, string> = {
   'United States': 'US', 'USA': 'US', 'Mexico': 'MX', 'Canada': 'CA',
@@ -67,9 +69,10 @@ function teamFlag(name: string): string {
  * Falls back to the emoji flag if the country can't be resolved or the image
  * fails to load.
  */
-function TeamFlag({ name }: { name: string }) {
+function TeamFlag({ name, size = 'sm' }: { name: string; size?: 'sm' | 'lg' }) {
   const url = getTeamFlag(name);
   const [failed, setFailed] = useState(false);
+  const cls = size === 'lg' ? 'w-[34px] h-[24px]' : 'w-[26px] h-[18px]';
   if (url && !failed) {
     return (
       <img
@@ -77,15 +80,16 @@ function TeamFlag({ name }: { name: string }) {
         alt=""
         loading="lazy"
         onError={() => setFailed(true)}
-        className="w-[26px] h-[18px] rounded-sm object-cover shrink-0 ring-1 ring-white/10"
+        className={cn(cls, 'rounded-sm object-cover shrink-0 ring-1 ring-white/10')}
       />
     );
   }
-  return <span className="text-[18px] leading-none shrink-0">{teamFlag(name)}</span>;
+  return <span className={cn('leading-none shrink-0', size === 'lg' ? 'text-[24px]' : 'text-[18px]')}>{teamFlag(name)}</span>;
 }
 
-type DateFilter = 'all' | 'live' | 'today' | 'tomorrow' | 'upcoming';
+type DateFilter = 'all' | 'live' | 'today' | 'tomorrow' | 'upcoming' | 'favorites';
 type MarketTab  = '1x2' | 'ou' | 'btts' | 'hcp';
+type SortMode   = 'time' | 'odds' | 'name';
 
 function deriveMarkets(odds1: number, oddsDraw: number | null | undefined, odds2: number) {
   const clamp = (n: number) => Math.max(1.01, Math.round(n * 100) / 100);
@@ -169,7 +173,46 @@ function WCOddsButton({
   );
 }
 
-function WCMatchCard({ match }: { match: Match }) {
+/** Live ticking countdown to a match kickoff. Numeric output is marked
+ *  translate="no" so the DOM translator never mangles the digits. */
+function Countdown({ iso, className }: { iso?: string; className?: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  if (!iso) return null;
+  const diff = new Date(iso).getTime() - now;
+  if (diff <= 0) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const days  = Math.floor(diff / 86400000);
+  const hours = Math.floor(diff / 3600000) % 24;
+  const mins  = Math.floor(diff / 60000) % 60;
+  const secs  = Math.floor(diff / 1000) % 60;
+  const text = days > 0
+    ? `${days}d ${pad(hours)}:${pad(mins)}:${pad(secs)}`
+    : `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+  return <span translate="no" className={className}>{text}</span>;
+}
+
+function FavoriteButton({ active, onClick }: { active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      aria-label="Favorite"
+      className={cn(
+        'shrink-0 grid place-items-center w-6 h-6 rounded-md transition-all duration-150 active:scale-90',
+        active ? 'text-[#FACC15]' : 'text-[#475569] hover:text-[#94A3B8]'
+      )}
+    >
+      <Star className="h-3.5 w-3.5" fill={active ? '#FACC15' : 'none'} />
+    </button>
+  );
+}
+
+function WCMatchCard({ match, isFavorite, onToggleFavorite }: {
+  match: Match; isFavorite: boolean; onToggleFavorite: (id: string) => void;
+}) {
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<MarketTab>('1x2');
 
@@ -200,6 +243,7 @@ function WCMatchCard({ match }: { match: Match }) {
       {/* Match header */}
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[#1A2535]/60">
         <div className="flex items-center gap-1.5 min-w-0">
+          <FavoriteButton active={isFavorite} onClick={() => onToggleFavorite(match.id)} />
           {match.isLive ? (
             <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-[#EF4444] bg-[#EF4444]/10 px-1.5 py-0.5 rounded shrink-0">
               <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
@@ -338,12 +382,105 @@ function WCMatchCard({ match }: { match: Match }) {
   );
 }
 
+/** Big hero card for the next live / upcoming match with a ticking countdown. */
+function FeaturedMatch({ match, isFavorite, onToggleFavorite }: {
+  match: Match; isFavorite: boolean; onToggleFavorite: (id: string) => void;
+}) {
+  const [, navigate] = useLocation();
+  const matchId = `${match.id}`;
+
+  return (
+    <div className="relative rounded-2xl overflow-hidden mb-4 border border-[#00DFA9]/25">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#04231B] via-[#0B0F14] to-[#0A1A2A]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_0%,rgba(0,223,169,0.12),transparent)]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00DFA9]/50 to-transparent" />
+
+      <div className="relative p-4 sm:p-5">
+        {/* Top row: label + status + star */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#00DFA9]">
+            <Star className="h-3.5 w-3.5" fill="#00DFA9" />
+            Featured Match
+          </span>
+          <div className="flex items-center gap-2">
+            {match.isLive ? (
+              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-[#EF4444] bg-[#EF4444]/10 px-2 py-0.5 rounded">
+                <span className="w-1 h-1 rounded-full bg-[#EF4444] animate-pulse" />
+                {match.liveMinute ? `${match.liveMinute}'` : 'LIVE NOW'}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#94A3B8]">
+                <Clock className="h-3 w-3 text-[#00DFA9]" />
+                <span className="text-[#64748B]">Kicks off in</span>
+                <Countdown iso={match.commenceIso} className="tabular-nums font-black text-[#FACC15]" />
+              </span>
+            )}
+            <FavoriteButton active={isFavorite} onClick={() => onToggleFavorite(match.id)} />
+          </div>
+        </div>
+
+        {/* Teams */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-1 flex items-center gap-2.5 min-w-0">
+            <TeamFlag name={match.team1} size="lg" />
+            <span className="text-[15px] sm:text-[17px] font-black text-white truncate">{match.team1}</span>
+          </div>
+          {match.isLive && match.score ? (
+            <span className="shrink-0 text-[18px] font-black text-white tabular-nums px-2">
+              {match.score.home} – {match.score.away}
+            </span>
+          ) : (
+            <span className="shrink-0 text-[12px] font-black text-[#334155] px-1">VS</span>
+          )}
+          <div className="flex-1 flex items-center gap-2.5 justify-end min-w-0">
+            <span className="text-[15px] sm:text-[17px] font-black text-white truncate text-right">{match.team2}</span>
+            <TeamFlag name={match.team2} size="lg" />
+          </div>
+        </div>
+
+        {/* 1X2 odds */}
+        <div className="flex items-center gap-2 mb-3">
+          <WCOddsButton
+            label={match.team1} odds={match.odds.home}
+            selectionId={`${matchId}-h2h-1`} marketId={`${matchId}-h2h`}
+            match={match} marketName="h2h"
+            selectionType="1" selectionName={match.team1}
+          />
+          {match.odds.draw !== undefined && match.odds.draw > 0 && (
+            <WCOddsButton
+              label="Draw" odds={match.odds.draw}
+              selectionId={`${matchId}-h2h-x`} marketId={`${matchId}-h2h`}
+              match={match} marketName="h2h"
+              selectionType="X" selectionName="Draw"
+            />
+          )}
+          <WCOddsButton
+            label={match.team2} odds={match.odds.away}
+            selectionId={`${matchId}-h2h-2`} marketId={`${matchId}-h2h`}
+            match={match} marketName="h2h"
+            selectionType="2" selectionName={match.team2}
+          />
+        </div>
+
+        <button
+          onClick={() => navigate(`/match/${match.id}`)}
+          className="flex items-center gap-1 text-[11px] font-bold text-[#00DFA9] hover:text-[#00DFA9]/80 transition-colors"
+        >
+          View all markets
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const DATE_TABS: { id: DateFilter; label: string; alwaysShow?: boolean }[] = [
-  { id: 'all',      label: 'All',      alwaysShow: true  },
-  { id: 'live',     label: 'Live'                        },
-  { id: 'today',    label: 'Today',    alwaysShow: true  },
-  { id: 'tomorrow', label: 'Tomorrow', alwaysShow: true  },
-  { id: 'upcoming', label: 'Upcoming', alwaysShow: true  },
+  { id: 'all',       label: 'All',       alwaysShow: true  },
+  { id: 'live',      label: 'Live'                         },
+  { id: 'today',     label: 'Today',     alwaysShow: true  },
+  { id: 'tomorrow',  label: 'Tomorrow',  alwaysShow: true  },
+  { id: 'upcoming',  label: 'Upcoming',  alwaysShow: true  },
+  { id: 'favorites', label: 'Favorites', alwaysShow: true  },
 ];
 
 interface DateGroup {
@@ -351,54 +488,104 @@ interface DateGroup {
   matches: Match[];
 }
 
-export function WorldCupPage() {
-  const [, navigate]  = useLocation();
-  const { matches: rawWcMatches, loading, lastUpdatedLabel, refreshing, refresh } = useWorldCupOdds();
-  const { collapsed: betSlipCollapsed } = useBetSlipSidebar();
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
-  const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
-
-  const wcMatches = useMemo<Match[]>(() => {
-    const matches = [...rawWcMatches];
-    matches.sort((a, b) => {
+function sortMatches(arr: Match[], mode: SortMode): Match[] {
+  const out = [...arr];
+  if (mode === 'name') {
+    out.sort((a, b) => a.team1.localeCompare(b.team1));
+  } else if (mode === 'odds') {
+    const top = (m: Match) => Math.max(m.odds.home, m.odds.away, m.odds.draw ?? 0);
+    out.sort((a, b) => top(b) - top(a));
+  } else {
+    out.sort((a, b) => {
       if (a.isLive && !b.isLive) return -1;
       if (!a.isLive && b.isLive) return 1;
       const ta = a.commenceIso ?? '';
       const tb = b.commenceIso ?? '';
       return ta < tb ? -1 : ta > tb ? 1 : 0;
     });
-    return matches;
-  }, [rawWcMatches]);
+  }
+  return out;
+}
+
+export function WorldCupPage() {
+  const [, navigate]  = useLocation();
+  const { t } = useI18n();
+  const { matches: rawWcMatches, loading, lastUpdatedLabel, refreshing, refresh } = useWorldCupOdds();
+  const { collapsed: betSlipCollapsed } = useBetSlipSidebar();
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [selectedSportId, setSelectedSportId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortMode>('time');
+
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(FAVORITES_KEY);
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch { return new Set(); }
+  });
+
+  const toggleFavorite = useCallback((id: string) => {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...next])); } catch { /* quota */ }
+      return next;
+    });
+  }, []);
+
+  // Base list, sorted live-first by time.
+  const wcMatches = useMemo<Match[]>(() => sortMatches(rawWcMatches, 'time'), [rawWcMatches]);
+
+  // Apply the team search across the whole list (drives counts + display).
+  const searched = useMemo<Match[]>(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return wcMatches;
+    return wcMatches.filter(m =>
+      m.team1.toLowerCase().includes(q) || m.team2.toLowerCase().includes(q)
+    );
+  }, [wcMatches, search]);
 
   const counts = useMemo(() => ({
-    all:      wcMatches.length,
-    live:     wcMatches.filter(m => m.isLive).length,
-    today:    wcMatches.filter(m => m.dateTag === 'today').length,
-    tomorrow: wcMatches.filter(m => m.dateTag === 'tomorrow').length,
-    upcoming: wcMatches.filter(m => m.dateTag === 'upcoming').length,
-  }), [wcMatches]);
+    all:       searched.length,
+    live:      searched.filter(m => m.isLive).length,
+    today:     searched.filter(m => m.dateTag === 'today').length,
+    tomorrow:  searched.filter(m => m.dateTag === 'tomorrow').length,
+    upcoming:  searched.filter(m => m.dateTag === 'upcoming').length,
+    favorites: searched.filter(m => favorites.has(m.id)).length,
+  }), [searched, favorites]);
+
+  // The hero is only shown in the default unfiltered view.
+  const featured = useMemo<Match | null>(() => {
+    if (dateFilter !== 'all' || search.trim()) return null;
+    return wcMatches[0] ?? null;
+  }, [wcMatches, dateFilter, search]);
 
   const flatDisplayed = useMemo(() => {
-    if (dateFilter === 'live')     return wcMatches.filter(m => m.isLive);
-    if (dateFilter === 'today')    return wcMatches.filter(m => m.dateTag === 'today');
-    if (dateFilter === 'tomorrow') return wcMatches.filter(m => m.dateTag === 'tomorrow');
-    if (dateFilter === 'upcoming') return wcMatches.filter(m => m.dateTag === 'upcoming' && !m.isLive);
-    return wcMatches;
-  }, [wcMatches, dateFilter]);
+    let list: Match[];
+    if (dateFilter === 'favorites')      list = searched.filter(m => favorites.has(m.id));
+    else if (dateFilter === 'live')      list = searched.filter(m => m.isLive);
+    else if (dateFilter === 'today')     list = searched.filter(m => m.dateTag === 'today');
+    else if (dateFilter === 'tomorrow')  list = searched.filter(m => m.dateTag === 'tomorrow');
+    else if (dateFilter === 'upcoming')  list = searched.filter(m => m.dateTag === 'upcoming' && !m.isLive);
+    else                                 list = searched;
+    return sortMatches(list, sort);
+  }, [searched, dateFilter, sort, favorites]);
 
   const groupedDisplay = useMemo<DateGroup[]>(() => {
     if (dateFilter !== 'all') return [];
+    const heroId = featured?.id;
+    const pool = heroId ? searched.filter(m => m.id !== heroId) : searched;
     const groups: DateGroup[] = [];
-    const live = wcMatches.filter(m => m.isLive);
-    if (live.length > 0) groups.push({ label: '🔴 Live Now', matches: live });
-    const today = wcMatches.filter(m => m.dateTag === 'today' && !m.isLive);
-    if (today.length > 0) groups.push({ label: 'Today', matches: today });
-    const tomorrow = wcMatches.filter(m => m.dateTag === 'tomorrow');
-    if (tomorrow.length > 0) groups.push({ label: 'Tomorrow', matches: tomorrow });
-    const upcoming = wcMatches.filter(m => m.dateTag === 'upcoming' && !m.isLive);
-    if (upcoming.length > 0) groups.push({ label: 'Upcoming', matches: upcoming });
+    const live = pool.filter(m => m.isLive);
+    if (live.length > 0) groups.push({ label: '🔴 Live Now', matches: sortMatches(live, sort) });
+    const today = pool.filter(m => m.dateTag === 'today' && !m.isLive);
+    if (today.length > 0) groups.push({ label: 'Today', matches: sortMatches(today, sort) });
+    const tomorrow = pool.filter(m => m.dateTag === 'tomorrow');
+    if (tomorrow.length > 0) groups.push({ label: 'Tomorrow', matches: sortMatches(tomorrow, sort) });
+    const upcoming = pool.filter(m => m.dateTag === 'upcoming' && !m.isLive);
+    if (upcoming.length > 0) groups.push({ label: 'Upcoming', matches: sortMatches(upcoming, sort) });
     return groups;
-  }, [wcMatches, dateFilter]);
+  }, [searched, dateFilter, sort, featured]);
 
   return (
     <div className="min-h-screen bg-[#0B0F14] flex flex-col">
@@ -412,7 +599,7 @@ export function WorldCupPage() {
           <div className="max-w-[960px] mx-auto px-3 sm:px-4 py-4 pb-24 sm:pb-6">
 
             {/* ── WC Page Header ────────────────────────────── */}
-            <div className="relative rounded-2xl overflow-hidden mb-5 border border-[#FACC15]/20">
+            <div className="relative rounded-2xl overflow-hidden mb-4 border border-[#FACC15]/20">
               {/* Background gradient */}
               <div className="absolute inset-0 bg-gradient-to-br from-[#1A1200] via-[#0B0F14] to-[#001C12]" />
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(250,204,21,0.12),transparent)]" />
@@ -461,12 +648,45 @@ export function WorldCupPage() {
               </div>
             </div>
 
+            {/* ── Search + Sort controls ────────────────────── */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#475569] pointer-events-none" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder={t('Search teams')}
+                  className="w-full h-9 pl-9 pr-8 rounded-lg bg-[#0D1218] border border-[#1A2535] text-[12px] text-[#E2E8F0] placeholder:text-[#475569] focus:outline-none focus:border-[#00DFA9]/40 transition-colors"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 grid place-items-center w-5 h-5 rounded text-[#475569] hover:text-[#94A3B8]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <select
+                value={sort}
+                onChange={e => setSort(e.target.value as SortMode)}
+                aria-label={t('Sort')}
+                className="h-9 px-2.5 rounded-lg bg-[#0D1218] border border-[#1A2535] text-[12px] font-semibold text-[#CBD5E1] focus:outline-none focus:border-[#00DFA9]/40 transition-colors cursor-pointer shrink-0"
+              >
+                <option value="time">{t('By Time')}</option>
+                <option value="odds">{t('Highest Odds')}</option>
+                <option value="name">{t('Team A–Z')}</option>
+              </select>
+            </div>
+
             {/* ── Date filter tabs ──────────────────────────── */}
             <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1 scrollbar-none">
               {DATE_TABS.filter(t => t.alwaysShow || counts[t.id] > 0).map(tab => {
                 const count = counts[tab.id];
                 const active = dateFilter === tab.id;
                 const isLiveTab = tab.id === 'live';
+                const isFavTab = tab.id === 'favorites';
                 return (
                   <button
                     key={tab.id}
@@ -482,6 +702,9 @@ export function WorldCupPage() {
                   >
                     {isLiveTab && (
                       <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
+                    )}
+                    {isFavTab && (
+                      <Star className="h-3 w-3" fill={active ? '#FACC15' : 'none'} />
                     )}
                     {tab.label}
                     {count > 0 && (
@@ -507,15 +730,51 @@ export function WorldCupPage() {
                 <div className="w-8 h-8 rounded-full border-2 border-[#FACC15]/30 border-t-[#FACC15] animate-spin" />
                 <p className="text-[13px] text-[#475569]">Loading World Cup odds…</p>
               </div>
-            ) : dateFilter === 'all' ? (
-              /* Grouped by date bucket */
-              groupedDisplay.length === 0 ? (
+            ) : dateFilter === 'favorites' && flatDisplayed.length === 0 ? (
+              favorites.size > 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-                  <span className="text-4xl">🏆</span>
-                  <p className="text-[15px] font-semibold text-[#64748B]">No matches available yet</p>
+                  <span className="text-4xl">🔎</span>
+                  <p className="text-[15px] font-semibold text-[#64748B]">No matches found</p>
+                  <button
+                    onClick={() => setSearch('')}
+                    className="text-[12px] text-[#00DFA9] hover:underline"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+                  <Star className="h-9 w-9 text-[#FACC15]/40" />
+                  <p className="text-[15px] font-semibold text-[#64748B]">No favorites yet</p>
+                  <p className="text-[12px] text-[#475569]">Tap the star on any match to save it here</p>
+                </div>
+              )
+            ) : dateFilter === 'all' ? (
+              /* Grouped by date bucket, with featured hero on top */
+              !featured && groupedDisplay.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+                  <span className="text-4xl">{search.trim() ? '🔎' : '🏆'}</span>
+                  <p className="text-[15px] font-semibold text-[#64748B]">
+                    {search.trim() ? 'No matches found' : 'No matches available yet'}
+                  </p>
+                  {search.trim() && (
+                    <button
+                      onClick={() => setSearch('')}
+                      className="text-[12px] text-[#00DFA9] hover:underline"
+                    >
+                      Clear search
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col gap-6">
+                  {featured && (
+                    <FeaturedMatch
+                      match={featured}
+                      isFavorite={favorites.has(featured.id)}
+                      onToggleFavorite={toggleFavorite}
+                    />
+                  )}
                   {groupedDisplay.map(group => (
                     <div key={group.label}>
                       <div className="flex items-center gap-2 mb-3">
@@ -532,7 +791,12 @@ export function WorldCupPage() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {group.matches.map(match => (
-                          <WCMatchCard key={match.id} match={match} />
+                          <WCMatchCard
+                            key={match.id}
+                            match={match}
+                            isFavorite={favorites.has(match.id)}
+                            onToggleFavorite={toggleFavorite}
+                          />
                         ))}
                       </div>
                     </div>
@@ -544,7 +808,7 @@ export function WorldCupPage() {
                 <span className="text-4xl">🏆</span>
                 <p className="text-[15px] font-semibold text-[#64748B]">No matches in this filter</p>
                 <button
-                  onClick={() => setDateFilter('all')}
+                  onClick={() => { setDateFilter('all'); setSearch(''); }}
                   className="text-[12px] text-[#00DFA9] hover:underline"
                 >
                   Show all matches
@@ -553,7 +817,12 @@ export function WorldCupPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {flatDisplayed.map(match => (
-                  <WCMatchCard key={match.id} match={match} />
+                  <WCMatchCard
+                    key={match.id}
+                    match={match}
+                    isFavorite={favorites.has(match.id)}
+                    onToggleFavorite={toggleFavorite}
+                  />
                 ))}
               </div>
             )}
