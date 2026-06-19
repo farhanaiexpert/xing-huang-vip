@@ -1296,6 +1296,10 @@ function SiteFooter() {
             ))}
           </div>
         </div>
+
+        <p className="mt-3 text-center text-[9px] text-[#94A3B8]/25 leading-snug">
+          The Latest Version
+        </p>
       </div>
     </footer>
   );
