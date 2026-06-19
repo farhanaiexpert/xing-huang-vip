@@ -312,16 +312,13 @@ export default function TranslationsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-                Paste one translation per line — <span className="text-[#C4D4E3]">English</span> then{" "}
-                <span className="text-[#C4D4E3]">Chinese</span>, separated by a <strong>Tab</strong>,{" "}
-                <strong>=</strong> or <strong>comma</strong>.
+                Paste one translation per line — English then Chinese, separated by a Tab, = or comma.
               </label>
               <textarea
                 className={cn(inp, "font-mono text-xs leading-relaxed min-h-[180px] resize-y")}
                 value={bulkText}
                 onChange={e => setBulkText(e.target.value)}
                 placeholder={"Cash Out = 提前结算\nLive = 滚球\nSettled = 已结算\n# lines starting with # are ignored"}
-                translate="no"
                 spellCheck={false}
               />
               <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
