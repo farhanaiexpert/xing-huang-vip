@@ -1211,8 +1211,6 @@ const FOOTER_NAV = [
 
 const FOOTER_COMPLIANCE = ["18+", "BeGambleAware", "GamCare", "Gamble Responsibly"];
 
-const FOOTER_CURRENCIES = ["USDT", "BTC", "ETH", "SOL", "TON", "BNB"];
-
 
 function SiteFooter() {
   const scrollToTop = () =>
@@ -1268,25 +1266,12 @@ function SiteFooter() {
           ))}
         </div>
 
-        {/* ── Accepted currencies + back to top ─────────────────────────── */}
-        <div className="flex flex-col gap-3 py-5 border-t border-[#253241]/40 sm:flex-row sm:items-center">
-          <p className="shrink-0 text-[10px] font-semibold text-[#94A3B8]/40 uppercase tracking-widest">
-            We Accept
-          </p>
-          <div className="flex items-center flex-wrap gap-2">
-            {FOOTER_CURRENCIES.map((c) => (
-              <span
-                key={c}
-                className="px-2.5 py-1 rounded-md bg-[#121821] border border-[#253241]/70 text-[10px] font-bold tracking-wide text-[#94A3B8]/55 transition-colors duration-200 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 cursor-default"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
+        {/* ── Back to top ───────────────────────────────────────────────── */}
+        <div className="flex justify-center py-5 border-t border-[#253241]/40 sm:justify-end">
           <button
             type="button"
             onClick={scrollToTop}
-            className="group self-start sm:self-auto sm:ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#121821] border border-[#253241]/70 text-[10px] font-semibold text-[#94A3B8]/60 transition-colors duration-200 hover:text-[#F8FAFC] hover:border-[#00DFA9]/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00DFA9]/40 focus-visible:text-[#F8FAFC]"
+            className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#121821] border border-[#253241]/70 text-[10px] font-semibold text-[#94A3B8]/60 transition-colors duration-200 hover:text-[#F8FAFC] hover:border-[#00DFA9]/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00DFA9]/40 focus-visible:text-[#F8FAFC]"
           >
             <ChevronUp className="h-3.5 w-3.5 text-[#00DFA9] transition-transform duration-200 group-hover:-translate-y-0.5" />
             Back to top
