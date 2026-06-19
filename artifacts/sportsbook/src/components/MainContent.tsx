@@ -1208,6 +1208,8 @@ const FOOTER_NAV = [
   },
 ];
 
+const FOOTER_COMPLIANCE = ["18+", "BeGambleAware", "GamCare", "Gamble Responsibly"];
+
 
 function SiteFooter() {
   return (
@@ -1300,27 +1302,21 @@ function SiteFooter() {
         </div>
 
         {/* ── Bottom bar ────────────────────────────────────────────────── */}
-        <div className="pt-4 sm:border-t sm:border-[#253241]/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <p className="text-[10px] text-[#94A3B8]/30 leading-snug">
+        <div className="mt-2 pt-5 border-t border-[#253241]/40 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+          <p className="order-2 sm:order-1 text-[10px] text-[#94A3B8]/35 leading-snug text-center sm:text-left">
             © 2021–2026 <span translate="no">Xing Huang</span> Ltd. All rights reserved.
-            <span className="hidden sm:inline">
-              {" "}
-              · 18+ · Gamble responsibly.
-            </span>
-            {" · "}
-            Latest Version
+            <span className="text-[#94A3B8]/25"> · 18+ · Gamble responsibly.</span>
           </p>
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            {["18+", "BeGambleAware", "GamCare", "Gamble Responsibly"].map(
-              (b) => (
-                <span
-                  key={b}
-                  className="text-[9px] font-semibold text-[#94A3B8]/25"
-                >
-                  {b}
-                </span>
-              ),
-            )}
+          <div className="order-1 sm:order-2 flex items-center justify-center flex-wrap gap-x-1.5 gap-y-1">
+            {FOOTER_COMPLIANCE.map((b, i) => (
+              <span
+                key={b}
+                className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#94A3B8]/30"
+              >
+                {i > 0 && <span className="text-[#253241]">·</span>}
+                {b}
+              </span>
+            ))}
           </div>
         </div>
       </div>
