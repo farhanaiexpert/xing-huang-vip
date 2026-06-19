@@ -1630,7 +1630,6 @@ const base: Record<string, string> = {
   "Maria Sakkari": "玛丽亚·萨卡里",
   "Mark all read": "标记为已读",
   "Markets": "市场",
-  "Markets from BetsAPI · cached, no live refresh": "来自 BetsAPI 的盘口 · 缓存数据，无实时更新",
   "Marseille": "马赛",
   "Martim": "马蒂姆",
   "Martinelli": "马丁内利",

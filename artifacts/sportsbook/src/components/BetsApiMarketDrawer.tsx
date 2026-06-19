@@ -10,7 +10,6 @@ import { useEffect, useState } from 'react';
 import type { Match } from '../types';
 import { fetchBetsApiMarkets, type BetsApiMarketsResponse } from '../lib/betsApi';
 import { OddsButton } from './OddsButton';
-import { cn } from '../lib/utils';
 
 interface Props {
   match:      Match;
@@ -261,9 +260,6 @@ export function BetsApiMarketDrawer({ match, leagueName }: Props) {
         </Section>
       )}
 
-      <p className={cn('text-[9px] text-[#475569] pt-1')}>
-        Markets from BetsAPI · cached, no live refresh
-      </p>
     </div>
   );
 }
