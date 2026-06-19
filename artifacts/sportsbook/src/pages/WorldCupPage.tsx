@@ -91,6 +91,28 @@ type DateFilter = 'all' | 'live' | 'today' | 'tomorrow' | 'upcoming' | 'favorite
 type MarketTab  = '1x2' | 'ou' | 'btts' | 'hcp';
 type SortMode   = 'time' | 'odds' | 'name';
 
+const ZH_WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+/** Locale-aware kickoff label derived from the ISO commence time, so match
+ *  times read "今天 20:00" in Chinese instead of the English "Today, 20:00"
+ *  baked into the data layer. */
+function formatKickoff(iso: string | undefined, lang: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const now      = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const tomEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+  const hhmm     = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const isZh     = lang === 'zh-CN' || lang === 'zh';
+  if (d < todayEnd) return isZh ? `今天 ${hhmm}`  : `Today, ${hhmm}`;
+  if (d < tomEnd)   return isZh ? `明天 ${hhmm}`  : `Tomorrow, ${hhmm}`;
+  if (isZh) {
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${ZH_WEEKDAYS[d.getDay()]} ${hhmm}`;
+  }
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + `, ${hhmm}`;
+}
+
 function deriveMarkets(odds1: number, oddsDraw: number | null | undefined, odds2: number) {
   const clamp = (n: number) => Math.max(1.01, Math.round(n * 100) / 100);
   const i1 = 1 / odds1;
@@ -214,7 +236,9 @@ function WCMatchCard({ match, isFavorite, onToggleFavorite }: {
   match: Match; isFavorite: boolean; onToggleFavorite: (id: string) => void;
 }) {
   const [, navigate] = useLocation();
+  const { lang } = useI18n();
   const [tab, setTab] = useState<MarketTab>('1x2');
+  const kickoff = formatKickoff(match.commenceIso, lang) ?? match.kickoffTime ?? match.date;
 
   const matchId  = `${match.id}`;
 
@@ -250,7 +274,7 @@ function WCMatchCard({ match, isFavorite, onToggleFavorite }: {
               {match.liveMinute ? `${match.liveMinute}'` : 'LIVE'}
             </span>
           ) : (
-            <span className="text-[10px] text-[#475569] shrink-0">{match.kickoffTime ?? match.date}</span>
+            <span className="text-[10px] text-[#475569] shrink-0">{kickoff}</span>
           )}
           {match.isLive && match.score && (
             <span className="text-[11px] font-black text-white tabular-nums">

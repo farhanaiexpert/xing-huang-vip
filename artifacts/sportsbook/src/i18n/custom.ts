@@ -98,6 +98,11 @@ export const customOverrides: Record<string, Record<string, string>> = {
     Refresh: "刷新",
     // Number-templated so "Updated Nm ago" works for every value, not just 19.
     "Updated \u00000\u0000m ago": "\u00000\u0000分钟前更新",
+    "Updated \u00000\u0000h ago": "\u00000\u0000小时前更新",
+    "Live · just updated": "实时 · 刚刚更新",
+    "Updated moments ago": "片刻前更新",
+    "Showing recent data": "显示最近数据",
+    HCP: "让球",
 
     // ── Sports categories ───────────────────────────────────────────────────
     Soccer: "足球",
