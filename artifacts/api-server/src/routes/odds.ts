@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { db, sportControlsTable, platformSettingsTable } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 import { recordApiCall } from "../lib/apiUsage.js";
+import { captureOddsApiNames } from "../lib/translationQueue.js";
 
 const router = Router();
 
@@ -268,6 +269,8 @@ async function setDbCachedOdds(sportKey: string, data: unknown[], ttlMinutes = 4
         fetched_at = NOW(),
         expires_at = NOW() + (${ttlMinutes} * INTERVAL '1 minute')
     `);
+    // Capture any new team/league names into the translation queue (non-blocking).
+    captureOddsApiNames(data as Array<{ home_team?: string; away_team?: string; sport_title?: string }>);
   } catch { /* silently ignore cache write failures */ }
 }
 

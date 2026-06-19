@@ -34,3 +34,4 @@
 - [Live translation overrides](live-translation-overrides.md) — admin-editable DB EN→ZH overrides (translation_overrides, unique lang+source); highest priority over static/DeepL; public GET /api/translations/:lang + 20s stale-while-revalidate poll = live update, no rebuild.
 - [i18n dynamic strings](i18n-dynamic-dates.md) — DeepL quota exhaustion makes dynamic strings fall back to English; fix dates at render-time, feed names via curated dict, and circuit-break the MutationObserver enrichment on outage.
 - [Same-game-multi odds drift](same-game-multi-odds-drift.md) — SGM picks share matchId so each needs a unique marketId; reconcile ODDS_CHANGED by eventId+selection, not matchId alone, or sibling legs go stale.
+- [Name-translation queue](name-translation-queue.md) — new API names captured at ingest into translation_queue (covered-set = translation_overrides zh-CN); curated seed from sportsbook custom.ts; resolve must markCovered to avoid 60s re-surface.

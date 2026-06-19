@@ -29,10 +29,12 @@ import {
   selfExclusionsTable,
   riskFlagsTable,
   translationOverridesTable,
+  translationQueueTable,
 } from "@workspace/db";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { getBetsApiWindowUsage } from "../lib/betsApiRateLimiter.js";
+import { markCovered } from "../lib/translationQueue.js";
 
 const router = Router();
 
@@ -3079,6 +3081,164 @@ router.delete("/admin/translations/:id", async (req, res): Promise<void> => {
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
   await logAdminAction(req.user!.userId, "delete_translation", "translation_override", id, { source: row.source });
   res.status(204).end();
+});
+
+// ─── Translation queue ("Needs translation") ─────────────────────────────────
+// Auto-collected proper-noun names off the live feeds that have no Chinese
+// override yet (see lib/translationQueue.ts). Operators translate them here;
+// resolving a row creates the live override and marks the queue row translated.
+
+// List with status filter + search + sort + pagination, plus status counts.
+router.get("/admin/translation-queue", async (req, res): Promise<void> => {
+  const lang = typeof req.query.lang === "string" && req.query.lang.trim() ? req.query.lang.trim() : DEFAULT_OVERRIDE_LANG;
+  const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+  const status = typeof req.query.status === "string" ? req.query.status.trim() : "pending";
+  const category = typeof req.query.category === "string" ? req.query.category.trim() : "";
+  const sort = req.query.sort === "recent" ? "recent" : "frequency";
+  const page = Math.max(1, parseInt(String(req.query.page ?? "1")) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize ?? "50")) || 50));
+
+  const conditions = [eq(translationQueueTable.lang, lang)];
+  if (status === "pending" || status === "translated" || status === "ignored") {
+    conditions.push(eq(translationQueueTable.status, status));
+  }
+  if (category === "team" || category === "league" || category === "country" || category === "player") {
+    conditions.push(eq(translationQueueTable.category, category));
+  }
+  if (search) {
+    conditions.push(ilike(translationQueueTable.source, `%${search}%`));
+  }
+  const where = and(...conditions);
+
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(translationQueueTable)
+    .where(where);
+
+  const orderBy =
+    sort === "recent"
+      ? [desc(translationQueueTable.lastSeen)]
+      : [desc(translationQueueTable.seenCount), desc(translationQueueTable.lastSeen)];
+
+  const rows = await db
+    .select()
+    .from(translationQueueTable)
+    .where(where)
+    .orderBy(...orderBy)
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  // Per-status counts (for the tab badges) scoped to the current language.
+  const countRows = await db
+    .select({ status: translationQueueTable.status, c: count() })
+    .from(translationQueueTable)
+    .where(eq(translationQueueTable.lang, lang))
+    .groupBy(translationQueueTable.status);
+  const counts = { pending: 0, translated: 0, ignored: 0 };
+  for (const r of countRows) {
+    if (r.status in counts) counts[r.status as keyof typeof counts] = Number(r.c);
+  }
+
+  res.json({ rows, total: Number(total), page, pageSize, counts });
+});
+
+const resolveQueueSchema = z.object({
+  target: z.string().trim().min(1, "Chinese text is required").max(500, "Chinese text is too long"),
+});
+
+// Resolve: create the live override + mark the queue row translated (atomic).
+router.post("/admin/translation-queue/:id/resolve", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const parsed = resolveQueueSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const target = parsed.data.target.trim();
+
+  const [queueRow] = await db
+    .select()
+    .from(translationQueueTable)
+    .where(eq(translationQueueTable.id, id))
+    .limit(1);
+  if (!queueRow) { res.status(404).json({ error: "Not found" }); return; }
+
+  try {
+    const override = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(translationOverridesTable)
+        .values({ lang: queueRow.lang, source: queueRow.source, target })
+        .returning();
+      await tx
+        .update(translationQueueTable)
+        .set({ status: "translated", lastSeen: sql`NOW()` })
+        .where(eq(translationQueueTable.id, id));
+      return row;
+    });
+    // Prime the covered-set cache so this name does not re-surface during the
+    // 60s cache window before the next refresh.
+    markCovered(queueRow.source);
+    await logAdminAction(req.user!.userId, "resolve_translation_queue", "translation_override", override.id, {
+      lang: queueRow.lang,
+      source: queueRow.source,
+      target,
+      queueId: id,
+    });
+    res.status(201).json({ override, queueId: id });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      // An override for this source already exists — still mark the queue row
+      // translated so it stops surfacing, then report the conflict.
+      await db
+        .update(translationQueueTable)
+        .set({ status: "translated", lastSeen: sql`NOW()` })
+        .where(eq(translationQueueTable.id, id));
+      markCovered(queueRow.source);
+      res.status(409).json({ error: "An override for this exact English text already exists", queueId: id });
+      return;
+    }
+    throw err;
+  }
+});
+
+// Ignore a single queue row (won't surface in the pending tab).
+router.post("/admin/translation-queue/:id/ignore", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [row] = await db
+    .update(translationQueueTable)
+    .set({ status: "ignored", lastSeen: sql`NOW()` })
+    .where(eq(translationQueueTable.id, id))
+    .returning();
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  await logAdminAction(req.user!.userId, "ignore_translation_queue", "translation_queue", id, { source: row.source });
+  res.json(row);
+});
+
+const bulkIgnoreSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1, "No rows selected").max(2000, "Too many rows"),
+});
+
+// Bulk-ignore selected queue rows.
+router.post("/admin/translation-queue/bulk-ignore", async (req, res): Promise<void> => {
+  const parsed = bulkIgnoreSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const updated = await db
+    .update(translationQueueTable)
+    .set({ status: "ignored", lastSeen: sql`NOW()` })
+    .where(inArray(translationQueueTable.id, parsed.data.ids))
+    .returning({ id: translationQueueTable.id });
+  await logAdminAction(req.user!.userId, "bulk_ignore_translation_queue", "translation_queue", undefined, {
+    requested: parsed.data.ids.length,
+    ignored: updated.length,
+  });
+  res.json({ ignored: updated.length });
 });
 
 export default router;

@@ -286,6 +286,25 @@ export interface BulkTranslationResult {
   invalid: number;
 }
 
+export interface TranslationQueueRow {
+  id: number;
+  lang: string;
+  source: string;
+  category: string;
+  seenCount: number;
+  status: string;
+  firstSeen: string;
+  lastSeen: string;
+}
+
+export interface TranslationQueueResponse {
+  rows: TranslationQueueRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: { pending: number; translated: number; ignored: number };
+}
+
 export interface RevenueBySport {
   sport: string;
   betCount: number;

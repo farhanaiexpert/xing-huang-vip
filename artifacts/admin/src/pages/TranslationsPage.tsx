@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, TranslationOverride, TranslationOverridesResponse, BulkTranslationResult } from "@/lib/api";
+import {
+  api, TranslationOverride, TranslationOverridesResponse, BulkTranslationResult,
+  TranslationQueueRow, TranslationQueueResponse,
+} from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   Languages, Plus, Search, Save, Trash2, Pencil, X, Check,
   ClipboardPaste, FileUp, ListChecks, AlertTriangle, CopyCheck, Eraser,
+  Inbox, EyeOff, Flame, Clock, CheckCheck,
 } from "lucide-react";
 
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
@@ -87,6 +91,49 @@ function parseBulk(text: string): ParsedRow[] {
 }
 
 export default function TranslationsPage() {
+  const [view, setView] = useState<"overrides" | "queue">("overrides");
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-bold text-white flex items-center gap-2">
+          <Languages className="w-5 h-5 text-[#94A3B8]" /> Translations
+        </h1>
+        <p className="text-sm text-[#94A3B8] mt-0.5">
+          Manage the Chinese names shown on the live site. Add or edit translations directly, or work
+          through the queue of new team / league / country names picked up from the live feeds.
+        </p>
+      </div>
+
+      {/* View toggle */}
+      <div className="inline-flex p-1 bg-[#0B0F14] border border-white/8 rounded-xl">
+        <button
+          onClick={() => setView("overrides")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+            view === "overrides" ? "bg-[#00DFA9] text-[#0B0F14]" : "text-[#94A3B8] hover:text-white",
+          )}
+        >
+          <Languages className="w-4 h-4" /> Translations
+        </button>
+        <button
+          onClick={() => setView("queue")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+            view === "queue" ? "bg-[#00DFA9] text-[#0B0F14]" : "text-[#94A3B8] hover:text-white",
+          )}
+        >
+          <Inbox className="w-4 h-4" /> Needs translation
+        </button>
+      </div>
+
+      {view === "overrides" ? <OverridesPanel /> : <TranslationQueuePanel />}
+    </div>
+  );
+}
+
+function OverridesPanel() {
   const qc = useQueryClient();
   const [mode, setMode] = useState<Mode>("single");
 
@@ -220,17 +267,11 @@ export default function TranslationsPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <Languages className="w-5 h-5 text-[#94A3B8]" /> Translations
-        </h1>
-        <p className="text-sm text-[#94A3B8] mt-0.5">
-          Add exact English words or phrases and their Chinese translations. Saved entries override the
-          built-in dictionary and appear on the live site within seconds — no redeploy needed.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <p className="text-xs text-[#475569]">
+        Add exact English words or phrases and their Chinese translations. Saved entries override the
+        built-in dictionary and appear on the live site within seconds — no redeploy needed.
+      </p>
 
       {/* Mode toggle */}
       <div className="inline-flex p-1 bg-[#0B0F14] border border-white/8 rounded-xl">
@@ -525,6 +566,331 @@ export default function TranslationsPage() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-5 py-3 border-t border-white/8 flex items-center justify-between">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-[#475569]">Page {page} of {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── "Needs translation" queue ───────────────────────────────────────────────
+// Names auto-collected from the live feeds that have no Chinese override yet.
+// Translate a row to promote it into a live override; ignore the ones you don't
+// want surfaced (e.g. already-Chinese or junk strings).
+
+const QUEUE_PAGE_SIZE = 50;
+type QueueStatus = "pending" | "translated" | "ignored";
+type QueueSort = "frequency" | "recent";
+
+const CATEGORY_LABEL: Record<string, string> = {
+  team: "Team",
+  league: "League",
+  country: "Country",
+  player: "Player",
+};
+
+function TranslationQueuePanel() {
+  const qc = useQueryClient();
+
+  const [status, setStatus] = useState<QueueStatus>("pending");
+  const [category, setCategory] = useState("");
+  const [sort, setSort] = useState<QueueSort>("frequency");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Per-row Chinese drafts + selected rows for bulk ignore.
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  const { data, isLoading } = useQuery<TranslationQueueResponse>({
+    queryKey: ["admin-translation-queue", status, category, sort, search, page],
+    queryFn: () =>
+      api.get(
+        `/admin/translation-queue?status=${status}&category=${encodeURIComponent(category)}` +
+          `&sort=${sort}&search=${encodeURIComponent(search)}&page=${page}&pageSize=${QUEUE_PAGE_SIZE}`,
+      ),
+  });
+
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const counts = data?.counts ?? { pending: 0, translated: 0, ignored: 0 };
+  const totalPages = Math.max(1, Math.ceil(total / QUEUE_PAGE_SIZE));
+
+  function invalidate() {
+    qc.invalidateQueries({ queryKey: ["admin-translation-queue"] });
+    qc.invalidateQueries({ queryKey: ["admin-translations"] });
+  }
+
+  const resolveMut = useMutation({
+    mutationFn: ({ id, target }: { id: number; target: string }) =>
+      api.post(`/admin/translation-queue/${id}/resolve`, { target }),
+    onSuccess: (_res, vars) => {
+      invalidate();
+      toast.success("Translation saved");
+      setDrafts(d => { const n = { ...d }; delete n[vars.id]; return n; });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const ignoreMut = useMutation({
+    mutationFn: (id: number) => api.post(`/admin/translation-queue/${id}/ignore`, {}),
+    onSuccess: () => { invalidate(); toast.success("Ignored"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const bulkIgnoreMut = useMutation({
+    mutationFn: (ids: number[]) => api.post<{ ignored: number }>("/admin/translation-queue/bulk-ignore", { ids }),
+    onSuccess: (res) => {
+      invalidate();
+      toast.success(`${res.ignored} ignored`);
+      setSelected(new Set());
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function applySearch(e: React.FormEvent) {
+    e.preventDefault();
+    setSearch(searchInput.trim());
+    setPage(1);
+  }
+
+  function changeStatus(s: QueueStatus) {
+    setStatus(s);
+    setPage(1);
+    setSelected(new Set());
+  }
+
+  function toggleSelect(id: number) {
+    setSelected(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected(prev => {
+      const allSelected = rows.length > 0 && rows.every(r => prev.has(r.id));
+      return allSelected ? new Set() : new Set(rows.map(r => r.id));
+    });
+  }
+
+  function handleResolve(row: TranslationQueueRow) {
+    const target = (drafts[row.id] ?? "").trim();
+    if (!target) { toast.error("Enter a Chinese translation first"); return; }
+    resolveMut.mutate({ id: row.id, target });
+  }
+
+  const statusTabs: { key: QueueStatus; label: string; n: number }[] = [
+    { key: "pending", label: "Pending", n: counts.pending },
+    { key: "translated", label: "Translated", n: counts.translated },
+    { key: "ignored", label: "Ignored", n: counts.ignored },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg bg-[#00DFA9]/5 border border-[#00DFA9]/15 px-4 py-3 text-xs leading-relaxed text-[#C4D4E3]">
+        These are new team, league and country names pulled from the live feeds that don’t have a Chinese
+        translation yet — most-seen first. Type the Chinese and hit save to make it appear on the live site,
+        or ignore the ones you don’t need.
+      </div>
+
+      {/* Status tabs */}
+      <div className="inline-flex p-1 bg-[#0B0F14] border border-white/8 rounded-xl">
+        {statusTabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => changeStatus(t.key)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+              status === t.key ? "bg-[#00DFA9] text-[#0B0F14]" : "text-[#94A3B8] hover:text-white",
+            )}
+          >
+            {t.label}
+            <span className={cn(
+              "px-1.5 py-0.5 rounded-md text-[11px] font-bold",
+              status === t.key ? "bg-[#0B0F14]/20 text-[#0B0F14]" : "bg-white/8 text-[#94A3B8]",
+            )}>
+              {t.n}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <form onSubmit={applySearch} className="flex items-center gap-2 flex-1 min-w-[220px]">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#475569]" />
+            <input
+              className={cn(inp, "pl-9")}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Search names…"
+            />
+          </div>
+          <button type="submit" className="px-4 py-2 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors">
+            Search
+          </button>
+          {search && (
+            <button
+              type="button"
+              onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
+              className="px-3 py-2 rounded-lg text-sm font-medium text-[#475569] hover:text-white transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </form>
+
+        <select
+          value={category}
+          onChange={e => { setCategory(e.target.value); setPage(1); }}
+          className={cn(inp, "w-auto")}
+        >
+          <option value="">All types</option>
+          <option value="team">Teams</option>
+          <option value="league">Leagues</option>
+          <option value="country">Countries</option>
+          <option value="player">Players</option>
+        </select>
+
+        <button
+          type="button"
+          onClick={() => { setSort(s => (s === "frequency" ? "recent" : "frequency")); setPage(1); }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors"
+          title="Toggle sort order"
+        >
+          {sort === "frequency" ? <><Flame className="w-4 h-4 text-[#FACC15]" /> Most seen</> : <><Clock className="w-4 h-4 text-[#38BDF8]" /> Recent</>}
+        </button>
+      </div>
+
+      {/* Bulk ignore bar (pending only) */}
+      {status === "pending" && selected.size > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-[#FACC15]/5 border border-[#FACC15]/15">
+          <span className="text-sm text-[#C4D4E3]">{selected.size} selected</span>
+          <button
+            type="button"
+            onClick={() => bulkIgnoreMut.mutate([...selected])}
+            disabled={bulkIgnoreMut.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-50"
+          >
+            <EyeOff className="w-4 h-4" /> Ignore selected
+          </button>
+        </div>
+      )}
+
+      {/* List */}
+      <div className="bg-[#111827] border border-white/8 rounded-xl overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-white/8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {status === "pending" && rows.length > 0 && (
+              <input
+                type="checkbox"
+                checked={rows.every(r => selected.has(r.id))}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded border-white/20 bg-white/5 accent-[#00DFA9]"
+                title="Select all on this page"
+              />
+            )}
+            <span className="text-sm font-semibold text-white">
+              {status === "pending" ? "Pending names" : status === "translated" ? "Translated" : "Ignored"}
+            </span>
+          </div>
+          <span className="text-xs text-[#475569]">{total} total</span>
+        </div>
+
+        {isLoading ? (
+          <div className="p-8 text-center text-[#475569] text-sm">Loading…</div>
+        ) : rows.length === 0 ? (
+          <div className="p-8 text-center text-[#475569] text-sm">
+            {status === "pending"
+              ? (search ? "No names match your search." : "Nothing to translate — the queue is empty. New names appear here automatically as matches are fetched.")
+              : "Nothing here yet."}
+          </div>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {rows.map(row => (
+              <div key={row.id} className="px-5 py-3 flex items-center gap-3" translate="no">
+                {status === "pending" && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(row.id)}
+                    onChange={() => toggleSelect(row.id)}
+                    className="w-4 h-4 rounded border-white/20 bg-white/5 accent-[#00DFA9] shrink-0"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-[#C4D4E3] truncate" title={row.source}>{row.source}</span>
+                    <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-white/5 text-[#94A3B8]">
+                      {CATEGORY_LABEL[row.category] ?? row.category}
+                    </span>
+                    <span className="shrink-0 flex items-center gap-1 text-[10px] text-[#475569]" title={`Seen ${row.seenCount} time(s)`}>
+                      <Flame className="w-3 h-3" /> {row.seenCount}
+                    </span>
+                  </div>
+                </div>
+
+                {status === "pending" ? (
+                  <>
+                    <input
+                      className={cn(inp, "flex-1 max-w-[220px]")}
+                      value={drafts[row.id] ?? ""}
+                      onChange={e => setDrafts(d => ({ ...d, [row.id]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === "Enter") handleResolve(row); }}
+                      placeholder="中文翻译"
+                    />
+                    <button
+                      onClick={() => handleResolve(row)}
+                      disabled={resolveMut.isPending}
+                      className="p-2 rounded-lg text-[#00DFA9] hover:bg-[#00DFA9]/10 transition-colors disabled:opacity-50"
+                      title="Save translation"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => ignoreMut.mutate(row.id)}
+                      disabled={ignoreMut.isPending}
+                      className="p-2 rounded-lg text-[#64748B] hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+                      title="Ignore"
+                    >
+                      <EyeOff className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : status === "translated" ? (
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-[#00DFA9] shrink-0">
+                    <CheckCheck className="w-4 h-4" /> Translated
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-[#475569] shrink-0">
+                    <EyeOff className="w-4 h-4" /> Ignored
+                  </span>
                 )}
               </div>
             ))}

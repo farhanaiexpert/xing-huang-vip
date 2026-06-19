@@ -17,6 +17,23 @@ let overrides: Record<string, string> = {};
 let overridesTimer: ReturnType<typeof setInterval> | null = null;
 let lastOverridesVersion: string | null = null;
 
+// Lets React (I18nContext) read operator overrides for t()-based renders (e.g.
+// league names via <SportName>) and re-render when they change on poll.
+const OVERRIDES_EVENT = "cb-overrides-changed";
+
+export function getOverrides(): Record<string, string> {
+  return overrides;
+}
+
+function notifyOverridesChanged(): void {
+  try { window.dispatchEvent(new CustomEvent(OVERRIDES_EVENT)); } catch { /* SSR / no window */ }
+}
+
+export function onOverridesChanged(cb: () => void): () => void {
+  window.addEventListener(OVERRIDES_EVENT, cb);
+  return () => window.removeEventListener(OVERRIDES_EVENT, cb);
+}
+
 // Tags whose text content must never be translated.
 const SKIP_TAGS = new Set([
   "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "INPUT",
@@ -88,6 +105,7 @@ async function refreshOverrides(): Promise<void> {
     lastOverridesVersion = version;
     overrides = translations ?? {};
     saveOverridesCache(version, overrides);
+    notifyOverridesChanged();
     walkAndApply();
   } catch { /* offline / server down — keep cached overrides */ }
 }
@@ -392,6 +410,7 @@ export function startChineseTranslation(): void {
 
   // 1b. Load cached operator overrides synchronously for first paint.
   overrides = loadOverridesCache();
+  notifyOverridesChanged();
 
   // 2. Apply immediately
   walkAndApply();

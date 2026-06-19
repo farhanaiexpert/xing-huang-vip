@@ -10,6 +10,7 @@ import { Router } from 'express';
 import { db } from '@workspace/db';
 import { sql } from 'drizzle-orm';
 import { logger } from '../lib/logger.js';
+import { captureBetsApiNames } from '../lib/translationQueue.js';
 import {
   BETSAPI_KEY,
   BETSAPI_SPORT_IDS,
@@ -309,6 +310,9 @@ async function refreshLiveCache(): Promise<BetsApiEventRaw[]> {
           fetched_at = EXCLUDED.fetched_at,
           expires_at = EXCLUDED.expires_at
   `);
+
+  // Capture any new team/league names into the translation queue (non-blocking).
+  captureBetsApiNames(enriched);
 
   return enriched;
 }

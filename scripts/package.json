@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed:super-admin": "tsx ./src/seed-super-admin.ts",
+    "seed:name-translations": "tsx ./src/seed-name-translations.ts",
     "test:tron": "tsx ./src/test-tron-utils.ts",
     "bake:translations": "tsx ./src/bake-translations.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

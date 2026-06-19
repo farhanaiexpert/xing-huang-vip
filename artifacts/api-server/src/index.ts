@@ -7,6 +7,7 @@ import cron from "node-cron";
 import { runSettlementWorker } from "./lib/settlementWorker.js";
 import { fetchAndCacheOdds, getDbCacheRemainingMs, ALL_ODDS_SPORT_KEYS } from "./routes/odds.js";
 import { fetchBetsApiUpcoming, fetchPrematchData, BETSAPI_SPORT_IDS, BETSAPI_SPORT_MAP, BETSAPI_KEY } from "./lib/betsapi.js";
+import { captureBetsApiNames } from "./lib/translationQueue.js";
 
 // ── Global process error handlers ─────────────────────────────────────────────
 // Must be registered before any async work so nothing slips through unnoticed.
@@ -646,6 +647,44 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v35 skipped");
   }
+
+  // v36: translation_queue — auto-collected "needs translation" queue. Proper-
+  // noun names (team/league/country/player) fetched from the sports feeds that
+  // have no Chinese override yet are captured here, ranked by frequency, for an
+  // operator to translate once. Created at boot (idempotent) so the table exists
+  // on EVERY deploy path. Mirrors lib/db/drizzle/0005_translation_queue.sql.
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS translation_queue (
+        id          SERIAL PRIMARY KEY,
+        lang        TEXT NOT NULL,
+        source      TEXT NOT NULL,
+        category    TEXT NOT NULL,
+        seen_count  INTEGER NOT NULL DEFAULT 1,
+        status      TEXT NOT NULL DEFAULT 'pending',
+        first_seen  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_seen   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'translation_queue_lang_source_unique'
+        ) THEN
+          ALTER TABLE translation_queue
+            ADD CONSTRAINT translation_queue_lang_source_unique UNIQUE (lang, source);
+        END IF;
+      END $$
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS translation_queue_status_seen_idx
+        ON translation_queue (status, seen_count DESC)
+    `);
+    logger.info("DB migration v36 applied (translation_queue table)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v36 skipped");
+  }
 }
 
 runMigrations().then(() => {
@@ -943,6 +982,9 @@ runMigrations().then(() => {
             fetched_at = NOW(),
             expires_at = NOW() + INTERVAL '${sql.raw(BETSAPI_DATA_TTL)}'
         `);
+
+        // Capture any new team/league names into the translation queue (non-blocking).
+        captureBetsApiNames(events);
 
         logger.info({ sportId, name: meta.name, count: events.length }, "BetsAPI cron: sport cached");
         fetched++;
