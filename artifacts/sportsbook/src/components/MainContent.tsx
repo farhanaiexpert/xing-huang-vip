@@ -32,6 +32,7 @@ import {
   X,
   TrendingUp,
   ChevronRight,
+  ChevronUp,
   ShieldCheck,
   Lock,
   Zap,
@@ -1210,79 +1211,44 @@ const FOOTER_NAV = [
 
 const FOOTER_COMPLIANCE = ["18+", "BeGambleAware", "GamCare", "Gamble Responsibly"];
 
+const FOOTER_CURRENCIES = ["USDT", "BTC", "ETH", "SOL", "TON", "BNB"];
+
 
 function SiteFooter() {
+  const scrollToTop = () =>
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
   return (
-    <footer className="border-t border-[#253241]/70 bg-[#0B0F14] mt-2">
-      <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-4">
-        {/* ── MOBILE brand strip (hidden on sm+) ────────────────────────── */}
-        <div className="flex items-start justify-between gap-4 mb-5 sm:hidden">
-          <div className="min-w-0">
-            <img
-              src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp"
-              alt="Xing Huang"
-              className="w-auto object-contain mb-1.5"
-              style={{ height: '33.6px', filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
-            />
-            <p className="text-[11px] text-[#94A3B8]/50 leading-snug">
-              Live odds · instant settlement · provably fair
-            </p>
-          </div>
-        </div>
+    <footer className="relative border-t border-[#253241]/70 bg-[#0B0F14] mt-2 overflow-hidden">
+      {/* Top accent line */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00DFA9]/40 to-transparent" />
 
-        {/* ── MOBILE license badge (hidden on sm+) ─────────────────────── */}
-        <div className="flex items-start gap-1.5 rounded-lg bg-[#121821] border border-[#253241]/80 p-2.5 mb-5 sm:hidden">
-          <ShieldCheck className="h-3 w-3 text-[#00DFA9]/70 mt-px shrink-0" />
-          <p className="text-[9px] text-[#94A3B8]/40 leading-snug">
-            Licensed by the Malta Gaming Authority · MGA/B2C/123/2021
-          </p>
-        </div>
-
-        {/* ── MOBILE nav grid — 3 columns of links (hidden on sm+) ─────── */}
-        <div className="sm:hidden grid grid-cols-3 gap-x-2 gap-y-1 pb-5 border-b border-[#253241]/40">
-          {FOOTER_NAV.map((col) => (
-            <div key={col.heading}>
-              <p className="text-[9px] font-bold text-[#94A3B8]/30 uppercase tracking-widest mb-2">
-                {col.heading}
-              </p>
-              <ul className="space-y-1.5">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-[11px] text-[#94A3B8]/55 hover:text-[#F8FAFC] transition-colors duration-150 leading-snug block"
-                    >
-                      <SportName name={link.label} />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        {/* ── DESKTOP 4-col grid (hidden on mobile) ────────────────────── */}
-        <div className="hidden sm:grid sm:grid-cols-4 gap-8 pb-8">
-          <div className="space-y-3">
+      <div className="px-4 sm:px-6 pt-7 sm:pt-9 pb-4">
+        {/* ── Brand + nav grid ──────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-8 pb-7">
+          {/* Brand column — full width on mobile */}
+          <div className="col-span-2 sm:col-span-1 space-y-3">
             <img
               src="https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp"
               alt="Xing Huang"
               className="w-auto object-contain"
-              style={{ height: '33.6px', filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
+              style={{ height: "33.6px", filter: "drop-shadow(0 0 6px rgba(0,223,169,0.15))" }}
             />
-            <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[180px]">
+            <p className="text-[11px] text-[#94A3B8]/50 leading-relaxed max-w-[230px]">
               Live odds, instant settlement, and provably fair sports markets.
             </p>
-            <div className="flex items-start gap-1.5 rounded-lg bg-[#121821] border border-[#253241]/80 p-2.5">
-              <ShieldCheck className="h-3 w-3 text-[#00DFA9]/70 mt-px shrink-0" />
-              <p className="text-[9px] text-[#94A3B8]/40 leading-snug">
+            <div className="group flex items-start gap-1.5 rounded-lg bg-[#121821] border border-[#253241]/80 p-2.5 max-w-[230px] transition-colors duration-200 hover:border-[#00DFA9]/30">
+              <ShieldCheck className="h-3 w-3 text-[#00DFA9]/70 group-hover:text-[#00DFA9] mt-px shrink-0 transition-colors duration-200" />
+              <p className="text-[9px] text-[#94A3B8]/45 leading-snug">
                 Licensed by the Malta Gaming Authority · MGA/B2C/123/2021
               </p>
             </div>
           </div>
+
+          {/* Nav columns */}
           {FOOTER_NAV.map((col) => (
             <div key={col.heading}>
-              <p className="text-[10px] font-semibold text-[#94A3B8]/35 uppercase tracking-widest mb-3">
+              <p className="text-[10px] font-semibold text-[#94A3B8]/40 uppercase tracking-widest mb-3">
                 {col.heading}
               </p>
               <ul className="space-y-2">
@@ -1290,8 +1256,9 @@ function SiteFooter() {
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-[11px] text-[#94A3B8]/50 hover:text-[#F8FAFC] transition-colors duration-150"
+                      className="group flex items-center gap-1 rounded text-[12px] text-[#94A3B8]/55 transition-colors duration-200 hover:text-[#F8FAFC] focus-visible:text-[#F8FAFC] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00DFA9]/40"
                     >
+                      <ChevronRight className="h-3 w-3 shrink-0 -translate-x-1 text-[#00DFA9] opacity-0 transition-all duration-200 ease-out group-hover:translate-x-0 group-hover:opacity-100" />
                       <SportName name={link.label} />
                     </Link>
                   </li>
@@ -1301,8 +1268,33 @@ function SiteFooter() {
           ))}
         </div>
 
+        {/* ── Accepted currencies + back to top ─────────────────────────── */}
+        <div className="flex flex-col gap-3 py-5 border-t border-[#253241]/40 sm:flex-row sm:items-center">
+          <p className="shrink-0 text-[10px] font-semibold text-[#94A3B8]/40 uppercase tracking-widest">
+            We Accept
+          </p>
+          <div className="flex items-center flex-wrap gap-2">
+            {FOOTER_CURRENCIES.map((c) => (
+              <span
+                key={c}
+                className="px-2.5 py-1 rounded-md bg-[#121821] border border-[#253241]/70 text-[10px] font-bold tracking-wide text-[#94A3B8]/55 transition-colors duration-200 hover:text-[#00DFA9] hover:border-[#00DFA9]/30 cursor-default"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={scrollToTop}
+            className="group self-start sm:self-auto sm:ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#121821] border border-[#253241]/70 text-[10px] font-semibold text-[#94A3B8]/60 transition-colors duration-200 hover:text-[#F8FAFC] hover:border-[#00DFA9]/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00DFA9]/40 focus-visible:text-[#F8FAFC]"
+          >
+            <ChevronUp className="h-3.5 w-3.5 text-[#00DFA9] transition-transform duration-200 group-hover:-translate-y-0.5" />
+            Back to top
+          </button>
+        </div>
+
         {/* ── Bottom bar ────────────────────────────────────────────────── */}
-        <div className="mt-2 pt-5 border-t border-[#253241]/40 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+        <div className="pt-5 border-t border-[#253241]/40 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
           <p className="order-2 sm:order-1 text-[10px] text-[#94A3B8]/35 leading-snug text-center sm:text-left">
             © 2021–2026 <span translate="no">Xing Huang</span> Ltd. All rights reserved.
             <span className="text-[#94A3B8]/25"> · 18+ · Gamble responsibly.</span>
