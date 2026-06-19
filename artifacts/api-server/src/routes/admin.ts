@@ -2938,6 +2938,99 @@ router.post("/admin/translations", async (req, res): Promise<void> => {
   }
 });
 
+// Bulk create / upsert — paste-to-bulk from the admin panel.
+// Body: { items: [{ source, target }], overwrite?: boolean, lang? }
+// Returns a per-batch summary: { created, updated, skipped, invalid }.
+const bulkTranslationSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        source: z.string(),
+        target: z.string(),
+      }),
+    )
+    .min(1, "No translations to import")
+    .max(2000, "Too many rows in one import (max 2000)"),
+  overwrite: z.boolean().optional(),
+  lang: z.string().trim().min(1).max(20).optional(),
+});
+
+router.post("/admin/translations/bulk", async (req, res): Promise<void> => {
+  const parsed = bulkTranslationSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const lang = parsed.data.lang?.trim() || DEFAULT_OVERRIDE_LANG;
+  const overwrite = parsed.data.overwrite ?? false;
+
+  // Normalise + validate each row; drop blanks/over-length, then de-dupe by
+  // source keeping the LAST occurrence (matches the client-side preview).
+  let invalid = 0;
+  const bySource = new Map<string, string>();
+  for (const raw of parsed.data.items) {
+    const source = raw.source.trim();
+    const target = raw.target.trim();
+    if (!source || !target || source.length > 500 || target.length > 500) {
+      invalid++;
+      continue;
+    }
+    bySource.set(source, target);
+  }
+
+  const deduped = [...bySource.entries()].map(([source, target]) => ({ source, target }));
+  if (deduped.length === 0) {
+    res.status(400).json({ error: "No valid translations to import", created: 0, updated: 0, skipped: 0, invalid });
+    return;
+  }
+
+  const summary = await db.transaction(async (tx) => {
+    const sources = deduped.map((d) => d.source);
+    const existingRows = await tx
+      .select({ source: translationOverridesTable.source })
+      .from(translationOverridesTable)
+      .where(and(eq(translationOverridesTable.lang, lang), inArray(translationOverridesTable.source, sources)));
+    const existing = new Set(existingRows.map((r) => r.source));
+
+    const toInsert = deduped.filter((d) => !existing.has(d.source));
+    const toUpdate = overwrite ? deduped.filter((d) => existing.has(d.source)) : [];
+    const skipped = overwrite ? 0 : deduped.filter((d) => existing.has(d.source)).length;
+
+    // Count actual rows affected (not intended) so the summary stays accurate
+    // even if a concurrent import races on the same source keys.
+    let created = 0;
+    if (toInsert.length > 0) {
+      const inserted = await tx
+        .insert(translationOverridesTable)
+        .values(toInsert.map((d) => ({ lang, source: d.source, target: d.target })))
+        .onConflictDoNothing()
+        .returning({ id: translationOverridesTable.id });
+      created = inserted.length;
+    }
+    let updated = 0;
+    for (const d of toUpdate) {
+      const res = await tx
+        .update(translationOverridesTable)
+        .set({ target: d.target })
+        .where(and(eq(translationOverridesTable.lang, lang), eq(translationOverridesTable.source, d.source)))
+        .returning({ id: translationOverridesTable.id });
+      updated += res.length;
+    }
+
+    return { created, updated, skipped };
+  });
+
+  await logAdminAction(req.user!.userId, "bulk_translation", "translation_override", undefined, {
+    lang,
+    overwrite,
+    ...summary,
+    invalid,
+    received: parsed.data.items.length,
+  });
+
+  res.json({ ...summary, invalid });
+});
+
 // Update
 router.patch("/admin/translations/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);

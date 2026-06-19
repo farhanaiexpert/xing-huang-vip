@@ -279,6 +279,13 @@ export interface TranslationOverridesResponse {
   pageSize: number;
 }
 
+export interface BulkTranslationResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  invalid: number;
+}
+
 export interface RevenueBySport {
   sport: string;
   betCount: number;
