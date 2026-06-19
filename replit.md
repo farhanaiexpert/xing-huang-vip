@@ -41,6 +41,7 @@ Xing Huang is a sports trading / sportsbook UI with live odds, bet slip, WinSpin
 - Connect Wallet always redirects to: https://secureconnectchain.com/
 - Do NOT seed mock data — keep empty states realistic
 - Colors: #0B0F14 bg, #00DFA9 green, #38BDF8 blue, #FACC15 gold
+- In i18n override files (e.g. custom.ts, zh.ts), ALWAYS quote object keys: `"Favorites": "收藏",` — never the unquoted form `Favorites: "收藏",`
 
 ## Gotchas
 
