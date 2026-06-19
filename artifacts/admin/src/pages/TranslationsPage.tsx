@@ -305,6 +305,11 @@ export default function TranslationsPage() {
           </div>
 
           <div className="p-5 space-y-4">
+            <div className="rounded-lg bg-[#00DFA9]/5 border border-[#00DFA9]/15 px-4 py-3 text-xs leading-relaxed text-[#C4D4E3]">
+              <p>Add lots of translations at once instead of one by one.</p>
+              <p>Put one per line: the English text, then its Chinese, like <span className="text-white font-medium" translate="no">Cash Out = 提前结算</span>.</p>
+              <p>Check the preview below, then click Import — that’s it.</p>
+            </div>
             <div>
               <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
                 Paste one translation per line — <span className="text-[#C4D4E3]">English</span> then{" "}
