@@ -6,6 +6,7 @@ import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 import { SportName } from "./SportName";
 import { LeagueSection } from "./LeagueSection";
 import { PopularBets } from "./PopularBets";
+import { BetBuilder } from "./BetBuilder";
 import { SkeletonLeague } from "./SkeletonLeague";
 import { UpcomingMatchesCarousel } from "./UpcomingMatchesCarousel";
 import { WinnersTicker } from "./WinnersTicker";
@@ -779,6 +780,7 @@ export function MainContent({
               {showFeatured && <LiveEventsBanner />}
               {showFeatured && <USDTDepositBanner onDeposit={() => requestDeposit(isAuthenticated, navigate)} />}
               {showFeatured && <PopularBets />}
+              {showFeatured && <BetBuilder />}
               {showFeatured && (
                 <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#1E2A38] to-transparent" />
               )}

@@ -21,8 +21,14 @@ interface BetSlipState {
   acceptOddsChanges: () => void;
   /** Combined odds (product) — for accumulator display */
   totalOdds: number;
-  /** Estimated acca return */
+  /** Estimated acca return (pre-boost) */
   accaReturn: number;
+  /** Acca boost percentage (0–0.30): +5% per leg beyond the first, capped at 30% */
+  accaBoostPct: number;
+  /** Boosted acca return = accaReturn * (1 + accaBoostPct) */
+  accaBoostedReturn: number;
+  /** Bonus amount added by the boost = accaBoostedReturn - accaReturn */
+  accaBoostBonus: number;
   /** Sum of all single estimated returns */
   totalSingleReturn: number;
   /** Total staked across all singles */
@@ -119,6 +125,14 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
 
   const accaReturn = parseFloat(stake || '0') * totalOdds;
 
+  // Acca boost: +5% per leg beyond the first, capped at +30%. Only applies to
+  // genuine accumulators (2+ legs).
+  const accaBoostPct = selections.length >= 2
+    ? Math.min((selections.length - 1) * 0.05, 0.30)
+    : 0;
+  const accaBoostedReturn = accaReturn * (1 + accaBoostPct);
+  const accaBoostBonus = accaBoostedReturn - accaReturn;
+
   const totalSingleStaked = selections.reduce(
     (acc, s) => acc + parseFloat(singleStakes[s.id] || '0'), 0
   );
@@ -137,6 +151,7 @@ export function BetSlipProvider({ children }: { children: ReactNode }) {
       clearSlip, hasSelection,
       oddsChanges, updateSelectionOdds, acceptOddsChanges,
       totalOdds, accaReturn,
+      accaBoostPct, accaBoostedReturn, accaBoostBonus,
       totalSingleReturn, totalSingleStaked,
     },
     children,

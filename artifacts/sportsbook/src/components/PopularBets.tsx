@@ -86,6 +86,10 @@ interface PopularBet {
   ouOver25?:   number;
   ouUnder25?:  number;
   betCount:    number;
+  /** % of bettors backing the most-popular side (deterministic from odds + hash) */
+  topBackingPct: number;
+  /** Team / outcome the crowd is backing, e.g. "Real Madrid" or "Draw" */
+  topBackingLabel: string;
   isLive?:     boolean;
   kickoffTime: string;
 }
@@ -110,6 +114,21 @@ function buildPopularBets(leagues: League[], max = 10): PopularBet[] {
       let hash = 0;
       for (let i = 0; i < match.id.length; i++) hash = (hash * 31 + match.id.charCodeAt(i)) >>> 0;
 
+      // ── Crowd backing (deterministic, no mock seeding) ──
+      // Implied probabilities from the priced odds; the favourite attracts a
+      // disproportionate share of stakes, so bias above raw implied prob and
+      // add a stable per-match jitter. Always reads as a clear majority.
+      const pHome = 1 / match.odds.home;
+      const pAway = 1 / match.odds.away;
+      const pDraw = match.odds.draw ? 1 / match.odds.draw : 0;
+      const pSum  = pHome + pAway + pDraw || 1;
+      let favLabel = match.team1;
+      let favProb  = pHome / pSum;
+      if (pAway / pSum > favProb) { favLabel = match.team2 || match.team1; favProb = pAway / pSum; }
+      if (pDraw && pDraw / pSum > favProb) { favLabel = 'Draw'; favProb = pDraw / pSum; }
+      const jitter = (hash % 13) - 6; // −6..+6, stable per match
+      const topBackingPct = Math.max(52, Math.min(88, Math.round(favProb * 100) + 8 + jitter));
+
       bets.push({
         id:          `pb_${match.id}`,
         matchId:     match.id,
@@ -129,6 +148,8 @@ function buildPopularBets(leagues: League[], max = 10): PopularBet[] {
         ouOver25:    match.ouOver25,
         ouUnder25:   match.ouUnder25,
         betCount:    400 + (hash % 2600),
+        topBackingPct,
+        topBackingLabel: favLabel,
         isLive:      match.isLive,
         kickoffTime: match.kickoffTime ?? match.date ?? '',
       });
@@ -310,8 +331,24 @@ function PopularBetCard({ bet, rank }: { bet: PopularBet; rank: number }) {
           )}
         </div>
 
+        {/* Crowd backing — social proof */}
+        <div className="mt-auto flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(37,50,65,0.7)' }}>
+              <div className="h-full rounded-full transition-all" style={{ width: `${bet.topBackingPct}%`, background: accent }} />
+            </div>
+            <span className="text-[9px] font-black tabular-nums shrink-0" style={{ color: accent }}>{bet.topBackingPct}%</span>
+          </div>
+          <p className="text-[9px] leading-none truncate">
+            <span className="text-[#475569]">backing</span>{' '}
+            <span className="font-semibold text-[#94A3B8]">
+              {bet.topBackingLabel === 'Draw' ? <SportName name="Draw" /> : <SportName name={bet.topBackingLabel} />}
+            </span>
+          </p>
+        </div>
+
         {/* Bet count */}
-        <div className="flex items-center gap-1.5 mt-auto">
+        <div className="flex items-center gap-1.5">
           <Flame className="h-2.5 w-2.5 text-[#EF4444]/60 shrink-0" />
           <span className="text-[9.5px] font-bold tabular-nums" style={{ color: `${accent}90` }}>
             {formatCount(bet.betCount)}

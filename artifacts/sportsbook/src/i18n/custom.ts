@@ -71,6 +71,24 @@ export const customOverrides: Record<string, Record<string, string>> = {
     "Top Matches": "热门赛事",
     "Early Payout": "提前结算",
     "Acca Boost": "串关加成",
+    "Add a leg to boost your odds": "增加一注以提升赔率",
+    "Potential Return": "潜在回报",
+    "Profit if Win": "盈利金额",
+
+    // ── Bet Builder ─────────────────────────────────────────────────────────
+    BUILDER: "构建",
+    "Player Markets": "球员盘口",
+    "Player / Last 5": "球员 / 近5场",
+    "Show more": "显示更多",
+    "Show less": "收起",
+    "Added to bet slip": "已加入投注单",
+
+    // ── Popular bets / social proof ─────────────────────────────────────────
+    "Popular Bets": "热门投注",
+    "Most backed matches right now": "当前最受关注的比赛",
+    backing: "支持",
+    "bets placed": "笔投注",
+    events: "场赛事",
 
     // ── World Cup page ──────────────────────────────────────────────────────
     "Search teams": "搜索球队",

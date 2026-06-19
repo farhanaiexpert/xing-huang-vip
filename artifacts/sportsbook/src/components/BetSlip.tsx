@@ -11,7 +11,7 @@ import { BetConfirmationModal, BetConfirmation } from './BetConfirmationModal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, ApiError } from '../lib/apiClient';
 import { cn } from '../lib/utils';
-import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { X, Trash2, Target, TrendingUp, Wallet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Plus, Zap } from 'lucide-react';
 import { useBetSlipSidebar } from '../contexts/BetSlipSidebarContext';
 import { useI18n } from '../contexts/I18nContext';
 import { Input } from './ui/input';
@@ -27,6 +27,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     singleStakes, setSingleStake,
     removeSelection, clearSlip,
     totalOdds, accaReturn, totalSingleReturn, totalSingleStaked,
+    accaBoostPct, accaBoostedReturn, accaBoostBonus,
     oddsChanges, acceptOddsChanges, updateSelectionOdds,
   } = useBetSlip();
 
@@ -63,7 +64,7 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
     if (betType === 'acca') {
       // ── Accumulator: single API call with all selections ──
       const stakeNum = parseFloat(stake || '0');
-      const payout   = accaReturn;
+      const payout   = accaBoostedReturn;
       const odds     = totalOdds;
       if (stakeNum <= 0 || totalBalance <= 0 || stakeNum > totalBalance) return;
 
@@ -103,9 +104,12 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
         setConfirmation(placed);
       } catch (err) {
         if (err instanceof ApiError && err.code === 'ODDS_CHANGED') {
-          const changed = (err.body.changedSelections as { eventId: string; currentOdds: number }[]) ?? [];
+          const changed = (err.body.changedSelections as { eventId: string; selection: string; currentOdds: number }[]) ?? [];
           changed.forEach(c => {
-            const sel = selections.find(s => s.matchId === c.eventId);
+            // Match on event + selection so same-game-multi picks (multiple
+            // selections sharing one matchId) each update independently.
+            const sel = selections.find(s => s.matchId === c.eventId && s.selectionName === c.selection)
+              ?? selections.find(s => s.matchId === c.eventId);
             if (sel) updateSelectionOdds(sel.id, c.currentOdds);
           });
           setDriftPending(true);
@@ -165,9 +169,10 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
           .filter((e): e is ApiError => e instanceof ApiError && e.code === 'ODDS_CHANGED');
         if (oddsChangedErrors.length > 0) {
           oddsChangedErrors.forEach(e => {
-            const changed = (e.body.changedSelections as { eventId: string; currentOdds: number }[]) ?? [];
+            const changed = (e.body.changedSelections as { eventId: string; selection: string; currentOdds: number }[]) ?? [];
             changed.forEach(c => {
-              const sel = selections.find(s => s.matchId === c.eventId);
+              const sel = selections.find(s => s.matchId === c.eventId && s.selectionName === c.selection)
+                ?? selections.find(s => s.matchId === c.eventId);
               if (sel) updateSelectionOdds(sel.id, c.currentOdds);
             });
           });
@@ -362,10 +367,31 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
                         <Input type="number" placeholder="0.00" value={stake} onChange={e => setStake(e.target.value)}
                           className="pl-3 h-8 text-[12px] bg-[#0B0F14] border-[#253241]/60 text-[#F8FAFC] rounded-xl focus-visible:ring-1 focus-visible:ring-[#00DFA9]/40" />
                       </div>
-                      {accaReturn > 0 && (
+                      {/* Quick-stake chips — two-tap betting */}
+                      <div className="grid grid-cols-4 gap-1">
+                        {[10, 50, 100].map(amt => (
+                          <button
+                            key={amt}
+                            onClick={() => setStake(String(parseFloat(stake || '0') + amt))}
+                            className="h-6 rounded-md text-[10px] font-semibold border bg-[#0B0F14] border-[#253241]/60 text-[#94A3B8] hover:border-[#00DFA9]/30 hover:text-[#00DFA9]/80 transition-all duration-150"
+                          >
+                            +{amt}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => totalBalance > 0 && setStake(totalBalance.toFixed(2))}
+                          disabled={totalBalance <= 0}
+                          className="h-6 rounded-md text-[10px] font-semibold border bg-[#0B0F14] border-[#253241]/60 text-[#94A3B8] hover:border-[#FACC15]/30 hover:text-[#FACC15]/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
+                        >
+                          Max
+                        </button>
+                      </div>
+                      {accaBoostedReturn > 0 && (
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] text-[#94A3B8]/50">Est. Return</span>
-                          <span className="text-[11px] font-bold text-[#00DFA9]">{accaReturn.toFixed(2)} USDT</span>
+                          <span className="text-[10px] text-[#94A3B8]/50">
+                            {accaBoostPct > 0 ? <><span>Est. Return</span> · +{Math.round(accaBoostPct * 100)}%</> : <span>Est. Return</span>}
+                          </span>
+                          <span className="text-[11px] font-bold text-[#00DFA9]">{accaBoostedReturn.toFixed(2)} USDT</span>
                         </div>
                       )}
                     </div>
@@ -540,6 +566,9 @@ export function BetSlip({ className, forceExpanded, isScrolled: isScrolledProp }
               stake={stake}
               setStake={setStake}
               accaReturn={accaReturn}
+              accaBoostPct={accaBoostPct}
+              accaBoostedReturn={accaBoostedReturn}
+              accaBoostBonus={accaBoostBonus}
               isConnected={isConnected}
               isAuthenticated={isAuthenticated}
               balance={totalBalance}
@@ -776,7 +805,8 @@ function SingleView({
 // ────────────────────────────────────────────────────────────────
 function AccaView({
   selections, removeSelection, removingIds, totalOdds, stake, setStake,
-  accaReturn, isConnected, isAuthenticated, balance, canPlace, readyToStake,
+  accaReturn, accaBoostPct, accaBoostedReturn, accaBoostBonus,
+  isConnected, isAuthenticated, balance, canPlace, readyToStake,
   isPlacing, onConnectWallet, onPlaceBet,
 }: {
   selections: Selection[];
@@ -786,6 +816,9 @@ function AccaView({
   stake: string;
   setStake: (v: string) => void;
   accaReturn: number;
+  accaBoostPct: number;
+  accaBoostedReturn: number;
+  accaBoostBonus: number;
   isConnected: boolean;
   isAuthenticated: boolean;
   balance: number;
@@ -835,23 +868,46 @@ function AccaView({
               {selections.length > 1 ? totalOdds.toFixed(2) : selections[0]?.odds.toFixed(2) ?? '—'}
             </span>
           </div>
+          {accaBoostPct > 0 && (
+            <>
+              <div className="h-px bg-[#253241]" />
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-[#00DFA9]">
+                  <Zap className="h-3 w-3 shrink-0" />
+                  <span>Acca Boost</span>
+                  <span className="tabular-nums">+{Math.round(accaBoostPct * 100)}%</span>
+                </span>
+                <span className="text-sm font-bold text-[#00DFA9]">
+                  {accaBoostBonus > 0 ? `+${accaBoostBonus.toFixed(2)} USDT` : `+${Math.round(accaBoostPct * 100)}%`}
+                </span>
+              </div>
+            </>
+          )}
           <div className="h-px bg-[#253241]" />
           <div className="flex justify-between items-center">
             <span className="text-[11px] text-[#94A3B8]">Potential Return</span>
-            <span className={cn('text-sm font-bold transition-colors', accaReturn > 0 ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40')}>
-              {accaReturn > 0 ? `${accaReturn.toFixed(2)} USDT` : '—'}
+            <span className={cn('text-base font-extrabold transition-colors', accaBoostedReturn > 0 ? 'text-[#F8FAFC]' : 'text-[#94A3B8]/40')}>
+              {accaBoostedReturn > 0 ? `${accaBoostedReturn.toFixed(2)} USDT` : '—'}
             </span>
           </div>
-          {accaReturn > 0 && stakeNum > 0 && (
+          {accaBoostedReturn > 0 && stakeNum > 0 && (
             <>
               <div className="h-px bg-[#253241]" />
               <div className="flex justify-between items-center">
                 <span className="text-[11px] text-[#94A3B8]">Profit if Win</span>
-                <span className="text-sm font-bold text-[#00DFA9]">+{(accaReturn - stakeNum).toFixed(2)} USDT</span>
+                <span className="text-sm font-bold text-[#00DFA9]">+{(accaBoostedReturn - stakeNum).toFixed(2)} USDT</span>
               </div>
             </>
           )}
         </div>
+
+        {/* Leg-up incentive — push toward bigger accas */}
+        {selections.length >= 2 && accaBoostPct < 0.30 && (
+          <div className="flex items-center gap-1.5 text-[10px] text-[#FACC15]/80 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-lg px-2.5 py-1.5">
+            <Zap className="h-3 w-3 shrink-0" />
+            <span>Add a leg to boost your odds</span>
+          </div>
+        )}
 
         {/* Stake */}
         <div className="space-y-1.5">

@@ -5,6 +5,7 @@ import { BB_MATCHES, TAB_CONFIG, type TabKey, type BBPlayer, type BBMatch } from
 import { JerseySilk } from './JerseySilk';
 import { getJerseyUrl } from '../lib/teamJerseys';
 import { useBetSlip } from '../hooks/useBetSlip';
+import { useToast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
 
 const TABS: TabKey[] = ['main', 'sot', 'shots', 'fouls', 'tackles'];
@@ -132,7 +133,8 @@ export function BetBuilder() {
   const [matchIdx, setMatchIdx] = useState(0);
   const [activeTab, setActiveTab] = useState<TabKey>('main');
   const [expanded, setExpanded] = useState(false);
-  const { removeSelection, hasSelection } = useBetSlip();
+  const { addSelection, removeSelection, hasSelection } = useBetSlip();
+  const { toast } = useToast();
 
   const match = BB_MATCHES[matchIdx];
   const { cols } = TAB_CONFIG[activeTab];
@@ -148,8 +150,31 @@ export function BetBuilder() {
     const selId = `bb_${match.id}_${player.id}_${activeTab}_${colIdx}`;
     if (hasSelection(selId)) {
       removeSelection(selId);
+      return;
     }
-    // commenceTime (ISO) required for settlement — unavailable in static BetBuilder data.
+    const colLabel = cols[colIdx] ?? TAB_CONFIG[activeTab].label;
+    const marketLabel = `${TAB_CONFIG[activeTab].label} · ${colLabel}`;
+    // Unique marketId per cell so multiple picks from the SAME match coexist
+    // (a true same-game multi). Static BetBuilder data has no real fixture, so
+    // a synthetic future kickoff routes settlement to manual review safely.
+    addSelection({
+      id:           selId,
+      marketId:     selId,
+      matchId:      match.id,
+      matchName:    `${match.home} vs ${match.away}`,
+      leagueName:   match.league,
+      marketName:   marketLabel,
+      selectionType: 'bb',
+      selectionName: `${player.name} · ${colLabel}`,
+      odds:         value,
+      sportKey:     'soccer_epl',
+      sportId:      'sp_soccer',
+      kickoffTime:  match.kickoff,
+      commenceTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      homeTeam:     match.home,
+      awayTeam:     match.away,
+    });
+    toast({ title: 'Added to bet slip', description: `${player.name} · ${colLabel} @ ${value.toFixed(2)}` });
   }
 
   const nextMatch = BB_MATCHES[(matchIdx + 1) % BB_MATCHES.length];
