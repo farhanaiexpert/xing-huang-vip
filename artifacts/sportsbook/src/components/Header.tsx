@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'wouter';
 import { API_BASE } from '@/lib/apiBase';
-import { Search, Wallet, LogOut, Copy, ChevronDown, X, Globe, User, ArrowDownLeft, Clock } from 'lucide-react';
+import { Search, Wallet, LogOut, ChevronDown, X, Globe, User, ArrowDownLeft, Clock, Receipt, History } from 'lucide-react';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { WalletPickerModal } from './WalletPickerModal';
 import { NotificationBell } from './NotificationBell';
@@ -358,9 +358,9 @@ export function Header() {
             <div className="hidden md:block h-5 w-px bg-white/[0.07] mx-1.5" />
 
             {/* Auth / Wallet */}
-            {isConnected && shortAddress ? (
+            {user ? (
               <div className="flex items-center gap-1.5 sm:gap-2">
-                {/* Deposit button — always visible for logged-in users */}
+                {/* Top Up button — logged-in users */}
                 <button
                   onClick={() => {
                     sessionStorage.setItem('cupbett_wallet_tab', 'deposit');
@@ -381,102 +381,77 @@ export function Header() {
                     </span>
                   )}
                 </button>
-                {/* Wallet address button — hidden on mobile (visible in More drawer) */}
-                <div className="relative hidden sm:block" ref={menuRef}>
-                <button
-                  onClick={() => setShowAddressMenu(v => !v)}
-                  data-testid="button-wallet-address"
-                  className={cn(
-                    'flex items-center gap-2 h-9 px-3 rounded-xl border text-sm font-semibold transition-all duration-200',
-                    showAddressMenu
-                      ? 'bg-[#18212B] border-[#00DFA9]/50 text-[#F8FAFC]'
-                      : 'bg-white/[0.04] border-white/[0.08] text-[#F8FAFC] hover:bg-white/[0.07] hover:border-white/[0.14]'
-                  )}
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] shrink-0" />
-                  <span className="text-xs text-[#00DFA9] font-semibold">{shortAddress}</span>
-                  {evmChain && (
-                    <span
-                      className="hidden lg:flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0"
-                      style={{ background: `${evmChain.color}1f`, color: evmChain.color }}
-                      title={`Connected on ${evmChain.label}`}
-                    >
-                      <span className="w-1 h-1 rounded-full" style={{ background: evmChain.color }} />
-                      {evmChain.network}
-                    </span>
-                  )}
-                  {balance > 0 && (
-                    <span className="text-[10px] text-[#FACC15] font-bold bg-[#FACC15]/10 px-1.5 py-0.5 rounded-md">
-                      {balance.toFixed(2)} USDT
-                    </span>
-                  )}
-                  <ChevronDown className={cn('h-3.5 w-3.5 text-[#94A3B8]/60 transition-transform duration-200', showAddressMenu && 'rotate-180')} />
-                </button>
 
-                {showAddressMenu && (
-                  <div className="absolute right-0 top-[calc(100%+8px)] w-56 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.7)] overflow-hidden z-50">
-                    <div className="px-3 py-2.5 border-b border-[#253241]">
-                      <p className="text-[10px] text-[#94A3B8]/50 uppercase tracking-wider font-medium">Signed in as</p>
-                      <p className="text-sm font-semibold text-[#F8FAFC] mt-0.5">{shortAddress}</p>
-                      <p className="text-xs text-[#FACC15] font-bold mt-0.5">{balance.toFixed(2)} USDT</p>
+                {/* User profile button + dropdown */}
+                <div className="relative hidden sm:block" ref={menuRef}>
+                  <button
+                    onClick={() => setShowAddressMenu(v => !v)}
+                    data-testid="button-user-menu"
+                    className={cn(
+                      'flex items-center gap-2 h-9 px-3 rounded-xl border text-sm font-semibold transition-all duration-200',
+                      showAddressMenu
+                        ? 'bg-[#18212B] border-[#00DFA9]/50 text-[#F8FAFC]'
+                        : 'bg-white/[0.04] border-white/[0.08] text-[#F8FAFC] hover:bg-white/[0.07] hover:border-white/[0.14]'
+                    )}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] shrink-0" />
+                    <User className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
+                    <span className="text-xs text-[#00DFA9] font-semibold max-w-[110px] truncate">
+                      {user.email ?? user.displayName ?? 'Account'}
+                    </span>
+                    {balance > 0 && (
+                      <span className="text-[10px] text-[#FACC15] font-bold bg-[#FACC15]/10 px-1.5 py-0.5 rounded-md">
+                        {balance.toFixed(2)} USDT
+                      </span>
+                    )}
+                    <ChevronDown className={cn('h-3.5 w-3.5 text-[#94A3B8]/60 transition-transform duration-200', showAddressMenu && 'rotate-180')} />
+                  </button>
+
+                  {showAddressMenu && (
+                    <div className="absolute right-0 top-[calc(100%+8px)] w-60 bg-[#0D1117] border border-[#253241] rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.7)] overflow-hidden z-50">
+                      <div className="px-3 py-2.5 border-b border-[#253241]">
+                        <p className="text-[10px] text-[#94A3B8]/50 uppercase tracking-wider font-medium">Signed in as</p>
+                        <p className="text-[13px] font-semibold text-[#F8FAFC] mt-0.5 truncate">{user.email ?? user.displayName ?? 'Account'}</p>
+                        <p className="text-xs text-[#FACC15] font-bold mt-0.5">{balance.toFixed(2)} USDT</p>
+                      </div>
+                      <div className="py-1">
+                        <MenuAction href="/account"              icon={<User className="h-3.5 w-3.5" />}        label="Profile"          onClick={() => setShowAddressMenu(false)} />
+                        <MenuAction href="/account/wallet"       icon={<History className="h-3.5 w-3.5" />}     label="Deposit History"  onClick={() => setShowAddressMenu(false)} />
+                        <MenuAction href="/account/bets"         icon={<Receipt className="h-3.5 w-3.5" />}     label="My Bets"          onClick={() => setShowAddressMenu(false)} />
+                        <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Sign Out" onClick={handleDisconnect} danger />
+                      </div>
                     </div>
-                    <div className="py-1">
-                      <MenuAction href="/account" icon={<User className="h-3.5 w-3.5" />} label="My Account" onClick={() => setShowAddressMenu(false)} />
-                      <MenuAction href="/account/wallet" icon={<ArrowDownLeft className="h-3.5 w-3.5" />} label="Top Up" onClick={() => setShowAddressMenu(false)} />
-                      <MenuAction icon={<Copy className="h-3.5 w-3.5" />} label={copied ? 'Copied!' : 'Copy Address'} onClick={handleCopy} />
-                      <MenuAction icon={<LogOut className="h-3.5 w-3.5" />} label="Disconnect" onClick={handleDisconnect} danger />
-                    </div>
-                  </div>
-                )}
+                  )}
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                {/* Connect Wallet button — opens wallet-picker popup */}
+                {/* Sign In / Register button */}
                 <button
                   data-testid="button-wallet-picker-header"
                   onClick={() => setIsWalletPickerOpen(true)}
                   className="flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-xl border text-sm font-bold tracking-tight transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] cursor-pointer"
                   style={{
-                    borderColor: 'rgba(56,189,248,0.35)',
-                    color: '#38BDF8',
-                    background: 'rgba(56,189,248,0.06)',
+                    borderColor: 'rgba(0,223,169,0.35)',
+                    color: '#00DFA9',
+                    background: 'rgba(0,223,169,0.06)',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.6)'; e.currentTarget.style.background = 'rgba(56,189,248,0.10)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.35)'; e.currentTarget.style.background = 'rgba(56,189,248,0.06)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,223,169,0.6)'; e.currentTarget.style.background = 'rgba(0,223,169,0.10)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,223,169,0.35)'; e.currentTarget.style.background = 'rgba(0,223,169,0.06)'; }}
                 >
-                  <Wallet className="h-3.5 w-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">Connect<span className="hidden sm:inline"> Wallet</span></span>
+                  <User className="h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Sign In<span className="hidden sm:inline"> / Register</span></span>
                 </button>
-                {/* Sign In button — opens the wallet picker (hidden for now) */}
-                {false && !user && (
-                  <button
-                    onClick={() => setIsWalletPickerOpen(true)}
-                    className="hidden sm:flex items-center gap-1.5 h-9 px-4 rounded-xl border text-sm font-bold tracking-tight transition-all duration-200 hover:scale-[1.02] active:scale-[0.97] cursor-pointer"
-                    style={{
-                      borderColor: 'rgba(0,223,169,0.35)',
-                      color: '#00DFA9',
-                      background: 'rgba(0,223,169,0.06)',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,223,169,0.6)'; e.currentTarget.style.background = 'rgba(0,223,169,0.10)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,223,169,0.35)'; e.currentTarget.style.background = 'rgba(0,223,169,0.06)'; }}
-                  >
-                    <User className="h-3.5 w-3.5 shrink-0" />
-                    <span>Sign In</span>
-                  </button>
-                )}
-                {/* Deposit — when logged out, prompts the connect-wallet-first alert; hidden on mobile (Connect btn is enough) */}
+                {/* Top Up — logged-out, no action */}
                 <button
                   data-testid="button-deposit-header"
-                  onClick={() => promptConnectFirst()}
+                  onClick={e => e.preventDefault()}
                   className="relative group hidden sm:flex items-center gap-2 h-9 px-4 rounded-xl text-[#0B0F14] text-sm font-black tracking-tight transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] overflow-hidden cursor-pointer"
                   style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 60%, #00A882 100%)' }}
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     style={{ background: 'linear-gradient(135deg, #00EFB9 0%, #00DFA9 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.5)' }} />
-                  <Wallet className="relative h-3.5 w-3.5 shrink-0" />
-                  <span className="relative hidden sm:inline whitespace-nowrap">Top Up</span>
-                  <span className="relative sm:hidden">Top Up</span>
+                  <span className="relative whitespace-nowrap">Top Up</span>
                 </button>
               </div>
             )}
