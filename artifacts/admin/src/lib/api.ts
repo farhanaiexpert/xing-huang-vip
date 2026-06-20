@@ -68,11 +68,77 @@ export const api = {
     request<T>(path, { method: "DELETE", ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }),
 };
 
+export interface StatDelta { today: number; yesterday: number }
+export interface MoneyDelta { today: string; yesterday: string }
+
 export interface AdminStats {
   users: { total: number };
   bets: { total: number; volume: string; open: number };
   transactions: { pendingDeposits: number; pendingWithdrawals: number };
   platform: { totalWalletBalance: string; totalCommissionsPaid: string; grossRevenue: string };
+  deltas?: {
+    newUsers: StatDelta;
+    bets: StatDelta;
+    betVolume: MoneyDelta;
+    grossRevenue: MoneyDelta;
+    commissions: MoneyDelta;
+  };
+  attention?: {
+    kycPending: number;
+    riskFlags: number;
+  };
+}
+
+export interface UsersSummary {
+  total: number;
+  active: number;
+  suspended: number;
+  kycVerified: number;
+  kycPending: number;
+  newThisWeek: number;
+  totalBalance: string;
+}
+
+export type ApiProviderStatus =
+  | "operational" | "degraded" | "throttled" | "down" | "idle" | "paused";
+
+export interface ApiProvider {
+  id: string;
+  name: string;
+  purpose: string;
+  configured: boolean;
+  paused: boolean;
+  status: ApiProviderStatus;
+  headline: string;
+  callsToday: number;
+  errorsToday: number;
+  lastStatus: string | null;
+  lastError: string | null;
+  lastAt: string | null;
+  quotaRemaining: number | null;
+  quotaUpdatedAt: string | null;
+  hourlyLimit?: number;
+  hourlyUsed?: number;
+  hourlyRemaining?: number;
+}
+
+export interface ApiStatusResponse {
+  providers: ApiProvider[];
+  generatedAt: string;
+}
+
+export interface MarketLiabilityRow {
+  id: number;
+  eventId: string;
+  eventName: string;
+  sport: string;
+  marketType: string;
+  selection: string;
+  totalStake: string;
+  potentialPayout: string;
+  betCount: number;
+  isSuspended: boolean;
+  updatedAt: string;
 }
 
 export interface AdminUser {

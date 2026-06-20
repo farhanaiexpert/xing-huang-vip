@@ -294,6 +294,84 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
   const rev = revenueRows.rows[0] as { total_stakes: string; total_winnings: string };
   const grossRevenue = (Number(rev.total_stakes) - Number(rev.total_winnings)).toFixed(2);
 
+  // ── Today-vs-yesterday deltas (UTC day boundaries, non-test accounts) ──
+  // Boundaries are computed once as timestamptz (CROSS JOIN bnd) so comparisons
+  // against timestamptz columns are timezone-independent regardless of session TZ.
+  const usersDeltaRows = await db.execute(sql`
+    WITH bnd AS (
+      SELECT (date_trunc('day', now() AT TIME ZONE 'UTC')) AT TIME ZONE 'UTC' AS today_start,
+             (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '1 day') AT TIME ZONE 'UTC' AS yday_start
+    )
+    SELECT
+      COUNT(*) FILTER (WHERE created_at >= bnd.today_start)::int AS today,
+      COUNT(*) FILTER (WHERE created_at >= bnd.yday_start AND created_at < bnd.today_start)::int AS yesterday
+    FROM users CROSS JOIN bnd
+    WHERE is_test_account = false
+  `);
+
+  const betsDeltaRows = await db.execute(sql`
+    WITH bnd AS (
+      SELECT (date_trunc('day', now() AT TIME ZONE 'UTC')) AT TIME ZONE 'UTC' AS today_start,
+             (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '1 day') AT TIME ZONE 'UTC' AS yday_start
+    )
+    SELECT
+      COUNT(*) FILTER (WHERE b.created_at >= bnd.today_start)::int AS cnt_today,
+      COUNT(*) FILTER (WHERE b.created_at >= bnd.yday_start AND b.created_at < bnd.today_start)::int AS cnt_yday,
+      COALESCE(SUM(b.stake) FILTER (WHERE b.created_at >= bnd.today_start), 0)::text AS vol_today,
+      COALESCE(SUM(b.stake) FILTER (WHERE b.created_at >= bnd.yday_start AND b.created_at < bnd.today_start), 0)::text AS vol_yday
+    FROM bets b
+    JOIN users u ON u.id = b.user_id AND u.is_test_account = false
+    CROSS JOIN bnd
+  `);
+
+  const ggrDeltaRows = await db.execute(sql`
+    WITH bnd AS (
+      SELECT (date_trunc('day', now() AT TIME ZONE 'UTC')) AT TIME ZONE 'UTC' AS today_start,
+             (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '1 day') AT TIME ZONE 'UTC' AS yday_start
+    )
+    SELECT
+      (COALESCE(SUM(b.stake) FILTER (WHERE b.settled_at >= bnd.today_start), 0)
+       - COALESCE(SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.settled_at >= bnd.today_start AND b.status IN ('won','void')), 0))::text AS ggr_today,
+      (COALESCE(SUM(b.stake) FILTER (WHERE b.settled_at >= bnd.yday_start AND b.settled_at < bnd.today_start), 0)
+       - COALESCE(SUM(COALESCE(b.settled_payout, 0)) FILTER (WHERE b.settled_at >= bnd.yday_start AND b.settled_at < bnd.today_start AND b.status IN ('won','void')), 0))::text AS ggr_yday
+    FROM bets b
+    JOIN users u ON u.id = b.user_id AND u.is_test_account = false
+    CROSS JOIN bnd
+    WHERE b.status IN ('won','lost','void')
+  `);
+
+  const commissionsDeltaRows = await db.execute(sql`
+    WITH bnd AS (
+      SELECT (date_trunc('day', now() AT TIME ZONE 'UTC')) AT TIME ZONE 'UTC' AS today_start,
+             (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '1 day') AT TIME ZONE 'UTC' AS yday_start
+    )
+    SELECT
+      COALESCE(SUM(c.amount) FILTER (WHERE c.created_at >= bnd.today_start), 0)::text AS today,
+      COALESCE(SUM(c.amount) FILTER (WHERE c.created_at >= bnd.yday_start AND c.created_at < bnd.today_start), 0)::text AS yesterday
+    FROM commissions c
+    JOIN users u ON u.id = c.user_id AND u.is_test_account = false
+    CROSS JOIN bnd
+    WHERE c.status = 'paid'
+  `);
+
+  // ── Attention-strip counts not already returned above (exclude test accounts) ──
+  const [kycPendingRow] = await db
+    .select({ count: count() })
+    .from(usersTable)
+    .where(and(eq(usersTable.isTestAccount, false), eq(usersTable.kycStatus, "pending")));
+  const riskFlagRows = await db.execute(sql`
+    SELECT COUNT(*)::int AS cnt
+    FROM risk_flags rf
+    JOIN users u ON u.id = rf.user_id AND u.is_test_account = false
+    WHERE rf.created_at >= now() - interval '24 hours'
+  `);
+
+  const ud = usersDeltaRows.rows[0] as { today: number; yesterday: number };
+  const bd = betsDeltaRows.rows[0] as { cnt_today: number; cnt_yday: number; vol_today: string; vol_yday: string };
+  const gd = ggrDeltaRows.rows[0] as { ggr_today: string; ggr_yday: string };
+  const cd = commissionsDeltaRows.rows[0] as { today: string; yesterday: string };
+  const riskFlags = Number((riskFlagRows.rows[0] as { cnt: number }).cnt);
+
   res.json({
     users: { total: Number(userCount.count) },
     bets: { total: Number(betStats.count), volume: betStats.volume ?? "0", open: Number(openBets.count) },
@@ -305,6 +383,17 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
       totalWalletBalance: walletStats.totalBalance ?? "0",
       totalCommissionsPaid: commissionStats.total ?? "0",
       grossRevenue,
+    },
+    deltas: {
+      newUsers:     { today: Number(ud.today), yesterday: Number(ud.yesterday) },
+      bets:         { today: Number(bd.cnt_today), yesterday: Number(bd.cnt_yday) },
+      betVolume:    { today: bd.vol_today, yesterday: bd.vol_yday },
+      grossRevenue: { today: gd.ggr_today, yesterday: gd.ggr_yday },
+      commissions:  { today: cd.today, yesterday: cd.yesterday },
+    },
+    attention: {
+      kycPending: Number(kycPendingRow.count),
+      riskFlags,
     },
   });
 });
@@ -492,10 +581,14 @@ router.post("/admin/users", async (req, res): Promise<void> => {
 // Respects the optional email/username `search` filter so the cards scope to the
 // current search. Scope matches the table (test accounts NOT excluded).
 router.get("/admin/users/summary", async (req, res): Promise<void> => {
-  const { search } = req.query as Record<string, string>;
-  const where = search
+  const { search, excludeTest } = req.query as Record<string, string>;
+  const searchWhere = search
     ? or(ilike(usersTable.email, `%${search}%`), ilike(usersTable.username, `%${search}%`))
     : undefined;
+  // Overview cockpit passes excludeTest=true so production KPIs match /admin/stats.
+  const where = excludeTest === "true"
+    ? and(eq(usersTable.isTestAccount, false), searchWhere)
+    : searchWhere;
 
   const [row] = await db
     .select({
