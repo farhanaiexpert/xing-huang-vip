@@ -354,6 +354,28 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
     WHERE c.status = 'paid'
   `);
 
+  // ── Transaction-flow deltas for the pending/balance KPI cards ──
+  // Same stock-value + flow-delta pattern as Total Users: card shows current
+  // pending/balance, delta shows today-vs-yesterday request flow / net cash flow.
+  const txDeltaRows = await db.execute(sql`
+    WITH bnd AS (
+      SELECT (date_trunc('day', now() AT TIME ZONE 'UTC')) AT TIME ZONE 'UTC' AS today_start,
+             (date_trunc('day', now() AT TIME ZONE 'UTC') - interval '1 day') AT TIME ZONE 'UTC' AS yday_start
+    )
+    SELECT
+      COUNT(*) FILTER (WHERE t.type = 'deposit' AND t.created_at >= bnd.today_start)::int AS dep_today,
+      COUNT(*) FILTER (WHERE t.type = 'deposit' AND t.created_at >= bnd.yday_start AND t.created_at < bnd.today_start)::int AS dep_yday,
+      COUNT(*) FILTER (WHERE t.type = 'withdrawal' AND t.created_at >= bnd.today_start)::int AS wd_today,
+      COUNT(*) FILTER (WHERE t.type = 'withdrawal' AND t.created_at >= bnd.yday_start AND t.created_at < bnd.today_start)::int AS wd_yday,
+      (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'deposit' AND t.status = 'completed' AND t.created_at >= bnd.today_start), 0)
+       - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'withdrawal' AND t.status = 'completed' AND t.created_at >= bnd.today_start), 0))::text AS flow_today,
+      (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'deposit' AND t.status = 'completed' AND t.created_at >= bnd.yday_start AND t.created_at < bnd.today_start), 0)
+       - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'withdrawal' AND t.status = 'completed' AND t.created_at >= bnd.yday_start AND t.created_at < bnd.today_start), 0))::text AS flow_yday
+    FROM transactions t
+    JOIN users u ON u.id = t.user_id AND u.is_test_account = false
+    CROSS JOIN bnd
+  `);
+
   // ── Attention-strip counts not already returned above (exclude test accounts) ──
   const [kycPendingRow] = await db
     .select({ count: count() })
@@ -370,6 +392,10 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
   const bd = betsDeltaRows.rows[0] as { cnt_today: number; cnt_yday: number; vol_today: string; vol_yday: string };
   const gd = ggrDeltaRows.rows[0] as { ggr_today: string; ggr_yday: string };
   const cd = commissionsDeltaRows.rows[0] as { today: string; yesterday: string };
+  const td = txDeltaRows.rows[0] as {
+    dep_today: number; dep_yday: number; wd_today: number; wd_yday: number;
+    flow_today: string; flow_yday: string;
+  };
   const riskFlags = Number((riskFlagRows.rows[0] as { cnt: number }).cnt);
 
   res.json({
@@ -390,6 +416,9 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
       betVolume:    { today: bd.vol_today, yesterday: bd.vol_yday },
       grossRevenue: { today: gd.ggr_today, yesterday: gd.ggr_yday },
       commissions:  { today: cd.today, yesterday: cd.yesterday },
+      pendingDeposits:    { today: Number(td.dep_today), yesterday: Number(td.dep_yday) },
+      pendingWithdrawals: { today: Number(td.wd_today), yesterday: Number(td.wd_yday) },
+      platformBalance:    { today: td.flow_today, yesterday: td.flow_yday },
     },
     attention: {
       kycPending: Number(kycPendingRow.count),

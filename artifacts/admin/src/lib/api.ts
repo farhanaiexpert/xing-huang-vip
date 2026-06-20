@@ -82,6 +82,9 @@ export interface AdminStats {
     betVolume: MoneyDelta;
     grossRevenue: MoneyDelta;
     commissions: MoneyDelta;
+    pendingDeposits: StatDelta;
+    pendingWithdrawals: StatDelta;
+    platformBalance: MoneyDelta;
   };
   attention?: {
     kycPending: number;
