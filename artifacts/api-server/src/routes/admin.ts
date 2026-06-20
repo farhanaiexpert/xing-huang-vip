@@ -3241,4 +3241,81 @@ router.post("/admin/translation-queue/bulk-ignore", async (req, res): Promise<vo
   res.json({ ignored: updated.length });
 });
 
+const bulkResolveSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.number().int().positive(),
+        target: z.string().trim().min(1, "Chinese text is required").max(500, "Chinese text is too long"),
+      }),
+    )
+    .min(1, "No rows to save")
+    .max(2000, "Too many rows"),
+});
+
+// Bulk-resolve: create live overrides + mark queue rows translated for many rows
+// at once. Each row is handled independently (its own transaction) so one
+// conflict can't roll back the rest — mirrors the single-row resolve semantics.
+router.post("/admin/translation-queue/bulk-resolve", async (req, res): Promise<void> => {
+  const parsed = bulkResolveSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+
+  // Dedupe by id (last target wins) so a repeated id can't double-insert.
+  const byId = new Map<number, string>();
+  for (const it of parsed.data.items) byId.set(it.id, it.target.trim());
+
+  let saved = 0;
+  let existed = 0;
+  let notFound = 0;
+
+  for (const [id, target] of byId) {
+    const [queueRow] = await db
+      .select()
+      .from(translationQueueTable)
+      .where(eq(translationQueueTable.id, id))
+      .limit(1);
+    if (!queueRow) {
+      notFound++;
+      continue;
+    }
+    try {
+      await db.transaction(async (tx) => {
+        await tx
+          .insert(translationOverridesTable)
+          .values({ lang: queueRow.lang, source: queueRow.source, target });
+        await tx
+          .update(translationQueueTable)
+          .set({ status: "translated", lastSeen: sql`NOW()` })
+          .where(eq(translationQueueTable.id, id));
+      });
+      markCovered(queueRow.source);
+      saved++;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        // An override for this source already exists — still mark the queue row
+        // translated so it stops surfacing, and count it as already-existing.
+        await db
+          .update(translationQueueTable)
+          .set({ status: "translated", lastSeen: sql`NOW()` })
+          .where(eq(translationQueueTable.id, id));
+        markCovered(queueRow.source);
+        existed++;
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  await logAdminAction(req.user!.userId, "bulk_resolve_translation_queue", "translation_queue", undefined, {
+    requested: byId.size,
+    saved,
+    existed,
+    notFound,
+  });
+  res.json({ saved, existed, notFound });
+});
+
 export default router;

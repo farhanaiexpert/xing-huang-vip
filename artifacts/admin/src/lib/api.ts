@@ -306,6 +306,12 @@ export interface TranslationQueueResponse {
   counts: { pending: number; translated: number; ignored: number };
 }
 
+export interface BulkResolveResult {
+  saved: number;
+  existed: number;
+  notFound: number;
+}
+
 export interface RevenueBySport {
   sport: string;
   betCount: number;

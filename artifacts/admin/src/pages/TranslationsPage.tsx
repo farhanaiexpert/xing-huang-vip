@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   api, TranslationOverride, TranslationOverridesResponse, BulkTranslationResult,
-  TranslationQueueRow, TranslationQueueResponse,
+  TranslationQueueRow, TranslationQueueResponse, BulkResolveResult,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -673,6 +673,43 @@ function TranslationQueuePanel() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const bulkResolveMut = useMutation({
+    mutationFn: (items: { id: number; target: string }[]) =>
+      api.post<BulkResolveResult>("/admin/translation-queue/bulk-resolve", { items }),
+    onSuccess: (res, items) => {
+      invalidate();
+      const parts: string[] = [];
+      if (res.saved) parts.push(`${res.saved} saved`);
+      if (res.existed) parts.push(`${res.existed} already existed`);
+      if (res.notFound) parts.push(`${res.notFound} not found`);
+      toast.success(parts.length ? parts.join(", ") : "Nothing saved");
+      // Drop the drafts we just submitted.
+      setDrafts(d => {
+        const n = { ...d };
+        for (const it of items) delete n[it.id];
+        return n;
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Rows on this page that have a non-empty Chinese draft, ready to bulk-save.
+  const filledItems = useMemo(
+    () =>
+      rows
+        .map(r => ({ id: r.id, target: (drafts[r.id] ?? "").trim() }))
+        .filter(it => it.target),
+    [rows, drafts],
+  );
+
+  function handleSaveAllFilled() {
+    if (filledItems.length === 0) {
+      toast.error("Fill in at least one Chinese translation first");
+      return;
+    }
+    bulkResolveMut.mutate(filledItems);
+  }
+
   function applySearch(e: React.FormEvent) {
     e.preventDefault();
     setSearch(searchInput.trim());
@@ -717,7 +754,7 @@ function TranslationQueuePanel() {
       <div className="rounded-lg bg-[#00DFA9]/5 border border-[#00DFA9]/15 px-4 py-3 text-xs leading-relaxed text-[#C4D4E3]">
         These are new team, league and country names pulled from the live feeds that don’t have a Chinese
         translation yet — most-seen first. Type the Chinese and hit save to make it appear on the live site,
-        or ignore the ones you don’t need.
+        or ignore the ones you don’t need. Fill in several rows and use “Save all” to publish them together.
       </div>
 
       {/* Status tabs */}
@@ -789,6 +826,23 @@ function TranslationQueuePanel() {
           {sort === "frequency" ? <><Flame className="w-4 h-4 text-[#FACC15]" /> Most seen</> : <><Clock className="w-4 h-4 text-[#38BDF8]" /> Recent</>}
         </button>
       </div>
+
+      {/* Bulk save bar (pending only) — save every row you've typed Chinese into. */}
+      {status === "pending" && filledItems.length > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-[#00DFA9]/5 border border-[#00DFA9]/15">
+          <span className="text-sm text-[#C4D4E3]">
+            {filledItems.length} ready to save
+          </span>
+          <button
+            type="button"
+            onClick={handleSaveAllFilled}
+            disabled={bulkResolveMut.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 transition-all disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" /> {bulkResolveMut.isPending ? "Saving…" : `Save all on page (${filledItems.length})`}
+          </button>
+        </div>
+      )}
 
       {/* Bulk ignore bar (pending only) */}
       {status === "pending" && selected.size > 0 && (
