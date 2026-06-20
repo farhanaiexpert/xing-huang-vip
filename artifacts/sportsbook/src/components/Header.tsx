@@ -48,9 +48,7 @@ const LANGUAGES = [
 
 
 export function Header() {
-  const { isConnected, shortAddress, fullAddress, walletName, balance } = useWallet();
-  const evmWallet = useEvmWallet();
-  const evmChain = evmWallet.isConnected ? EVM_CHAINS[evmWallet.chainId] ?? null : null;
+  const { balance } = useWallet();
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const { logout, user } = useAuth();
   const pendingDeposit = usePendingNppDeposit();
@@ -78,7 +76,6 @@ export function Header() {
   const { lang: currentLang, setLang, t } = useI18n();
   const [showLang,         setShowLang]         = useState(false);
   const [searchQuery,      setSearchQuery]      = useState('');
-  const [copied,           setCopied]           = useState(false);
   const menuRef   = useRef<HTMLDivElement>(null);
   const langRef   = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -140,15 +137,6 @@ export function Header() {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, []);
-
-  function handleCopy() {
-    const toCopy = fullAddress ?? shortAddress;
-    if (toCopy) {
-      navigator.clipboard.writeText(toCopy).catch(() => {});
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }
 
   async function handleDisconnect() { await logout(); setShowAddressMenu(false); }
 
