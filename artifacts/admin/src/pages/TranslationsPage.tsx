@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   api, TranslationOverride, TranslationOverridesResponse, BulkTranslationResult,
@@ -627,6 +627,16 @@ function TranslationQueuePanel() {
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
+  // "Translate selected" focused panel.
+  const [bulkTranslateOpen, setBulkTranslateOpen] = useState(false);
+
+  // Selection is scoped to the page/filters currently in view, so the count in
+  // the selection bar can never diverge from the rows the bulk actions operate
+  // on. Reset it whenever the visible set changes.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [page, category, search, sort, status]);
+
   const { data, isLoading } = useQuery<TranslationQueueResponse>({
     queryKey: ["admin-translation-queue", status, category, sort, search, page],
     queryFn: () =>
@@ -640,6 +650,25 @@ function TranslationQueuePanel() {
   const total = data?.total ?? 0;
   const counts = data?.counts ?? { pending: 0, translated: 0, ignored: 0 };
   const totalPages = Math.max(1, Math.ceil(total / QUEUE_PAGE_SIZE));
+
+  // Drop any selected ids that are no longer in the visible rows (e.g. after a
+  // per-row resolve/ignore removes them) so the count and bulk actions never
+  // reference rows that aren't on screen.
+  const visibleIdsKey = rows.map(r => r.id).join(",");
+  useEffect(() => {
+    setSelected(prev => {
+      if (prev.size === 0) return prev;
+      const visible = new Set(rows.map(r => r.id));
+      let changed = false;
+      const next = new Set<number>();
+      for (const id of prev) {
+        if (visible.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleIdsKey]);
 
   function invalidate() {
     qc.invalidateQueries({ queryKey: ["admin-translation-queue"] });
@@ -708,6 +737,40 @@ function TranslationQueuePanel() {
       return;
     }
     bulkResolveMut.mutate(filledItems);
+  }
+
+  // Selected rows visible on the current page — the names shown in the
+  // "Translate selected" panel.
+  const selectedRows = useMemo(
+    () => rows.filter(r => selected.has(r.id)),
+    [rows, selected],
+  );
+
+  const selectedFilledCount = useMemo(
+    () => selectedRows.reduce((n, r) => n + ((drafts[r.id] ?? "").trim() ? 1 : 0), 0),
+    [selectedRows, drafts],
+  );
+
+  function handleBulkTranslateSave() {
+    const items = selectedRows
+      .map(r => ({ id: r.id, target: (drafts[r.id] ?? "").trim() }))
+      .filter(it => it.target);
+    if (items.length === 0) {
+      toast.error("Fill in at least one Chinese translation first");
+      return;
+    }
+    bulkResolveMut.mutate(items, {
+      onSuccess: () => {
+        setBulkTranslateOpen(false);
+        // Deselect only the rows we actually submitted; leave any still-empty
+        // ticked rows selected so they aren't silently dropped.
+        setSelected(prev => {
+          const n = new Set(prev);
+          for (const it of items) n.delete(it.id);
+          return n;
+        });
+      },
+    });
   }
 
   function applySearch(e: React.FormEvent) {
@@ -844,18 +907,120 @@ function TranslationQueuePanel() {
         </div>
       )}
 
-      {/* Bulk ignore bar (pending only) */}
-      {status === "pending" && selected.size > 0 && (
+      {/* Selection bar (pending only) — translate or ignore the rows you ticked. */}
+      {status === "pending" && selectedRows.length > 0 && (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-[#FACC15]/5 border border-[#FACC15]/15">
-          <span className="text-sm text-[#C4D4E3]">{selected.size} selected</span>
-          <button
-            type="button"
-            onClick={() => bulkIgnoreMut.mutate([...selected])}
-            disabled={bulkIgnoreMut.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-50"
+          <span className="text-sm text-[#C4D4E3]">{selectedRows.length} selected on this page</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setBulkTranslateOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 transition-all"
+            >
+              <Languages className="w-4 h-4" /> Translate selected
+            </button>
+            <button
+              type="button"
+              onClick={() => bulkIgnoreMut.mutate(selectedRows.map(r => r.id))}
+              disabled={bulkIgnoreMut.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-50"
+            >
+              <EyeOff className="w-4 h-4" /> Ignore selected
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* "Translate selected" panel — translate every ticked name together. */}
+      {bulkTranslateOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => { if (!bulkResolveMut.isPending) setBulkTranslateOpen(false); }}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[85vh] flex flex-col bg-[#111827] border border-white/10 rounded-2xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+            translate="no"
           >
-            <EyeOff className="w-4 h-4" /> Ignore selected
-          </button>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+              <div className="flex items-center gap-2">
+                <Languages className="w-5 h-5 text-[#00DFA9]" />
+                <h3 className="text-base font-semibold text-white">
+                  Translate {selectedRows.length} {selectedRows.length === 1 ? "name" : "names"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBulkTranslateOpen(false)}
+                disabled={bulkResolveMut.isPending}
+                className="p-1.5 rounded-lg text-[#64748B] hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            {selectedRows.length === 0 ? (
+              <div className="p-8 text-center text-[#475569] text-sm">
+                No selected names on this page. Tick some pending names first.
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto divide-y divide-white/5">
+                {selectedRows.map((row, idx) => (
+                  <div key={row.id} className="px-5 py-3 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-[#C4D4E3] truncate" title={row.source}>{row.source}</span>
+                        <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-white/5 text-[#94A3B8]">
+                          {CATEGORY_LABEL[row.category] ?? row.category}
+                        </span>
+                      </div>
+                      {row.context && (
+                        <div className="mt-0.5 flex items-center gap-1 text-[11px] text-[#64748B] truncate" title={`Appears in ${row.context}`}>
+                          <MapPin className="w-3 h-3 shrink-0 text-[#475569]" />
+                          <span className="truncate">{row.context}</span>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      className={cn(inp, "flex-1 max-w-[260px]")}
+                      value={drafts[row.id] ?? ""}
+                      onChange={e => setDrafts(d => ({ ...d, [row.id]: e.target.value }))}
+                      placeholder="中文翻译"
+                      autoFocus={idx === 0}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-white/8">
+              <span className="text-xs text-[#475569]">
+                {selectedFilledCount} of {selectedRows.length} filled in
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkTranslateOpen(false)}
+                  disabled={bulkResolveMut.isPending}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkTranslateSave}
+                  disabled={bulkResolveMut.isPending || selectedFilledCount === 0}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 transition-all disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" /> {bulkResolveMut.isPending ? "Saving…" : `Save all (${selectedFilledCount})`}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
