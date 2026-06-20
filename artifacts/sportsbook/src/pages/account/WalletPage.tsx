@@ -249,20 +249,30 @@ export function WalletPage() {
 
   const [bonusBalance, setBonusBalance] = useState<number>(0);
 
+  // Welcome bonus state
+  interface WelcomeBonusStatus { claimed: boolean; eligible: boolean; totalDeposited: number; minDeposit: number; bonusAmount: string; }
+  const [welcomeBonus, setWelcomeBonus] = useState<WelcomeBonusStatus | null>(null);
+  const [bonusClaiming, setBonusClaiming] = useState(false);
+  const [bonusIneligiblePopup, setBonusIneligiblePopup] = useState(false);
+  const [bonusSuccessAmt, setBonusSuccessAmt] = useState(0);
+  const [showBonusCongrats, setShowBonusCongrats] = useState(false);
+
   const loadData = useCallback(async () => {
     if (!isAuthenticated) { setLoading(false); return; }
     try {
-      const [info, bal, history, cmCheck] = await Promise.all([
+      const [info, bal, history, cmCheck, wb] = await Promise.all([
         api.get<DepositInfo>('/wallet/deposit-info'),
         api.get<{ balance: string; bonusBalance?: string }>('/wallet/balance'),
         api.get<Transaction[]>('/wallet/transactions'),
         api.get<{ available: boolean }>('/wallet/deposit/cryptomus/available').catch(() => ({ available: false })),
+        api.get<WelcomeBonusStatus>('/wallet/bonus/welcome/status').catch(() => null),
       ]);
       setDepositInfo(info);
       setBalance(parseFloat(bal.balance));
       setBonusBalance(parseFloat(bal.bonusBalance ?? '0'));
       setTxns(history);
       setCmAvailable(cmCheck.available);
+      if (wb) setWelcomeBonus(wb);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, [isAuthenticated]);
@@ -316,6 +326,32 @@ export function WalletPage() {
   const w3Address   = evmWallet.address;
   const w3Connected = evmWallet.isConnected;
   const [highlightDeposit, setHighlightDeposit] = useState(false);
+
+  // ── Welcome bonus claim ───────────────────────────────────────────────────
+  const claimWelcomeBonus = useCallback(async () => {
+    if (!welcomeBonus) return;
+    if (!welcomeBonus.eligible) { setBonusIneligiblePopup(true); return; }
+    setBonusClaiming(true);
+    try {
+      const result = await api.post<{ bonusAmount: string }>('/wallet/bonus/welcome', {});
+      const amt = parseFloat(result.bonusAmount ?? '88.88');
+      setBonusSuccessAmt(amt);
+      setShowBonusCongrats(true);
+      setWelcomeBonus(prev => prev ? { ...prev, claimed: true } : prev);
+      setBonusBalance(prev => prev + amt);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not claim bonus';
+      if (msg.toLowerCase().includes('already')) {
+        setWelcomeBonus(prev => prev ? { ...prev, claimed: true } : prev);
+      } else if (msg.toLowerCase().includes('top up') || msg.toLowerCase().includes('deposit') || msg.toLowerCase().includes('eligible')) {
+        setBonusIneligiblePopup(true);
+      } else {
+        toast({ title: msg, variant: 'destructive' });
+      }
+    } finally {
+      setBonusClaiming(false);
+    }
+  }, [welcomeBonus, toast]);
 
   // Switch network only on user action; surface rejection as a toast (spec wording)
   const handleNetworkSwitch = useCallback(async (chainId: number) => {
@@ -856,6 +892,152 @@ export function WalletPage() {
           )}
         </div>
       </div>
+
+      {/* ── Welcome Bonus Card ───────────────────────────────────────────── */}
+      {isAuthenticated && welcomeBonus && !welcomeBonus.claimed && (
+        <div
+          className="relative rounded-2xl border overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, #0A1A10 0%, #071510 60%, #0B0F14 100%)',
+            borderColor: 'rgba(250,204,21,0.25)',
+            boxShadow: '0 0 40px rgba(250,204,21,0.06)',
+          }}
+        >
+          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent" />
+          <div className="p-4 flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl"
+              style={{ background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.25)' }}
+            >
+              🎁
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold text-[#FACC15] uppercase tracking-wide mb-0.5">Welcome Bonus</p>
+              <p className="text-[15px] font-black text-[#F8FAFC] leading-tight">
+                Claim <span className="text-[#FACC15]">88.88 USDT</span>
+              </p>
+              <p className="text-[11px] text-[#64748B] mt-0.5">
+                {welcomeBonus.eligible
+                  ? 'You\'re eligible! Claim your welcome bonus now.'
+                  : `Top up ≥ 8 USDT to unlock this bonus`}
+              </p>
+            </div>
+            <button
+              onClick={claimWelcomeBonus}
+              disabled={bonusClaiming}
+              className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                background: welcomeBonus.eligible
+                  ? 'linear-gradient(135deg, #FACC15 0%, #E6B800 100%)'
+                  : 'rgba(250,204,21,0.12)',
+                color: welcomeBonus.eligible ? '#0B0F14' : '#FACC15',
+                border: welcomeBonus.eligible ? 'none' : '1px solid rgba(250,204,21,0.25)',
+              }}
+            >
+              {bonusClaiming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Claim'}
+            </button>
+          </div>
+          {!welcomeBonus.eligible && (
+            <div className="px-4 pb-3">
+              <div className="h-1.5 w-full rounded-full overflow-hidden bg-white/5">
+                <div
+                  className="h-full rounded-full bg-[#FACC15]/60 transition-all duration-500"
+                  style={{ width: `${Math.min((welcomeBonus.totalDeposited / 8) * 100, 100)}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-[#475569] mt-1 text-right tabular-nums">
+                {welcomeBonus.totalDeposited.toFixed(2)} / 8.00 USDT deposited
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isAuthenticated && welcomeBonus?.claimed && (
+        <div
+          className="relative rounded-2xl border p-4 flex items-center gap-3"
+          style={{ background: 'rgba(0,223,169,0.04)', borderColor: 'rgba(0,223,169,0.15)' }}
+        >
+          <CheckCircle2 className="h-5 w-5 text-[#00DFA9] shrink-0" />
+          <div>
+            <p className="text-[13px] font-bold text-[#F8FAFC]">Welcome bonus claimed!</p>
+            <p className="text-[11px] text-[#64748B]">88.88 USDT added to your bonus balance · Bet only, non-withdrawable</p>
+          </div>
+        </div>
+      )}
+
+      {/* Ineligible bonus popup */}
+      {bonusIneligiblePopup && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(5,8,12,0.82)', backdropFilter: 'blur(8px)' }}>
+          <div
+            className="relative max-w-sm w-full rounded-3xl border p-6 text-center"
+            style={{
+              background: 'linear-gradient(180deg, #0E141B 0%, #0B0F14 100%)',
+              borderColor: 'rgba(250,204,21,0.25)',
+              boxShadow: '0 40px 100px rgba(0,0,0,0.8)',
+            }}
+          >
+            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent rounded-t-3xl" />
+            <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center text-2xl"
+              style={{ background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.25)' }}>
+              🎁
+            </div>
+            <h3 className="text-[16px] font-black text-[#F8FAFC] mb-2">Deposit Required</h3>
+            <p className="text-[13px] text-[#94A3B8] leading-relaxed mb-5">
+              Please top up your account with at least <span className="font-bold text-[#FACC15]">8 USDT</span> to claim the <span className="font-bold text-[#FACC15]">88.88 USDT</span> bonus. You can use this bonus for betting.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { setBonusIneligiblePopup(false); setTab('deposit'); }}
+                className="w-full py-3 rounded-xl font-bold text-[13px] text-[#0B0F14] transition-all hover:scale-[1.02]"
+                style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
+              >
+                Top Up Now
+              </button>
+              <button
+                onClick={() => setBonusIneligiblePopup(false)}
+                className="text-[11px] text-[#64748B] hover:text-[#94A3B8] transition-colors py-1"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bonus claimed congrats popup */}
+      {showBonusCongrats && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(5,8,12,0.88)', backdropFilter: 'blur(10px)' }}>
+          <div
+            className="relative max-w-sm w-full rounded-3xl border p-8 text-center"
+            style={{
+              background: 'linear-gradient(160deg, #0A100A 0%, #0D1A10 55%, #0A0F10 100%)',
+              borderColor: 'rgba(250,204,21,0.35)',
+              boxShadow: '0 0 80px rgba(250,204,21,0.15), 0 40px 100px rgba(0,0,0,0.9)',
+            }}
+          >
+            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent rounded-t-3xl" />
+            <div className="text-4xl mb-4">🎉</div>
+            <h3 className="text-[20px] font-black text-[#FACC15] mb-1">Bonus Credited!</h3>
+            <div className="my-4 px-6 py-4 rounded-2xl border border-[#FACC15]/20" style={{ background: 'rgba(250,204,21,0.06)' }}>
+              <p className="text-[10px] text-[#64748B] uppercase tracking-widest mb-1">Bonus Balance</p>
+              <p className="text-[40px] font-black text-[#FACC15] leading-none">
+                {bonusSuccessAmt.toFixed(2)}
+              </p>
+              <p className="text-[14px] font-bold text-[#FACC15]/80 mt-1">USDT</p>
+              <p className="text-[10px] text-[#475569] mt-2">Non-withdrawable · Bet only</p>
+            </div>
+            <p className="text-[12px] text-[#94A3B8] mb-5">Any profits from bets using this bonus are fully withdrawable.</p>
+            <button
+              onClick={() => setShowBonusCongrats(false)}
+              className="w-full py-3 rounded-xl font-bold text-[14px] text-[#0B0F14] transition-all hover:scale-[1.02]"
+              style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
+            >
+              Start Betting →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <div className="flex rounded-xl overflow-hidden border border-white/[0.07] bg-[#0E1520] p-1 gap-1">

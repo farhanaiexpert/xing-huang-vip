@@ -623,47 +623,85 @@ router.get("/wallet/deposit/cryptomus/:uuid/status", authenticate, async (req, r
   }
 });
 
+// ── Welcome bonus helpers ─────────────────────────────────────────────────────
+const WELCOME_BONUS_AMOUNT = "88.88";
+const WELCOME_BONUS_MIN_DEPOSIT = 8; // USDT
+
+async function getWelcomeBonusStatus(userId: number): Promise<{ claimed: boolean; eligible: boolean; totalDeposited: number }> {
+  const [claimed, deposits] = await Promise.all([
+    db.select({ id: transactionsTable.id })
+      .from(transactionsTable)
+      .where(and(
+        eq(transactionsTable.userId, userId),
+        eq(transactionsTable.type, "bonus"),
+        eq(transactionsTable.reference, "welcome_bonus"),
+      ))
+      .limit(1),
+    db.select({ amount: transactionsTable.amount })
+      .from(transactionsTable)
+      .where(and(
+        eq(transactionsTable.userId, userId),
+        eq(transactionsTable.type, "deposit"),
+        eq(transactionsTable.status, "completed"),
+      )),
+  ]);
+
+  const totalDeposited = deposits.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+  const eligible = totalDeposited >= WELCOME_BONUS_MIN_DEPOSIT;
+  return { claimed: claimed.length > 0, eligible, totalDeposited };
+}
+
 // ── GET /wallet/bonus/welcome/status ─────────────────────────────────────────
 router.get("/wallet/bonus/welcome/status", authenticate, async (req, res): Promise<void> => {
-  const [existing] = await db.select({ id: transactionsTable.id })
-    .from(transactionsTable)
-    .where(and(
-      eq(transactionsTable.userId, req.user!.userId),
-      eq(transactionsTable.type, "bonus"),
-      eq(transactionsTable.reference, "welcome_bonus"),
-    ))
-    .limit(1);
-  res.json({ claimed: !!existing });
+  const status = await getWelcomeBonusStatus(req.user!.userId);
+  res.json({
+    claimed: status.claimed,
+    eligible: status.eligible,
+    totalDeposited: status.totalDeposited,
+    minDeposit: WELCOME_BONUS_MIN_DEPOSIT,
+    bonusAmount: WELCOME_BONUS_AMOUNT,
+  });
 });
 
 // ── POST /wallet/bonus/welcome ────────────────────────────────────────────────
 router.post("/wallet/bonus/welcome", authenticate, async (req, res): Promise<void> => {
   const userId = req.user!.userId;
-  const BONUS_AMOUNT = "88.88";
+
+  // Check eligibility: must have made a qualifying deposit first
+  const status = await getWelcomeBonusStatus(userId);
+  if (status.claimed) {
+    res.status(409).json({ error: "Welcome bonus already claimed.", code: "ALREADY_CLAIMED" });
+    return;
+  }
+  if (!status.eligible) {
+    res.status(403).json({
+      error: `Please top up your account with at least ${WELCOME_BONUS_MIN_DEPOSIT} USDT to claim the ${WELCOME_BONUS_AMOUNT} USDT bonus. You can use this bonus for betting.`,
+      code: "NOT_ELIGIBLE",
+      minDeposit: WELCOME_BONUS_MIN_DEPOSIT,
+    });
+    return;
+  }
 
   try {
-    // Atomic: insert transaction first — the unique partial index rejects duplicates
-    // then credit the wallet. Wrapped in a DB transaction for consistency.
     await db.transaction(async (tx) => {
       await tx.insert(transactionsTable).values({
         userId,
         type: "bonus",
-        amount: BONUS_AMOUNT,
+        amount: WELCOME_BONUS_AMOUNT,
         status: "completed",
         reference: "welcome_bonus",
         verified: true,
-        notes: "Welcome bonus — non-withdrawable",
+        notes: "Welcome bonus — non-withdrawable. Profits from this bonus are withdrawable.",
       });
 
       await tx.update(walletsTable)
-        .set({ bonusBalanceUsdt: sql`bonus_balance_usdt + ${BONUS_AMOUNT}` })
+        .set({ bonusBalanceUsdt: sql`bonus_balance_usdt + ${WELCOME_BONUS_AMOUNT}` })
         .where(eq(walletsTable.userId, userId));
     });
 
-    logger.info({ userId, amount: BONUS_AMOUNT }, "Welcome bonus claimed");
-    res.status(201).json({ bonusAmount: BONUS_AMOUNT, currency: "USDT" });
+    logger.info({ userId, amount: WELCOME_BONUS_AMOUNT }, "Welcome bonus claimed");
+    res.status(201).json({ bonusAmount: WELCOME_BONUS_AMOUNT, currency: "USDT" });
   } catch (err: unknown) {
-    // DrizzleQueryError wraps the pg error in .cause, not .message — check both
     const msg = err instanceof Error ? err.message : String(err);
     const causeMsg = (err as { cause?: { message?: string } })?.cause?.message ?? "";
     const full = `${msg} ${causeMsg}`.toLowerCase();
