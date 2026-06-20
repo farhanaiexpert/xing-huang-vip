@@ -15,6 +15,10 @@ export const translationQueueTable = pgTable(
     source: text("source").notNull(),
     // team | league | country | player
     category: text("category").notNull(),
+    // Where the name appeared on the feed (e.g. the league/sport it came with),
+    // shown to operators so they can disambiguate names like "Wolves". Nullable —
+    // older rows and some feeds may not carry it.
+    context: text("context"),
     seenCount: integer("seen_count").notNull().default(1),
     // pending | translated | ignored
     status: text("status").notNull().default("pending"),

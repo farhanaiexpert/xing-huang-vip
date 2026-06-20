@@ -13,6 +13,9 @@ export type QueueCategory = "team" | "league" | "country" | "player";
 export interface CaptureItem {
   source: string;
   category: QueueCategory;
+  // Where the name appeared (e.g. the league/sport it came with). Optional —
+  // shown to operators to disambiguate names like "Wolves".
+  context?: string;
 }
 
 const QUEUE_LANG = "zh-CN";
@@ -71,20 +74,24 @@ export async function captureNames(items: CaptureItem[]): Promise<void> {
     if (!items.length) return;
     await ensureCovered();
 
-    // Dedupe within the batch (first category wins), drop covered/uncapturable.
-    const bySource = new Map<string, QueueCategory>();
+    // Dedupe within the batch (first occurrence wins), drop covered/uncapturable.
+    const bySource = new Map<string, { category: QueueCategory; context?: string }>();
     for (const it of items) {
       const source = (it.source ?? "").trim();
       if (!source || coveredSet.has(source)) continue;
       if (!isCapturableName(source)) continue;
-      if (!bySource.has(source)) bySource.set(source, it.category);
+      if (!bySource.has(source)) {
+        const context = (it.context ?? "").trim();
+        bySource.set(source, { category: it.category, context: context || undefined });
+      }
     }
     if (bySource.size === 0) return;
 
-    const values = [...bySource.entries()].map(([source, category]) => ({
+    const values = [...bySource.entries()].map(([source, { category, context }]) => ({
       lang: QUEUE_LANG,
       source,
       category,
+      context: context ?? null,
     }));
 
     await db
@@ -95,6 +102,8 @@ export async function captureNames(items: CaptureItem[]): Promise<void> {
         set: {
           seenCount: sql`${translationQueueTable.seenCount} + 1`,
           lastSeen: sql`NOW()`,
+          // Backfill context only when the existing row has none yet.
+          context: sql`COALESCE(${translationQueueTable.context}, excluded.context)`,
         },
         // Only bump still-pending rows; ignored/translated rows stay untouched.
         setWhere: sql`${translationQueueTable.status} = 'pending'`,
@@ -118,8 +127,9 @@ export function captureBetsApiNames(
 ): void {
   const items: CaptureItem[] = [];
   for (const ev of events) {
-    if (ev?.home?.name) items.push({ source: ev.home.name, category: "team" });
-    if (ev?.away?.name) items.push({ source: ev.away.name, category: "team" });
+    const league = ev?.league?.name?.trim() || undefined;
+    if (ev?.home?.name) items.push({ source: ev.home.name, category: "team", context: league });
+    if (ev?.away?.name) items.push({ source: ev.away.name, category: "team", context: league });
     if (ev?.league?.name) items.push({ source: ev.league.name, category: "league" });
   }
   void captureNames(items);
@@ -131,8 +141,9 @@ export function captureOddsApiNames(
 ): void {
   const items: CaptureItem[] = [];
   for (const ev of events) {
-    if (ev?.home_team) items.push({ source: ev.home_team, category: "team" });
-    if (ev?.away_team) items.push({ source: ev.away_team, category: "team" });
+    const sport = ev?.sport_title?.trim() || undefined;
+    if (ev?.home_team) items.push({ source: ev.home_team, category: "team", context: sport });
+    if (ev?.away_team) items.push({ source: ev.away_team, category: "team", context: sport });
     if (ev?.sport_title) items.push({ source: ev.sport_title, category: "league" });
   }
   void captureNames(items);

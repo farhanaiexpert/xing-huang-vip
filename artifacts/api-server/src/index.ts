@@ -685,6 +685,18 @@ async function runMigrations() {
   } catch (err) {
     logger.warn({ err }, "Migration v36 skipped");
   }
+
+  // v37: translation_queue.context — records where a queued name appeared on the
+  // feed (the league/sport it came with), so operators can disambiguate names
+  // like "Wolves". Nullable; idempotent on every deploy path.
+  try {
+    await db.execute(sql`
+      ALTER TABLE translation_queue ADD COLUMN IF NOT EXISTS context TEXT
+    `);
+    logger.info("DB migration v37 applied (translation_queue.context)");
+  } catch (err) {
+    logger.warn({ err }, "Migration v37 skipped");
+  }
 }
 
 runMigrations().then(() => {

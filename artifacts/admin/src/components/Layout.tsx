@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { clearToken, getStoredUser, api, PendingTotals, isTokenStored } from "@/lib/api";
+import { clearToken, getStoredUser, api, PendingTotals, isTokenStored, TranslationQueueResponse } from "@/lib/api";
 import { useAdminNotifications } from "@/hooks/useAdminNotifications";
 import { useQuery } from "@tanstack/react-query";
 import { stopChineseTranslation } from "@/i18n/translator";
@@ -86,7 +86,7 @@ function NavSections({
   );
 }
 
-function buildNavSections(depositBadge: number, withdrawalBadge: number) {
+function buildNavSections(depositBadge: number, withdrawalBadge: number, translationBadge: number) {
   return [
     {
       label: "Platform",
@@ -136,7 +136,7 @@ function buildNavSections(depositBadge: number, withdrawalBadge: number) {
         { href: "/admin-accounts", icon: ShieldCheck, label: "Admin Accounts", badge: 0 },
         { href: "/api-status",     icon: Activity,    label: "API Status",     badge: 0 },
         { href: "/audit",          icon: ScrollText,  label: "Audit Log",      badge: 0 },
-        { href: "/translations",   icon: Languages,   label: "Translations",   badge: 0 },
+        { href: "/translations",   icon: Languages,   label: "Translations",   badge: translationBadge },
         { href: "/settings",       icon: Settings,    label: "Settings",       badge: 0 },
       ],
     },
@@ -212,7 +212,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const depositBadge = pendingTotals?.pendingDepositCount ?? 0;
   const withdrawalBadge = pendingTotals?.pendingWithdrawalCount ?? 0;
 
-  const navSections = buildNavSections(depositBadge, withdrawalBadge);
+  const { data: translationQueue } = useQuery<TranslationQueueResponse>({
+    queryKey: ["admin-translation-queue-badge"],
+    queryFn: () => api.get("/admin/translation-queue?status=pending&pageSize=1"),
+    refetchInterval: 60_000,
+    enabled: isTokenStored(),
+  });
+  const translationBadge = translationQueue?.counts.pending ?? 0;
+
+  const navSections = buildNavSections(depositBadge, withdrawalBadge, translationBadge);
 
   function logout() {
     clearToken();

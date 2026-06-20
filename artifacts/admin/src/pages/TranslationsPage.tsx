@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   Languages, Plus, Search, Save, Trash2, Pencil, X, Check,
   ClipboardPaste, FileUp, ListChecks, AlertTriangle, CopyCheck, Eraser,
-  Inbox, EyeOff, Flame, Clock, CheckCheck,
+  Inbox, EyeOff, Flame, Clock, CheckCheck, MapPin,
 } from "lucide-react";
 
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
@@ -855,6 +855,12 @@ function TranslationQueuePanel() {
                       <Flame className="w-3 h-3" /> {row.seenCount}
                     </span>
                   </div>
+                  {row.context && (
+                    <div className="mt-0.5 flex items-center gap-1 text-[11px] text-[#64748B] truncate" title={`Appears in ${row.context}`}>
+                      <MapPin className="w-3 h-3 shrink-0 text-[#475569]" />
+                      <span className="truncate">{row.context}</span>
+                    </div>
+                  )}
                 </div>
 
                 {status === "pending" ? (

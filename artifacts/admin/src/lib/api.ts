@@ -291,6 +291,7 @@ export interface TranslationQueueRow {
   lang: string;
   source: string;
   category: string;
+  context: string | null;
   seenCount: number;
   status: string;
   firstSeen: string;
