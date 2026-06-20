@@ -954,13 +954,19 @@ router.patch("/admin/bets/:id", async (req, res): Promise<void> => {
 
 // ─── Transactions pending totals (aggregate — no page cap) ───────────────────
 router.get("/admin/transactions/pending-totals", async (req, res): Promise<void> => {
+  // Opt-in test-account exclusion (Overview dashboard parity). Default keeps all
+  // accounts so the transaction-management pages match their own list views.
+  const testFilter = req.query.excludeTest === "true"
+    ? sql`JOIN users u ON u.id = t.user_id AND u.is_test_account = false`
+    : sql``;
   const result = await db.execute(sql`
     SELECT
-      COALESCE(SUM(amount::numeric) FILTER (WHERE type = 'deposit' AND status = 'pending'), 0)::text AS deposit_total,
-      COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'pending') AS deposit_count,
-      COALESCE(SUM(amount::numeric) FILTER (WHERE type = 'withdrawal' AND status = 'pending'), 0)::text AS withdrawal_total,
-      COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'pending') AS withdrawal_count
-    FROM transactions
+      COALESCE(SUM(t.amount::numeric) FILTER (WHERE t.type = 'deposit' AND t.status = 'pending'), 0)::text AS deposit_total,
+      COUNT(*) FILTER (WHERE t.type = 'deposit' AND t.status = 'pending') AS deposit_count,
+      COALESCE(SUM(t.amount::numeric) FILTER (WHERE t.type = 'withdrawal' AND t.status = 'pending'), 0)::text AS withdrawal_total,
+      COUNT(*) FILTER (WHERE t.type = 'withdrawal' AND t.status = 'pending') AS withdrawal_count
+    FROM transactions t
+    ${testFilter}
   `);
   const row = result.rows[0] as {
     deposit_total: string; deposit_count: string;

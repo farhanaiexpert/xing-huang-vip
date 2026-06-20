@@ -2,13 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
   api, AdminStats, BetsChartRow, UsersChartRow, RevenueChartRow, RecentActivityItem, UserGrowthRow,
-  UsersSummary, ApiStatusResponse, ApiProvider, MarketLiabilityRow, RevenueBySport,
+  UsersSummary, ApiStatusResponse, MarketLiabilityRow, PendingTotals, TopBettor,
 } from "@/lib/api";
 import { fmt, fmtDate } from "@/lib/utils";
 import {
   Users, Receipt, CreditCard, Wallet, TrendingUp, Clock, Banknote,
   ShieldCheck, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle,
-  Server, ShieldAlert, Trophy, BarChart3,
+  ShieldAlert, Trophy, Coins, Crown,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
@@ -144,16 +144,6 @@ function Widget({ title, icon: Icon, headerRight, isLoading, error, isEmpty, emp
   );
 }
 
-const STATUS_META: Record<ApiProvider["status"], { dot: string; label: string; text: string }> = {
-  operational: { dot: "bg-[#00DFA9]", label: "Operational", text: "text-[#00DFA9]" },
-  idle:        { dot: "bg-[#38BDF8]", label: "Idle",        text: "text-[#38BDF8]" },
-  degraded:    { dot: "bg-[#FACC15]", label: "Degraded",    text: "text-[#FACC15]" },
-  throttled:   { dot: "bg-[#FACC15]", label: "Throttled",   text: "text-[#FACC15]" },
-  paused:      { dot: "bg-[#64748B]", label: "Paused",      text: "text-[#64748B]" },
-  down:        { dot: "bg-red-400",   label: "Down",        text: "text-red-400" },
-};
-
-const SPORT_COLORS = ["#00DFA9", "#38BDF8", "#FACC15", "#A78BFA", "#F472B6", "#34D399", "#FB923C"];
 
 export default function OverviewPage() {
   const { data: stats, isLoading, error } = useQuery<AdminStats>({
@@ -211,9 +201,15 @@ export default function OverviewPage() {
     refetchInterval: 60_000,
   });
 
-  const revenueBySport = useQuery<RevenueBySport[]>({
-    queryKey: ["admin-revenue-by-sport"],
-    queryFn: () => api.get<RevenueBySport[]>("/admin/reports/revenue-by-sport"),
+  const pendingTotals = useQuery<PendingTotals>({
+    queryKey: ["admin-pending-totals"],
+    queryFn: () => api.get<PendingTotals>("/admin/transactions/pending-totals?excludeTest=true"),
+    refetchInterval: 60_000,
+  });
+
+  const topBettors = useQuery<TopBettor[]>({
+    queryKey: ["admin-top-bettors"],
+    queryFn: () => api.get<TopBettor[]>("/admin/reports/top-bettors"),
     refetchInterval: 120_000,
   });
 
@@ -269,14 +265,9 @@ export default function OverviewPage() {
     blue: "bg-[#38BDF8]/10 text-[#38BDF8] border-[#38BDF8]/20 hover:bg-[#38BDF8]/15",
   };
 
-  // ── Liability / sport-volume derived ──
+  // ── Liability / top-players derived ──
   const topMarkets = (liability.data ?? []).slice(0, 6);
-  const sportRows = (revenueBySport.data ?? [])
-    .map(r => ({ sport: r.sport, staked: Number(r.totalStaked), betCount: r.betCount }))
-    .filter(r => r.staked > 0)
-    .sort((a, b) => b.staked - a.staked)
-    .slice(0, 7);
-  const sportMax = sportRows.reduce((m, r) => Math.max(m, r.staked), 0);
+  const topPlayers = (topBettors.data ?? []).slice(0, 6);
 
   return (
     <div className="space-y-6">
@@ -313,39 +304,33 @@ export default function OverviewPage() {
         }
       </div>
 
-      {/* Operations row: API health · Player health · Top markets · Volume by sport */}
+      {/* Operations row: Pending money · Player health · Top liability · Top players */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* API health */}
+        {/* Pending money */}
         <Widget
-          title="API health"
-          icon={Server}
-          isLoading={apiStatus.isLoading}
-          error={apiStatus.error}
-          isEmpty={providers.length === 0}
-          emptyText="No providers"
-          headerRight={<span className="text-[10px] text-[#334155]">today</span>}
+          title="Pending money"
+          icon={Coins}
+          isLoading={pendingTotals.isLoading}
+          error={pendingTotals.error}
+          isEmpty={!pendingTotals.data}
+          emptyText="No data"
+          headerRight={<span className="text-[10px] text-[#334155]">USDT</span>}
         >
-          <div className="space-y-3">
-            {providers.map(p => {
-              const meta = STATUS_META[p.status];
-              return (
-                <div key={p.id} className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className={cn("w-2 h-2 rounded-full shrink-0", meta.dot)} />
-                      <span className="text-xs text-white font-medium truncate">{p.name}</span>
-                    </div>
-                    <div className="text-[10px] text-[#475569] mt-0.5 tabular-nums">
-                      {p.callsToday.toLocaleString()} calls · {p.errorsToday.toLocaleString()} err
-                      {p.quotaRemaining != null && <> · {p.quotaRemaining.toLocaleString()} credits</>}
-                      {p.hourlyRemaining != null && <> · {p.hourlyRemaining}/{p.hourlyLimit} window</>}
-                    </div>
-                  </div>
-                  <span className={cn("text-[10px] font-semibold shrink-0", meta.text)}>{meta.label}</span>
-                </div>
-              );
-            })}
-          </div>
+          {pendingTotals.data && (
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[#64748B]">Deposits awaiting review</span>
+                <span className="text-[#38BDF8] font-semibold tabular-nums">${fmt(pendingTotals.data.pendingDepositTotal)}</span>
+              </div>
+              <div className="text-[10px] text-[#475569] -mt-2 tabular-nums">{`${pendingTotals.data.pendingDepositCount.toLocaleString()} pending`}</div>
+              <div className="h-px bg-white/5" />
+              <div className="flex items-center justify-between">
+                <span className="text-[#64748B]">Withdrawals to approve</span>
+                <span className="text-red-400 font-semibold tabular-nums">${fmt(pendingTotals.data.pendingWithdrawalTotal)}</span>
+              </div>
+              <div className="text-[10px] text-[#475569] -mt-2 tabular-nums">{`${pendingTotals.data.pendingWithdrawalCount.toLocaleString()} pending`}</div>
+            </div>
+          )}
         </Widget>
 
         {/* Player health */}
@@ -410,29 +395,27 @@ export default function OverviewPage() {
           </div>
         </Widget>
 
-        {/* Volume by sport */}
+        {/* Top players */}
         <Widget
-          title="Volume by sport"
-          icon={BarChart3}
-          isLoading={revenueBySport.isLoading}
-          error={revenueBySport.error}
-          isEmpty={sportRows.length === 0}
-          emptyText="No volume yet"
+          title="Top players"
+          icon={Crown}
+          isLoading={topBettors.isLoading}
+          error={topBettors.error}
+          isEmpty={topPlayers.length === 0}
+          emptyText="No bets yet"
           headerRight={<span className="text-[10px] text-[#334155]">USDT staked</span>}
         >
           <div className="space-y-2.5">
-            {sportRows.map((r, i) => (
-              <div key={r.sport}>
-                <div className="flex items-center justify-between text-[11px] mb-1">
-                  <span className="text-[#94A3B8] truncate capitalize">{r.sport}</span>
-                  <span className="text-white font-semibold tabular-nums">${fmt(r.staked)}</span>
+            {topPlayers.map((p, i) => (
+              <div key={p.username} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[10px] text-[#475569] tabular-nums w-4 shrink-0">{i + 1}</span>
+                  <div className="min-w-0">
+                    <div className="text-xs text-white font-medium truncate">{p.username}</div>
+                    <div className="text-[10px] text-[#475569] tabular-nums">{`${p.betCount.toLocaleString()} bets`}</div>
+                  </div>
                 </div>
-                <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${sportMax > 0 ? (r.staked / sportMax) * 100 : 0}%`, backgroundColor: SPORT_COLORS[i % SPORT_COLORS.length] }}
-                  />
-                </div>
+                <span className="text-xs font-semibold text-[#00DFA9] tabular-nums shrink-0">${fmt(p.totalStaked)}</span>
               </div>
             ))}
           </div>
