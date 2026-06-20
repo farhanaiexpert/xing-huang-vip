@@ -438,7 +438,15 @@ export function MainContent({
         className="flex-1 overflow-y-auto overflow-x-hidden h-[calc(100vh-3.5rem)] pb-14 xl:pb-0"
         style={{ scrollbarWidth: "none" }}
       >
-        {/* Hero banner slider — above the search bar, scrolls away as controls stick */}
+        {/* Winners ticker + quick sport nav — above the slides */}
+        <div className="hidden sm:block"><WinnersTicker /></div>
+        <SportQuickNav
+          selectedId={selectedSportId}
+          liveCount={liveCount}
+          onSelect={onSelectSport}
+        />
+
+        {/* Hero banner slider — below the ticker & sport nav, above the search bar */}
         {showFeatured && (
           <div className="px-3 sm:px-4 pt-3 sm:pt-4">
             <HeroBannerSlider />
@@ -447,16 +455,6 @@ export function MainContent({
 
         {/* ── Sticky controls ─────────────────────────────────────────── */}
         <div className="sticky top-0 z-20 bg-[#0B0F14]/97 backdrop-blur-md border-b border-[#253241]/60">
-          {/* Winners ticker — hidden on mobile to save ~38px of sticky height */}
-          <div className="hidden sm:block"><WinnersTicker /></div>
-
-          {/* Quick sport navigation */}
-          <SportQuickNav
-            selectedId={selectedSportId}
-            liveCount={liveCount}
-            onSelect={onSelectSport}
-          />
-
           {/* Search */}
           <div className="px-3 sm:px-4 pt-2 sm:pt-3.5 pb-1.5 sm:pb-2.5">
             <div className="relative group max-w-2xl">
