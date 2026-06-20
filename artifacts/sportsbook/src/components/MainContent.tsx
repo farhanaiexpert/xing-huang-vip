@@ -438,6 +438,13 @@ export function MainContent({
         className="flex-1 overflow-y-auto overflow-x-hidden h-[calc(100vh-3.5rem)] pb-14 xl:pb-0"
         style={{ scrollbarWidth: "none" }}
       >
+        {/* Hero banner slider — above the search bar, scrolls away as controls stick */}
+        {showFeatured && (
+          <div className="px-3 sm:px-4 pt-3 sm:pt-4">
+            <HeroBannerSlider />
+          </div>
+        )}
+
         {/* ── Sticky controls ─────────────────────────────────────────── */}
         <div className="sticky top-0 z-20 bg-[#0B0F14]/97 backdrop-blur-md border-b border-[#253241]/60">
           {/* Winners ticker — hidden on mobile to save ~38px of sticky height */}
@@ -453,16 +460,18 @@ export function MainContent({
           {/* Search */}
           <div className="px-3 sm:px-4 pt-2 sm:pt-3.5 pb-1.5 sm:pb-2.5">
             <div className="relative group max-w-2xl">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#94A3B8]/50 group-focus-within:text-[#00DFA9] transition-colors duration-200 pointer-events-none" />
+              {/* Soft brand glow on focus */}
+              <div className="pointer-events-none absolute -inset-px rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-[#00DFA9]/25 via-[#38BDF8]/15 to-[#00DFA9]/25 blur-[7px]" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]/50 group-focus-within:text-[#00DFA9] group-focus-within:scale-110 transition-all duration-200 pointer-events-none z-10" />
               <Input
                 ref={searchRef}
-                className="w-full pl-9 pr-10 sm:pr-20 h-8 sm:h-10 rounded-xl text-[13px] sm:text-sm bg-[#121821] border border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 focus-visible:ring-2 focus-visible:ring-[#00DFA9]/25 focus-visible:border-[#00DFA9]/50 transition-all duration-200"
+                className="relative w-full pl-10 pr-12 sm:pr-20 h-9 sm:h-11 rounded-xl text-[13px] sm:text-sm bg-[#121821] border border-[#253241] text-[#F8FAFC] placeholder:text-[#94A3B8]/40 shadow-inner shadow-black/20 hover:border-[#2E3D50] focus-visible:ring-2 focus-visible:ring-[#00DFA9]/30 focus-visible:border-[#00DFA9]/60 transition-all duration-200"
                 placeholder="Search events, teams or leagues…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 data-testid="input-search"
               />
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10">
                 {search ? (
                   <button
                     onClick={clearSearch}
@@ -776,7 +785,6 @@ export function MainContent({
               {showFeatured && (
                 <FeaturedMatchesCarousel leagues={allLeagues} />
               )}
-              {showFeatured && <HeroBannerSlider />}
               {showFeatured && <WorldCupHero />}
               {showFeatured && <LiveEventsBanner />}
               {showFeatured && <USDTDepositBanner onDeposit={() => requestDeposit(isAuthenticated, navigate)} />}

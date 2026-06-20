@@ -12,7 +12,7 @@ const SLIDES = [
   },
 ];
 
-const INTERVAL_MS = 10000;
+const INTERVAL_MS = 3000;
 const FADE_MS     = 900;
 
 export function HeroBannerSlider() {
