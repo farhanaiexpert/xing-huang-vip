@@ -4,78 +4,9 @@ import { X, Mail, Lock, Eye, EyeOff, CheckCircle2, Loader2 } from 'lucide-react'
 import { api } from '../lib/apiClient';
 import { useAuth, AuthUser } from '../contexts/AuthContext';
 
-type WalletTag = 'full' | 'dapp';
-
-interface WalletOption {
-  name: string;
-  icon: string;
-  tag: WalletTag;
-}
-
-const WALLETS: WalletOption[] = [
-  { name: 'TronLink',    icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/TronLink.png',                                  tag: 'full' },
-  { name: 'OKX',         icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/OKX.svg',                                       tag: 'full' },
-  { name: 'Bitget',      icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/BitGet.svg',                                    tag: 'full' },
-  { name: 'imToken',     icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imToken.svg',                                   tag: 'dapp' },
-  { name: 'TokenPocket', icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/TokenPocket.svg',                               tag: 'dapp' },
-  { name: 'Trust',       icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/TrustWallet.svg',                               tag: 'dapp' },
-  { name: 'Portal',      icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Portal.svg',                                    tag: 'dapp' },
-  { name: 'FoxWallet',   icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/FoxWallet.svg',                                 tag: 'dapp' },
-  { name: 'BitPie',      icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/e8570352728f9524148d395e9b9f39ed_icon.png',     tag: 'dapp' },
-  { name: 'MetaMask',    icon: 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/MetaMask.svg',                                  tag: 'dapp' },
-];
-
-const COLLAPSED_COUNT = 4;
-
 interface WalletPickerModalProps {
   open: boolean;
   onClose: () => void;
-}
-
-function WalletIcon({ name, icon }: { name: string; icon: string }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return (
-      <div className="flex h-full w-full items-center justify-center rounded-xl bg-white/[0.06] text-sm font-black text-[#00DFA9]">
-        {name.charAt(0)}
-      </div>
-    );
-  }
-  return (
-    <img
-      src={icon}
-      alt={name}
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="h-full w-full object-contain"
-    />
-  );
-}
-
-function WalletRow({ wallet }: { wallet: WalletOption }) {
-  return (
-    <a
-      href="#"
-      onClick={e => e.preventDefault()}
-      className="group flex items-center gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-4 py-3.5 transition-all duration-200 hover:border-[#00DFA9]/40 hover:bg-white/[0.05] active:scale-[0.99]"
-    >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl">
-        <WalletIcon name={wallet.name} icon={wallet.icon} />
-      </span>
-      <span className="text-[15px] font-bold tracking-tight text-[#F8FAFC] group-hover:text-white">
-        {wallet.name}
-      </span>
-      {wallet.tag === 'full' ? (
-        <span className="ml-auto rounded-md border border-[#00DFA9]/30 bg-[#00DFA9]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#00DFA9]">
-          Full Support
-        </span>
-      ) : (
-        <span className="ml-auto text-[11px] font-semibold text-[#94A3B8]/55">
-          DApp Browser
-        </span>
-      )}
-    </a>
-  );
 }
 
 // ── Email Auth Panel ──────────────────────────────────────────────────────────
@@ -83,14 +14,12 @@ function EmailAuthPanel({ onSuccess }: { onSuccess: () => void }) {
   const { loginWithWallet } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
-  // Login state
   const [loginEmail, setLoginEmail]     = useState('');
   const [loginPw, setLoginPw]           = useState('');
   const [loginShowPw, setLoginShowPw]   = useState(false);
   const [loginError, setLoginError]     = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Register state
   const [regEmail, setRegEmail]       = useState('');
   const [regPw, setRegPw]             = useState('');
   const [regPw2, setRegPw2]           = useState('');
@@ -119,14 +48,8 @@ function EmailAuthPanel({ onSuccess }: { onSuccess: () => void }) {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setRegError('');
-    if (regPw !== regPw2) {
-      setRegError('Passwords do not match');
-      return;
-    }
-    if (regPw.length < 8) {
-      setRegError('Password must be at least 8 characters');
-      return;
-    }
+    if (regPw !== regPw2) { setRegError('Passwords do not match'); return; }
+    if (regPw.length < 8) { setRegError('Password must be at least 8 characters'); return; }
     setRegLoading(true);
     try {
       const data = await api.post<{ accessToken: string; refreshToken: string; user: AuthUser }>(
@@ -141,7 +64,6 @@ function EmailAuthPanel({ onSuccess }: { onSuccess: () => void }) {
     }
   }
 
-  // Registration success view
   if (regSuccess) {
     return (
       <div className="flex flex-col items-center gap-5 px-2 py-8 text-center">
@@ -168,7 +90,6 @@ function EmailAuthPanel({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="space-y-4">
-      {/* Mode toggle */}
       <div className="flex rounded-xl overflow-hidden border border-white/[0.07] bg-[#0A0E14] p-1 gap-1">
         {(['login', 'register'] as const).map(m => (
           <button
@@ -176,7 +97,7 @@ function EmailAuthPanel({ onSuccess }: { onSuccess: () => void }) {
             type="button"
             onClick={() => { setMode(m); setLoginError(''); setRegError(''); }}
             className={[
-              'flex-1 py-2 rounded-lg text-[12px] font-bold transition-all capitalize',
+              'flex-1 py-2 rounded-lg text-[12px] font-bold transition-all',
               mode === m
                 ? 'bg-[#00DFA9] text-[#0B0F14] shadow-[0_0_12px_rgba(0,223,169,0.25)]'
                 : 'text-[#64748B] hover:text-[#94A3B8]',
@@ -296,14 +217,8 @@ function EmailAuthPanel({ onSuccess }: { onSuccess: () => void }) {
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
-  const [tab, setTab] = useState<'email' | 'wallet'>('email');
-  const [expanded, setExpanded] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
-
-  useEffect(() => {
-    if (open) { setExpanded(false); setTab('email'); }
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -326,7 +241,7 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key !== 'Tab' || !panelRef.current) return;
     const focusable = panelRef.current.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
+      'button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
     );
     if (focusable.length === 0) return;
     const first = focusable[0];
@@ -342,8 +257,6 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
   }
 
   if (!open) return null;
-
-  const visible = expanded ? WALLETS : WALLETS.slice(0, COLLAPSED_COUNT);
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6">
@@ -367,10 +280,9 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00DFA9]/40 to-transparent" />
 
-        {/* Header */}
         <div className="relative flex items-center justify-center px-6 pt-6 pb-4">
           <h2 id={titleId} className="text-[15px] font-semibold tracking-wide text-[#94A3B8]">
-            {tab === 'email' ? 'Account Login' : 'Connect your wallet'}
+            Account Login
           </h2>
           <button
             onClick={onClose}
@@ -381,54 +293,8 @@ export function WalletPickerModal({ open, onClose }: WalletPickerModalProps) {
           </button>
         </div>
 
-        {/* Tab switcher */}
-        <div className="px-5 pb-3">
-          <div className="flex rounded-xl overflow-hidden border border-white/[0.07] bg-[#0A0E14] p-1 gap-1">
-            <button
-              onClick={() => setTab('email')}
-              className={[
-                'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-bold transition-all',
-                tab === 'email'
-                  ? 'bg-[#00DFA9] text-[#0B0F14] shadow-[0_0_12px_rgba(0,223,169,0.25)]'
-                  : 'text-[#64748B] hover:text-[#94A3B8]',
-              ].join(' ')}
-            >
-              <Mail className="h-3.5 w-3.5" /> Email
-            </button>
-            <button
-              onClick={() => setTab('wallet')}
-              className={[
-                'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-bold transition-all',
-                tab === 'wallet'
-                  ? 'bg-[#00DFA9] text-[#0B0F14] shadow-[0_0_12px_rgba(0,223,169,0.25)]'
-                  : 'text-[#64748B] hover:text-[#94A3B8]',
-              ].join(' ')}
-            >
-              <span className="text-[13px]">₿</span> Crypto Wallet
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-col gap-2.5 overflow-y-auto px-5 py-2 pb-5 sidebar-scroll">
-          {tab === 'email' ? (
-            <EmailAuthPanel onSuccess={onClose} />
-          ) : (
-            <>
-              {visible.map(w => (
-                <WalletRow key={w.name} wallet={w} />
-              ))}
-              <button
-                onClick={() => setExpanded(v => !v)}
-                className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3 text-[13px] font-semibold text-[#94A3B8] transition-all duration-200 hover:border-[#00DFA9]/30 hover:text-[#F8FAFC]"
-              >
-                {expanded ? 'Show less' : `Show more (${WALLETS.length - COLLAPSED_COUNT})`}
-              </button>
-              <div className="pt-1 text-center text-[10px] font-bold uppercase tracking-[0.25em] text-[#94A3B8]/30">
-                TRON Network
-              </div>
-            </>
-          )}
+        <div className="overflow-y-auto px-5 py-2 pb-6 sidebar-scroll">
+          <EmailAuthPanel onSuccess={onClose} />
         </div>
       </div>
     </div>,
