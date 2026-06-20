@@ -627,8 +627,9 @@ function TranslationQueuePanel() {
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
-  // "Translate selected" focused panel.
+  // "Translate selected" panel (Idea 2 — two columns, one Chinese line per name).
   const [bulkTranslateOpen, setBulkTranslateOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
 
   // Selection is scoped to the page/filters currently in view, so the count in
   // the selection bar can never diverge from the rows the bulk actions operate
@@ -746,22 +747,40 @@ function TranslationQueuePanel() {
     [rows, selected],
   );
 
-  const selectedFilledCount = useMemo(
-    () => selectedRows.reduce((n, r) => n + ((drafts[r.id] ?? "").trim() ? 1 : 0), 0),
-    [selectedRows, drafts],
+  // Idea 2 — one textarea, one Chinese line per selected name (line N ↔ name N).
+  const bulkLines = useMemo(() => bulkText.split("\n"), [bulkText]);
+  const bulkFilledCount = useMemo(
+    () => selectedRows.reduce((n, _r, i) => n + ((bulkLines[i] ?? "").trim() ? 1 : 0), 0),
+    [selectedRows, bulkLines],
   );
+  // Lines with content typed beyond the number of names can't map to anyone —
+  // flag them. Trailing blank lines (common when pasting) don't count.
+  const bulkExtraLines = useMemo(() => {
+    let lastNonEmpty = -1;
+    for (let i = 0; i < bulkLines.length; i++) {
+      if (bulkLines[i].trim()) lastNonEmpty = i;
+    }
+    return Math.max(0, lastNonEmpty + 1 - selectedRows.length);
+  }, [bulkLines, selectedRows.length]);
+
+  function openBulkTranslate() {
+    // Seed each line from any draft already typed inline so nothing is lost.
+    setBulkText(selectedRows.map(r => drafts[r.id] ?? "").join("\n"));
+    setBulkTranslateOpen(true);
+  }
 
   function handleBulkTranslateSave() {
     const items = selectedRows
-      .map(r => ({ id: r.id, target: (drafts[r.id] ?? "").trim() }))
+      .map((r, i) => ({ id: r.id, target: (bulkLines[i] ?? "").trim() }))
       .filter(it => it.target);
     if (items.length === 0) {
-      toast.error("Fill in at least one Chinese translation first");
+      toast.error("Type at least one Chinese line first");
       return;
     }
     bulkResolveMut.mutate(items, {
       onSuccess: () => {
         setBulkTranslateOpen(false);
+        setBulkText("");
         // Deselect only the rows we actually submitted; leave any still-empty
         // ticked rows selected so they aren't silently dropped.
         setSelected(prev => {
@@ -914,7 +933,7 @@ function TranslationQueuePanel() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setBulkTranslateOpen(true)}
+              onClick={openBulkTranslate}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 transition-all"
             >
               <Languages className="w-4 h-4" /> Translate selected
@@ -931,14 +950,15 @@ function TranslationQueuePanel() {
         </div>
       )}
 
-      {/* "Translate selected" panel — translate every ticked name together. */}
+      {/* "Translate selected" panel (Idea 2) — English names on the left, one
+          textarea on the right where each line maps to the name beside it. */}
       {bulkTranslateOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
           onClick={() => { if (!bulkResolveMut.isPending) setBulkTranslateOpen(false); }}
         >
           <div
-            className="w-full max-w-2xl max-h-[85vh] flex flex-col bg-[#111827] border border-white/10 rounded-2xl shadow-2xl"
+            className="w-full max-w-3xl max-h-[85vh] flex flex-col bg-[#111827] border border-white/10 rounded-2xl shadow-2xl"
             onClick={e => e.stopPropagation()}
             translate="no"
           >
@@ -967,40 +987,62 @@ function TranslationQueuePanel() {
                 No selected names on this page. Tick some pending names first.
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto divide-y divide-white/5">
-                {selectedRows.map((row, idx) => (
-                  <div key={row.id} className="px-5 py-3 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-[#C4D4E3] truncate" title={row.source}>{row.source}</span>
-                        <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-white/5 text-[#94A3B8]">
-                          {CATEGORY_LABEL[row.category] ?? row.category}
-                        </span>
-                      </div>
-                      {row.context && (
-                        <div className="mt-0.5 flex items-center gap-1 text-[11px] text-[#64748B] truncate" title={`Appears in ${row.context}`}>
-                          <MapPin className="w-3 h-3 shrink-0 text-[#475569]" />
-                          <span className="truncate">{row.context}</span>
-                        </div>
-                      )}
-                    </div>
-                    <input
-                      className={cn(inp, "flex-1 max-w-[260px]")}
-                      value={drafts[row.id] ?? ""}
-                      onChange={e => setDrafts(d => ({ ...d, [row.id]: e.target.value }))}
-                      placeholder="中文翻译"
-                      autoFocus={idx === 0}
+              <div className="flex-1 overflow-y-auto p-5">
+                <p className="mb-3 text-xs text-[#64748B]">
+                  Type one Chinese name per line — line 1 is name 1, line 2 is name 2, and so on. Keep the lines lined up.
+                </p>
+                <div className="grid grid-cols-[1fr_1fr] gap-4">
+                  {/* Left: English names, numbered to match the lines */}
+                  <div>
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">English name</div>
+                    <ol className="rounded-lg border border-white/8 bg-[#0B0F14] py-1.5">
+                      {selectedRows.map((row, idx) => (
+                        <li
+                          key={row.id}
+                          className={cn(
+                            "h-7 px-3 flex items-center gap-2 leading-7",
+                            (bulkLines[idx] ?? "").trim() ? "" : "bg-[#FACC15]/[0.04]",
+                          )}
+                        >
+                          <span className="shrink-0 w-5 text-right text-[11px] tabular-nums text-[#475569]">{idx + 1}</span>
+                          <span className="truncate text-sm text-[#C4D4E3]" title={row.context ? `${row.source} — ${row.context}` : row.source}>
+                            {row.source}
+                          </span>
+                          <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-white/5 text-[#94A3B8]">
+                            {CATEGORY_LABEL[row.category] ?? row.category}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  {/* Right: one Chinese line per name */}
+                  <div>
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">中文 (one per line)</div>
+                    <textarea
+                      className="w-full rounded-lg border border-white/10 bg-[#0B0F14] px-3 py-1.5 text-sm leading-7 text-white placeholder:text-[#374151] resize-none focus:outline-none focus:border-[#00DFA9]"
+                      style={{ height: `${selectedRows.length * 28 + 12}px` }}
+                      value={bulkText}
+                      onChange={e => setBulkText(e.target.value)}
+                      placeholder={"中文翻译\n按行对应左侧名称"}
+                      autoFocus
+                      spellCheck={false}
                     />
                   </div>
-                ))}
+                </div>
               </div>
             )}
 
             {/* Footer */}
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-white/8">
-              <span className="text-xs text-[#475569]">
-                {selectedFilledCount} of {selectedRows.length} filled in
-              </span>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-[#475569]">{bulkFilledCount} of {selectedRows.length} filled in</span>
+                {bulkExtraLines > 0 && (
+                  <span className="flex items-center gap-1 text-[#FACC15]">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {bulkExtraLines} extra line{bulkExtraLines === 1 ? "" : "s"} ignored
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1013,10 +1055,10 @@ function TranslationQueuePanel() {
                 <button
                   type="button"
                   onClick={handleBulkTranslateSave}
-                  disabled={bulkResolveMut.isPending || selectedFilledCount === 0}
+                  disabled={bulkResolveMut.isPending || bulkFilledCount === 0}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 transition-all disabled:opacity-50"
                 >
-                  <Save className="w-4 h-4" /> {bulkResolveMut.isPending ? "Saving…" : `Save all (${selectedFilledCount})`}
+                  <Save className="w-4 h-4" /> {bulkResolveMut.isPending ? "Saving…" : `Save all (${bulkFilledCount})`}
                 </button>
               </div>
             </div>
