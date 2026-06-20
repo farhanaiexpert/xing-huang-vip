@@ -1,12 +1,10 @@
 import { Link, useLocation } from 'wouter';
 import { API_BASE } from '@/lib/apiBase';
-import { Search, Wallet, LogOut, ChevronDown, X, Globe, User, ArrowDownLeft, Clock, Receipt, History } from 'lucide-react';
+import { Search, LogOut, ChevronDown, X, Globe, User, Clock, Receipt, History } from 'lucide-react';
 import { ConnectWalletModal } from './ConnectWalletModal';
 import { WalletPickerModal } from './WalletPickerModal';
 import { NotificationBell } from './NotificationBell';
 import { useWallet } from '../hooks/useWallet';
-import { useEvmWallet } from '../hooks/useEvmWallet';
-import { EVM_CHAINS } from '../hooks/useAutoDeposit';
 import { useAuth } from '../contexts/AuthContext';
 import { useBetHistory } from '../hooks/useBetHistory';
 import { useState, useRef, useEffect } from 'react';
@@ -15,7 +13,7 @@ import { SportName } from './SportName';
 import { useOddsFormat } from '../hooks/useOddsFormat';
 import { FORMAT_LABELS, type OddsFormat } from '../lib/oddsFormat';
 import { useI18n } from '../contexts/I18nContext';
-import { promptConnectFirst, OPEN_WALLET_PICKER_EVENT } from '../lib/depositGate';
+import { OPEN_WALLET_PICKER_EVENT } from '../lib/depositGate';
 
 const NPP_PENDING_KEY = 'npp_pending_deposit';
 
