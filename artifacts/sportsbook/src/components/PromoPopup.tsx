@@ -8,9 +8,11 @@ import { api } from '../lib/apiClient';
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imgi_15_Promo-Banner-2.webp';
 const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ronaldo11.webp';
 
-const SNOOZE_KEY          = 'promo_snoozed_until';
-const SNOOZE_NOT_CLAIMED  = 30 * 60 * 1000;        // 30 minutes
-const SNOOZE_CLAIMED      = 12 * 60 * 60 * 1000;   // 12 hours
+const SNOOZE_KEY          = 'promo_snoozed_until';        // guests: dismiss for 30 min
+const SNOOZE_CLAIMED_KEY  = 'promo_claimed_snoozed_until'; // post-claim: 2 h between shows
+const SESSION_KEY         = 'promo_session_dismissed';     // logged-in unclaimed: per JS-session
+const SNOOZE_NOT_CLAIMED  = 30 * 60 * 1000;        // 30 minutes  (guest dismiss)
+const SNOOZE_CLAIMED      = 2 * 60 * 60 * 1000;   // 2 hours     (post-claim)
 
 const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
   id: i,
@@ -100,26 +102,53 @@ export function PromoPopup() {
   const [alreadyClaimed, setAlreadyClaimed] = useState(false);
   const [showCongrats,   setShowCongrats]   = useState(false);
 
-  const initRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const loopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loopRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ensures popup is triggered only once per JS-session even if claim status arrives late
+  const popupTriggeredRef = useRef(false);
 
   const counterVal = useCounter(88.88, showCongrats);
 
-  // Check claimed status on mount (when authenticated)
+  // Load claimed status — sets alreadyClaimed + signals claimLoaded
+  const [claimLoaded, setClaimLoaded] = useState(false);
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) { setClaimLoaded(true); return; }
     api.get<{ claimed: boolean }>('/wallet/bonus/welcome/status')
       .then(r => { if (r.claimed) setAlreadyClaimed(true); })
-      .catch(() => { /* silent — don't block popup */ });
+      .catch(() => {})
+      .finally(() => setClaimLoaded(true));
   }, [isAuthenticated]);
 
-  // Show popup after 3 s — skip if user snoozed within the last 3 hours
+  // Decide whether / when to show the popup — runs once per session after claim
+  // status is known so we never flash the modal on claimed accounts.
   useEffect(() => {
-    const snoozedUntil = parseInt(localStorage.getItem(SNOOZE_KEY) ?? '0', 10);
-    if (Date.now() < snoozedUntil) return;
+    if (!claimLoaded || popupTriggeredRef.current) return;
+    popupTriggeredRef.current = true;
+
+    if (isAuthenticated && !alreadyClaimed) {
+      // Logged-in + unclaimed: show on every page load unless already dismissed
+      // THIS session (sessionStorage resets on tab/browser close).
+      if (sessionStorage.getItem(SESSION_KEY)) return;
+      const t = setTimeout(() => setVisible(true), 3000);
+      return () => clearTimeout(t);
+    }
+
+    if (isAuthenticated && alreadyClaimed) {
+      // Post-claim: show once every 2 hours
+      const until = parseInt(localStorage.getItem(SNOOZE_CLAIMED_KEY) ?? '0', 10);
+      if (Date.now() < until) return;
+      const t = setTimeout(() => setVisible(true), 3000);
+      return () => clearTimeout(t);
+    }
+
+    // Guest: existing 30-min snooze, homepage only
+    if (location !== '/') return;
+    const until = parseInt(localStorage.getItem(SNOOZE_KEY) ?? '0', 10);
+    if (Date.now() < until) return;
     const t = setTimeout(() => setVisible(true), 3000);
     return () => clearTimeout(t);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claimLoaded]);
 
   // Auto-cycle images every 5 s when not hovered
   useEffect(() => {
@@ -135,7 +164,7 @@ export function PromoPopup() {
     const schedule = (nextVisible: boolean, delay: number) => {
       loopRef.current = setTimeout(() => {
         setBarVisible(nextVisible);
-        schedule(!nextVisible, nextVisible ? 5000 : 60000);
+        schedule(!nextVisible, nextVisible ? 10000 : 20000);
       }, delay);
     };
     initRef.current = setTimeout(() => {
@@ -150,8 +179,17 @@ export function PromoPopup() {
 
   function close() {
     if (showCongrats) return;
-    const snooze = alreadyClaimed ? SNOOZE_CLAIMED : SNOOZE_NOT_CLAIMED;
-    localStorage.setItem(SNOOZE_KEY, String(Date.now() + snooze));
+    if (isAuthenticated && !alreadyClaimed) {
+      // Logged-in, unclaimed: just dismiss for this browser session; will
+      // show again next time the page is loaded fresh.
+      sessionStorage.setItem(SESSION_KEY, '1');
+    } else if (alreadyClaimed) {
+      // Post-claim: snooze 2 hours
+      localStorage.setItem(SNOOZE_CLAIMED_KEY, String(Date.now() + SNOOZE_CLAIMED));
+    } else {
+      // Guest: snooze 30 minutes
+      localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_NOT_CLAIMED));
+    }
     setClosing(true);
     setTimeout(() => {
       setVisible(false);
@@ -203,8 +241,8 @@ export function PromoPopup() {
 
   const altVisible = hovered || showAlt;
 
-  // Only show on the homepage
-  if (location !== '/') return null;
+  // Guests only see the popup on the homepage; authenticated users see it on all pages
+  if (!isAuthenticated && location !== '/') return null;
 
   // Sticky claim bar — desktop: fixed bottom strip; mobile: slim top notice below header
   // Never rendered once bonus has been claimed

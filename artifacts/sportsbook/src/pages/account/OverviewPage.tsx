@@ -10,8 +10,9 @@ import {
   Gift, Star, Trophy, Settings,
   Calendar, ShieldCheck, TrendingUp, Activity,
   ArrowDownLeft, ArrowUpRight, Lock, ChevronRight,
-  BarChart2, Percent, Camera, X, Loader2,
+  BarChart2, Percent, Camera, X, Loader2, Info,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/apiClient';
 import { userDisplayLabel, addressInitials, shortAddress } from '@/lib/utils';
@@ -190,20 +191,36 @@ export function OverviewPage() {
 
             {/* Name + meta */}
             <div className="flex-1 min-w-0">
-              <p className="text-[17px] font-black text-[#F8FAFC] leading-tight truncate">{displayLabel}</p>
+              <p className="text-[17px] font-black text-[#F8FAFC] leading-tight truncate">
+                {user?.email ?? displayLabel}
+              </p>
               {user?.walletAddress && (
                 <p className="text-[10px] font-mono text-[#00DFA9]/50 mt-0.5 truncate">{shortAddress(user.walletAddress)}</p>
               )}
               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span className={cn(
-                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border',
-                  user?.kycStatus === 'verified'
-                    ? 'bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/25'
-                    : 'bg-[#64748B]/10 text-[#64748B] border-[#64748B]/20'
-                )}>
-                  <ShieldCheck className="h-2 w-2" />
-                  {user?.kycStatus === 'verified' ? 'Verified' : 'Unverified'}
-                </span>
+                {user?.kycStatus === 'verified' ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border bg-[#00DFA9]/10 text-[#00DFA9] border-[#00DFA9]/25">
+                    <ShieldCheck className="h-2 w-2" />
+                    Verified
+                  </span>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border bg-[#64748B]/10 text-[#64748B] border-[#64748B]/20 cursor-help">
+                        <ShieldCheck className="h-2 w-2" />
+                        Unverified
+                        <Info className="h-2 w-2 ml-0.5 opacity-60" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      className="max-w-[260px] text-center text-[11px] leading-relaxed"
+                      style={{ background: '#0D1520', border: '1px solid rgba(255,255,255,0.1)', color: '#CBD5E1' }}
+                    >
+                      Your account is currently new. Continue using the platform normally, and once your activity is reviewed, your account may be verified.
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 {user?.createdAt && (
                   <span className="inline-flex items-center gap-1 text-[10px] text-[#64748B]">
                     <Calendar className="h-2.5 w-2.5 shrink-0" />
