@@ -97,10 +97,11 @@ export function PromoPopup() {
   const [barStopped, setBarStopped] = useState(false);
 
   // Claim state
-  const [claiming,       setClaiming]       = useState(false);
-  const [claimError,     setClaimError]     = useState('');
-  const [alreadyClaimed, setAlreadyClaimed] = useState(false);
-  const [showCongrats,   setShowCongrats]   = useState(false);
+  const [claiming,          setClaiming]          = useState(false);
+  const [claimError,        setClaimError]        = useState('');
+  const [alreadyClaimed,    setAlreadyClaimed]    = useState(false);
+  const [showCongrats,      setShowCongrats]      = useState(false);
+  const [showIneligible,    setShowIneligible]    = useState(false);
 
   const initRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loopRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -164,12 +165,12 @@ export function PromoPopup() {
     const schedule = (nextVisible: boolean, delay: number) => {
       loopRef.current = setTimeout(() => {
         setBarVisible(nextVisible);
-        schedule(!nextVisible, nextVisible ? 10000 : 20000);
+        schedule(!nextVisible, nextVisible ? 20000 : 20000);
       }, delay);
     };
     initRef.current = setTimeout(() => {
       setBarVisible(true);
-      schedule(false, 5000);
+      schedule(false, 20000);
     }, 600);
     return () => {
       if (initRef.current) clearTimeout(initRef.current);
@@ -215,6 +216,8 @@ export function PromoPopup() {
       const msg = err instanceof Error ? err.message : '';
       if (msg.toLowerCase().includes('already') || msg.includes('409') || msg.includes('ALREADY_CLAIMED')) {
         setAlreadyClaimed(true);
+      } else if (msg.includes('NOT_ELIGIBLE') || msg.toLowerCase().includes('top up') || msg.toLowerCase().includes('minimum')) {
+        setShowIneligible(true);
       } else {
         setClaimError(msg || 'Failed to claim bonus. Please try again.');
       }
@@ -241,8 +244,63 @@ export function PromoPopup() {
 
   const altVisible = hovered || showAlt;
 
+  // Ineligible-to-claim popup (triggered from strip or modal when deposit threshold not met)
+  const IneligiblePopup = showIneligible ? (
+    <div
+      className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+      style={{ animation: 'pBdIn .32s ease forwards' }}
+    >
+      <div
+        className="absolute inset-0 bg-black/75"
+        style={{ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+        onClick={() => setShowIneligible(false)}
+      />
+      <div
+        className="relative w-full max-w-[400px] rounded-2xl overflow-hidden text-center"
+        style={{
+          background: 'linear-gradient(140deg,#0A0F16 0%,#0D1520 100%)',
+          border: '1px solid rgba(250,204,21,0.28)',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.9)',
+          animation: 'pMIn .38s cubic-bezier(.16,1,.3,1) forwards',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent" />
+        <div className="px-6 pt-8 pb-6">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.3)' }}
+          >
+            <Gift className="w-7 h-7 text-[#FACC15]" />
+          </div>
+          <h3 className="text-[18px] font-black text-[#F8FAFC] mb-2">Deposit Required</h3>
+          <p className="text-[13px] text-[#94A3B8] leading-relaxed mb-6">
+            Please top up your account with at least{' '}
+            <span className="font-bold text-[#FACC15]">8 USDT</span>, then you can claim the{' '}
+            <span className="font-bold text-[#00DFA9]">88.88 USDT</span> bonus.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowIneligible(false)}
+              className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              Maybe Later
+            </button>
+            <button
+              onClick={() => { setShowIneligible(false); navigate('/account/wallet'); }}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[#0B0F14] cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.97]"
+              style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)' }}
+            >
+              Top Up Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   // Guests only see the popup on the homepage; authenticated users see it on all pages
-  if (!isAuthenticated && location !== '/') return null;
+  if (!isAuthenticated && location !== '/') return <>{IneligiblePopup}</>;
 
   // Sticky claim bar — desktop: fixed bottom strip; mobile: slim top notice below header
   // Never rendered once bonus has been claimed
@@ -301,11 +359,12 @@ export function PromoPopup() {
     </>
   ) : null;
 
-  if (!visible) return <>{StickyBar}</>;
+  if (!visible) return <>{StickyBar}{IneligiblePopup}</>;
 
   return (
     <>
     {StickyBar}
+    {IneligiblePopup}
     <div
       translate="no"
       className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"

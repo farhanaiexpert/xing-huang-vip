@@ -382,14 +382,7 @@ export function Header() {
                   >
                     <span className="w-2 h-2 rounded-full bg-[#00DFA9] shadow-[0_0_6px_rgba(0,223,169,0.8)] shrink-0" />
                     <User className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
-                    <span className="text-xs text-[#00DFA9] font-semibold max-w-[110px] truncate">
-                      {user.email ?? user.displayName ?? 'Account'}
-                    </span>
-                    {balance > 0 && (
-                      <span className="text-[10px] text-[#FACC15] font-bold bg-[#FACC15]/10 px-1.5 py-0.5 rounded-md">
-                        {balance.toFixed(2)} USDT
-                      </span>
-                    )}
+                    <span className="text-xs text-[#94A3B8] font-semibold">Account</span>
                     <ChevronDown className={cn('h-3.5 w-3.5 text-[#94A3B8]/60 transition-transform duration-200', showAddressMenu && 'rotate-180')} />
                   </button>
 
