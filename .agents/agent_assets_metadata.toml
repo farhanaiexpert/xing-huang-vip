@@ -1,0 +1,44 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "FTlaSzv-eDgZ7BQBjJyzy"
+uri = "file://attached_assets/stock_images/fan_a_1.jpg"
+type = "image"
+title = "excited male sports fan cheering close up portrait"
+
+[[outputs]]
+id = "2BYO0ZHwCYSKmDXMF-Euf"
+uri = "file://attached_assets/stock_images/fan_a_2.jpg"
+type = "image"
+title = "excited male sports fan cheering close up portrait"
+
+[[outputs]]
+id = "Q86XOWzse_nIia0NLcXbF"
+uri = "file://attached_assets/stock_images/fan_a_3.jpg"
+type = "image"
+title = "excited male sports fan cheering close up portrait"
+
+[[outputs]]
+id = "eU4Q5ACQVgoOrV4EW4cBz"
+uri = "file://attached_assets/stock_images/fan_a_4.jpg"
+type = "image"
+title = "excited male sports fan cheering close up portrait"
+
+[[outputs]]
+id = "RtNGbqL-QsJ22O-Ehq3mb"
+uri = "file://attached_assets/stock_images/fan_b_1.jpg"
+type = "image"
+title = "young woman sports fan smiling portrait stadium"
+
+[[outputs]]
+id = "SsqJO8oz2RgXq5qFLHSf5"
+uri = "file://attached_assets/stock_images/fan_b_2.jpg"
+type = "image"
+title = "young woman sports fan smiling portrait stadium"
+
+[[outputs]]
+id = "U1qbmZGrB-MdJDcf4UIRq"
+uri = "file://attached_assets/stock_images/fan_b_3.jpg"
+type = "image"
+title = "young woman sports fan smiling portrait stadium"

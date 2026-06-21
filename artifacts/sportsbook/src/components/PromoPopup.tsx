@@ -4,6 +4,13 @@ import { useLocation } from 'wouter';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../lib/apiClient';
+import fanA1 from '@assets/stock_images/fan_a_1.jpg';
+import fanA2 from '@assets/stock_images/fan_a_2.jpg';
+import fanA3 from '@assets/stock_images/fan_a_3.jpg';
+import fanA4 from '@assets/stock_images/fan_a_4.jpg';
+import fanB1 from '@assets/stock_images/fan_b_1.jpg';
+import fanB2 from '@assets/stock_images/fan_b_2.jpg';
+import fanB3 from '@assets/stock_images/fan_b_3.jpg';
 
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imgi_15_Promo-Banner-2.webp';
 const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ronaldo11.webp';
@@ -53,18 +60,18 @@ function useCounter(target: number, active: boolean, duration = 1800) {
   return value;
 }
 
-const AVATARS = [
-  'https://i.pravatar.cc/50?img=1',
-  'https://i.pravatar.cc/50?img=3',
-  'https://i.pravatar.cc/50?img=5',
-  'https://i.pravatar.cc/50?img=8',
-  'https://i.pravatar.cc/50?img=12',
-  'https://i.pravatar.cc/50?img=15',
-  'https://i.pravatar.cc/50?img=20',
-];
+const AVATARS = [fanA1, fanB1, fanA2, fanB2, fanA3, fanB3, fanA4];
 
 const AVATAR_COLORS = ['#00DFA9','#38BDF8','#FACC15','#F97316','#A855F7','#00DFA9','#38BDF8'];
 const AVATAR_LETTERS = ['A','K','M','J','R','S','T'];
+
+// Pseudo-random "joined in the last hour" count (150–500) that rotates once per hour
+function getHourlyJoinCount(): number {
+  const hourBucket = Math.floor(Date.now() / 3_600_000);
+  let x = Math.sin(hourBucket * 9973.7) * 10000;
+  x = x - Math.floor(x);
+  return 150 + Math.floor(x * 351);
+}
 
 const DOT_BG = `radial-gradient(ellipse at 55% 85%, rgba(0,223,169,0.15) 0%, transparent 50%), radial-gradient(ellipse at 20% 20%, rgba(56,189,248,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 10%, rgba(250,204,21,0.08) 0%, transparent 40%), linear-gradient(160deg, #0D1825 0%, #081018 100%)`;
 
@@ -104,6 +111,13 @@ export function PromoPopup() {
   const loopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const counterVal = useCounter(88.88, showCongrats);
+
+  // "Joined in the last hour" count — rotates to a new random value (150–500) every hour
+  const [joinCount, setJoinCount] = useState(getHourlyJoinCount);
+  useEffect(() => {
+    const id = setInterval(() => setJoinCount(getHourlyJoinCount()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Check claimed status on mount (when authenticated)
   useEffect(() => {
@@ -487,36 +501,37 @@ export function PromoPopup() {
                 style={{ background: 'rgba(250,204,21,0.08)', animation: 'pPillPulse 2.2s ease-in-out infinite' }}
               >
                 <span className="text-[#FACC15] text-[10px]">✦</span>
-                <span className="text-[11px] sm:text-[12px] font-black text-[#FACC15] tracking-wide">欢迎奖金 — 免费领取 88.88 USDT</span>
+                <span className="text-[11px] sm:text-[12px] font-black text-[#FACC15] tracking-wide">首充豪礼 — 充值即送 88.88 USDT</span>
               </div>
             </div>
 
             {/* Headline */}
-            <h2 className="text-[20px] sm:text-[24px] font-black text-[#F8FAFC] leading-[1.18] mb-1.5">
+            <h2 className="text-[19px] sm:text-[23px] font-black text-[#F8FAFC] leading-[1.22] mb-1.5">
               <span style={{ background: 'linear-gradient(90deg,#00DFA9 0%,#38BDF8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                注册即送
+                立即充值，即可获赠
               </span>{' '}
-              <span className="text-[#FACC15]">88.88 USDT</span>
+              <span className="text-[#FACC15]">88.88 USDT</span>{' '}
+              <span className="text-[#F8FAFC]">豪华赠金！</span>
             </h2>
 
             {/* Subtext — shorter on mobile */}
             <p className="text-[11px] sm:text-[13px] text-[#94A3B8] leading-snug mb-3">
               <span className="md:hidden">
-                即时充值 · 实时赔率 · 公平透明。
+                极速充值 · 实时赔率 · 公平透明。
               </span>
               <span className="hidden md:inline">
                 加入数千名正在{' '}
                 <span translate="no" className="text-[#00DFA9] font-semibold">杏凰体育</span>{' '}
-                获利的玩家。即时充值 · 实时赔率 · 公平透明。
+                赢利的玩家。极速充值 · 实时赔率 · 公平透明。
               </span>
             </p>
 
             {/* Social proof */}
-            <div className="flex items-center gap-2.5 mb-3 px-2.5 py-2 rounded-2xl border border-[#1E2A38]"
-              style={{ background: 'rgba(15,20,28,0.9)' }}>
-              <div className="flex -space-x-2 shrink-0">
+            <div className="flex items-center gap-3 mb-3 px-3 py-2.5 rounded-2xl border border-[#1E2A38]"
+              style={{ background: 'linear-gradient(180deg,rgba(15,20,28,0.96),rgba(10,15,22,0.9))' }}>
+              <div className="flex -space-x-2.5 shrink-0">
                 {AVATARS.map((src, i) => (
-                  <div key={i} className="w-7 h-7 rounded-full border-[1.5px] border-[#0A0F16] overflow-hidden shrink-0 relative"
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0A0F16] overflow-hidden shrink-0 relative shadow-[0_2px_6px_rgba(0,0,0,0.55)]"
                     style={{ zIndex: AVATARS.length - i }}>
                     <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#0B0F14]"
                       style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
@@ -528,9 +543,15 @@ export function PromoPopup() {
                 ))}
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[#00DFA9] font-black text-[11px]">+127 名玩家</span>
-                <span className="text-[#CBD5E1] text-[11px]"> 在过去 1 小时内加入</span>
-                <div className="text-[9px] text-[#64748B] mt-0.5 leading-none">全球超过 50,000 名活跃玩家</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse shrink-0" />
+                  <p className="text-[11px] leading-tight">
+                    <span className="text-[#CBD5E1]">过去 1 小时内已有 </span>
+                    <span className="text-[#00DFA9] font-black tabular-nums">{joinCount}+</span>
+                    <span className="text-[#CBD5E1]"> 名玩家加入</span>
+                  </p>
+                </div>
+                <div className="text-[9px] text-[#64748B] mt-0.5 leading-none pl-3">全球超过 50,000 名活跃玩家</div>
               </div>
             </div>
 
@@ -569,7 +590,7 @@ export function PromoPopup() {
                     style={{ background: 'linear-gradient(135deg,#00DFA9 0%,#00C49A 100%)', animation: 'pCTAPulse 2.6s ease-in-out infinite' }}
                   >
                     <Gift className="w-4 h-4 shrink-0" />
-                    {claiming ? '领取中…' : isAuthenticated ? '立即领取 — 获得 88.88 USDT' : '注册即送 88.88 USDT'}
+                    {claiming ? '领取中…' : '立即充值，领取 88.88 USDT'}
                     <div className="absolute inset-0 pointer-events-none"
                       style={{ background: 'linear-gradient(108deg,transparent 38%,rgba(255,255,255,0.22) 50%,transparent 62%)', animation: 'pShimmer 2.6s ease-in-out infinite' }} />
                   </button>
