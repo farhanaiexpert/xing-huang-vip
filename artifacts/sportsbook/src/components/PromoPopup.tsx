@@ -4,13 +4,6 @@ import { useLocation } from 'wouter';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../hooks/useWallet';
 import { api } from '../lib/apiClient';
-import fanA1 from '@assets/stock_images/fan_a_1.jpg';
-import fanA2 from '@assets/stock_images/fan_a_2.jpg';
-import fanA3 from '@assets/stock_images/fan_a_3.jpg';
-import fanA4 from '@assets/stock_images/fan_a_4.jpg';
-import fanB1 from '@assets/stock_images/fan_b_1.jpg';
-import fanB2 from '@assets/stock_images/fan_b_2.jpg';
-import fanB3 from '@assets/stock_images/fan_b_3.jpg';
 
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imgi_15_Promo-Banner-2.webp';
 const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ronaldo11.webp';
@@ -60,10 +53,16 @@ function useCounter(target: number, active: boolean, duration = 1800) {
   return value;
 }
 
-const AVATARS = [fanA1, fanB1, fanA2, fanB2, fanA3, fanB3, fanA4];
-
-const AVATAR_COLORS = ['#00DFA9','#38BDF8','#FACC15','#F97316','#A855F7','#00DFA9','#38BDF8'];
-const AVATAR_LETTERS = ['A','K','M','J','R','S','T'];
+// Sports-icon avatars rendered on colored gradient rings (no external images)
+const SPORT_AVATARS = [
+  { icon: '⚽', bg: 'linear-gradient(135deg,#0F3D2E 0%,#00DFA9 100%)' },
+  { icon: '🏀', bg: 'linear-gradient(135deg,#7C2D12 0%,#F97316 100%)' },
+  { icon: '🎾', bg: 'linear-gradient(135deg,#0C4A6E 0%,#38BDF8 100%)' },
+  { icon: '🏈', bg: 'linear-gradient(135deg,#7F1D1D 0%,#EF4444 100%)' },
+  { icon: '🎱', bg: 'linear-gradient(135deg,#4C1D95 0%,#A855F7 100%)' },
+  { icon: '🏐', bg: 'linear-gradient(135deg,#115E59 0%,#2DD4BF 100%)' },
+  { icon: '⚾', bg: 'linear-gradient(135deg,#854D0E 0%,#FACC15 100%)' },
+];
 
 // Pseudo-random "joined in the last hour" count (150–500) that rotates once per hour
 function getHourlyJoinCount(): number {
@@ -530,15 +529,10 @@ export function PromoPopup() {
             <div className="flex items-center gap-3 mb-3 px-3 py-2.5 rounded-2xl border border-[#1E2A38]"
               style={{ background: 'linear-gradient(180deg,rgba(15,20,28,0.96),rgba(10,15,22,0.9))' }}>
               <div className="flex -space-x-2.5 shrink-0">
-                {AVATARS.map((src, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0A0F16] overflow-hidden shrink-0 relative shadow-[0_2px_6px_rgba(0,0,0,0.55)]"
-                    style={{ zIndex: AVATARS.length - i }}>
-                    <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#0B0F14]"
-                      style={{ background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
-                      {AVATAR_LETTERS[i % AVATAR_LETTERS.length]}
-                    </div>
-                    <img src={src} alt="Player" className="absolute inset-0 w-full h-full object-cover"
-                      onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
+                {SPORT_AVATARS.map((a, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0A0F16] shrink-0 relative flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.55)]"
+                    style={{ zIndex: SPORT_AVATARS.length - i, background: a.bg }}>
+                    <span className="text-[15px] leading-none select-none" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.4))' }}>{a.icon}</span>
                   </div>
                 ))}
               </div>
