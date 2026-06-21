@@ -1289,36 +1289,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   });
 });
 
-// ── Reset password (no email token — direct reset by email + new password) ───
-router.post("/auth/reset-password", async (req, res): Promise<void> => {
-  const { email, newPassword } = req.body as { email?: string; newPassword?: string };
-  if (!email || !newPassword) {
-    res.status(400).json({ error: "Email and new password are required" });
-    return;
-  }
-  if (newPassword.length < 8) {
-    res.status(400).json({ error: "Password must be at least 8 characters" });
-    return;
-  }
-
-  const [user] = await db.select({ id: usersTable.id, passwordHash: usersTable.passwordHash })
-    .from(usersTable)
-    .where(eq(usersTable.email, email.toLowerCase().trim()))
-    .limit(1);
-
-  // Always return success (don't reveal whether email exists)
-  if (!user || !user.passwordHash) {
-    res.json({ success: true });
-    return;
-  }
-
-  const passwordHash = await bcrypt.hash(newPassword, 12);
-  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
-  // Invalidate all sessions so the user must log in with the new password
-  await db.delete(sessionsTable).where(eq(sessionsTable.userId, user.id));
-  res.json({ success: true });
-});
-
 // ── Admin-only: email/password login (kept for admin portal) ──────────────────
 const AdminLoginBody = z.object({
   email: z.string().email(),

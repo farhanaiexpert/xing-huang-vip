@@ -100,6 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithWallet = useCallback((accessToken: string, refreshToken: string, authedUser: AuthUser) => {
     setTokens(accessToken, refreshToken);
     setUser(authedUser);
+    // No username = brand-new wallet account → trigger profile setup
+    if (!authedUser.username) setIsNewUser(true);
     // Migrate guest avatar → account (fire-and-forget)
     if (!authedUser.avatar) {
       const guestAvatar = localStorage.getItem('guest_avatar');

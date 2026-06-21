@@ -8,11 +8,9 @@ import { api } from '../lib/apiClient';
 const IMG_ORIGINAL = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/imgi_15_Promo-Banner-2.webp';
 const IMG_ALT      = 'https://media.ourwebprojects.pro/wp-content/uploads/2026/06/ronaldo11.webp';
 
-const SNOOZE_KEY          = 'promo_snoozed_until';        // guests: dismiss for 30 min
-const SNOOZE_CLAIMED_KEY  = 'promo_claimed_snoozed_until'; // post-claim: 2 h between shows
-const SESSION_KEY         = 'promo_session_dismissed';     // logged-in unclaimed: per JS-session
-const SNOOZE_NOT_CLAIMED  = 30 * 60 * 1000;        // 30 minutes  (guest dismiss)
-const SNOOZE_CLAIMED      = 2 * 60 * 60 * 1000;   // 2 hours     (post-claim)
+const SNOOZE_KEY          = 'promo_snoozed_until';
+const SNOOZE_NOT_CLAIMED  = 30 * 60 * 1000;        // 30 minutes
+const SNOOZE_CLAIMED      = 12 * 60 * 60 * 1000;   // 12 hours
 
 const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
   id: i,
@@ -97,59 +95,31 @@ export function PromoPopup() {
   const [barStopped, setBarStopped] = useState(false);
 
   // Claim state
-  const [claiming,          setClaiming]          = useState(false);
-  const [claimError,        setClaimError]        = useState('');
-  const [alreadyClaimed,    setAlreadyClaimed]    = useState(false);
-  const [showCongrats,      setShowCongrats]      = useState(false);
-  const [showIneligible,    setShowIneligible]    = useState(false);
+  const [claiming,       setClaiming]       = useState(false);
+  const [claimError,     setClaimError]     = useState('');
+  const [alreadyClaimed, setAlreadyClaimed] = useState(false);
+  const [showCongrats,   setShowCongrats]   = useState(false);
 
-  const initRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const loopRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Ensures popup is triggered only once per JS-session even if claim status arrives late
-  const popupTriggeredRef = useRef(false);
+  const initRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const counterVal = useCounter(88.88, showCongrats);
 
-  // Load claimed status — sets alreadyClaimed + signals claimLoaded
-  const [claimLoaded, setClaimLoaded] = useState(false);
+  // Check claimed status on mount (when authenticated)
   useEffect(() => {
-    if (!isAuthenticated) { setClaimLoaded(true); return; }
+    if (!isAuthenticated) return;
     api.get<{ claimed: boolean }>('/wallet/bonus/welcome/status')
       .then(r => { if (r.claimed) setAlreadyClaimed(true); })
-      .catch(() => {})
-      .finally(() => setClaimLoaded(true));
+      .catch(() => { /* silent — don't block popup */ });
   }, [isAuthenticated]);
 
-  // Decide whether / when to show the popup — runs once per session after claim
-  // status is known so we never flash the modal on claimed accounts.
+  // Show popup after 3 s — skip if user snoozed within the last 3 hours
   useEffect(() => {
-    if (!claimLoaded || popupTriggeredRef.current) return;
-    popupTriggeredRef.current = true;
-
-    if (isAuthenticated && !alreadyClaimed) {
-      // Logged-in + unclaimed: show on every page load unless already dismissed
-      // THIS session (sessionStorage resets on tab/browser close).
-      if (sessionStorage.getItem(SESSION_KEY)) return;
-      const t = setTimeout(() => setVisible(true), 3000);
-      return () => clearTimeout(t);
-    }
-
-    if (isAuthenticated && alreadyClaimed) {
-      // Post-claim: show once every 2 hours
-      const until = parseInt(localStorage.getItem(SNOOZE_CLAIMED_KEY) ?? '0', 10);
-      if (Date.now() < until) return;
-      const t = setTimeout(() => setVisible(true), 3000);
-      return () => clearTimeout(t);
-    }
-
-    // Guest: existing 30-min snooze, homepage only
-    if (location !== '/') return;
-    const until = parseInt(localStorage.getItem(SNOOZE_KEY) ?? '0', 10);
-    if (Date.now() < until) return;
+    const snoozedUntil = parseInt(localStorage.getItem(SNOOZE_KEY) ?? '0', 10);
+    if (Date.now() < snoozedUntil) return;
     const t = setTimeout(() => setVisible(true), 3000);
     return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claimLoaded]);
+  }, []);
 
   // Auto-cycle images every 5 s when not hovered
   useEffect(() => {
@@ -165,12 +135,12 @@ export function PromoPopup() {
     const schedule = (nextVisible: boolean, delay: number) => {
       loopRef.current = setTimeout(() => {
         setBarVisible(nextVisible);
-        schedule(!nextVisible, nextVisible ? 20000 : 20000);
+        schedule(!nextVisible, nextVisible ? 5000 : 60000);
       }, delay);
     };
     initRef.current = setTimeout(() => {
       setBarVisible(true);
-      schedule(false, 20000);
+      schedule(false, 5000);
     }, 600);
     return () => {
       if (initRef.current) clearTimeout(initRef.current);
@@ -180,17 +150,8 @@ export function PromoPopup() {
 
   function close() {
     if (showCongrats) return;
-    if (isAuthenticated && !alreadyClaimed) {
-      // Logged-in, unclaimed: just dismiss for this browser session; will
-      // show again next time the page is loaded fresh.
-      sessionStorage.setItem(SESSION_KEY, '1');
-    } else if (alreadyClaimed) {
-      // Post-claim: snooze 2 hours
-      localStorage.setItem(SNOOZE_CLAIMED_KEY, String(Date.now() + SNOOZE_CLAIMED));
-    } else {
-      // Guest: snooze 30 minutes
-      localStorage.setItem(SNOOZE_KEY, String(Date.now() + SNOOZE_NOT_CLAIMED));
-    }
+    const snooze = alreadyClaimed ? SNOOZE_CLAIMED : SNOOZE_NOT_CLAIMED;
+    localStorage.setItem(SNOOZE_KEY, String(Date.now() + snooze));
     setClosing(true);
     setTimeout(() => {
       setVisible(false);
@@ -216,8 +177,6 @@ export function PromoPopup() {
       const msg = err instanceof Error ? err.message : '';
       if (msg.toLowerCase().includes('already') || msg.includes('409') || msg.includes('ALREADY_CLAIMED')) {
         setAlreadyClaimed(true);
-      } else if (msg.includes('NOT_ELIGIBLE') || msg.toLowerCase().includes('top up') || msg.toLowerCase().includes('minimum')) {
-        setShowIneligible(true);
       } else {
         setClaimError(msg || 'Failed to claim bonus. Please try again.');
       }
@@ -244,63 +203,8 @@ export function PromoPopup() {
 
   const altVisible = hovered || showAlt;
 
-  // Ineligible-to-claim popup (triggered from strip or modal when deposit threshold not met)
-  const IneligiblePopup = showIneligible ? (
-    <div
-      className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
-      style={{ animation: 'pBdIn .32s ease forwards' }}
-    >
-      <div
-        className="absolute inset-0 bg-black/75"
-        style={{ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
-        onClick={() => setShowIneligible(false)}
-      />
-      <div
-        className="relative w-full max-w-[400px] rounded-2xl overflow-hidden text-center"
-        style={{
-          background: 'linear-gradient(140deg,#0A0F16 0%,#0D1520 100%)',
-          border: '1px solid rgba(250,204,21,0.28)',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.9)',
-          animation: 'pMIn .38s cubic-bezier(.16,1,.3,1) forwards',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent" />
-        <div className="px-6 pt-8 pb-6">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.3)' }}
-          >
-            <Gift className="w-7 h-7 text-[#FACC15]" />
-          </div>
-          <h3 className="text-[18px] font-black text-[#F8FAFC] mb-2">Deposit Required</h3>
-          <p className="text-[13px] text-[#94A3B8] leading-relaxed mb-6">
-            Please top up your account with at least{' '}
-            <span className="font-bold text-[#FACC15]">8 USDT</span>, then you can claim the{' '}
-            <span className="font-bold text-[#00DFA9]">88.88 USDT</span> bonus.
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowIneligible(false)}
-              className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              Maybe Later
-            </button>
-            <button
-              onClick={() => { setShowIneligible(false); navigate('/account/wallet'); }}
-              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[#0B0F14] cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.97]"
-              style={{ background: 'linear-gradient(135deg,#00DFA9,#00C49A)' }}
-            >
-              Top Up Now
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  ) : null;
-
-  // Guests only see the popup on the homepage; authenticated users see it on all pages
-  if (!isAuthenticated && location !== '/') return <>{IneligiblePopup}</>;
+  // Only show on the homepage
+  if (location !== '/') return null;
 
   // Sticky claim bar — desktop: fixed bottom strip; mobile: slim top notice below header
   // Never rendered once bonus has been claimed
@@ -359,12 +263,11 @@ export function PromoPopup() {
     </>
   ) : null;
 
-  if (!visible) return <>{StickyBar}{IneligiblePopup}</>;
+  if (!visible) return <>{StickyBar}</>;
 
   return (
     <>
     {StickyBar}
-    {IneligiblePopup}
     <div
       translate="no"
       className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"

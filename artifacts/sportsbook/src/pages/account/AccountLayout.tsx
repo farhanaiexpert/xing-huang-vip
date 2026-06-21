@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Link, useParams, Redirect } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/hooks/useWallet';
 import { useToast } from '@/hooks/use-toast';
 import { useBetHistory } from '@/hooks/useBetHistory';
 import { Header } from '@/components/Header';
@@ -78,6 +79,7 @@ function isSection(s: string): s is SectionId {
 
 export function AccountLayout() {
   const { user, logout, isLoading } = useAuth();
+  const { isConnected } = useWallet();
   const { toast } = useToast();
   const { openBetsCount } = useBetHistory();
   const params = useParams<{ section?: string }>();
@@ -86,23 +88,18 @@ export function AccountLayout() {
   const section: SectionId = isSection(raw) ? raw : 'overview';
   const PageComponent = PAGES[section];
 
-  // ── Auth guard: ALL account sections require login ────────────────────────
-  // Gate on !isLoading so a genuinely-connected user isn't bounced on
-  // refresh/deep-link before the session cookie has been validated.
-  const notAuthed = !isLoading && !user;
+  // Wallet page is gated behind an active wallet connection.
+  // Wait for auth restore (isLoading) so a connected user isn't bounced on refresh/deep-link.
+  const walletBlocked = !isLoading && section === 'wallet' && !isConnected;
   useEffect(() => {
-    if (notAuthed) {
-      // Save intended destination so Header redirects here after login
-      const dest = `/account${section !== 'overview' ? `/${section}` : ''}`;
-      sessionStorage.setItem('cb_return_to', dest);
-      toast({ title: 'Please sign in to access your account.' });
-      window.dispatchEvent(new Event('openLoginModal'));
+    if (walletBlocked) {
+      toast({ title: 'Please connect your wallet first to access the wallet page.' });
     }
-  }, [notAuthed, section, toast]);
+  }, [walletBlocked, toast]);
 
-  const displayLabel = user ? userDisplayLabel(user) : '';
-  const initials     = user ? addressInitials(displayLabel) : '';
-  const avatarSrc    = user?.avatar ?? null;
+  const displayLabel = user ? userDisplayLabel(user) : 'Guest';
+  const initials     = user ? addressInitials(displayLabel) : 'G';
+  const avatarSrc    = user ? (user.avatar ?? null) : (localStorage.getItem('guest_avatar') ?? null);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -118,7 +115,7 @@ export function AccountLayout() {
   const activeNav   = NAV.find(n => n.id === section)!;
   const activeColor = SECTION_COLOR[section];
 
-  if (notAuthed) {
+  if (walletBlocked) {
     return <Redirect to="/" />;
   }
 

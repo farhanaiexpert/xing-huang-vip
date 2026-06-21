@@ -135,9 +135,6 @@ const MIN_NATIVE_GAS: Record<number, number> = {
 const SUPPORTED_CHAIN_IDS = [56, 137, 42161, 10, 8453, 59144];
 
 // ── Main component ─────────────────────────────────────────────────────────────
-// Set to true once deposit integrations are ready to expose to users.
-const DEPOSIT_METHODS_ENABLED = false;
-
 export function WalletPage() {
   const { isAuthenticated, user } = useAuth();
   const { bets } = useBetHistory();
@@ -252,30 +249,20 @@ export function WalletPage() {
 
   const [bonusBalance, setBonusBalance] = useState<number>(0);
 
-  // Welcome bonus state
-  interface WelcomeBonusStatus { claimed: boolean; eligible: boolean; totalDeposited: number; minDeposit: number; bonusAmount: string; }
-  const [welcomeBonus, setWelcomeBonus] = useState<WelcomeBonusStatus | null>(null);
-  const [bonusClaiming, setBonusClaiming] = useState(false);
-  const [bonusIneligiblePopup, setBonusIneligiblePopup] = useState(false);
-  const [bonusSuccessAmt, setBonusSuccessAmt] = useState(0);
-  const [showBonusCongrats, setShowBonusCongrats] = useState(false);
-
   const loadData = useCallback(async () => {
     if (!isAuthenticated) { setLoading(false); return; }
     try {
-      const [info, bal, history, cmCheck, wb] = await Promise.all([
+      const [info, bal, history, cmCheck] = await Promise.all([
         api.get<DepositInfo>('/wallet/deposit-info'),
         api.get<{ balance: string; bonusBalance?: string }>('/wallet/balance'),
         api.get<Transaction[]>('/wallet/transactions'),
         api.get<{ available: boolean }>('/wallet/deposit/cryptomus/available').catch(() => ({ available: false })),
-        api.get<WelcomeBonusStatus>('/wallet/bonus/welcome/status').catch(() => null),
       ]);
       setDepositInfo(info);
       setBalance(parseFloat(bal.balance));
       setBonusBalance(parseFloat(bal.bonusBalance ?? '0'));
       setTxns(history);
       setCmAvailable(cmCheck.available);
-      if (wb) setWelcomeBonus(wb);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, [isAuthenticated]);
@@ -329,32 +316,6 @@ export function WalletPage() {
   const w3Address   = evmWallet.address;
   const w3Connected = evmWallet.isConnected;
   const [highlightDeposit, setHighlightDeposit] = useState(false);
-
-  // ── Welcome bonus claim ───────────────────────────────────────────────────
-  const claimWelcomeBonus = useCallback(async () => {
-    if (!welcomeBonus) return;
-    if (!welcomeBonus.eligible) { setBonusIneligiblePopup(true); return; }
-    setBonusClaiming(true);
-    try {
-      const result = await api.post<{ bonusAmount: string }>('/wallet/bonus/welcome', {});
-      const amt = parseFloat(result.bonusAmount ?? '88.88');
-      setBonusSuccessAmt(amt);
-      setShowBonusCongrats(true);
-      setWelcomeBonus(prev => prev ? { ...prev, claimed: true } : prev);
-      setBonusBalance(prev => prev + amt);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Could not claim bonus';
-      if (msg.toLowerCase().includes('already')) {
-        setWelcomeBonus(prev => prev ? { ...prev, claimed: true } : prev);
-      } else if (msg.toLowerCase().includes('top up') || msg.toLowerCase().includes('deposit') || msg.toLowerCase().includes('eligible')) {
-        setBonusIneligiblePopup(true);
-      } else {
-        toast({ title: msg, variant: 'destructive' });
-      }
-    } finally {
-      setBonusClaiming(false);
-    }
-  }, [welcomeBonus, toast]);
 
   // Switch network only on user action; surface rejection as a toast (spec wording)
   const handleNetworkSwitch = useCallback(async (chainId: number) => {
@@ -896,152 +857,6 @@ export function WalletPage() {
         </div>
       </div>
 
-      {/* ── Welcome Bonus Card ───────────────────────────────────────────── */}
-      {isAuthenticated && welcomeBonus && !welcomeBonus.claimed && (
-        <div
-          className="relative rounded-2xl border overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, #0A1A10 0%, #071510 60%, #0B0F14 100%)',
-            borderColor: 'rgba(250,204,21,0.25)',
-            boxShadow: '0 0 40px rgba(250,204,21,0.06)',
-          }}
-        >
-          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent" />
-          <div className="p-4 flex items-center gap-4">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl"
-              style={{ background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.25)' }}
-            >
-              🎁
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold text-[#FACC15] uppercase tracking-wide mb-0.5">Welcome Bonus</p>
-              <p className="text-[15px] font-black text-[#F8FAFC] leading-tight">
-                Claim <span className="text-[#FACC15]">88.88 USDT</span>
-              </p>
-              <p className="text-[11px] text-[#64748B] mt-0.5">
-                {welcomeBonus.eligible
-                  ? 'You\'re eligible! Claim your welcome bonus now.'
-                  : `Top up ≥ 8 USDT to unlock this bonus`}
-              </p>
-            </div>
-            <button
-              onClick={claimWelcomeBonus}
-              disabled={bonusClaiming}
-              className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{
-                background: welcomeBonus.eligible
-                  ? 'linear-gradient(135deg, #FACC15 0%, #E6B800 100%)'
-                  : 'rgba(250,204,21,0.12)',
-                color: welcomeBonus.eligible ? '#0B0F14' : '#FACC15',
-                border: welcomeBonus.eligible ? 'none' : '1px solid rgba(250,204,21,0.25)',
-              }}
-            >
-              {bonusClaiming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Claim'}
-            </button>
-          </div>
-          {!welcomeBonus.eligible && (
-            <div className="px-4 pb-3">
-              <div className="h-1.5 w-full rounded-full overflow-hidden bg-white/5">
-                <div
-                  className="h-full rounded-full bg-[#FACC15]/60 transition-all duration-500"
-                  style={{ width: `${Math.min((welcomeBonus.totalDeposited / 8) * 100, 100)}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-[#475569] mt-1 text-right tabular-nums">
-                {welcomeBonus.totalDeposited.toFixed(2)} / 8.00 USDT deposited
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {isAuthenticated && welcomeBonus?.claimed && (
-        <div
-          className="relative rounded-2xl border p-4 flex items-center gap-3"
-          style={{ background: 'rgba(0,223,169,0.04)', borderColor: 'rgba(0,223,169,0.15)' }}
-        >
-          <CheckCircle2 className="h-5 w-5 text-[#00DFA9] shrink-0" />
-          <div>
-            <p className="text-[13px] font-bold text-[#F8FAFC]">Welcome bonus claimed!</p>
-            <p className="text-[11px] text-[#64748B]">88.88 USDT added to your bonus balance · Bet only, non-withdrawable</p>
-          </div>
-        </div>
-      )}
-
-      {/* Ineligible bonus popup */}
-      {bonusIneligiblePopup && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(5,8,12,0.82)', backdropFilter: 'blur(8px)' }}>
-          <div
-            className="relative max-w-sm w-full rounded-3xl border p-6 text-center"
-            style={{
-              background: 'linear-gradient(180deg, #0E141B 0%, #0B0F14 100%)',
-              borderColor: 'rgba(250,204,21,0.25)',
-              boxShadow: '0 40px 100px rgba(0,0,0,0.8)',
-            }}
-          >
-            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent rounded-t-3xl" />
-            <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center text-2xl"
-              style={{ background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.25)' }}>
-              🎁
-            </div>
-            <h3 className="text-[16px] font-black text-[#F8FAFC] mb-2">Deposit Required</h3>
-            <p className="text-[13px] text-[#94A3B8] leading-relaxed mb-5">
-              Please top up your account with at least <span className="font-bold text-[#FACC15]">8 USDT</span> to claim the <span className="font-bold text-[#FACC15]">88.88 USDT</span> bonus. You can use this bonus for betting.
-            </p>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => { setBonusIneligiblePopup(false); setTab('deposit'); }}
-                className="w-full py-3 rounded-xl font-bold text-[13px] text-[#0B0F14] transition-all hover:scale-[1.02]"
-                style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
-              >
-                Top Up Now
-              </button>
-              <button
-                onClick={() => setBonusIneligiblePopup(false)}
-                className="text-[11px] text-[#64748B] hover:text-[#94A3B8] transition-colors py-1"
-              >
-                Maybe later
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bonus claimed congrats popup */}
-      {showBonusCongrats && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ background: 'rgba(5,8,12,0.88)', backdropFilter: 'blur(10px)' }}>
-          <div
-            className="relative max-w-sm w-full rounded-3xl border p-8 text-center"
-            style={{
-              background: 'linear-gradient(160deg, #0A100A 0%, #0D1A10 55%, #0A0F10 100%)',
-              borderColor: 'rgba(250,204,21,0.35)',
-              boxShadow: '0 0 80px rgba(250,204,21,0.15), 0 40px 100px rgba(0,0,0,0.9)',
-            }}
-          >
-            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FACC15] to-transparent rounded-t-3xl" />
-            <div className="text-4xl mb-4">🎉</div>
-            <h3 className="text-[20px] font-black text-[#FACC15] mb-1">Bonus Credited!</h3>
-            <div className="my-4 px-6 py-4 rounded-2xl border border-[#FACC15]/20" style={{ background: 'rgba(250,204,21,0.06)' }}>
-              <p className="text-[10px] text-[#64748B] uppercase tracking-widest mb-1">Bonus Balance</p>
-              <p className="text-[40px] font-black text-[#FACC15] leading-none">
-                {bonusSuccessAmt.toFixed(2)}
-              </p>
-              <p className="text-[14px] font-bold text-[#FACC15]/80 mt-1">USDT</p>
-              <p className="text-[10px] text-[#475569] mt-2">Non-withdrawable · Bet only</p>
-            </div>
-            <p className="text-[12px] text-[#94A3B8] mb-5">Any profits from bets using this bonus are fully withdrawable.</p>
-            <button
-              onClick={() => setShowBonusCongrats(false)}
-              className="w-full py-3 rounded-xl font-bold text-[14px] text-[#0B0F14] transition-all hover:scale-[1.02]"
-              style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}
-            >
-              Start Betting →
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <div className="flex rounded-xl overflow-hidden border border-white/[0.07] bg-[#0E1520] p-1 gap-1">
         {(['deposit', 'withdraw', 'history'] as const).map(t => (
@@ -1063,35 +878,8 @@ export function WalletPage() {
 
           {/* ── Method selector ─────────────────────────────────────────── */}
 
-          {/* Top Up Coming Soon placeholder */}
-          {!DEPOSIT_METHODS_ENABLED && (
-            <div className="rounded-2xl text-center py-12 px-6 space-y-5"
-              style={{ background: 'linear-gradient(135deg, #0C1520 0%, #091018 100%)', border: '1px solid rgba(0,223,169,0.15)' }}>
-              <div className="w-14 h-14 rounded-2xl bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center mx-auto"
-                style={{ boxShadow: '0 0 30px rgba(0,223,169,0.06)' }}>
-                <Wallet className="h-7 w-7 text-[#00DFA9]" />
-              </div>
-              <div>
-                <h3 className="text-[18px] font-black text-[#F8FAFC] mb-2">Top Up Coming Soon</h3>
-                <p className="text-[13px] text-[#64748B] leading-relaxed max-w-[280px] mx-auto">
-                  We're setting up secure deposit methods. Contact our support team to top up your account.
-                </p>
-              </div>
-              <a
-                href="https://t.me/xinhuangsupport"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.25)' }}
-              >
-                Contact Support
-              </a>
-              <p className="text-[10px] text-[#475569]">Available 24/7 · Rapid response</p>
-            </div>
-          )}
-
-          {/* Method picker — all deposit methods */}
-          {DEPOSIT_METHODS_ENABLED && <div className="space-y-2.5">
+          {/* Method picker — always visible: all deposit methods shown upfront */}
+          <div className="space-y-2.5">
               <div className="px-0.5">
                 <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Choose Top Up Method</p>
               </div>
@@ -1220,10 +1008,10 @@ export function WalletPage() {
                 </div>
                 <Lock className="w-4 h-4 text-[#475569] shrink-0" />
               </div>
-            </div>}
+            </div>
 
           {/* Trust elements — desktop only to save mobile space */}
-          {DEPOSIT_METHODS_ENABLED && <div className="hidden sm:grid sm:grid-cols-4 gap-2">
+          <div className="hidden sm:grid sm:grid-cols-4 gap-2">
             {[
               { emoji: '🔒', label: 'Secure Payments', sub: 'All deposits verified automatically', color: '#38BDF8' },
               { emoji: '⚡', label: 'Fast Processing', sub: 'Most deposits confirmed within minutes', color: '#00DFA9' },
@@ -1236,10 +1024,10 @@ export function WalletPage() {
                 <p className="text-[10px] text-[#64748B] mt-1 leading-relaxed">{sub}</p>
               </div>
             ))}
-          </div>}
+          </div>
 
           {/* ── NOWPayments auto-pay panel ─────────────────────────────── */}
-          {DEPOSIT_METHODS_ENABLED && depositMethod === 'nowpayments' && (
+          {depositMethod === 'nowpayments' && (
             <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #0A1628 100%)', border: '1px solid rgba(56,189,248,0.20)' }}>
               <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(56,189,248,0.06) 0%, transparent 100%)' }}>
                 <div className="flex items-center gap-3">
@@ -1507,7 +1295,7 @@ export function WalletPage() {
           )}
 
           {/* ── Plisio deposit panel ─────────────────────────────────────── */}
-          {DEPOSIT_METHODS_ENABLED && depositMethod === 'plisio' && (
+          {depositMethod === 'plisio' && (
             <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0D0A1E 0%, #110E28 100%)', border: '1px solid rgba(168,85,247,0.20)' }}>
               <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(168,85,247,0.06) 0%, transparent 100%)' }}>
                 <div className="flex items-center gap-3">
@@ -1733,7 +1521,7 @@ export function WalletPage() {
           )}
 
           {/* ── Web3 Wallet auto-deposit ─────────────────────────────────── */}
-          {DEPOSIT_METHODS_ENABLED && depositMethod === 'wallet' && (
+          {depositMethod === 'wallet' && (
             <div ref={depositSectionRef} className="rounded-2xl overflow-hidden transition-shadow duration-500" style={{ background: 'linear-gradient(135deg, #0A0F1E 0%, #0E1228 100%)', border: `1px solid ${highlightDeposit ? 'rgba(167,139,250,0.70)' : 'rgba(167,139,250,0.20)'}`, boxShadow: highlightDeposit ? '0 0 0 2px rgba(167,139,250,0.45), 0 0 28px rgba(167,139,250,0.35)' : 'none' }}>
               <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(167,139,250,0.06) 0%, transparent 100%)' }}>
                 <div className="flex items-center gap-3">
@@ -2230,7 +2018,7 @@ export function WalletPage() {
           )}
 
           {/* ── Cryptomus USDT auto-pay panel ───────────────────────────── */}
-          {DEPOSIT_METHODS_ENABLED && depositMethod === 'cryptomus' && (
+          {depositMethod === 'cryptomus' && (
             <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #071A12 100%)', border: '1px solid rgba(0,223,169,0.20)' }}>
               <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(0,223,169,0.06) 0%, transparent 100%)' }}>
                 <div className="flex items-center gap-3">
@@ -2492,7 +2280,7 @@ export function WalletPage() {
           )}
 
           {/* ── Manual USDT flow ─────────────────────────────────────────── */}
-          {DEPOSIT_METHODS_ENABLED && depositMethod === 'manual' && (() => {
+          {depositMethod === 'manual' && (() => {
             const MANUAL_NETS = [
               { val: 'TRC-20'   as const, short: 'TRC-20',   fullName: 'Tron (TRC-20)',    coinLabel: 'USDT', color: '#00DFA9', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT on TRC-20 (Tron). Sending on any other network will result in permanent loss.' },
               { val: 'ERC-20'   as const, short: 'ERC-20',   fullName: 'Ethereum (ERC-20)',coinLabel: 'USDT', color: '#627EEA', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT on Ethereum (ERC-20). Do not send on TRC-20/Tron or other networks.' },
@@ -2858,83 +2646,46 @@ export function WalletPage() {
 
       {/* ── WITHDRAW TAB ──────────────────────────────────────────────────── */}
       {tab === 'withdraw' && (
-        <div className="space-y-5">
+        <div className="space-y-4">
 
-          {/* ── Premium Balance Card ── */}
-          <div className="relative rounded-2xl overflow-hidden p-5"
-            style={{ background: 'linear-gradient(135deg, #071220 0%, #0B1A14 50%, #071018 100%)', border: '1px solid rgba(0,223,169,0.18)', boxShadow: '0 0 50px rgba(0,223,169,0.04)' }}>
-            <div className="absolute inset-0 pointer-events-none"
-              style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(0,223,169,0.06) 0%, transparent 60%)' }} />
-            <div className="relative flex items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.25)' }}>
-                    <Wallet className="h-4 w-4 text-[#00DFA9]" />
-                  </div>
-                  <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Withdrawable Balance</p>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[36px] font-black text-[#F8FAFC] leading-none tabular-nums">{fmt(balance)}</span>
-                  <span className="text-[14px] font-bold text-[#00DFA9]">USDT</span>
-                </div>
+          {/* Balance card */}
+          <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0E1520] to-[#0B1019] p-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#00DFA9]/10 border border-[#00DFA9]/20 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-[#00DFA9]" />
               </div>
-              <div className="text-right shrink-0">
-                {balance >= 100 ? (
-                  <div className="flex flex-col items-end gap-1.5">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                      style={{ background: 'rgba(0,223,169,0.10)', border: '1px solid rgba(0,223,169,0.28)' }}>
-                      <CheckCircle2 className="h-3.5 w-3.5 text-[#00DFA9]" />
-                      <span className="text-[11px] font-bold text-[#00DFA9]">Eligible</span>
-                    </div>
-                    <p className="text-[9px] text-[#475569] uppercase tracking-wider">Min. 100 met</p>
-                  </div>
-                ) : balance > 0 ? (
-                  <div className="flex flex-col items-end gap-1.5">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                      style={{ background: 'rgba(250,204,21,0.10)', border: '1px solid rgba(250,204,21,0.28)' }}>
-                      <AlertCircle className="h-3.5 w-3.5 text-[#FACC15]" />
-                      <span className="text-[11px] font-bold text-[#FACC15]">{fmt(100 - balance)} more</span>
-                    </div>
-                    <p className="text-[9px] text-[#475569] uppercase tracking-wider">Need 100 min.</p>
-                  </div>
-                ) : null}
+              <div>
+                <p className="text-[10px] text-[#64748B] font-semibold uppercase tracking-wider mb-0.5">Available Balance</p>
+                <p className="text-[22px] font-black text-[#F8FAFC] leading-none">
+                  {fmt(balance)} <span className="text-[13px] font-bold text-[#00DFA9]">USDT</span>
+                </p>
               </div>
             </div>
-            {bonusBalance > 0 && (
-              <div className="relative mt-4 pt-4 border-t border-white/[0.07] flex items-center justify-between">
-                <span className="text-[11px] text-[#94A3B8] flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15] shrink-0" />
-                  Bonus Balance
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#FACC15]/10 text-[#FACC15] border border-[#FACC15]/20">Non-withdrawable</span>
-                </span>
-                <span className="text-[13px] font-black text-[#FACC15]">{fmt(bonusBalance)} USDT</span>
+            {balance >= 100 && (
+              <div className="text-right">
+                <p className="text-[9px] text-[#64748B] uppercase tracking-wider">Withdrawable</p>
+                <p className="text-[11px] font-bold text-[#00DFA9]">✓ Eligible</p>
+              </div>
+            )}
+            {balance < 100 && balance > 0 && (
+              <div className="text-right">
+                <p className="text-[9px] text-[#FACC15] uppercase tracking-wider">Need</p>
+                <p className="text-[11px] font-bold text-[#FACC15]">{fmt(100 - balance)} more</p>
               </div>
             )}
           </div>
 
-          {/* ── Withdraw Form Card ── */}
-          <div className="rounded-2xl overflow-hidden"
-            style={{ background: '#0C1119', border: '1px solid rgba(255,255,255,0.07)' }}>
-
+          {/* Form card */}
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0E1520] overflow-hidden">
             {/* Header */}
-            <div className="px-5 py-4 border-b border-white/[0.06]"
-              style={{ background: 'linear-gradient(90deg, rgba(56,189,248,0.07) 0%, transparent 100%)' }}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.28)' }}>
-                    <ArrowUpRight className="h-4.5 w-4.5 h-[18px] w-[18px] text-[#38BDF8]" />
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-black text-[#F8FAFC]">Request Withdrawal</p>
-                    <p className="text-[10px] text-[#64748B] mt-0.5">Admin reviews and sends within 24 hours</p>
-                  </div>
+            <div className="px-5 py-4 border-b border-white/[0.06] bg-gradient-to-r from-[#38BDF8]/5 to-transparent">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#38BDF8]/10 border border-[#38BDF8]/20 flex items-center justify-center">
+                  <ArrowUpRight className="h-3.5 w-3.5 text-[#38BDF8]" />
                 </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full shrink-0"
-                  style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.20)' }}>
-                  <Shield className="h-3 w-3 text-[#00DFA9]" />
-                  <span className="text-[9px] font-bold text-[#00DFA9] uppercase tracking-wider">Secured</span>
+                <div>
+                  <p className="text-[13px] font-bold text-[#F8FAFC]">Request Withdrawal</p>
+                  <p className="text-[10px] text-[#64748B]">Admin reviews and sends manually within 24 hours</p>
                 </div>
               </div>
             </div>
@@ -2944,12 +2695,15 @@ export function WalletPage() {
                 /* ── Processing animation ── */
                 <div className="flex flex-col items-center py-10 gap-5 text-center">
                   <div className="relative w-20 h-20">
+                    {/* Outer spinning ring */}
                     <svg className="absolute inset-0 animate-spin" viewBox="0 0 80 80" fill="none">
                       <circle cx="40" cy="40" r="36" stroke="#38BDF8" strokeWidth="2.5" strokeDasharray="56 170" strokeLinecap="round"/>
                     </svg>
+                    {/* Inner spinning ring (opposite direction) */}
                     <svg className="absolute inset-0" style={{ animation: 'spin 1.4s linear infinite reverse' }} viewBox="0 0 80 80" fill="none">
                       <circle cx="40" cy="40" r="27" stroke="#00DFA9" strokeWidth="2" strokeDasharray="36 133" strokeLinecap="round"/>
                     </svg>
+                    {/* Center icon */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <ArrowUpRight className="h-7 w-7 text-[#38BDF8]" />
                     </div>
@@ -2960,33 +2714,30 @@ export function WalletPage() {
                   </div>
                   <div className="flex gap-1.5">
                     {[0, 1, 2].map(i => (
-                      <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]"
-                        style={{ animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                      <span
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]"
+                        style={{ animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }}
+                      />
                     ))}
                   </div>
                 </div>
               ) : wdSuccess ? (
                 /* ── Success state ── */
-                <div className="flex flex-col items-center py-10 gap-4 text-center">
+                <div className="flex flex-col items-center py-8 gap-4 text-center">
                   <div className="relative">
-                    <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 40px rgba(0,223,169,0.15)' }}>
-                      <CheckCircle2 className="h-9 w-9 text-[#00DFA9]" />
+                    <div className="w-16 h-16 rounded-full bg-[#00DFA9]/10 border-2 border-[#00DFA9]/30 flex items-center justify-center">
+                      <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
                     </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#00DFA9] flex items-center justify-center">
-                      <span className="text-[10px] font-black text-[#0B0F14]">✓</span>
+                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center">
+                      <span className="text-[8px] font-black text-[#0B0F14]">✓</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[18px] font-black text-[#F8FAFC]">Withdrawal Submitted!</p>
-                    <p className="text-[12px] text-[#64748B] mt-1.5 max-w-[260px] mx-auto leading-relaxed">
-                      Your request is pending admin review. Funds will be sent to your address within <span className="text-[#F8FAFC] font-semibold">24 hours</span>.
+                    <p className="text-[16px] font-bold text-[#F8FAFC]">Withdrawal Requested!</p>
+                    <p className="text-[12px] text-[#64748B] mt-1 max-w-[260px] mx-auto leading-relaxed">
+                      Your request is pending admin review. You'll receive your funds within 24 hours.
                     </p>
-                  </div>
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
-                    style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)' }}>
-                    <Clock className="h-3.5 w-3.5 text-[#38BDF8] shrink-0" />
-                    <p className="text-[11px] text-[#38BDF8]">Processing time: up to 24 hours</p>
                   </div>
                   <div className="flex gap-2 w-full max-w-xs">
                     <button onClick={() => { setWdSuccess(false); setTab('history'); }}
@@ -3000,112 +2751,87 @@ export function WalletPage() {
                   </div>
                 </div>
               ) : (
-                <form onSubmit={submitWithdrawal} className="space-y-6">
+                <form onSubmit={submitWithdrawal} className="space-y-5">
 
-                  {/* ─ Step 1: Network ─ */}
+                  {/* Step 1 — Network */}
                   <div>
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0"
-                        style={{ background: 'rgba(56,189,248,0.15)', border: '1.5px solid rgba(56,189,248,0.45)', color: '#38BDF8' }}>1</div>
-                      <p className="text-[12px] font-black text-[#F8FAFC] uppercase tracking-wider">Select Network</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">1</span>
+                      <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">Select Network</p>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {([
-                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron · USDT',      color: '#00DFA9', icon: 'TRX', desc: 'Low fees' },
-                        { id: 'TRX',    label: 'TRX',    chain: 'Tron Coin',        color: '#EF4444', icon: 'TRX', desc: 'Native' },
-                        { id: 'BSC',    label: 'BEP-20', chain: 'BNB Chain · USDT', color: '#F0B90B', icon: 'BNB', desc: 'Low fees' },
-                        { id: 'BTC',    label: 'BTC',    chain: 'Bitcoin',          color: '#F7931A', icon: '₿',   desc: 'Bitcoin' },
-                      ] as const).map(net => {
-                        const isActive = wdNetwork === net.id;
-                        return (
-                          <button
-                            key={net.id}
-                            type="button"
-                            onClick={() => { setWdNetwork(net.id); setWdAddress(''); }}
-                            className="relative rounded-xl p-3.5 text-left transition-all duration-150"
-                            style={isActive ? {
-                              background: `${net.color}12`,
-                              border: `1.5px solid ${net.color}`,
-                              boxShadow: `0 0 18px ${net.color}18`
-                            } : {
-                              background: 'rgba(255,255,255,0.025)',
-                              border: '1px solid rgba(255,255,255,0.07)'
-                            }}
-                          >
-                            {isActive && (
-                              <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
-                                style={{ background: net.color }}>
-                                <Check className="w-2.5 h-2.5 text-[#0B0F14]" />
-                              </div>
-                            )}
-                            <div className="w-7 h-7 rounded-lg mb-2.5 flex items-center justify-center"
-                              style={{ background: `${net.color}20`, border: `1px solid ${net.color}40` }}>
-                              <span className="text-[9px] font-black" style={{ color: net.color }}>{net.icon}</span>
-                            </div>
-                            <p className="text-[12px] font-black text-[#F8FAFC]">{net.label}</p>
-                            <p className="text-[9px] text-[#64748B] mt-0.5">{net.chain}</p>
-                            <p className="text-[9px] font-semibold mt-1" style={{ color: net.color }}>{net.desc}</p>
-                          </button>
-                        );
-                      })}
+                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron (USDT)',      color: '#00DFA9', desc: 'Low fees',    icon: 'TRX' },
+                        { id: 'TRX',    label: 'TRX',    chain: 'Tron Coin',        color: '#EF4444', desc: 'Native TRX',  icon: 'TRX' },
+                        { id: 'BSC',    label: 'BEP-20', chain: 'BNB Smart Chain',  color: '#F0B90B', desc: 'Low fees',    icon: 'BNB' },
+                        { id: 'BTC',    label: 'BTC',    chain: 'Bitcoin',          color: '#F7931A', desc: 'Bitcoin',     icon: '₿'   },
+                      ] as const).map(net => (
+                        <button
+                          key={net.id}
+                          type="button"
+                          onClick={() => { setWdNetwork(net.id); setWdAddress(''); }}
+                          className={`relative p-3 rounded-xl border-2 text-left transition-all ${
+                            wdNetwork === net.id
+                              ? 'border-[#38BDF8] bg-[#38BDF8]/10'
+                              : 'border-white/[0.08] bg-[#0B0F14] hover:border-white/[0.15]'
+                          }`}
+                        >
+                          {wdNetwork === net.id && (
+                            <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#38BDF8] flex items-center justify-center">
+                              <span className="text-[7px] font-black text-[#0B0F14]">✓</span>
+                            </span>
+                        )}
+                          <div className="w-6 h-6 rounded-lg mb-2 flex items-center justify-center" style={{ backgroundColor: net.color + '22', border: `1px solid ${net.color}44` }}>
+                            <span className="text-[8px] font-black" style={{ color: net.color }}>{net.icon}</span>
+                          </div>
+                          <p className="text-[11px] font-bold text-[#F8FAFC]">{net.label}</p>
+                          <p className="text-[9px] text-[#64748B]">{net.chain}</p>
+                          <p className="text-[9px] mt-1 font-medium" style={{ color: net.color }}>{net.desc}</p>
+                        </button>
+                      ))}
                     </div>
                     {wdNetwork === 'TRX' && (
-                      <div className="mt-2.5 flex items-start gap-2 rounded-xl px-3 py-2.5"
-                        style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)' }}>
+                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)' }}>
                         <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-red-400/80 leading-relaxed">TRX withdrawals processed as native Tron coin. Admin converts USDT and sends TRX to your Tron address.</p>
+                        <p className="text-[10px] text-red-400/80 leading-relaxed">TRX withdrawals are processed as native Tron coin. Admin will convert your USDT balance and send TRX to your Tron address.</p>
                       </div>
                     )}
                     {wdNetwork === 'BSC' && (
-                      <div className="mt-2.5 flex items-start gap-2 rounded-xl px-3 py-2.5"
-                        style={{ background: 'rgba(240,185,11,0.06)', border: '1px solid rgba(240,185,11,0.18)' }}>
+                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(240,185,11,0.06)', border: '1px solid rgba(240,185,11,0.18)' }}>
                         <AlertCircle className="h-3.5 w-3.5 text-[#F0B90B] shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-[#F0B90B]/80 leading-relaxed">Send your BEP-20 wallet address. Only USDT on BNB Smart Chain will be credited.</p>
+                        <p className="text-[10px] text-[#F0B90B]/80 leading-relaxed">Send your BSC (BEP-20) wallet address. Only send USDT on BNB Smart Chain to this address.</p>
                       </div>
                     )}
                     {wdNetwork === 'BTC' && (
-                      <div className="mt-2.5 flex items-start gap-2 rounded-xl px-3 py-2.5"
-                        style={{ background: 'rgba(247,147,26,0.06)', border: '1px solid rgba(247,147,26,0.18)' }}>
+                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(247,147,26,0.06)', border: '1px solid rgba(247,147,26,0.18)' }}>
                         <AlertCircle className="h-3.5 w-3.5 text-[#F7931A] shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-[#F7931A]/80 leading-relaxed">BTC withdrawals converted from USDT. Admin sends native BTC to your Bitcoin address.</p>
+                        <p className="text-[10px] text-[#F7931A]/80 leading-relaxed">BTC withdrawals are processed as Bitcoin. Admin will convert your USDT balance and send BTC to your address.</p>
                       </div>
                     )}
                   </div>
 
-                  {/* ─ Step 2: Amount ─ */}
+                  {/* Step 2 — Amount */}
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0"
-                          style={{ background: 'rgba(56,189,248,0.15)', border: '1.5px solid rgba(56,189,248,0.45)', color: '#38BDF8' }}>2</div>
-                        <p className="text-[12px] font-black text-[#F8FAFC] uppercase tracking-wider">Enter Amount</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] text-[#64748B] uppercase tracking-wide">Min:</span>
-                        <span className="text-[11px] font-black text-[#FACC15]">100 USDT</span>
-                      </div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">2</span>
+                      <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">Enter Amount</p>
+                      <span className="ml-auto text-[10px] text-[#64748B]">Min: <span className="text-[#FACC15] font-bold">100 USDT</span></span>
                     </div>
 
                     {/* Quick % buttons */}
-                    <div className="grid grid-cols-4 gap-2 mb-3">
+                    <div className="grid grid-cols-4 gap-1.5 mb-2">
                       {[25, 50, 75, 100].map(pct => (
                         <button
                           key={pct}
                           type="button"
                           onClick={() => setWdAmount((balance * pct / 100).toFixed(2))}
-                          className={cn(
-                            'py-2 rounded-xl text-[11px] font-bold transition-all',
-                            wdAmount === (balance * pct / 100).toFixed(2)
-                              ? 'bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/50'
-                              : 'bg-white/[0.04] border border-white/[0.08] text-[#64748B] hover:border-[#38BDF8]/30 hover:text-[#38BDF8]'
-                          )}
+                          className="py-1.5 rounded-lg text-[10px] font-bold bg-[#0B0F14] border border-white/[0.08] text-[#64748B] hover:border-[#38BDF8]/40 hover:text-[#38BDF8] transition-all"
                         >
                           {pct === 100 ? 'MAX' : `${pct}%`}
                         </button>
                       ))}
                     </div>
 
-                    {/* Amount input */}
                     <div className="relative">
                       <input
                         type="number"
@@ -3115,49 +2841,27 @@ export function WalletPage() {
                         value={wdAmount}
                         onChange={e => setWdAmount(e.target.value)}
                         placeholder="0.00"
-                        className="w-full rounded-xl px-4 py-4 text-[22px] font-black text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none transition-all pr-20"
-                        style={{
-                          background: '#0B0F14',
-                          border: wdAmount && parseFloat(wdAmount) > 0
-                            ? (parseFloat(wdAmount) >= 100 && parseFloat(wdAmount) <= balance
-                                ? '1px solid rgba(0,223,169,0.40)'
-                                : '1px solid rgba(239,68,68,0.40)')
-                            : '1px solid rgba(255,255,255,0.08)',
-                          boxShadow: (wdAmount && parseFloat(wdAmount) >= 100 && parseFloat(wdAmount) <= balance)
-                            ? '0 0 0 1px rgba(0,223,169,0.10)' : 'none'
-                        }}
+                        className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[18px] font-black text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/50 transition-colors pr-20"
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-black text-[#00DFA9]">USDT</span>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-[#00DFA9]">USDT</span>
                     </div>
 
-                    {/* Inline validation */}
                     {wdAmount && parseFloat(wdAmount) > 0 && (
-                      <div className="mt-2 px-1">
-                        {parseFloat(wdAmount) < 100 ? (
-                          <p className="text-[10px] text-red-400 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3 shrink-0" /> Minimum withdrawal is 100 USDT
-                          </p>
-                        ) : parseFloat(wdAmount) > balance ? (
-                          <p className="text-[10px] text-red-400 flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3 shrink-0" /> Amount exceeds available balance
-                          </p>
-                        ) : (
-                          <p className="text-[10px] text-[#64748B]">
-                            Remaining after withdrawal:{' '}
-                            <span className="text-[#F8FAFC] font-bold">{fmt(Math.max(0, balance - parseFloat(wdAmount)))} USDT</span>
-                          </p>
-                        )}
-                      </div>
+                      <p className="text-[10px] text-[#64748B] mt-1.5">
+                        Remaining after withdrawal:{' '}
+                        <span className="text-[#F8FAFC] font-bold">
+                          {fmt(Math.max(0, balance - parseFloat(wdAmount)))} USDT
+                        </span>
+                      </p>
                     )}
                   </div>
 
-                  {/* ─ Step 3: Address ─ */}
+                  {/* Step 3 — Wallet Address */}
                   <div>
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0"
-                        style={{ background: 'rgba(56,189,248,0.15)', border: '1.5px solid rgba(56,189,248,0.45)', color: '#38BDF8' }}>3</div>
-                      <p className="text-[12px] font-black text-[#F8FAFC] uppercase tracking-wider">
-                        Your {wdNetwork === 'TRC-20' ? 'TRC-20 (Tron)' : wdNetwork === 'TRX' ? 'Tron (TRX)' : wdNetwork === 'BSC' ? 'BEP-20 (BSC)' : 'Bitcoin'} Address
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">3</span>
+                      <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">
+                        Your {wdNetwork} Wallet Address
                       </p>
                     </div>
                     <div className="relative">
@@ -3166,66 +2870,39 @@ export function WalletPage() {
                         value={wdAddress}
                         onChange={e => setWdAddress(e.target.value)}
                         placeholder={
-                          wdNetwork === 'TRC-20' ? 'T… Tron USDT (TRC-20) address' :
-                          wdNetwork === 'TRX'    ? 'T… Tron (TRX) address' :
-                          wdNetwork === 'BSC'    ? '0x… BNB Smart Chain address' :
-                          'bc1q… or 1… or 3… Bitcoin address'
+                          wdNetwork === 'TRC-20' ? 'e.g. TQn5m… Tron USDT (TRC-20) address' :
+                          wdNetwork === 'TRX'    ? 'e.g. TQn5m… Tron (TRX) address' :
+                          wdNetwork === 'BSC'    ? 'e.g. 0x742d… BNB Smart Chain address' :
+                          wdNetwork === 'BTC'    ? 'e.g. bc1q… or 1… or 3… Bitcoin address' :
+                          'e.g. 0x742d… wallet address'
                         }
-                        className="w-full rounded-xl px-4 py-3.5 text-[13px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none transition-all pr-[70px]"
-                        style={{
-                          background: '#0B0F14',
-                          border: wdAddress
-                            ? '1px solid rgba(56,189,248,0.38)'
-                            : '1px solid rgba(255,255,255,0.08)',
-                          boxShadow: wdAddress ? '0 0 0 1px rgba(56,189,248,0.09)' : 'none'
-                        }}
+                        className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/50 transition-colors"
                       />
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const text = await navigator.clipboard.readText();
-                            if (text) setWdAddress(text.trim());
-                          } catch { /* clipboard access denied */ }
-                        }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:scale-[1.04]"
-                        style={{ background: 'rgba(56,189,248,0.12)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.28)' }}
-                      >
-                        Paste
-                      </button>
                     </div>
-                    <div className="flex items-start gap-2 mt-2.5 rounded-xl px-3 py-2.5"
-                      style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.14)' }}>
-                      <AlertCircle className="h-3 w-3 text-red-400/70 shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-red-400/70 leading-relaxed">
-                        Double-check your address. Withdrawals to incorrect addresses are <span className="font-bold text-red-400">irreversible</span>.
+                    <div className="flex items-start gap-1.5 mt-2 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-2">
+                      <AlertCircle className="h-3 w-3 text-red-400 shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-red-400 leading-relaxed">
+                        Always double-check your address. Withdrawals sent to incorrect addresses are <strong>irreversible</strong>.
                       </p>
                     </div>
                   </div>
 
-                  {/* ─ Withdrawal Summary ─ */}
-                  <div className="rounded-xl overflow-hidden"
-                    style={{ border: '1px solid rgba(56,189,248,0.12)' }}>
-                    <div className="px-4 py-2.5 border-b border-white/[0.05]"
-                      style={{ background: 'rgba(56,189,248,0.05)' }}>
-                      <div className="flex items-center gap-2">
-                        <Info className="h-3.5 w-3.5 text-[#38BDF8]" />
-                        <p className="text-[11px] font-bold text-[#38BDF8]">Withdrawal Terms</p>
-                      </div>
+                  {/* Info box */}
+                  <div className="bg-[#38BDF8]/[0.04] border border-[#38BDF8]/[0.12] rounded-xl p-3.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="h-3.5 w-3.5 text-[#38BDF8] shrink-0" />
+                      <p className="text-[11px] font-bold text-[#38BDF8]">Withdrawal Terms</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-px bg-white/[0.04]">
-                      {([
-                        ['💰', 'Min. Amount', '100 USDT'],
-                        ['🌐', 'Network', wdNetwork],
-                        ['⏱', 'Processing', 'Within 24 hrs'],
-                        ['✅', 'Platform Fee', 'None'],
-                      ] as const).map(([icon, label, value]) => (
-                        <div key={label} className="flex items-center justify-between px-3.5 py-2.5"
-                          style={{ background: '#0B0F14' }}>
-                          <span className="text-[10px] text-[#64748B] flex items-center gap-1.5">
-                            <span>{icon}</span> {label}
-                          </span>
-                          <span className="text-[11px] font-bold text-[#F8FAFC]">{value}</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        ['Min. Amount', '100 USDT'],
+                        ['Network', wdNetwork],
+                        ['Processing', 'Within 24 hrs'],
+                        ['Fees', 'None from us'],
+                      ].map(([k, v]) => (
+                        <div key={k} className="flex items-center justify-between bg-[#0B0F14] rounded-lg px-2.5 py-1.5">
+                          <span className="text-[9px] text-[#64748B] font-semibold uppercase">{k}</span>
+                          <span className="text-[10px] font-bold text-[#F8FAFC]">{v}</span>
                         </div>
                       ))}
                     </div>
@@ -3233,10 +2910,9 @@ export function WalletPage() {
 
                   {/* Error */}
                   {wdError && (
-                    <div className="flex items-start gap-2.5 rounded-xl p-3.5"
-                      style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)' }}>
-                      <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                      <p className="text-[12px] text-red-400 leading-relaxed">{wdError}</p>
+                    <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                      <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                      <p className="text-[12px] text-red-400">{wdError}</p>
                     </div>
                   )}
 
@@ -3244,25 +2920,14 @@ export function WalletPage() {
                   <button
                     type="submit"
                     disabled={wdSubmitting || balance < 100}
-                    className="w-full py-4 rounded-xl font-black text-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.98]"
-                    style={balance >= 100 ? {
-                      background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)',
-                      color: '#0B0F14',
-                      boxShadow: '0 0 28px rgba(56,189,248,0.25)'
-                    } : {
-                      background: 'rgba(255,255,255,0.07)',
-                      color: '#64748B',
-                      border: '1px solid rgba(255,255,255,0.08)'
-                    }}
+                    className="w-full py-3.5 rounded-xl font-bold text-[13px] bg-gradient-to-r from-[#38BDF8] to-[#60A5FA] text-[#0B0F14] hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#38BDF8]/10"
                   >
                     {wdSubmitting ? (
                       <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Submitting…
+                        <Loader2 className="h-4 w-4 animate-spin" /> Submitting Request...
                       </span>
                     ) : balance < 100 ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Lock className="h-4 w-4" /> Insufficient Balance (min 100 USDT)
-                      </span>
+                      `Insufficient Balance (min 100 USDT)`
                     ) : (
                       <span className="flex items-center justify-center gap-2">
                         <ArrowUpRight className="h-4 w-4" /> Request Withdrawal
