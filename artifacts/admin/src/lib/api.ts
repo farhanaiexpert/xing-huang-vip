@@ -68,6 +68,40 @@ export const api = {
     request<T>(path, { method: "DELETE", ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }),
 };
 
+// Download the full override list as a TSV file. Uses a raw fetch (not the JSON
+// `request` helper) because the response is a text/tsv attachment, then triggers
+// a browser download.
+export async function downloadTranslationsTsv(lang = "zh-CN"): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${BASE}/admin/translations/export?lang=${encodeURIComponent(lang)}`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (res.status === 401) {
+    const body = await res.json().catch(() => ({ error: "Unauthorized" }));
+    if (getToken()) {
+      clearToken();
+      window.location.href = import.meta.env.BASE_URL + "login";
+    }
+    throw new Error(body.error ?? "Session expired — please sign in again");
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^"]+)"?/.exec(disposition);
+  const filename = match?.[1] ?? `translations-${lang}.tsv`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export interface StatDelta { today: number; yesterday: number }
 export interface MoneyDelta { today: string; yesterday: string }
 

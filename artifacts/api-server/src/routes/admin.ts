@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, gte, lte, sql, count, sum, and, or, ilike, like, inArray, isNull, isNotNull } from "drizzle-orm";
+import { eq, asc, desc, gte, lte, sql, count, sum, and, or, ilike, like, inArray, isNull, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import {
@@ -3029,6 +3029,30 @@ router.get("/admin/translations", async (req, res): Promise<void> => {
     .offset((page - 1) * pageSize);
 
   res.json({ rows, total: Number(total), page, pageSize });
+});
+
+// Export — download the full current override list as a TSV for offline editing.
+// The header line is a "#" comment so the file can be re-imported via Bulk Paste
+// (the parser ignores #/// lines). Tabs/newlines in values are flattened so the
+// two-column layout stays intact.
+router.get("/admin/translations/export", async (req, res): Promise<void> => {
+  const lang = typeof req.query.lang === "string" && req.query.lang.trim() ? req.query.lang.trim() : DEFAULT_OVERRIDE_LANG;
+
+  const rows = await db
+    .select({ source: translationOverridesTable.source, target: translationOverridesTable.target })
+    .from(translationOverridesTable)
+    .where(eq(translationOverridesTable.lang, lang))
+    .orderBy(asc(translationOverridesTable.source));
+
+  const flatten = (s: string) => s.replace(/[\t\r\n]+/g, " ").trim();
+  const lines = ["# English\tChinese", ...rows.map((r) => `${flatten(r.source)}\t${flatten(r.target)}`)];
+  const body = lines.join("\n") + "\n";
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const safeLang = lang.replace(/[^A-Za-z0-9._-]/g, "") || "zh-CN";
+  res.setHeader("Content-Type", "text/tab-separated-values; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="translations-${safeLang}-${stamp}.tsv"`);
+  res.send(body);
 });
 
 // Create

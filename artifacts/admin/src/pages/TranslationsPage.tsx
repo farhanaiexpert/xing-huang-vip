@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  api, TranslationOverride, TranslationOverridesResponse, BulkTranslationResult,
+  api, downloadTranslationsTsv, TranslationOverride, TranslationOverridesResponse, BulkTranslationResult,
   TranslationQueueRow, TranslationQueueResponse, BulkResolveResult,
 } from "@/lib/api";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   Languages, Plus, Search, Save, Trash2, Pencil, X, Check,
   ClipboardPaste, FileUp, ListChecks, AlertTriangle, CopyCheck, Eraser,
-  Inbox, EyeOff, Flame, Clock, CheckCheck, MapPin,
+  Inbox, EyeOff, Flame, Clock, CheckCheck, MapPin, Upload, Download,
 } from "lucide-react";
 
 const inp = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#374151] focus:outline-none focus:border-[#00DFA9] transition-colors";
@@ -151,6 +151,10 @@ function OverridesPanel() {
   // Bulk state
   const [bulkText, setBulkText] = useState("");
   const [overwrite, setOverwrite] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Export state
+  const [exporting, setExporting] = useState(false);
 
   const { data, isLoading } = useQuery<TranslationOverridesResponse>({
     queryKey: ["admin-translations", search, page],
@@ -233,6 +237,40 @@ function OverridesPanel() {
     });
   }
 
+  // ── Import a TSV/CSV file by loading it into the bulk textarea ─────────────
+  // The existing parse + preview + import flow then handles it, so file imports
+  // get the same validation and duplicate detection as a paste.
+  function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large (max 5MB)");
+      return;
+    }
+    setMode("bulk");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      setBulkText((prev) => (prev.trim() ? prev.replace(/\s*$/, "") + "\n" + text : text));
+      toast.success(`Loaded ${file.name}`);
+    };
+    reader.onerror = () => toast.error("Could not read that file");
+    reader.readAsText(file);
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await downloadTranslationsTsv();
+      toast.success("Exported translations");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     const source = newSource.trim();
@@ -273,25 +311,43 @@ function OverridesPanel() {
         built-in dictionary and appear on the live site within seconds — no redeploy needed.
       </p>
 
-      {/* Mode toggle */}
-      <div className="inline-flex p-1 bg-[#0B0F14] border border-white/8 rounded-xl">
+      {/* Mode toggle + file import */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="inline-flex p-1 bg-[#0B0F14] border border-white/8 rounded-xl">
+          <button
+            onClick={() => setMode("single")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+              mode === "single" ? "bg-[#00DFA9] text-[#0B0F14]" : "text-[#94A3B8] hover:text-white",
+            )}
+          >
+            <Plus className="w-4 h-4" /> Add one
+          </button>
+          <button
+            onClick={() => setMode("bulk")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+              mode === "bulk" ? "bg-[#00DFA9] text-[#0B0F14]" : "text-[#94A3B8] hover:text-white",
+            )}
+          >
+            <ClipboardPaste className="w-4 h-4" /> Bulk paste
+          </button>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".tsv,.csv,.txt,text/tab-separated-values,text/csv,text/plain"
+          className="hidden"
+          onChange={handleFilePick}
+        />
         <button
-          onClick={() => setMode("single")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
-            mode === "single" ? "bg-[#00DFA9] text-[#0B0F14]" : "text-[#94A3B8] hover:text-white",
-          )}
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors"
+          title="Import a .tsv / .csv / .txt file of English → Chinese pairs"
         >
-          <Plus className="w-4 h-4" /> Add one
-        </button>
-        <button
-          onClick={() => setMode("bulk")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
-            mode === "bulk" ? "bg-[#00DFA9] text-[#0B0F14]" : "text-[#94A3B8] hover:text-white",
-          )}
-        >
-          <ClipboardPaste className="w-4 h-4" /> Bulk paste
+          <Upload className="w-4 h-4" /> Import file
         </button>
       </div>
 
@@ -502,9 +558,20 @@ function OverridesPanel() {
 
       {/* List */}
       <div className="bg-[#111827] border border-white/8 rounded-xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-white/8 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-white/8 flex items-center justify-between gap-3">
           <span className="text-sm font-semibold text-white">Existing Translations</span>
-          <span className="text-xs text-[#475569]">{total} total</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-[#475569]">{total} total</span>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || total === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Download all translations as a TSV file"
+            >
+              <Download className="w-3.5 h-3.5" /> {exporting ? "Exporting…" : "Export TSV"}
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
