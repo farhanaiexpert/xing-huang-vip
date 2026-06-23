@@ -23,11 +23,14 @@ const STORAGE_KEY = 'cupbett_lang';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<string>(() => {
+    // Sportsbook is Chinese-only: the switcher no longer offers English, so
+    // always render in Chinese and coerce any stale 'en' value to 'zh-CN'.
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      // Only English + Chinese are supported; sanitize any stale value.
-      return stored === 'en' || stored === 'zh-CN' ? stored : 'zh-CN';
-    } catch { return 'zh-CN'; }
+      if (localStorage.getItem(STORAGE_KEY) !== 'zh-CN') {
+        localStorage.setItem(STORAGE_KEY, 'zh-CN');
+      }
+    } catch { /* ignore */ }
+    return 'zh-CN';
   });
 
   const setLang = useCallback((code: string) => {
