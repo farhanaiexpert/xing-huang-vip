@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  api, downloadTranslationsTsv, TranslationOverride, TranslationOverridesResponse, BulkTranslationResult,
-  TranslationQueueRow, TranslationQueueResponse, BulkResolveResult,
+  api, downloadTranslationsTsv, downloadTranslationQueueTxt, TranslationOverride, TranslationOverridesResponse, BulkTranslationResult,
+  TranslationQueueRow, TranslationQueueResponse, BulkResolveResult, ImportQueueResult,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -698,6 +698,14 @@ function TranslationQueuePanel() {
   const [bulkTranslateOpen, setBulkTranslateOpen] = useState(false);
   const [bulkText, setBulkText] = useState("");
 
+  // Export queue (.txt of pending English names) + Import translations (modal).
+  const [exportLimit, setExportLimit] = useState(100);
+  const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importOverwrite, setImportOverwrite] = useState(false);
+  const importFileRef = useRef<HTMLInputElement | null>(null);
+
   // Selection is scoped to the page/filters currently in view, so the count in
   // the selection bar can never diverge from the rows the bulk actions operate
   // on. Reset it whenever the visible set changes.
@@ -892,6 +900,72 @@ function TranslationQueuePanel() {
     resolveMut.mutate({ id: row.id, target });
   }
 
+  // ── Export pending queue → .txt ───────────────────────────────────────────
+  async function handleExportQueue() {
+    setExporting(true);
+    try {
+      await downloadTranslationQueueTxt({ category, sort, limit: exportLimit });
+      toast.success("Exported queue");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // ── Import translations (modal) ───────────────────────────────────────────
+  // Reuses the shared parseBulk preview (English → Chinese pairs). Importing
+  // saves live overrides AND resolves matching queue rows server-side.
+  const importParsed = useMemo(() => parseBulk(importText), [importText]);
+  const importReady = useMemo(() => importParsed.filter(r => r.status === "ready"), [importParsed]);
+  const importDupCount = importParsed.filter(r => r.status === "duplicate").length;
+  const importInvalidCount = importParsed.filter(r => r.status === "invalid").length;
+  const importOverLimit = importReady.length > MAX_BULK;
+
+  const importMut = useMutation({
+    mutationFn: (body: { items: { source: string; target: string }[]; overwrite: boolean }) =>
+      api.post<ImportQueueResult>("/admin/translation-queue/import-file", body),
+    onSuccess: (res) => {
+      invalidate();
+      const parts: string[] = [];
+      if (res.created) parts.push(`${res.created} added`);
+      if (res.updated) parts.push(`${res.updated} updated`);
+      if (res.skipped) parts.push(`${res.skipped} skipped`);
+      if (res.queueResolved) parts.push(`${res.queueResolved} queue resolved`);
+      if (res.invalid) parts.push(`${res.invalid} invalid`);
+      toast.success(parts.length ? `Import complete — ${parts.join(", ")}` : "Nothing to import");
+      setImportText("");
+      setImportOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function handleImport() {
+    if (importReady.length === 0) { toast.error("Nothing valid to import"); return; }
+    if (importOverLimit) { toast.error(`Too many rows (max ${MAX_BULK} per import)`); return; }
+    importMut.mutate({
+      items: importReady.map(({ source, target }) => ({ source, target })),
+      overwrite: importOverwrite,
+    });
+  }
+
+  // Load a .txt / .csv / .tsv file into the import textarea so the same parse +
+  // preview flow handles it (English → Chinese pairs).
+  function handleImportFilePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("File too large (max 5MB)"); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      setImportText((prev) => (prev.trim() ? prev.replace(/\s*$/, "") + "\n" + text : text));
+      toast.success(`Loaded ${file.name}`);
+    };
+    reader.onerror = () => toast.error("Could not read that file");
+    reader.readAsText(file);
+  }
+
   const statusTabs: { key: QueueStatus; label: string; n: number }[] = [
     { key: "pending", label: "Pending", n: counts.pending },
     { key: "translated", label: "Translated", n: counts.translated },
@@ -973,6 +1047,42 @@ function TranslationQueuePanel() {
           title="Toggle sort order"
         >
           {sort === "frequency" ? <><Flame className="w-4 h-4 text-[#FACC15]" /> Most seen</> : <><Clock className="w-4 h-4 text-[#38BDF8]" /> Recent</>}
+        </button>
+      </div>
+
+      {/* Export queue / Import translations — the offline-translation workflow.
+          Export the pending names, translate them, then import to go live. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-[#475569]">Export</span>
+          <select
+            value={exportLimit}
+            onChange={e => setExportLimit(Number(e.target.value))}
+            className={cn(inp, "w-auto py-1.5")}
+            title="How many pending names to export"
+          >
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={200}>200</option>
+            <option value={500}>500</option>
+          </select>
+          <button
+            type="button"
+            onClick={handleExportQueue}
+            disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-50"
+            title="Download pending English names as a .txt for offline translation"
+          >
+            <Download className="w-4 h-4" /> {exporting ? "Exporting…" : "Export queue"}
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setImportOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 transition-all"
+          title="Import translated names (paste or upload a file)"
+        >
+          <Upload className="w-4 h-4" /> Import translations
         </button>
       </div>
 
@@ -1126,6 +1236,180 @@ function TranslationQueuePanel() {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 transition-all disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" /> {bulkResolveMut.isPending ? "Saving…" : `Save all (${bulkFilledCount})`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import translations modal — paste or upload English → Chinese pairs.
+          Saves live overrides and resolves matching queue rows automatically. */}
+      {importOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => { if (!importMut.isPending) setImportOpen(false); }}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[88vh] flex flex-col bg-[#111827] border border-white/10 rounded-2xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+              <div className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-[#00DFA9]" />
+                <h3 className="text-base font-semibold text-white">Import translations</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImportOpen(false)}
+                disabled={importMut.isPending}
+                className="p-1.5 rounded-lg text-[#64748B] hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div className="rounded-lg bg-[#00DFA9]/5 border border-[#00DFA9]/15 px-4 py-3 text-xs leading-relaxed text-[#C4D4E3]">
+                <p>Paste your translated names below, or upload the .txt / .csv / .tsv you exported and filled in.</p>
+                <p>One per line: the English name, then its Chinese, separated by a Tab, = or comma — e.g. <span className="text-white font-medium" translate="no">Manchester City = 曼城</span>.</p>
+                <p>Matching queue names are resolved automatically and translations go live within seconds.</p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept=".tsv,.csv,.txt,text/tab-separated-values,text/csv,text/plain"
+                  className="hidden"
+                  onChange={handleImportFilePick}
+                />
+                <button
+                  type="button"
+                  onClick={() => importFileRef.current?.click()}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors"
+                >
+                  <FileUp className="w-4 h-4" /> Upload file
+                </button>
+                {importText.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setImportText("")}
+                    className="flex items-center gap-1.5 text-xs font-medium text-[#475569] hover:text-white transition-colors"
+                  >
+                    <Eraser className="w-3.5 h-3.5" /> Clear
+                  </button>
+                )}
+              </div>
+
+              <textarea
+                className={cn(inp, "font-mono text-xs leading-relaxed min-h-[160px] resize-y")}
+                value={importText}
+                onChange={e => setImportText(e.target.value)}
+                placeholder={"Manchester City = 曼城\nReal Madrid = 皇家马德里\nPremier League = 英超"}
+                spellCheck={false}
+                translate="no"
+              />
+
+              {/* Preview summary + table */}
+              {importParsed.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 flex-wrap text-xs">
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#00DFA9]/10 text-[#00DFA9] font-semibold">
+                      <ListChecks className="w-3.5 h-3.5" /> {importReady.length} valid
+                    </span>
+                    {importDupCount > 0 && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FACC15]/10 text-[#FACC15] font-semibold">
+                        <CopyCheck className="w-3.5 h-3.5" /> {importDupCount} duplicate{importDupCount > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {importInvalidCount > 0 && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EF4444]/10 text-[#EF4444] font-semibold">
+                        <AlertTriangle className="w-3.5 h-3.5" /> {importInvalidCount} invalid
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="border border-white/8 rounded-lg overflow-hidden max-h-[260px] overflow-y-auto" translate="no">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-[#0B0F14] text-[#475569]">
+                        <tr className="text-left text-xs">
+                          <th className="px-3 py-2 font-medium w-10">#</th>
+                          <th className="px-3 py-2 font-medium">English</th>
+                          <th className="px-3 py-2 font-medium">Chinese</th>
+                          <th className="px-3 py-2 font-medium w-28">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {importParsed.map((r, i) => (
+                          <tr
+                            key={i}
+                            className={cn(
+                              r.status === "invalid" && "bg-[#EF4444]/5",
+                              r.status === "duplicate" && "bg-[#FACC15]/5",
+                            )}
+                          >
+                            <td className="px-3 py-2 text-[#475569] text-xs">{r.line}</td>
+                            <td className="px-3 py-2 text-[#C4D4E3] truncate max-w-[180px]" title={r.source}>
+                              {r.source || <span className="text-[#475569] italic">—</span>}
+                            </td>
+                            <td className="px-3 py-2 text-white truncate max-w-[180px]" title={r.target}>
+                              {r.target || <span className="text-[#475569] italic">—</span>}
+                            </td>
+                            <td className="px-3 py-2">
+                              {r.status === "ready" && <span className="text-xs font-medium text-[#00DFA9]">Valid</span>}
+                              {r.status === "duplicate" && <span className="text-xs font-medium text-[#FACC15]" title={r.reason}>Duplicate</span>}
+                              {r.status === "invalid" && <span className="text-xs font-medium text-[#EF4444]" title={r.reason}>{r.reason ?? "Invalid"}</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {importOverLimit && (
+                    <p className="text-xs text-[#EF4444]">
+                      Too many rows ({importReady.length}). Import at most {MAX_BULK} at a time.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-white/8 flex-wrap">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={importOverwrite}
+                  onChange={e => setImportOverwrite(e.target.checked)}
+                  className="w-4 h-4 rounded border-white/20 bg-white/5 accent-[#00DFA9]"
+                />
+                <span className="text-sm text-[#C4D4E3]">Override existing</span>
+                <span className="text-xs text-[#475569]">
+                  {importOverwrite ? "(matching entries updated)" : "(matching entries skipped)"}
+                </span>
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setImportOpen(false)}
+                  disabled={importMut.isPending}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-white/5 text-[#C4D4E3] hover:bg-white/10 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleImport}
+                  disabled={importMut.isPending || importReady.length === 0 || importOverLimit}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold bg-[#00DFA9] text-[#0B0F14] hover:brightness-110 transition-all disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  {importMut.isPending ? "Importing…" : `Import ${importReady.length} translation${importReady.length === 1 ? "" : "s"}`}
                 </button>
               </div>
             </div>

@@ -3294,6 +3294,42 @@ router.get("/admin/translation-queue", async (req, res): Promise<void> => {
   res.json({ rows, total: Number(total), page, pageSize, counts });
 });
 
+// Export — download the current PENDING queue (English names only, one per line)
+// as a plain .txt for offline translation. Respects the category filter and sort
+// order so the file matches what the operator sees, capped by `limit`. The
+// resulting file is translated offline then re-imported via /import-file.
+router.get("/admin/translation-queue/export", async (req, res): Promise<void> => {
+  const lang = typeof req.query.lang === "string" && req.query.lang.trim() ? req.query.lang.trim() : DEFAULT_OVERRIDE_LANG;
+  const category = typeof req.query.category === "string" ? req.query.category.trim() : "";
+  const sort = req.query.sort === "recent" ? "recent" : "frequency";
+  const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit ?? "100")) || 100));
+
+  const conditions = [eq(translationQueueTable.lang, lang), eq(translationQueueTable.status, "pending")];
+  if (category === "team" || category === "league" || category === "country" || category === "player") {
+    conditions.push(eq(translationQueueTable.category, category));
+  }
+  const orderBy =
+    sort === "recent"
+      ? [desc(translationQueueTable.lastSeen)]
+      : [desc(translationQueueTable.seenCount), desc(translationQueueTable.lastSeen)];
+
+  const rows = await db
+    .select({ source: translationQueueTable.source })
+    .from(translationQueueTable)
+    .where(and(...conditions))
+    .orderBy(...orderBy)
+    .limit(limit);
+
+  const flatten = (s: string) => s.replace(/[\t\r\n]+/g, " ").trim();
+  const body = rows.map((r) => flatten(r.source)).join("\n") + (rows.length ? "\n" : "");
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const safeLang = lang.replace(/[^A-Za-z0-9._-]/g, "") || "zh-CN";
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="translation-queue-${safeLang}-${stamp}.txt"`);
+  res.send(body);
+});
+
 const resolveQueueSchema = z.object({
   target: z.string().trim().min(1, "Chinese text is required").max(500, "Chinese text is too long"),
 });
@@ -3468,6 +3504,110 @@ router.post("/admin/translation-queue/bulk-resolve", async (req, res): Promise<v
     notFound,
   });
   res.json({ saved, existed, notFound });
+});
+
+// Import-file: paste/upload a translated queue file (English → Chinese pairs).
+// For each pair it saves a live override (insert, or update when overwrite is on)
+// AND marks any matching queue row (same source) translated so the workflow
+// "export → translate offline → import" closes the loop automatically.
+const importQueueSchema = z.object({
+  items: z
+    .array(z.object({ source: z.string(), target: z.string() }))
+    .min(1, "No translations to import")
+    .max(2000, "Too many rows in one import (max 2000)"),
+  overwrite: z.boolean().optional(),
+  lang: z.string().trim().min(1).max(20).optional(),
+});
+
+router.post("/admin/translation-queue/import-file", async (req, res): Promise<void> => {
+  const parsed = importQueueSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const lang = parsed.data.lang?.trim() || DEFAULT_OVERRIDE_LANG;
+  const overwrite = parsed.data.overwrite ?? false;
+
+  // Normalise + validate, then de-dupe by source keeping the LAST occurrence
+  // (matches the client-side preview).
+  let invalid = 0;
+  const bySource = new Map<string, string>();
+  for (const raw of parsed.data.items) {
+    const source = raw.source.trim();
+    const target = raw.target.trim();
+    if (!source || !target || source.length > 500 || target.length > 500) {
+      invalid++;
+      continue;
+    }
+    bySource.set(source, target);
+  }
+
+  const deduped = [...bySource.entries()].map(([source, target]) => ({ source, target }));
+  if (deduped.length === 0) {
+    res.status(400).json({ error: "No valid translations to import", created: 0, updated: 0, skipped: 0, invalid, queueResolved: 0 });
+    return;
+  }
+
+  const summary = await db.transaction(async (tx) => {
+    const sources = deduped.map((d) => d.source);
+    const existingRows = await tx
+      .select({ source: translationOverridesTable.source })
+      .from(translationOverridesTable)
+      .where(and(eq(translationOverridesTable.lang, lang), inArray(translationOverridesTable.source, sources)));
+    const existing = new Set(existingRows.map((r) => r.source));
+
+    const toInsert = deduped.filter((d) => !existing.has(d.source));
+    const toUpdate = overwrite ? deduped.filter((d) => existing.has(d.source)) : [];
+    const skipped = overwrite ? 0 : deduped.filter((d) => existing.has(d.source)).length;
+
+    let created = 0;
+    if (toInsert.length > 0) {
+      const inserted = await tx
+        .insert(translationOverridesTable)
+        .values(toInsert.map((d) => ({ lang, source: d.source, target: d.target })))
+        .onConflictDoNothing()
+        .returning({ id: translationOverridesTable.id });
+      created = inserted.length;
+    }
+    let updated = 0;
+    for (const d of toUpdate) {
+      const r = await tx
+        .update(translationOverridesTable)
+        .set({ target: d.target })
+        .where(and(eq(translationOverridesTable.lang, lang), eq(translationOverridesTable.source, d.source)))
+        .returning({ id: translationOverridesTable.id });
+      updated += r.length;
+    }
+
+    // Resolve matching queue rows that aren't already translated.
+    const resolved = await tx
+      .update(translationQueueTable)
+      .set({ status: "translated", lastSeen: sql`NOW()` })
+      .where(
+        and(
+          eq(translationQueueTable.lang, lang),
+          inArray(translationQueueTable.source, sources),
+          inArray(translationQueueTable.status, ["pending", "ignored"]),
+        ),
+      )
+      .returning({ id: translationQueueTable.id });
+
+    return { created, updated, skipped, queueResolved: resolved.length };
+  });
+
+  // Prime the covered-set cache so these names don't re-surface during the 60s
+  // cache window before the next refresh.
+  for (const d of deduped) markCovered(d.source);
+
+  await logAdminAction(req.user!.userId, "import_translation_queue", "translation_override", undefined, {
+    lang,
+    overwrite,
+    ...summary,
+    invalid,
+    received: parsed.data.items.length,
+  });
+
+  res.json({ ...summary, invalid });
 });
 
 export default router;

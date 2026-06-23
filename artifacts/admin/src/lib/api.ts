@@ -102,6 +102,52 @@ export async function downloadTranslationsTsv(lang = "zh-CN"): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+// Download the PENDING translation queue (English names, one per line) as a .txt
+// for offline translation. Respects the category filter, sort order and limit so
+// the file matches what the operator sees. Raw fetch (text attachment).
+export async function downloadTranslationQueueTxt(opts: {
+  category?: string;
+  sort?: string;
+  limit?: number;
+  lang?: string;
+} = {}): Promise<void> {
+  const { category = "", sort = "frequency", limit = 100, lang = "zh-CN" } = opts;
+  const token = getToken();
+  const qs = new URLSearchParams({
+    lang,
+    category,
+    sort,
+    limit: String(limit),
+  });
+  const res = await fetch(`${BASE}/admin/translation-queue/export?${qs.toString()}`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (res.status === 401) {
+    const body = await res.json().catch(() => ({ error: "Unauthorized" }));
+    if (getToken()) {
+      clearToken();
+      window.location.href = import.meta.env.BASE_URL + "login";
+    }
+    throw new Error(body.error ?? "Session expired — please sign in again");
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^"]+)"?/.exec(disposition);
+  const filename = match?.[1] ?? `translation-queue-${lang}.txt`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export interface StatDelta { today: number; yesterday: number }
 export interface MoneyDelta { today: string; yesterday: string }
 
@@ -413,6 +459,14 @@ export interface BulkResolveResult {
   saved: number;
   existed: number;
   notFound: number;
+}
+
+export interface ImportQueueResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  invalid: number;
+  queueResolved: number;
 }
 
 export interface RevenueBySport {
