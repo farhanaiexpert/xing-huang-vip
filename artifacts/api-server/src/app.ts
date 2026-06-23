@@ -217,11 +217,20 @@ const adminDist = path.resolve(here, "../../admin/dist/public");
 const hasAdmin = existsSync(path.join(adminDist, "index.html"));
 const hasSportsbook = existsSync(path.join(sportsbookDist, "index.html"));
 
+// index.html must never be cached, or a republish keeps serving the old HTML
+// (which points at the previous build). Hashed JS/CSS assets are immutable and
+// keep their default long-lived caching.
+const noCacheHtml = (res: import("express").Response, filePath: string) => {
+  if (filePath.endsWith("index.html")) {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  }
+};
+
 if (hasAdmin) {
-  app.use("/admin", express.static(adminDist));
+  app.use("/admin", express.static(adminDist, { setHeaders: noCacheHtml }));
 }
 if (hasSportsbook) {
-  app.use(express.static(sportsbookDist));
+  app.use(express.static(sportsbookDist, { setHeaders: noCacheHtml }));
 }
 
 // SPA fallback — any non-API GET returns the matching index.html so client-side
@@ -230,6 +239,7 @@ if (hasAdmin || hasSportsbook) {
   app.use((req, res, next) => {
     if (req.method !== "GET") return next();
     if (req.path === BASE || req.path.startsWith(`${BASE}/`)) return next();
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     if (hasAdmin && (req.path === "/admin" || req.path.startsWith("/admin/"))) {
       return res.sendFile(path.join(adminDist, "index.html"));
     }
