@@ -178,13 +178,15 @@ app.get(`${BASE}/init-admin`, async (req, res): Promise<void> => {
     return;
   }
   const ADMIN_EMAIL    = "admin@xinghuang.vip";
-  const ADMIN_PASSWORD = "XH@X72GEKNaPN!!*";
+  // Password can be overridden via env var; falls back to the built-in default.
+  const ADMIN_PASSWORD = process.env.ADMIN_INIT_PASSWORD || "XH@X72GEKNaPN!!*";
   const hash = await bcrypt.hash(ADMIN_PASSWORD, 12);
   const existing = await db.select({ id: usersTable.id })
     .from(usersTable).where(eq(usersTable.email, ADMIN_EMAIL)).limit(1);
   if (existing.length > 0) {
+    // Clear TOTP so the recovered account can log in with the password alone.
     await db.update(usersTable)
-      .set({ passwordHash: hash, role: "super_admin" })
+      .set({ passwordHash: hash, role: "super_admin", totpSecret: null, isSuspended: false })
       .where(eq(usersTable.email, ADMIN_EMAIL));
   } else {
     await db.insert(usersTable).values({
@@ -192,8 +194,8 @@ app.get(`${BASE}/init-admin`, async (req, res): Promise<void> => {
       referralCode: "ADMIN0001", username: "superadmin",
     });
   }
-  logger.info("Admin bootstrap: admin@xinghuang.vip created/updated");
-  res.json({ ok: true, message: "Admin account ready. Email: admin@xinghuang.vip — use the password you configured." });
+  logger.info("Admin bootstrap: admin@xinghuang.vip created/updated (TOTP cleared)");
+  res.json({ ok: true, message: "Admin account ready. Email: admin@xinghuang.vip — log in with the password you configured (TOTP disabled)." });
 });
 
 app.use(BASE, apiRouter);
