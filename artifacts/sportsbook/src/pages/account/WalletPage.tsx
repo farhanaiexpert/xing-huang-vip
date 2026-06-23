@@ -97,17 +97,6 @@ function StatusBadge({ status }: { status: string }) {
   return <span className="text-[10px] text-[#64748B] capitalize">{status}</span>;
 }
 
-// ── Chain tab definitions ──────────────────────────────────────────────────────
-const CHAIN_TABS = [
-  { key: 'bsc',      name: 'BSC',      chainId: 56 },
-  { key: 'trc20',    name: 'TRC-20',   chainId: null, color: '#00DFA9' },
-  { key: 'polygon',  name: 'Polygon',  chainId: 137 },
-  { key: 'arbitrum', name: 'Arbitrum', chainId: 42161 },
-  { key: 'optimism', name: 'Optimism', chainId: 10 },
-  { key: 'base',     name: 'Base',     chainId: 8453 },
-] as const;
-
-type ChainTabKey = typeof CHAIN_TABS[number]['key'];
 
 const MIN_NATIVE_GAS: Record<number, number> = {
   56: 0.003, 137: 0.5, 42161: 0.0005, 10: 0.0005, 8453: 0.0005, 59144: 0.0005,
@@ -152,7 +141,7 @@ export function WalletPage() {
     if (hint === 'nowpayments') return 'nowpayments';
     return 'wallet';
   });
-  const [selectedChain, setSelectedChain] = useState<ChainTabKey>('bsc');
+
   const manualNetwork = 'TRC-20' as const;
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>(() => {
     try {
@@ -408,18 +397,6 @@ export function WalletPage() {
     return () => { cancelled = true; clearTimeout(timeout); };
   }, [hasTronLink, tronBalanceNonce]);
 
-  // Sync selectedChain to the wallet's current connected chain
-  useEffect(() => {
-    if (w3Connected && chainCfg) {
-      const tab = CHAIN_TABS.find(t => t.chainId === evmWallet.chainId);
-      if (tab) setSelectedChain(tab.key);
-    } else if (!w3Connected && hasTronLink) {
-      setSelectedChain('trc20');
-    }
-  }, [w3Connected, chainCfg, hasTronLink, evmWallet.chainId]);
-
-  const selectedChainData = CHAIN_TABS.find(t => t.key === selectedChain);
-  const isOnSelectedChain = selectedChainData?.chainId != null && evmWallet.chainId === selectedChainData.chainId;
 
   // Scroll deposit section into view + briefly highlight when arriving via header deep-link
   useEffect(() => {
@@ -435,11 +412,9 @@ export function WalletPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Balance for the active selected chain
-  const walletBalance = selectedChain === 'trc20'
-    ? (hasTronLink ? tronBalance : null)
-    : (w3Connected && isOnSelectedChain ? evmBalance : null);
-  const walletBalanceError = selectedChain === 'trc20' ? tronBalanceError : evmBalanceError;
+  // Balance for the active connected wallet (TronLink takes priority over EVM)
+  const walletBalance = hasTronLink ? tronBalance : (w3Connected ? evmBalance : null);
+  const walletBalanceError = hasTronLink ? tronBalanceError : evmBalanceError;
 
   // Platform deposit destination address for the active EVM chain
   const platformDepositAddr = (depositInfo && chainCfg)
@@ -729,7 +704,7 @@ export function WalletPage() {
                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(167,139,250,0.22)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.40)' }}>⚡ Instant</span>
                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.20)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.40)' }}>★ Best</span>
                       </div>
-                      <p className="text-[10px] text-[#64748B] mt-0.5">MetaMask · Trust · ETH · BSC · TRC-20 · <span className="font-semibold text-[#A78BFA]">Min $10</span></p>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">MetaMask · Trust Wallet · WalletConnect · <span className="font-semibold text-[#A78BFA]">Min $10</span></p>
                     </div>
                     {active
                       ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#A78BFA] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
@@ -800,7 +775,7 @@ export function WalletPage() {
               { emoji: '🔒', label: 'Secure Payments', sub: 'All deposits verified automatically', color: '#38BDF8' },
               { emoji: '⚡', label: 'Fast Processing', sub: 'Most deposits confirmed within minutes', color: '#00DFA9' },
               { emoji: '💰', label: 'Auto Credit', sub: 'Balance updated after blockchain confirmation', color: '#FACC15' },
-              { emoji: '🌍', label: 'Multiple Networks', sub: 'TRC20, ERC20, BEP20, Polygon & more', color: '#A78BFA' },
+              { emoji: '🌍', label: 'Multiple Wallets', sub: 'MetaMask, Trust, Coinbase & 300+ more', color: '#A78BFA' },
             ].map(({ emoji, label, sub }) => (
               <div key={label} className="rounded-xl border border-white/[0.06] bg-[#0E1520] p-3.5 text-center">
                 <span className="text-xl block mb-2">{emoji}</span>
@@ -1103,7 +1078,7 @@ export function WalletPage() {
                     <div>
                       <p className="text-[15px] font-black text-[#F8FAFC]">Connect Your Wallet</p>
                       <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
-                        Connect MetaMask, Trust Wallet, Coinbase Wallet or any EVM wallet via WalletConnect to deposit USDT.
+                        Connect MetaMask, Trust Wallet, Coinbase Wallet or any compatible wallet to deposit USDT.
                       </p>
                     </div>
                     <button
@@ -1113,7 +1088,7 @@ export function WalletPage() {
                     >
                       <Wallet className="w-4 h-4" /> Connect Wallet <ChevronRight className="w-4 h-4" />
                     </button>
-                    <p className="text-[10px] text-[#64748B]">Supports 300+ wallets · BSC · Polygon · Arbitrum · Optimism · Base · Linea</p>
+                    <p className="text-[10px] text-[#64748B]">Supports 300+ wallets worldwide</p>
                     {isMobileDevice && !hasInjectedProvider && (() => {
                       const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
                       const hostPath = typeof window !== 'undefined' ? `${window.location.host}${window.location.pathname}` : '';
