@@ -250,18 +250,6 @@ async function runMigrations() {
     logger.warn({ err }, "Migration v13 skipped");
   }
 
-  // v14: plisio payment gateway columns on transactions
-  try {
-    await db.execute(sql`
-      ALTER TABLE transactions
-        ADD COLUMN IF NOT EXISTS plisio_payment_id TEXT,
-        ADD COLUMN IF NOT EXISTS plisio_status TEXT
-    `);
-    logger.info("DB migration v14 applied (transactions.plisio_payment_id, plisio_status)");
-  } catch (err) {
-    logger.warn({ err }, "Migration v14 skipped");
-  }
-
   // v15: odds_cache — PostgreSQL-backed pre-match odds cache (survives restarts)
   try {
     await db.execute(sql`
@@ -356,7 +344,7 @@ async function runMigrations() {
 
   // v21: unique partial index on transactions.tx_hash — prevents double-credit from
   // concurrent duplicate submissions (TOCTOU race between SELECT check and INSERT).
-  // Partial (WHERE tx_hash IS NOT NULL) so NOWPayments / Cryptomus rows (null tx_hash) are unaffected.
+  // Partial (WHERE tx_hash IS NOT NULL) so NOWPayments rows (null tx_hash) are unaffected.
   try {
     await db.execute(sql`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_tx_hash

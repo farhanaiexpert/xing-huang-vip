@@ -53,7 +53,7 @@ const ATTRS = new Set(["placeholder", "title", "aria-label", "alt"]);
 const PROTECTED = new Set([
   "USDT", "USDC", "USD", "BTC", "ETH", "BNB", "SOL", "TON", "TRX", "XRP", "DOGE",
   "TRC20", "ERC20", "BEP20", "TRC-20", "ERC-20", "BEP-20",
-  "Xing", "Huang", "CupBett", "NOWPayments", "Cryptomus", "Web3", "DeepL",
+  "Xing", "Huang", "CupBett", "NOWPayments", "Web3", "DeepL",
 ]);
 
 function isOnlyProtected(s: string): boolean {

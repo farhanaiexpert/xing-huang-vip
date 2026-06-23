@@ -148,31 +148,8 @@ function GatewayCell({ txn }: { txn: AdminTransaction }) {
     );
   }
 
-  if (txn.cryptomusUuid) {
-    parts.push(
-      <div key="cm" className="flex items-center gap-1">
-        <span className="text-[10px] text-[#A78BFA] font-bold">◈</span>
-        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#A78BFA] bg-[#A78BFA]/10 border border-[#A78BFA]/20 px-1.5 py-0.5 rounded-full max-w-[140px] truncate" title={txn.cryptomusUuid}>
-          CM · {txn.cryptomusStatus ?? "—"} · {txn.cryptomusUuid.slice(0, 8)}…
-        </span>
-        <a href="https://app.cryptomus.com/payments" target="_blank" rel="noopener noreferrer"
-          className="text-[#A78BFA]/50 hover:text-[#A78BFA]" title="Open Cryptomus">
-          <Link2 className="w-3 h-3" />
-        </a>
-      </div>
-    );
-  }
-
-  if (txn.plisioPaymentId) {
-    parts.push(
-      <span key="pl" className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#F472B6] bg-[#F472B6]/10 border border-[#F472B6]/20 px-1.5 py-0.5 rounded-full max-w-[140px] truncate" title={txn.plisioPaymentId}>
-        🔷 {txn.plisioStatus ?? "Plisio"} · {txn.plisioPaymentId.slice(0, 8)}…
-      </span>
-    );
-  }
-
   const note = txn.verificationNote ?? txn.notes;
-  if (note && !txn.nowpaymentsPaymentId && !txn.cryptomusUuid && !txn.plisioPaymentId) {
+  if (note && !txn.nowpaymentsPaymentId) {
     parts.push(
       <span key="note" className="text-[#475569] text-xs max-w-[150px] truncate block" title={note}>{note}</span>
     );

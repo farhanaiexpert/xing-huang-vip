@@ -3,7 +3,6 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, walletsTable, transactionsTable } from "@workspace/db";
 import { checkDepositLimits, recordDepositUsage, isSelfExcludedFromDeposits } from "../lib/depositGuard.js";
 import { verifyIpnSignature, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
-import { verifyWebhookSignature as verifyCryptomusWebhook, FINISHED_STATUSES as CRYPTOMUS_FINISHED, FAILED_STATUSES as CRYPTOMUS_FAILED } from "../lib/cryptomus.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
@@ -111,114 +110,6 @@ router.post("/webhooks/nowpayments", async (req, res): Promise<void> => {
   }
 
   // Always acknowledge with 200 so NOWPayments stops retrying
-  res.status(200).json({ received: true });
-});
-
-// ── POST /webhooks/cryptomus ───────────────────────────────────────────────────
-// Cryptomus sends JSON; sign = md5(base64(body without sign field) + api_key)
-
-router.post("/webhooks/cryptomus", async (req, res): Promise<void> => {
-  const body = req.body as Record<string, unknown>;
-  const receivedSign = body.sign ? String(body.sign) : null;
-
-  // ── 1. Verify signature ───────────────────────────────────────────────────
-  if (!receivedSign) {
-    logger.warn("Cryptomus webhook received with no sign field");
-    res.status(400).json({ error: "Missing sign" });
-    return;
-  }
-
-  if (!verifyCryptomusWebhook(body, receivedSign)) {
-    logger.warn("Cryptomus webhook signature verification FAILED");
-    res.status(401).json({ error: "Invalid signature" });
-    return;
-  }
-
-  const uuid   = body.uuid   ? String(body.uuid)   : null;
-  const status = body.status ? String(body.status) : null;
-  const orderId = body.order_id ? String(body.order_id) : null;
-
-  logger.info({ uuid, status, orderId }, "Cryptomus webhook received");
-
-  if (!uuid) {
-    res.status(400).json({ error: "Missing uuid" });
-    return;
-  }
-
-  // ── 2. Find our transaction ────────────────────────────────────────────────
-  const [txn] = await db
-    .select()
-    .from(transactionsTable)
-    .where(eq(transactionsTable.cryptomusUuid, uuid))
-    .limit(1);
-
-  if (!txn) {
-    logger.warn({ uuid }, "Cryptomus webhook — transaction not found");
-    res.status(200).json({ received: true });
-    return;
-  }
-
-  // ── 3. Update status in DB ─────────────────────────────────────────────────
-  if (status) {
-    await db
-      .update(transactionsTable)
-      .set({ cryptomusStatus: status })
-      .where(eq(transactionsTable.id, txn.id));
-  }
-
-  // ── 4. Credit wallet when payment completes ────────────────────────────────
-  // Atomic idempotency: claim the row only if it is still 'pending'.
-  // PostgreSQL UPDATE is atomic — exactly one concurrent request wins; others
-  // see claimed.length === 0 and skip the wallet credit (no double-credit).
-  if (status && CRYPTOMUS_FINISHED.has(status)) {
-    const depositAmount = parseFloat(txn.amount);
-
-    const exclMsg = await isSelfExcludedFromDeposits(txn.userId);
-    if (exclMsg) {
-      await db.update(transactionsTable)
-        .set({ status: "rejected", verificationNote: "Deposit rejected: account is self-excluded" })
-        .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
-      logger.warn({ uuid, userId: txn.userId }, "Cryptomus deposit rejected: self-excluded");
-      res.status(200).json({ received: true });
-      return;
-    }
-
-    const limitCheck = await checkDepositLimits(txn.userId, depositAmount);
-    if (limitCheck.blocked) {
-      await db.update(transactionsTable)
-        .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
-        .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
-      logger.warn({ uuid, userId: txn.userId, depositAmount }, "Cryptomus deposit rejected: deposit limit exceeded");
-      res.status(200).json({ received: true });
-      return;
-    }
-
-    // Atomic claim: only credit if we transition pending → completed
-    const claimed = await db.update(transactionsTable)
-      .set({ status: "completed", verified: true, verificationNote: `Auto-credited via Cryptomus (${status})`, cryptomusStatus: status })
-      .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")))
-      .returning({ id: transactionsTable.id });
-
-    if (claimed.length > 0) {
-      await db.update(walletsTable)
-        .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
-        .where(eq(walletsTable.userId, txn.userId));
-      await recordDepositUsage(txn.userId, txn.amount);
-      logger.info({ uuid, userId: txn.userId, amount: txn.amount }, "Cryptomus deposit credited to wallet");
-    } else {
-      logger.info({ uuid }, "Cryptomus webhook: deposit already processed, skipping duplicate credit");
-    }
-  }
-
-  // ── 5. Mark failed/cancelled ───────────────────────────────────────────────
-  if (status && CRYPTOMUS_FAILED.has(status)) {
-    await db.update(transactionsTable)
-      .set({ status: "rejected", verificationNote: `Cryptomus payment ${status}` })
-      .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
-
-    logger.info({ uuid, status }, "Cryptomus payment marked rejected");
-  }
-
   res.status(200).json({ received: true });
 });
 

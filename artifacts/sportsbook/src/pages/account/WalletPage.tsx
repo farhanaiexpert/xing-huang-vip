@@ -12,7 +12,7 @@ import { useAutoDeposit, USDT_ABI, TRON_USDT_CONTRACT, EVM_CHAINS } from '@/hook
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, Copy, Check, CheckCircle2,
   Clock, XCircle, RefreshCw, Loader2, CircleDollarSign, Shield,
-  AlertCircle, ExternalLink, Info, QrCode, Zap, CreditCard, Lock,
+  AlertCircle, ExternalLink, Info, QrCode, Zap, Lock,
   ChevronRight, ChevronDown, LogOut, RotateCcw, Users, Gift,
 } from 'lucide-react';
 
@@ -55,24 +55,6 @@ interface NppPayment {
   priceAmount: number;
   priceCurrency: string;
   expiresAt: string | null;
-}
-
-interface CmPayment {
-  uuid: string;
-  address: string | null;
-  amount: number;
-  network: string;
-  paymentUrl: string;
-  expiresAt: string | null;
-}
-
-interface PlisioInvoice {
-  invoiceId: string;
-  walletHash: string;
-  amount: number;
-  pendingAmount: string;
-  currency: string;
-  expiresAt?: string | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -163,13 +145,11 @@ export function WalletPage() {
   const depositSectionRef = useRef<HTMLDivElement>(null);
 
   // NOWPayments
-  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual' | 'wallet' | 'cryptomus' | 'plisio'>(() => {
+  const [depositMethod, setDepositMethod] = useState<'nowpayments' | 'manual' | 'wallet'>(() => {
     const hint = sessionStorage.getItem('cupbett_deposit_method');
     sessionStorage.removeItem('cupbett_deposit_method');
     if (hint === 'manual') return 'manual';
     if (hint === 'nowpayments') return 'nowpayments';
-    if (hint === 'cryptomus') return 'cryptomus';
-    if (hint === 'plisio') return 'plisio';
     return 'wallet';
   });
   const [selectedChain, setSelectedChain] = useState<ChainTabKey>('bsc');
@@ -218,25 +198,6 @@ export function WalletPage() {
   const [nppError, setNppError]       = useState('');
   const [nppAddrCopied, setNppAddrCopied] = useState(false);
 
-  // Plisio
-  const [plisioState, setPlisioState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
-  const [plisioAmount, setPlisioAmount]     = useState('');
-  const [plisioCurrency, setPlisioCurrency] = useState<'USDTTRC20' | 'USDTERC20' | 'BTC' | 'ETH' | 'LTC' | 'BNB' | 'XRP'>('USDTTRC20');
-  const [plisioInvoice, setPlisioInvoice]   = useState<PlisioInvoice | null>(null);
-  const [plisioTimeLeft, setPlisioTimeLeft] = useState(0);
-  const [plisioError, setPlisioError]       = useState('');
-  const [plisioAddrCopied, setPlisioAddrCopied] = useState(false);
-
-  // Cryptomus
-  const [cmAvailable, setCmAvailable]   = useState<boolean | null>(null);
-  const [cmState, setCmState]           = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>('idle');
-  const [cmAmount, setCmAmount]         = useState('');
-  const [cmNetwork, setCmNetwork]       = useState<'trc20' | 'erc20'>('trc20');
-  const [cmPayment, setCmPayment]       = useState<CmPayment | null>(null);
-  const [cmTimeLeft, setCmTimeLeft]     = useState(0);
-  const [cmError, setCmError]           = useState('');
-  const [cmAddrCopied, setCmAddrCopied] = useState(false);
-
   // Withdrawal form
   const [wdAmount, setWdAmount]       = useState('');
   const [wdAddress, setWdAddress]     = useState('');
@@ -252,17 +213,15 @@ export function WalletPage() {
   const loadData = useCallback(async () => {
     if (!isAuthenticated) { setLoading(false); return; }
     try {
-      const [info, bal, history, cmCheck] = await Promise.all([
+      const [info, bal, history] = await Promise.all([
         api.get<DepositInfo>('/wallet/deposit-info'),
         api.get<{ balance: string; bonusBalance?: string }>('/wallet/balance'),
         api.get<Transaction[]>('/wallet/transactions'),
-        api.get<{ available: boolean }>('/wallet/deposit/cryptomus/available').catch(() => ({ available: false })),
       ]);
       setDepositInfo(info);
       setBalance(parseFloat(bal.balance));
       setBonusBalance(parseFloat(bal.bonusBalance ?? '0'));
       setTxns(history);
-      setCmAvailable(cmCheck.available);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, [isAuthenticated]);
@@ -593,70 +552,6 @@ export function WalletPage() {
     setNppAmount(''); setNppError(''); setNppTimeLeft(0);
   }
 
-  // ── Plisio handlers ──────────────────────────────────────────────────────────
-  async function createPlisioDeposit() {
-    const amount = parseFloat(plisioAmount);
-    if (!plisioAmount || isNaN(amount) || amount < 10) { setPlisioError('Minimum deposit is 10 USDT'); return; }
-    setPlisioState('creating'); setPlisioError('');
-    try {
-      const result = await api.post<PlisioInvoice & { status: string }>(
-        '/wallet/deposit/plisio/create', { amount, currency: plisioCurrency }
-      );
-      const secsLeft = result.expiresAt
-        ? Math.max(0, Math.floor((new Date(result.expiresAt).getTime() - Date.now()) / 1000))
-        : 20 * 60;
-      setPlisioInvoice(result);
-      setPlisioTimeLeft(secsLeft);
-      setPlisioState('paying');
-      loadData();
-    } catch (err: unknown) {
-      setPlisioError(err instanceof Error ? err.message : 'Failed to create invoice');
-      setPlisioState('idle');
-    }
-  }
-
-  function copyPlisioAddress() {
-    if (!plisioInvoice) return;
-    navigator.clipboard.writeText(plisioInvoice.walletHash);
-    setPlisioAddrCopied(true);
-    setTimeout(() => setPlisioAddrCopied(false), 2000);
-  }
-
-  function resetPlisio() {
-    setPlisioState('idle'); setPlisioInvoice(null);
-    setPlisioAmount(''); setPlisioError(''); setPlisioTimeLeft(0);
-  }
-
-  // Plisio countdown timer
-  useEffect(() => {
-    if (plisioState !== 'paying' || plisioTimeLeft <= 0) return;
-    const id = setInterval(() => {
-      setPlisioTimeLeft(prev => {
-        if (prev <= 1) { setPlisioState('expired'); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [plisioState]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Plisio auto-poll status every 15s
-  useEffect(() => {
-    if (plisioState !== 'paying' || !plisioInvoice) return;
-    const id = setInterval(async () => {
-      try {
-        const r = await api.get<{ status: string; credited: boolean }>(
-          `/wallet/deposit/plisio/${plisioInvoice.invoiceId}/status`
-        );
-        if (r.credited || r.status === 'completed' || r.status === 'mined') {
-          setPlisioState('success'); loadData();
-        } else if (r.status === 'expired' || r.status === 'cancelled' || r.status === 'error') {
-          setPlisioState(r.status === 'expired' ? 'expired' : 'failed');
-        }
-      } catch { /* silent */ }
-    }, 15_000);
-    return () => clearInterval(id);
-  }, [plisioState, plisioInvoice]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Countdown timer
   useEffect(() => {
     if (nppState !== 'paying' || nppTimeLeft <= 0) return;
@@ -688,69 +583,6 @@ export function WalletPage() {
     }, 10_000);
     return () => clearInterval(id);
   }, [nppState, nppPayment]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Cryptomus handlers ───────────────────────────────────────────────────────
-  async function createCmPayment() {
-    const amount = parseFloat(cmAmount);
-    if (!cmAmount || isNaN(amount) || amount < 10) { setCmError('Minimum deposit is 10 USDT'); return; }
-    setCmState('creating'); setCmError('');
-    try {
-      const result = await api.post<CmPayment & { paymentStatus: string }>(
-        '/wallet/deposit/cryptomus/create', { amount, network: cmNetwork }
-      );
-      setCmPayment(result);
-      setCmTimeLeft(result.expiresAt
-        ? Math.max(0, Math.floor((new Date(result.expiresAt).getTime() - Date.now()) / 1000))
-        : 900); // 15-minute default matches backend lifetime
-      setCmState('paying');
-      loadData();
-    } catch (err: unknown) {
-      setCmError(err instanceof Error ? err.message : 'Failed to create payment');
-      setCmState('idle');
-    }
-  }
-
-  function copyCmAddress() {
-    if (!cmPayment?.address) return;
-    navigator.clipboard.writeText(cmPayment.address);
-    setCmAddrCopied(true);
-    setTimeout(() => setCmAddrCopied(false), 2000);
-  }
-
-  function resetCm() {
-    setCmState('idle'); setCmPayment(null);
-    setCmAmount(''); setCmError(''); setCmTimeLeft(0);
-  }
-
-  // Cryptomus countdown
-  useEffect(() => {
-    if (cmState !== 'paying' || cmTimeLeft <= 0) return;
-    const id = setInterval(() => {
-      setCmTimeLeft(prev => {
-        if (prev <= 1) { setCmState('expired'); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [cmState]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Cryptomus auto-poll every 12 s
-  useEffect(() => {
-    if (cmState !== 'paying' || !cmPayment) return;
-    const id = setInterval(async () => {
-      try {
-        const r = await api.get<{ status: string; credited: boolean }>(
-          `/wallet/deposit/cryptomus/${cmPayment.uuid}/status`
-        );
-        if (r.credited || r.status === 'paid' || r.status === 'paid_over') {
-          setCmState('success'); loadData();
-        } else if (r.status === 'fail' || r.status === 'cancel' || r.status === 'wrong_amount' || r.status === 'wrong_amount_waiting' || r.status === 'system_fail') {
-          setCmState('failed');
-        }
-      } catch { /* silent */ }
-    }, 12_000);
-    return () => clearInterval(id);
-  }, [cmState, cmPayment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -939,33 +771,6 @@ export function WalletPage() {
                 );
               })()}
 
-              {/* Plisio */}
-              {(() => {
-                const active = depositMethod === 'plisio';
-                return (
-                  <button onClick={() => { setDepositMethod('plisio'); resetPlisio(); }}
-                    className="w-full rounded-xl p-3 flex items-center gap-3 transition-all duration-150 text-left group"
-                    style={active
-                      ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(168,85,247,0.05) 100%)', border: '2px solid rgba(168,85,247,0.50)', boxShadow: '0 0 20px rgba(168,85,247,0.10)' }
-                      : { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.30)' }}>
-                      <CreditCard className="w-4 h-4 text-[#A855F7]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[13px] font-bold text-[#F8FAFC]">Plisio</span>
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,223,169,0.15)', color: '#00DFA9', border: '1px solid rgba(0,223,169,0.30)' }}>Auto Credit</span>
-                      </div>
-                      <p className="text-[10px] text-[#64748B] mt-0.5">USDT TRC-20 · ERC-20 · BTC · ETH · LTC · <span className="font-semibold text-[#A855F7]">Min $10</span></p>
-                    </div>
-                    {active
-                      ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#A855F7] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
-                      : <ChevronRight className="w-4 h-4 text-[#475569] shrink-0 group-hover:text-[#94A3B8] transition-colors" />}
-                  </button>
-                );
-              })()}
-
               {/* USDT Manual */}
               {(() => {
                 const active = depositMethod === 'manual';
@@ -993,21 +798,6 @@ export function WalletPage() {
                 );
               })()}
 
-              {/* Cryptomus — Coming Soon */}
-              <div className="w-full rounded-xl p-3 flex items-center gap-3 cursor-not-allowed"
-                style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(0,223,169,0.18)', opacity: 0.45 }}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.08)', border: '1px solid rgba(0,223,169,0.18)' }}>
-                  <CircleDollarSign className="w-4 h-4 text-[#00DFA9]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[13px] font-bold text-[#94A3B8]">Cryptomus</span>
-                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full text-[#64748B]" style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(100,116,139,0.28)' }}>Coming Soon</span>
-                  </div>
-                  <p className="text-[10px] text-[#475569] mt-0.5">TRC-20 · ERC-20 · Zero platform fee</p>
-                </div>
-                <Lock className="w-4 h-4 text-[#475569] shrink-0" />
-              </div>
             </div>
 
           {/* Trust elements — desktop only to save mobile space */}
@@ -1286,232 +1076,6 @@ export function WalletPage() {
                     <button onClick={resetNpp}
                       className="px-5 py-2.5 rounded-xl font-black text-[13px] text-[#0B0F14] transition-all hover:scale-[1.01]"
                       style={{ background: 'linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)' }}>
-                      Try Again
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── Plisio deposit panel ─────────────────────────────────────── */}
-          {depositMethod === 'plisio' && (
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0D0A1E 0%, #110E28 100%)', border: '1px solid rgba(168,85,247,0.20)' }}>
-              <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(168,85,247,0.06) 0%, transparent 100%)' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.30)' }}>
-                    <CreditCard className="h-4 w-4 text-[#A855F7]" />
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Top Up via Plisio</p>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">Enter amount → choose network → get unique address → auto-credited</p>
-                  </div>
-                </div>
-              </div>
-              {/* Network strip */}
-              <div className="px-5 py-2 border-b border-white/[0.05] flex items-center gap-2 overflow-x-auto scrollbar-none">
-                <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider shrink-0">Supports:</span>
-                {([
-                  { name: 'USDT TRC-20', color: '#00DFA9' },
-                  { name: 'USDT ERC-20', color: '#627EEA' },
-                  { name: 'BTC', color: '#F7931A' },
-                  { name: 'ETH', color: '#627EEA' },
-                  { name: 'LTC', color: '#A5A5A5' },
-                  { name: 'BNB', color: '#F0B90B' },
-                  { name: 'XRP', color: '#00C2FF' },
-                ] as { name: string; color: string }[]).map(n => (
-                  <span key={n.name} className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
-                    style={{ background: `${n.color}18`, color: n.color, border: `1px solid ${n.color}30` }}>
-                    {n.name}
-                  </span>
-                ))}
-              </div>
-              <div className="p-5">
-
-                {/* IDLE */}
-                {plisioState === 'idle' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
-                          <CircleDollarSign className="h-3 w-3" /> Amount (USDT)
-                        </label>
-                        <div className="relative">
-                          <input type="number" min="10" step="0.01" value={plisioAmount}
-                            onChange={e => { setPlisioAmount(e.target.value); setPlisioError(''); }}
-                            placeholder="Min 10 USDT"
-                            className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#A855F7]/60 focus:ring-1 focus:ring-[#A855F7]/20 transition-all pr-16" />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#A855F7] bg-[#A855F7]/10 px-2 py-0.5 rounded-lg">USDT</span>
-                        </div>
-                        {plisioAmount && !isNaN(parseFloat(plisioAmount)) && parseFloat(plisioAmount) > 0 && (
-                          <div className="mt-1.5 px-1">
-                            {parseFloat(plisioAmount) < 10
-                              ? <span className="text-[10px] text-red-400 flex items-center gap-1"><AlertCircle className="h-2.5 w-2.5" /> Minimum deposit is 10 USDT</span>
-                              : <span className="text-[10px] text-[#00DFA9]">✓ You will receive ≈ {parseFloat(plisioAmount).toFixed(2)} USDT</span>}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
-                          <Zap className="h-3 w-3" /> Network / Coin
-                        </label>
-                        <select value={plisioCurrency} onChange={e => setPlisioCurrency(e.target.value as typeof plisioCurrency)}
-                          className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[13px] font-semibold text-[#F8FAFC] focus:outline-none focus:border-[#A855F7]/60 focus:ring-1 focus:ring-[#A855F7]/20 transition-all">
-                          <option value="USDTTRC20">USDT (TRC-20 / Tron) — Recommended</option>
-                          <option value="USDTERC20">USDT (ERC-20 / Ethereum)</option>
-                          <option value="BTC">Bitcoin (BTC)</option>
-                          <option value="ETH">Ethereum (ETH)</option>
-                          <option value="LTC">Litecoin (LTC)</option>
-                          <option value="BNB">BNB (BSC)</option>
-                          <option value="XRP">XRP (Ripple)</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex gap-1.5 flex-wrap items-center">
-                      <p className="text-[10px] text-[#64748B] font-semibold mr-0.5">Quick:</p>
-                      {[10, 25, 50, 100, 250, 500, 1000].map(amt => (
-                        <button key={amt} type="button" onClick={() => { setPlisioAmount(String(amt)); setPlisioError(''); }}
-                          className={cn('text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-all',
-                            plisioAmount === String(amt)
-                              ? 'bg-[#A855F7]/20 text-[#A855F7] border border-[#A855F7]/40'
-                              : 'bg-white/5 text-[#64748B] border border-white/[0.07] hover:bg-white/10 hover:text-white')}>
-                          ${amt}
-                        </button>
-                      ))}
-                    </div>
-                    {plisioError && (
-                      <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl p-3">
-                        <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-                        <p className="text-[12px] text-red-400">{plisioError}</p>
-                      </div>
-                    )}
-                    <button onClick={createPlisioDeposit}
-                      className="w-full py-3.5 rounded-xl font-black text-[14px] text-white transition-all hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2"
-                      style={{ background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)', boxShadow: '0 0 24px rgba(168,85,247,0.30)' }}>
-                      <CreditCard className="h-4 w-4" /> Generate Payment Address
-                    </button>
-                    <p className="text-center text-[10px] text-[#64748B]">
-                      A unique address is generated for each deposit — your balance is credited automatically when payment is confirmed
-                    </p>
-                  </div>
-                )}
-
-                {/* CREATING */}
-                {plisioState === 'creating' && (
-                  <div className="flex flex-col items-center py-12 gap-5 text-center">
-                    <div className="relative flex items-center justify-center">
-                      <div className="absolute w-24 h-24 rounded-full animate-ping opacity-10" style={{ background: 'radial-gradient(circle, #A855F7, transparent)', animationDuration: '1.4s' }} />
-                      <svg className="w-20 h-20 animate-spin" style={{ animationDuration: '1.1s' }} viewBox="0 0 80 80">
-                        <circle cx="40" cy="40" r="34" fill="none" stroke="#A855F7" strokeWidth="3" strokeDasharray="160" strokeDashoffset="120" strokeLinecap="round" />
-                        <circle cx="40" cy="40" r="34" fill="none" stroke="#7C3AED" strokeWidth="1" strokeDasharray="213" strokeLinecap="round" style={{ opacity: 0.15 }} />
-                      </svg>
-                      <div className="absolute w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)' }}>
-                        <CreditCard className="w-6 h-6 text-[#A855F7]" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[16px] font-black text-[#F8FAFC]">Generating address…</p>
-                      <p className="text-[11px] text-[#64748B] mt-1">Connecting to Plisio gateway</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* PAYING */}
-                {plisioState === 'paying' && plisioInvoice && (
-                  <div className="space-y-4">
-                    {/* Timer */}
-                    <div className="flex items-center justify-between px-4 py-2.5 rounded-xl"
-                      style={{ background: plisioTimeLeft < 300 ? 'rgba(239,68,68,0.08)' : 'rgba(168,85,247,0.08)', border: `1px solid ${plisioTimeLeft < 300 ? 'rgba(239,68,68,0.25)' : 'rgba(168,85,247,0.25)'}` }}>
-                      <div className="flex items-center gap-2">
-                        <Clock className={`h-4 w-4 ${plisioTimeLeft < 300 ? 'text-red-400' : 'text-[#A855F7]'}`} />
-                        <span className="text-[12px] font-bold text-[#F8FAFC]">Invoice expires in</span>
-                      </div>
-                      <span className={`text-[16px] font-black tabular-nums ${plisioTimeLeft < 300 ? 'text-red-400' : 'text-[#A855F7]'}`}>
-                        {Math.floor(plisioTimeLeft / 60)}:{String(plisioTimeLeft % 60).padStart(2, '0')}
-                      </span>
-                    </div>
-
-                    {/* Amount to send */}
-                    <div className="rounded-xl p-4 text-center" style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.20)' }}>
-                      <p className="text-[11px] text-[#64748B] font-semibold uppercase tracking-wider mb-1">Send exactly</p>
-                      <p className="text-[28px] font-black text-[#F8FAFC] tabular-nums leading-none">{parseFloat(plisioInvoice.pendingAmount).toFixed(6)}</p>
-                      <p className="text-[13px] font-bold text-[#A855F7] mt-1">{plisioInvoice.currency.replace('USDT', 'USDT ')}</p>
-                      <p className="text-[11px] text-[#64748B] mt-0.5">≈ ${plisioInvoice.amount.toFixed ? plisioInvoice.amount.toFixed(2) : plisioInvoice.amount} USD</p>
-                    </div>
-
-                    {/* Address */}
-                    <div>
-                      <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">Top Up Address</p>
-                      <div className="flex items-center gap-2 rounded-xl px-4 py-3" style={{ background: '#0B0F14', border: '1px solid rgba(168,85,247,0.25)' }}>
-                        <p className="text-[12px] font-mono text-[#F8FAFC] flex-1 break-all leading-relaxed">{plisioInvoice.walletHash}</p>
-                        <button onClick={copyPlisioAddress} className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all"
-                          style={{ background: plisioAddrCopied ? 'rgba(0,223,169,0.15)' : 'rgba(168,85,247,0.15)', color: plisioAddrCopied ? '#00DFA9' : '#A855F7', border: `1px solid ${plisioAddrCopied ? 'rgba(0,223,169,0.30)' : 'rgba(168,85,247,0.30)'}` }}>
-                          {plisioAddrCopied ? <><Check className="h-3 w-3" /> Copied</> : <><Copy className="h-3 w-3" /> Copy</>}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Polling indicator */}
-                    <div className="flex items-center gap-2.5 rounded-xl p-3" style={{ background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.15)' }}>
-                      <RefreshCw className="h-3.5 w-3.5 text-[#A855F7] animate-spin shrink-0" />
-                      <div>
-                        <p className="text-[11px] font-semibold text-[#A855F7]">Watching for your payment…</p>
-                        <p className="text-[10px] text-[#64748B]">Checking every 15 seconds · Balance credited automatically on confirmation</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-2 rounded-xl p-3" style={{ background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.12)' }}>
-                      <AlertCircle className="w-3.5 h-3.5 text-[#FACC15] shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-[#FACC15] leading-relaxed">
-                        Send <strong>exactly</strong> the amount shown above. Sending less or more may delay or prevent credit.
-                      </p>
-                    </div>
-
-                    <button onClick={resetPlisio}
-                      className="w-full py-2 rounded-xl text-[12px] font-bold text-[#64748B] hover:text-[#94A3B8] transition-all"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      Cancel — start over
-                    </button>
-                  </div>
-                )}
-
-                {/* SUCCESS */}
-                {plisioState === 'success' && (
-                  <div className="flex flex-col items-center py-10 gap-4 text-center">
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 40px rgba(0,223,169,0.15)' }}>
-                      <CheckCircle2 className="w-10 h-10 text-[#00DFA9]" />
-                    </div>
-                    <div>
-                      <p className="text-[20px] font-black text-[#00DFA9]">Top Up Confirmed!</p>
-                      <p className="text-[13px] text-[#64748B] mt-1">
-                        {plisioInvoice ? `$${plisioInvoice.amount} USDT` : 'Your deposit'} has been credited to your account
-                      </p>
-                    </div>
-                    <button onClick={resetPlisio}
-                      className="px-8 py-3 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01]"
-                      style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 20px rgba(0,223,169,0.25)' }}>
-                      Top Up Again
-                    </button>
-                  </div>
-                )}
-
-                {/* EXPIRED / FAILED */}
-                {(plisioState === 'expired' || plisioState === 'failed') && (
-                  <div className="flex flex-col items-center py-10 gap-4 text-center">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(239,68,68,0.10)', border: '2px solid rgba(239,68,68,0.25)' }}>
-                      <Clock className="w-8 h-8 text-red-400" />
-                    </div>
-                    <div>
-                      <p className="text-[18px] font-black text-red-400">{plisioState === 'expired' ? 'Invoice Expired' : 'Payment Failed'}</p>
-                      <p className="text-[13px] text-[#64748B] mt-1">
-                        {plisioState === 'expired' ? 'This invoice has expired. Please generate a new one.' : 'Payment could not be processed. Please try again.'}
-                      </p>
-                    </div>
-                    <button onClick={resetPlisio}
-                      className="px-8 py-3 rounded-xl font-black text-[13px] text-white transition-all hover:scale-[1.01]"
-                      style={{ background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)' }}>
                       Try Again
                     </button>
                   </div>
@@ -2011,268 +1575,6 @@ export function WalletPage() {
                         Top Up More
                       </button>
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── Cryptomus USDT auto-pay panel ───────────────────────────── */}
-          {depositMethod === 'cryptomus' && (
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #071A12 100%)', border: '1px solid rgba(0,223,169,0.20)' }}>
-              <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: 'linear-gradient(90deg, rgba(0,223,169,0.06) 0%, transparent 100%)' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,223,169,0.15)', border: '1px solid rgba(0,223,169,0.30)' }}>
-                    <CircleDollarSign className="h-4 w-4 text-[#00DFA9]" />
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-bold text-[#F8FAFC]">Quick Top Up via Cryptomus</p>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">USDT TRC-20 or ERC-20 — auto-credited on confirmation</p>
-                  </div>
-                </div>
-              </div>
-              {/* Network strip */}
-              <div className="px-5 py-2 border-b border-white/[0.05] flex items-center gap-2 overflow-x-auto scrollbar-none">
-                <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider shrink-0">Supports:</span>
-                {([
-                  { name: 'USDT TRC-20', color: '#00DFA9' },
-                  { name: 'USDT ERC-20', color: '#627EEA' },
-                ] as { name: string; color: string }[]).map(n => (
-                  <span key={n.name} className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
-                    style={{ background: `${n.color}18`, color: n.color, border: `1px solid ${n.color}30` }}>
-                    {n.name}
-                  </span>
-                ))}
-              </div>
-              <div className="p-5">
-
-                {/* IDLE */}
-                {cmState === 'idle' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
-                          <CircleDollarSign className="h-3 w-3" /> Amount (USDT)
-                        </label>
-                        <div className="relative">
-                          <input type="number" min="10" step="0.01" value={cmAmount}
-                            onChange={e => { setCmAmount(e.target.value); setCmError(''); }}
-                            placeholder="Min 10 USDT"
-                            className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16" />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">USDT</span>
-                        </div>
-                        {cmAmount && !isNaN(parseFloat(cmAmount)) && parseFloat(cmAmount) > 0 && (
-                          <div className="mt-1.5 px-1">
-                            {parseFloat(cmAmount) < 10
-                              ? <span className="text-[10px] text-red-400 flex items-center gap-1"><AlertCircle className="h-2.5 w-2.5" /> Minimum deposit is 10 USDT</span>
-                              : <span className="text-[10px] text-[#00DFA9]">✓ You will receive ≈ {parseFloat(cmAmount).toFixed(2)} USDT</span>}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2">
-                          <Zap className="h-3 w-3" /> Network
-                        </label>
-                        <select value={cmNetwork} onChange={e => setCmNetwork(e.target.value as 'trc20' | 'erc20')}
-                          className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[13px] font-semibold text-[#F8FAFC] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all">
-                          <option value="trc20">USDT (TRC-20 / Tron)</option>
-                          <option value="erc20">USDT (ERC-20 / Ethereum)</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex gap-1.5 flex-wrap items-center">
-                      <p className="text-[10px] text-[#64748B] font-semibold mr-0.5">Quick:</p>
-                      {[10, 25, 50, 100, 250, 500, 1000].map(amt => (
-                        <button key={amt} type="button" onClick={() => { setCmAmount(String(amt)); setCmError(''); }}
-                          className={cn('text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-all',
-                            cmAmount === String(amt)
-                              ? 'bg-[#00DFA9]/20 text-[#00DFA9] border border-[#00DFA9]/40'
-                              : 'bg-white/5 text-[#64748B] border border-white/[0.07] hover:bg-white/10 hover:text-white')}>
-                          ${amt}
-                        </button>
-                      ))}
-                    </div>
-                    {cmError && (
-                      <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/25 rounded-xl p-3">
-                        <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-                        <p className="text-[12px] text-red-400">{cmError}</p>
-                      </div>
-                    )}
-                    <button onClick={createCmPayment}
-                      className="w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2"
-                      style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 24px rgba(0,223,169,0.30)' }}>
-                      <Zap className="h-4 w-4" /> Generate Payment Address
-                    </button>
-                    <p className="text-center text-[10px] text-[#64748B]">
-                      A unique address is generated for each deposit — balance is credited automatically when confirmed
-                    </p>
-                  </div>
-                )}
-
-                {/* CREATING */}
-                {cmState === 'creating' && (
-                  <div className="flex flex-col items-center py-12 gap-5 text-center">
-                    <div className="relative flex items-center justify-center">
-                      <div className="absolute w-24 h-24 rounded-full animate-ping opacity-10" style={{ background: 'radial-gradient(circle, #00DFA9, transparent)', animationDuration: '1.4s' }} />
-                      <svg className="w-20 h-20 animate-spin" style={{ animationDuration: '1.1s' }} viewBox="0 0 80 80">
-                        <circle cx="40" cy="40" r="34" fill="none" stroke="#00DFA9" strokeWidth="3" strokeDasharray="160" strokeDashoffset="120" strokeLinecap="round" />
-                        <circle cx="40" cy="40" r="34" fill="none" stroke="#38BDF8" strokeWidth="1" strokeDasharray="213" strokeLinecap="round" style={{ opacity: 0.15 }} />
-                      </svg>
-                      <div className="absolute w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,223,169,0.12)', border: '1px solid rgba(0,223,169,0.3)' }}>
-                        <CircleDollarSign className="w-6 h-6 text-[#00DFA9]" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[16px] font-black text-[#F8FAFC]">Generating address…</p>
-                      <p className="text-[11px] text-[#64748B] mt-1">Connecting to Cryptomus gateway</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* PAYING */}
-                {cmState === 'paying' && cmPayment && (
-                  <div className="space-y-4">
-                    {/* Timer */}
-                    <div className="flex items-center justify-between px-4 py-2.5 rounded-xl"
-                      style={{ background: cmTimeLeft < 300 ? 'rgba(239,68,68,0.08)' : 'rgba(0,223,169,0.08)', border: `1px solid ${cmTimeLeft < 300 ? 'rgba(239,68,68,0.25)' : 'rgba(0,223,169,0.25)'}` }}>
-                      <div className="flex items-center gap-2">
-                        <Clock className={`h-4 w-4 ${cmTimeLeft < 300 ? 'text-red-400' : 'text-[#00DFA9]'}`} />
-                        <span className="text-[12px] font-bold text-[#F8FAFC]">Payment expires in</span>
-                      </div>
-                      <span className={`text-[16px] font-black tabular-nums ${cmTimeLeft < 300 ? 'text-red-400' : 'text-[#00DFA9]'}`}>
-                        {Math.floor(cmTimeLeft / 3600)}:{String(Math.floor((cmTimeLeft % 3600) / 60)).padStart(2, '0')}:{String(cmTimeLeft % 60).padStart(2, '0')}
-                      </span>
-                    </div>
-
-                    {/* Payment status tracker */}
-                    <div className="flex items-center w-full px-1">
-                      {['Waiting','Detected','Confirming','Confirmed','Credited'].map((step, i, arr) => (
-                        <div key={step} className="flex items-center flex-1 min-w-0">
-                          <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                            <div className={cn('w-5 h-5 rounded-full flex items-center justify-center',
-                              i === 0 ? 'border border-[#00DFA9]/50 bg-[#00DFA9]/10' : 'border border-white/[0.08] bg-white/[0.03]')}>
-                              {i === 0
-                                ? <span className="w-1.5 h-1.5 rounded-full bg-[#00DFA9] animate-pulse block" />
-                                : <span className="text-[8px] font-bold text-[#475569]">{i+1}</span>}
-                            </div>
-                            <span className={cn('text-[8px] font-semibold leading-tight text-center whitespace-nowrap',
-                              i === 0 ? 'text-[#00DFA9]' : 'text-[#475569]')}>{step}</span>
-                          </div>
-                          {i < arr.length - 1 && (
-                            <div className="flex-1 h-px mx-1 mb-4" style={{ background: i === 0 ? 'linear-gradient(90deg, rgba(0,223,169,0.4) 0%, rgba(255,255,255,0.06) 100%)' : 'rgba(255,255,255,0.06)' }} />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Pay on Cryptomus button */}
-                    {cmPayment.paymentUrl && (
-                      <a href={cmPayment.paymentUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-black text-[14px] text-[#0B0F14] transition-all hover:scale-[1.01]"
-                        style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)', boxShadow: '0 0 20px rgba(0,223,169,0.25)' }}>
-                        <ExternalLink className="h-4 w-4" /> Pay on Cryptomus
-                      </a>
-                    )}
-
-                    {/* QR + address (if address is available) */}
-                    {cmPayment.address && (
-                      <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-[#0B0F14] border border-white/[0.07]">
-                        <div className="p-2 rounded-xl bg-white flex-shrink-0" style={{ boxShadow: '0 0 0 1px rgba(0,223,169,0.2)' }}>
-                          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(cmPayment.address)}`}
-                            alt="Payment address QR" className="w-[140px] h-[140px] object-contain" />
-                        </div>
-                        <div className="flex-1 w-full space-y-3">
-                          <div>
-                            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Send Exactly</p>
-                            <div className="flex items-center gap-2 bg-[#00DFA9]/5 border border-[#00DFA9]/20 rounded-xl px-4 py-2.5">
-                              <span className="text-[18px] font-black text-[#F8FAFC] tabular-nums">{cmPayment.amount}</span>
-                              <span className="text-[12px] font-bold text-[#00DFA9]">USDT</span>
-                              <span className="text-[10px] text-[#64748B] ml-auto">{cmPayment.network === 'TRON' ? 'TRC-20' : 'ERC-20'}</span>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">To This Address</p>
-                            <div className="flex items-center gap-2 bg-[#0E1520] border border-white/[0.08] rounded-xl px-3 py-2">
-                              <p className="flex-1 text-[11px] font-mono text-[#94A3B8] break-all leading-relaxed select-all">{cmPayment.address}</p>
-                              <button onClick={copyCmAddress}
-                                className={cn('shrink-0 p-2 rounded-lg transition-all', cmAddrCopied ? 'bg-[#00DFA9]/20 text-[#00DFA9]' : 'bg-white/5 text-[#64748B] hover:bg-white/10 hover:text-white')}>
-                                {cmAddrCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                              </button>
-                            </div>
-                            {cmAddrCopied && <p className="text-[10px] text-[#00DFA9] mt-1 flex items-center gap-1"><Check className="h-2.5 w-2.5" /> Address copied</p>}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Polling indicator */}
-                    <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#00DFA9]/5 border border-[#00DFA9]/15">
-                      <div className="relative w-3 h-3 flex-shrink-0">
-                        <div className="absolute inset-0 rounded-full bg-[#00DFA9] animate-ping opacity-60" style={{ animationDuration: '1.5s' }} />
-                        <div className="relative w-3 h-3 rounded-full bg-[#00DFA9]" />
-                      </div>
-                      <p className="text-[11px] text-[#00DFA9]/80">Monitoring your payment — balance updates automatically when confirmed</p>
-                    </div>
-                    <div className="flex items-start gap-2 bg-[#FACC15]/5 border border-[#FACC15]/15 rounded-xl p-3">
-                      <AlertCircle className="h-3.5 w-3.5 text-[#FACC15] shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-[#FACC15]/80 leading-relaxed">
-                        Send <strong>exactly</strong> the amount shown. You can also tap "Pay on Cryptomus" to use the hosted payment page.
-                      </p>
-                    </div>
-                    <button onClick={resetCm}
-                      className="w-full py-2.5 rounded-xl text-[12px] font-bold text-[#64748B] border border-white/[0.07] hover:text-white hover:bg-white/5 transition-all">
-                      ← Start a new payment
-                    </button>
-                  </div>
-                )}
-
-                {/* SUCCESS */}
-                {cmState === 'success' && (
-                  <div className="flex flex-col items-center py-8 gap-4 text-center">
-                    <div className="relative">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,223,169,0.12)', border: '2px solid rgba(0,223,169,0.35)', boxShadow: '0 0 32px rgba(0,223,169,0.2)' }}>
-                        <CheckCircle2 className="h-8 w-8 text-[#00DFA9]" />
-                      </div>
-                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center">
-                        <Check className="w-3 h-3 text-[#0B0F14]" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[18px] font-black text-[#F8FAFC]">Top Up Credited! ⚡</p>
-                      <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
-                        Your Cryptomus payment was confirmed and <span className="text-[#00DFA9] font-semibold">automatically credited</span> to your account.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 bg-[#00DFA9]/5 border border-[#00DFA9]/15 rounded-xl px-4 py-2.5">
-                      <Check className="h-3.5 w-3.5 text-[#00DFA9] shrink-0" />
-                      <p className="text-[11px] text-[#00DFA9]/80">Funds are available in your wallet now</p>
-                    </div>
-                    <button onClick={resetCm}
-                      className="mt-1 px-5 py-2 rounded-xl text-[12px] font-bold text-[#00DFA9] border border-[#00DFA9]/25 hover:bg-[#00DFA9]/10 transition-all">
-                      Make another deposit
-                    </button>
-                  </div>
-                )}
-
-                {/* EXPIRED / FAILED */}
-                {(cmState === 'expired' || cmState === 'failed') && (
-                  <div className="flex flex-col items-center py-8 gap-4 text-center">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(239,68,68,0.10)', border: '2px solid rgba(239,68,68,0.25)' }}>
-                      <XCircle className="h-8 w-8 text-red-400" />
-                    </div>
-                    <div>
-                      <p className="text-[18px] font-black text-[#F8FAFC]">{cmState === 'expired' ? 'Payment Expired' : 'Payment Failed'}</p>
-                      <p className="text-[12px] text-[#64748B] mt-1.5 max-w-xs mx-auto leading-relaxed">
-                        {cmState === 'expired'
-                          ? 'This payment session has expired. Please generate a new address to deposit.'
-                          : 'The payment was not completed. Please try again or use another deposit method.'}
-                      </p>
-                    </div>
-                    <button onClick={resetCm}
-                      className="px-5 py-2.5 rounded-xl font-black text-[13px] text-[#0B0F14] transition-all hover:scale-[1.01]"
-                      style={{ background: 'linear-gradient(135deg, #00DFA9 0%, #00C49A 100%)' }}>
-                      Try Again
-                    </button>
                   </div>
                 )}
               </div>

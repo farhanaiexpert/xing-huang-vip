@@ -12,20 +12,16 @@ import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
 
-type GatewayKind = "nowpayments" | "cryptomus" | "plisio" | "manual" | "none";
+type GatewayKind = "nowpayments" | "manual" | "none";
 
 function detectGateway(txn: AdminTransaction): GatewayKind {
   if (txn.nowpaymentsPaymentId) return "nowpayments";
-  if (txn.cryptomusUuid) return "cryptomus";
-  if (txn.plisioPaymentId) return "plisio";
   if (txn.txHash) return "manual";
   return "none";
 }
 
 const GATEWAY_LABELS: Record<GatewayKind, { label: string; color: string; border: string; bg: string; icon: string }> = {
   nowpayments: { label: "NOWPayments", color: "#38BDF8", border: "rgba(56,189,248,0.25)", bg: "rgba(56,189,248,0.08)", icon: "⚡" },
-  cryptomus:   { label: "Cryptomus",   color: "#A78BFA", border: "rgba(167,139,250,0.25)", bg: "rgba(167,139,250,0.08)", icon: "◈" },
-  plisio:      { label: "Plisio",      color: "#F472B6", border: "rgba(244,114,182,0.25)", bg: "rgba(244,114,182,0.08)", icon: "🔷" },
   manual:      { label: "On-chain",    color: "#00DFA9", border: "rgba(0,223,169,0.25)",   bg: "rgba(0,223,169,0.08)",   icon: "#" },
   none:        { label: "Unknown",     color: "#64748B", border: "rgba(100,116,139,0.15)", bg: "rgba(100,116,139,0.06)", icon: "?" },
 };
@@ -56,17 +52,6 @@ function CopyBtn({ value, label }: { value: string; label: string }) {
     </button>
   );
 }
-
-const CRYPTOMUS_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  paid:          { bg: "rgba(0,223,169,0.08)",   text: "#00DFA9", border: "rgba(0,223,169,0.20)",   label: "Paid ✓" },
-  paid_over:     { bg: "rgba(0,223,169,0.08)",   text: "#00DFA9", border: "rgba(0,223,169,0.20)",   label: "Paid Over" },
-  check:         { bg: "rgba(250,204,21,0.08)",  text: "#FACC15", border: "rgba(250,204,21,0.20)",  label: "Checking" },
-  waiting:       { bg: "rgba(250,204,21,0.08)",  text: "#FACC15", border: "rgba(250,204,21,0.20)",  label: "Waiting" },
-  cancel:        { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Cancelled" },
-  fail:          { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Failed" },
-  wrong_amount:  { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Wrong Amt" },
-  system_fail:   { bg: "rgba(239,68,68,0.08)",   text: "#F87171", border: "rgba(239,68,68,0.20)",   label: "Sys Fail" },
-};
 
 const NPP_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
   waiting:        { bg: "rgba(250,204,21,0.08)",  text: "#FACC15", border: "rgba(250,204,21,0.20)",  label: "Waiting" },
@@ -143,40 +128,7 @@ function PaymentDetailsCell({ txn }: { txn: AdminTransaction }) {
           {txn.nowpaymentsStatus && <StatusPill status={txn.nowpaymentsStatus} colors={NPP_STATUS_COLORS} />}
         </div>
       )}
-      {txn.cryptomusUuid && (
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-[#A78BFA] font-bold">◈</span>
-            <span className="font-mono text-[11px] text-[#A78BFA]">
-              {txn.cryptomusUuid.slice(0, 10)}…
-            </span>
-            <CopyBtn value={txn.cryptomusUuid} label="Cryptomus UUID" />
-            <a href="https://app.cryptomus.com/payments"
-              target="_blank" rel="noopener noreferrer"
-              className="text-[#A78BFA]/60 hover:text-[#A78BFA] transition-colors" title="Open Cryptomus dashboard">
-              <Link2 className="w-3 h-3" />
-            </a>
-          </div>
-          {txn.cryptomusStatus && <StatusPill status={txn.cryptomusStatus} colors={CRYPTOMUS_STATUS_COLORS} />}
-        </div>
-      )}
-      {txn.plisioPaymentId && (
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-[#F472B6]">🔷</span>
-            <span className="font-mono text-[11px] text-[#F472B6]">
-              {txn.plisioPaymentId.slice(0, 10)}…
-            </span>
-            <CopyBtn value={txn.plisioPaymentId} label="Plisio ID" />
-          </div>
-          {txn.plisioStatus && (
-            <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-[#F472B6]/10 text-[#F472B6] border border-[#F472B6]/20">
-              {txn.plisioStatus}
-            </span>
-          )}
-        </div>
-      )}
-      {!txn.txHash && !txn.nowpaymentsPaymentId && !txn.cryptomusUuid && !txn.plisioPaymentId && (
+      {!txn.txHash && !txn.nowpaymentsPaymentId && (
         <span className="text-[#334155] text-xs">—</span>
       )}
     </div>
@@ -338,8 +290,6 @@ export default function DepositsPage() {
           <option value="">All gateways</option>
           <option value="manual">On-chain / Manual</option>
           <option value="nowpayments">⚡ NOWPayments</option>
-          <option value="cryptomus">◈ Cryptomus</option>
-          <option value="plisio">🔷 Plisio</option>
         </select>
         <select value={network} onChange={e => { setNetwork(e.target.value); setPage(1); }} className={selClass}>
           <option value="">All networks</option>
@@ -399,7 +349,7 @@ export default function DepositsPage() {
                 </div>
 
                 {/* Payment reference */}
-                {(txn.txHash || txn.nowpaymentsPaymentId || txn.cryptomusUuid || txn.plisioPaymentId) && (
+                {(txn.txHash || txn.nowpaymentsPaymentId) && (
                   <div className="bg-white/3 rounded-lg p-2.5">
                     <div className="text-[10px] text-[#475569] mb-1.5 font-semibold uppercase tracking-wider">Payment Details</div>
                     <PaymentDetailsCell txn={txn} />

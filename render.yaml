@@ -52,14 +52,6 @@ services:
         sync: false
       - key: NOWPAYMENTS_IPN_SECRET
         sync: false
-      - key: CRYPTOMUS_API_KEY
-        sync: false
-      - key: CRYPTOMUS_MERCHANT_ID
-        sync: false
-      - key: PLISIO_API_KEY
-        sync: false
-      - key: PLISIO_IPN_SECRET
-        sync: false
       - key: DEPOSIT_WALLET_ADDRESS
         sync: false
       - key: DEPOSIT_WALLET_ADDRESS_ERC

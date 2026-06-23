@@ -991,13 +991,9 @@ router.get("/admin/transactions", async (req, res): Promise<void> => {
   if (type) conditions.push(eq(transactionsTable.type, type));
   if (status) conditions.push(eq(transactionsTable.status, status));
   if (gateway === "nowpayments") conditions.push(isNotNull(transactionsTable.nowpaymentsPaymentId));
-  else if (gateway === "cryptomus") conditions.push(isNotNull(transactionsTable.cryptomusUuid));
-  else if (gateway === "plisio") conditions.push(isNotNull(transactionsTable.plisioPaymentId));
   else if (gateway === "manual") {
     conditions.push(isNotNull(transactionsTable.txHash));
     conditions.push(isNull(transactionsTable.nowpaymentsPaymentId));
-    conditions.push(isNull(transactionsTable.cryptomusUuid));
-    conditions.push(isNull(transactionsTable.plisioPaymentId));
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -1018,10 +1014,6 @@ router.get("/admin/transactions", async (req, res): Promise<void> => {
       verificationNote: transactionsTable.verificationNote,
       nowpaymentsPaymentId: transactionsTable.nowpaymentsPaymentId,
       nowpaymentsStatus: transactionsTable.nowpaymentsStatus,
-      plisioPaymentId: transactionsTable.plisioPaymentId,
-      plisioStatus: transactionsTable.plisioStatus,
-      cryptomusUuid: transactionsTable.cryptomusUuid,
-      cryptomusStatus: transactionsTable.cryptomusStatus,
       createdAt: transactionsTable.createdAt,
       userBalance: walletsTable.balanceUsdt,
       userBonusBalance: walletsTable.bonusBalanceUsdt,

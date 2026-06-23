@@ -214,10 +214,6 @@ docker compose up -d --build
 | `BETSAPI_KEY` | Recommended | BetsAPI — in-play data |
 | `NOWPAYMENTS_API_KEY` | Optional | NOWPayments gateway |
 | `NOWPAYMENTS_IPN_SECRET` | Optional | NOWPayments webhooks |
-| `CRYPTOMUS_API_KEY` | Optional | Cryptomus gateway |
-| `CRYPTOMUS_MERCHANT_ID` | Optional | Cryptomus merchant ID |
-| `PLISIO_API_KEY` | Optional | Plisio gateway |
-| `PLISIO_IPN_SECRET` | Optional | Plisio webhooks |
 | `DEPOSIT_WALLET_ADDRESS` | Optional | TRC-20 USDT address |
 | `DEPOSIT_WALLET_ADDRESS_ERC` | Optional | ERC-20 USDT address |
 | `DEPOSIT_WALLET_ADDRESS_BSC` | Optional | BSC USDT address |

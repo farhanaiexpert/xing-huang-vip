@@ -13,7 +13,6 @@ import { verifyTonDeposit } from "../lib/tonVerify.js";
 import { verifyBtcDeposit } from "../lib/btcVerify.js";
 import { verifyXrpDeposit } from "../lib/xrpVerify.js";
 import { createPayment, getPaymentStatus, getMinimumPaymentAmount, FINISHED_STATUSES, FAILED_STATUSES } from "../lib/nowpayments.js";
-import { createPayment as cryptomusCreatePayment, getPaymentStatus as cryptomusGetStatus, cryptomusConfigured, FINISHED_STATUSES as CRYPTOMUS_FINISHED, FAILED_STATUSES as CRYPTOMUS_FAILED } from "../lib/cryptomus.js";
 import { logger } from "../lib/logger.js";
 
 const router = Router();
@@ -425,7 +424,7 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
 
       // Atomic claim: only credit if we can transition pending → completed.
       // This prevents double-credit when both the webhook and polling path
-      // see a finished status concurrently. Mirrors the Cryptomus pattern.
+      // see a finished status concurrently.
       const pollClaimed = await db.update(transactionsTable)
         .set({ status: "completed", verified: true, verificationNote: `Auto-credited via NOWPayments (${payment.paymentStatus})`, nowpaymentsStatus: payment.paymentStatus })
         .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")))
@@ -454,172 +453,6 @@ router.get("/wallet/deposit/nowpayments/:paymentId/status", authenticate, async 
   } catch (err) {
     logger.warn({ err, paymentId }, "Failed to poll NOWPayments status");
     res.json({ status: txn.nowpaymentsStatus ?? "waiting", nowpaymentsStatus: txn.nowpaymentsStatus, credited: false });
-  }
-});
-
-// ── GET /wallet/deposit/cryptomus/available ───────────────────────────────────
-router.get("/wallet/deposit/cryptomus/available", (_req, res): void => {
-  res.json({ available: cryptomusConfigured() });
-});
-
-// ── POST /wallet/deposit/cryptomus/create ─────────────────────────────────────
-const CRYPTOMUS_NETWORKS = ["trc20", "erc20"] as const;
-
-const CryptomusCreateBody = z.object({
-  amount:  z.number().positive().min(10, "Minimum deposit is 10 USDT"),
-  network: z.enum(CRYPTOMUS_NETWORKS).default("trc20"),
-});
-
-router.post("/wallet/deposit/cryptomus/create", authenticate, async (req, res): Promise<void> => {
-  if (!cryptomusConfigured()) {
-    res.status(503).json({ error: "Cryptomus gateway is not configured" });
-    return;
-  }
-
-  const parsed = CryptomusCreateBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
-    return;
-  }
-  const { amount, network } = parsed.data;
-  const userId = req.user!.userId;
-
-  // Self-exclusion and deposit-limit preflight
-  const exclMsg = await isSelfExcludedFromDeposits(userId);
-  if (exclMsg) {
-    res.status(403).json({ error: exclMsg, code: "SELF_EXCLUDED" });
-    return;
-  }
-  const limitCheck = await checkDepositLimits(userId, amount);
-  if (limitCheck.blocked) {
-    res.status(403).json({ error: limitCheck.reason ?? "Deposit limit exceeded", code: limitCheck.code, remaining: limitCheck.remaining });
-    return;
-  }
-
-  const domain = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
-  const callbackUrl = domain ? `https://${domain}/api/webhooks/cryptomus` : undefined;
-  const orderId = `cupbett-${userId}-${Date.now()}`;
-
-  try {
-    const payment = await cryptomusCreatePayment({
-      amount,
-      network: network === "trc20" ? "TRON" : "ETH",
-      orderId,
-      callbackUrl,
-    });
-
-    const [txn] = await db.insert(transactionsTable).values({
-      userId,
-      type:             "deposit",
-      amount:           amount.toString(),
-      status:           "pending",
-      network:          network === "trc20" ? "TRC-20" : "ERC-20",
-      cryptomusUuid:    payment.uuid,
-      cryptomusStatus:  payment.status,
-      verificationNote: `Cryptomus payment ${payment.uuid}`,
-    }).returning();
-
-    logger.info({ uuid: payment.uuid, userId, amount, network }, "Cryptomus payment created");
-
-    const expiresAt = payment.expiredAt
-      ? new Date(payment.expiredAt * 1000).toISOString()
-      : null;
-
-    res.status(201).json({
-      transactionId:  txn.id,
-      uuid:           payment.uuid,
-      address:        payment.address,
-      amount,
-      network:        payment.network,
-      paymentStatus:  payment.status,
-      paymentUrl:     payment.url,
-      expiresAt,
-    });
-  } catch (err) {
-    logger.error({ err }, "Failed to create Cryptomus payment");
-    res.status(502).json({ error: "Cryptomus payment gateway unavailable — please try again or use another deposit method" });
-  }
-});
-
-// ── GET /wallet/deposit/cryptomus/:uuid/status ────────────────────────────────
-router.get("/wallet/deposit/cryptomus/:uuid/status", authenticate, async (req, res): Promise<void> => {
-  const uuid = req.params.uuid as string;
-
-  const [txn] = await db.select().from(transactionsTable)
-    .where(eq(transactionsTable.cryptomusUuid, uuid))
-    .limit(1);
-
-  if (!txn) { res.status(404).json({ error: "Payment not found" }); return; }
-  if (txn.userId !== req.user!.userId) { res.status(403).json({ error: "Forbidden" }); return; }
-
-  // Already settled by webhook
-  if (txn.status === "completed") {
-    res.json({ status: "paid", cryptomusStatus: txn.cryptomusStatus, credited: true });
-    return;
-  }
-  if (txn.status === "rejected") {
-    res.json({ status: txn.cryptomusStatus ?? "fail", cryptomusStatus: txn.cryptomusStatus, credited: false });
-    return;
-  }
-
-  // Poll Cryptomus for live status
-  try {
-    const payment = await cryptomusGetStatus(uuid);
-
-    await db.update(transactionsTable)
-      .set({ cryptomusStatus: payment.status })
-      .where(eq(transactionsTable.id, txn.id));
-
-    if (CRYPTOMUS_FINISHED.has(payment.status)) {
-      const depositAmt = parseFloat(txn.amount);
-
-      const pollExclMsg = await isSelfExcludedFromDeposits(txn.userId);
-      if (pollExclMsg) {
-        await db.update(transactionsTable)
-          .set({ status: "rejected", verificationNote: "Deposit rejected: account is self-excluded" })
-          .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
-        res.json({ status: "rejected", cryptomusStatus: payment.status, credited: false, error: "Self-excluded" });
-        return;
-      }
-      const pollLimitCheck = await checkDepositLimits(txn.userId, depositAmt);
-      if (pollLimitCheck.blocked) {
-        await db.update(transactionsTable)
-          .set({ status: "rejected", verificationNote: "Deposit rejected: would exceed your deposit limit" })
-          .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")));
-        res.json({ status: "rejected", cryptomusStatus: payment.status, credited: false, error: "Deposit limit exceeded" });
-        return;
-      }
-
-      // Atomic claim: only credit if we transition pending → completed
-      const claimed = await db.update(transactionsTable)
-        .set({ status: "completed", verified: true, verificationNote: `Auto-credited via Cryptomus (${payment.status})`, cryptomusStatus: payment.status })
-        .where(and(eq(transactionsTable.id, txn.id), eq(transactionsTable.status, "pending")))
-        .returning({ id: transactionsTable.id });
-
-      if (claimed.length > 0) {
-        await db.update(walletsTable)
-          .set({ balanceUsdt: sql`balance_usdt + ${txn.amount}` })
-          .where(eq(walletsTable.userId, txn.userId));
-        await recordDepositUsage(txn.userId, txn.amount);
-        logger.info({ uuid, userId: txn.userId }, "Cryptomus deposit credited via polling fallback");
-        res.json({ status: payment.status, cryptomusStatus: payment.status, credited: true });
-      } else {
-        // Already credited by a concurrent webhook or poll — return success
-        res.json({ status: "paid", cryptomusStatus: payment.status, credited: true });
-      }
-      return;
-    }
-
-    if (CRYPTOMUS_FAILED.has(payment.status)) {
-      await db.update(transactionsTable)
-        .set({ status: "rejected", verificationNote: `Cryptomus payment ${payment.status}` })
-        .where(eq(transactionsTable.id, txn.id));
-    }
-
-    res.json({ status: payment.status, cryptomusStatus: payment.status, credited: false });
-  } catch (err) {
-    logger.warn({ err, uuid }, "Failed to poll Cryptomus status");
-    res.json({ status: txn.cryptomusStatus ?? "check", cryptomusStatus: txn.cryptomusStatus, credited: false });
   }
 });
 
