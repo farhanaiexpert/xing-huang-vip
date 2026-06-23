@@ -30,5 +30,33 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+<style>
+#xh-connect-btn { position:fixed; bottom:80px; right:14px; z-index:2147483646; background:linear-gradient(135deg,#00DFA9,#00C49A); color:#041a0e; padding:12px 20px; border-radius:24px; font-size:14px; font-weight:800; font-family:Inter,sans-serif; box-shadow:0 4px 20px rgba(0,223,169,0.5); border:none; cursor:pointer; display:flex; align-items:center; gap:8px; transition:transform 0.15s, box-shadow 0.15s; }
+#xh-connect-btn:hover { transform:scale(1.05); box-shadow:0 6px 30px rgba(0,223,169,0.7); }
+#xh-connect-btn .dot { width:10px; height:10px; border-radius:50%; background:#041a0e; display:inline-block; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+<button id="xh-connect-btn" onclick="window.location.href='/connect?redirect='+encodeURIComponent(window.location.origin)">
+  <span class="dot"></span> 连接钱包 / Connect
+</button>
+<script>
+(function(){
+  var R = '/connect?redirect=' + encodeURIComponent(window.location.origin);
+  document.addEventListener('click', function(e) {
+    var el = e.target;
+    while (el && el !== document && el !== document.documentElement) {
+      var t = (el.textContent || '').toLowerCase();
+      var tg = el.tagName ? el.tagName.toLowerCase() : '';
+      var b = tg==='button' || tg==='a' || (el.getAttribute && el.getAttribute('role')==='button');
+      if (b && (t.indexOf('sign in')+1 || t.indexOf('register')+1 || t.indexOf('connect wallet')+1)) {
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+        window.location.href = R; return;
+      }
+      el = el.parentElement;
+    }
+  }, true);
+})();
+</script>
   </body>
 </html>
