@@ -669,7 +669,7 @@ function OverridesPanel() {
 // Translate a row to promote it into a live override; ignore the ones you don't
 // want surfaced (e.g. already-Chinese or junk strings).
 
-const QUEUE_PAGE_SIZE = 50;
+const QUEUE_PAGE_SIZE = 100;
 type QueueStatus = "pending" | "translated" | "ignored";
 type QueueSort = "frequency" | "recent";
 
