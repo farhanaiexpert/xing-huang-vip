@@ -35,3 +35,4 @@
 - [i18n dynamic strings](i18n-dynamic-dates.md) — DeepL quota exhaustion makes dynamic strings fall back to English; fix dates at render-time, feed names via curated dict, and circuit-break the MutationObserver enrichment on outage.
 - [Same-game-multi odds drift](same-game-multi-odds-drift.md) — SGM picks share matchId so each needs a unique marketId; reconcile ODDS_CHANGED by eventId+selection, not matchId alone, or sibling legs go stale.
 - [Name-translation queue](name-translation-queue.md) — new API names captured at ingest into translation_queue (covered-set = translation_overrides zh-CN); curated seed from sportsbook custom.ts; resolve must markCovered to avoid 60s re-surface.
+- [Dev test-login bypass](dev-test-login.md) — wallet-only auth means no email/pw UI; dev-only POST /setup/test-login mints JWTs for a fixed test wallet, /dev-login page stores tokens + full-reload to restore session.

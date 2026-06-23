@@ -22,6 +22,7 @@ const LivePage = lazy(() => import("@/pages/LivePage").then((m) => ({ default: m
 const WorldCupPage = lazy(() => import("@/pages/WorldCupPage").then((m) => ({ default: m.WorldCupPage })));
 const MoreMarkets = lazy(() => import("@/pages/MoreMarkets").then((m) => ({ default: m.MoreMarkets })));
 const AccountLayout = lazy(() => import("@/pages/account/AccountLayout").then((m) => ({ default: m.AccountLayout })));
+const DevLogin = lazy(() => import("@/pages/DevLogin"));
 import { BetSlipProvider } from "@/hooks/useBetSlip";
 import { WalletProvider } from "@/hooks/useWallet";
 import { BetHistoryProvider } from "@/hooks/useBetHistory";
@@ -77,6 +78,7 @@ function Router() {
       <Route path="/live"              component={LivePage}        />
       <Route path="/worldcup"          component={WorldCupPage}    />
       <Route path="/more-markets"      component={MoreMarkets}     />
+      {import.meta.env.DEV && <Route path="/dev-login" component={DevLogin} />}
       {/* Legacy redirects */}
       <Route path="/bet-history">
         {() => <Redirect to="/account/bets" />}
