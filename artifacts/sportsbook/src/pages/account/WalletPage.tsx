@@ -153,7 +153,7 @@ export function WalletPage() {
     return 'wallet';
   });
   const [selectedChain, setSelectedChain] = useState<ChainTabKey>('bsc');
-  const [manualNetwork, setManualNetwork] = useState<'TRC-20' | 'ERC-20' | 'BSC' | 'POLYGON' | 'ARBITRUM' | 'OPTIMISM' | 'BASE' | 'SOLANA' | 'TON' | 'XRP' | 'BTC'>('TRC-20');
+  const manualNetwork = 'TRC-20' as const;
   const [nppState, setNppState]       = useState<'idle' | 'creating' | 'paying' | 'success' | 'expired' | 'failed'>(() => {
     try {
       const saved = sessionStorage.getItem('cupbett_npp_payment');
@@ -201,7 +201,7 @@ export function WalletPage() {
   // Withdrawal form
   const [wdAmount, setWdAmount]       = useState('');
   const [wdAddress, setWdAddress]     = useState('');
-  const [wdNetwork, setWdNetwork]     = useState<'TRC-20' | 'TRX' | 'BSC' | 'BTC'>('TRC-20');
+  const wdNetwork = 'TRC-20' as const;
   const [historyFilter, setHistoryFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
   const [wdSubmitting, setWdSubmitting] = useState(false);
   const [wdProcessing, setWdProcessing] = useState(false);
@@ -453,13 +453,7 @@ export function WalletPage() {
     return addr;
   }
 
-  function getManualAddress(network: typeof manualNetwork, info: DepositInfo): string {
-    if (network === 'BTC')    return cleanAddr(info.addressBtc);
-    if (network === 'SOLANA') return cleanAddr(info.addressSol);
-    if (network === 'TON')    return cleanAddr(info.addressTon);
-    if (network === 'XRP')    return cleanAddr(info.addressXrp);
-    if (network === 'BSC')    return cleanAddr(info.addressBsc) || cleanAddr(info.addressErc20) || cleanAddr(info.address);
-    if (network !== 'TRC-20') return cleanAddr(info.addressErc20) || cleanAddr(info.address);
+  function getManualAddress(_network: typeof manualNetwork, info: DepositInfo): string {
     return cleanAddr(info.address);
   }
 
@@ -498,7 +492,7 @@ export function WalletPage() {
     if (!wdAmount || isNaN(amount) || amount <= 0) { setWdError('Enter a valid amount'); return; }
     if (amount < 100) { setWdError('Minimum withdrawal is 100 USDT'); return; }
     if (amount > balance) { setWdError('Amount exceeds your available balance'); return; }
-    if (!wdAddress.trim()) { setWdError(`Enter your ${wdNetwork === 'BTC' ? 'BTC' : `USDT ${wdNetwork}`} wallet address`); return; }
+    if (!wdAddress.trim()) { setWdError('Enter your USDT TRC-20 wallet address'); return; }
     setWdSubmitting(true);
     try {
       await api.post('/wallet/withdraw', { amount, walletAddress: wdAddress.trim(), network: wdNetwork });
@@ -789,7 +783,7 @@ export function WalletPage() {
                         <span className="text-[13px] font-bold text-[#F8FAFC]">USDT Manual</span>
                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(250,204,21,0.18)', color: '#FACC15', border: '1px solid rgba(250,204,21,0.35)' }}>Most Popular</span>
                       </div>
-                      <p className="text-[10px] text-[#64748B] mt-0.5">TRC-20 · ERC-20 · BTC · TON · 11 networks · <span className="font-semibold text-[#00DFA9]">Min $10</span></p>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">USDT · TRC-20 (Tron) · <span className="font-semibold text-[#00DFA9]">Min $10</span></p>
                     </div>
                     {active
                       ? <div className="shrink-0 w-5 h-5 rounded-full bg-[#00DFA9] flex items-center justify-center"><Check className="w-3 h-3 text-[#0B0F14]" /></div>
@@ -1583,82 +1577,43 @@ export function WalletPage() {
 
           {/* ── Manual USDT flow ─────────────────────────────────────────── */}
           {depositMethod === 'manual' && (() => {
-            const MANUAL_NETS = [
-              { val: 'TRC-20'   as const, short: 'TRC-20',   fullName: 'Tron (TRC-20)',    coinLabel: 'USDT', color: '#00DFA9', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT on TRC-20 (Tron). Sending on any other network will result in permanent loss.' },
-              { val: 'ERC-20'   as const, short: 'ERC-20',   fullName: 'Ethereum (ERC-20)',coinLabel: 'USDT', color: '#627EEA', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT on Ethereum (ERC-20). Do not send on TRC-20/Tron or other networks.' },
-              { val: 'BSC'      as const, short: 'BEP-20',   fullName: 'BNB Smart Chain',  coinLabel: 'USDT', color: '#F0B90B', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT on BEP-20 (BSC). Sending on TRC-20 or Ethereum will result in loss.' },
-              { val: 'SOLANA'   as const, short: 'Solana',   fullName: 'Solana (SPL)',     coinLabel: 'USDT', color: '#9945FF', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT SPL on Solana. Sending SOL or other tokens will result in permanent loss.' },
-              { val: 'TON'      as const, short: 'TON',      fullName: 'TON Network',      coinLabel: 'USDT', color: '#0098EA', badge: '⚡ Auto',    min: 'Min $10', autoVerify: true,  warning: 'Only send USDT Jetton on TON. Sending native TON will result in loss.' },
-              { val: 'BTC'      as const, short: 'Bitcoin',  fullName: 'Bitcoin Network',  coinLabel: 'BTC',  color: '#F7931A', badge: '🕐 Review', min: 'Admin',   autoVerify: false, warning: 'Only send native BTC. Admin converts to USDT and credits within 30 min.' },
-            ];
-            const net = MANUAL_NETS.find(n => n.val === manualNetwork) ?? MANUAL_NETS[0];
+            const ACCENT = '#00DFA9';
+            const net = { color: ACCENT, coinLabel: 'USDT', fullName: 'Tron (TRC-20)', badge: '⚡ Auto', warning: 'Only send USDT on the TRC-20 (Tron) network to this address. Sending any other coin or using a different network will result in permanent loss.', autoVerify: true };
             const addr = depositInfo ? getManualAddress(manualNetwork, depositInfo) : '';
-            const qrData = addr ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(addr)}&bgcolor=ffffff&color=000000&margin=6` : '';
+            const qrData = addr ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(addr)}&bgcolor=ffffff&color=000000&margin=8` : '';
 
             return (
               <>
-                {/* ── Network summary strip ── */}
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none px-1 pb-1">
-                  <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider shrink-0">6 Networks:</span>
-                  {([
-                    { name: 'TRC-20',  color: '#00DFA9' },
-                    { name: 'ERC-20',  color: '#627EEA' },
-                    { name: 'BEP-20',  color: '#F0B90B' },
-                    { name: 'Solana',  color: '#9945FF' },
-                    { name: 'TON',     color: '#0098EA' },
-                    { name: 'Bitcoin', color: '#F7931A' },
-                  ] as { name: string; color: string }[]).map(n => (
-                    <span key={n.name} className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap"
-                      style={{ background: `${n.color}18`, color: n.color, border: `1px solid ${n.color}30` }}>
-                      {n.name}
-                    </span>
-                  ))}
+                {/* ── USDT TRC-20 banner ── */}
+                <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #06140F 0%, #08221A 100%)', border: `1px solid ${ACCENT}30` }}>
+                  <div className="px-4 py-3.5 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${ACCENT}18`, border: `1px solid ${ACCENT}40` }}>
+                      <span className="text-[16px] font-black" style={{ color: ACCENT }}>₮</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-[14px] font-black text-[#F8FAFC]">USDT · TRC-20</p>
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ background: `${ACCENT}18`, color: ACCENT, border: `1px solid ${ACCENT}35` }}>⚡ Auto-credit</span>
+                      </div>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">Tron Network · USDT only · Min {depositInfo?.minDeposit ?? 10} USDT</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* ── Step indicator ── */}
                 <div className="flex items-center gap-2 px-1">
-                  {['Select Network', 'Send Funds', 'Confirm TxID'].map((s, i) => (
+                  {['Send USDT', 'Confirm TxID'].map((s, i) => (
                     <div key={s} className="flex items-center gap-2 flex-1">
                       <div className="flex items-center gap-1.5">
                         <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0"
-                          style={{ background: i === 0 ? net.color : i === 1 && addr ? net.color : 'rgba(255,255,255,0.07)', color: (i === 0 || (i === 1 && addr)) ? '#0B0F14' : '#64748B' }}>
+                          style={{ background: i === 0 && addr ? net.color : 'rgba(255,255,255,0.07)', color: i === 0 && addr ? '#0B0F14' : '#64748B' }}>
                           {i + 1}
                         </div>
-                        <span className="text-[10px] font-semibold hidden sm:block" style={{ color: i === 0 ? net.color : '#64748B' }}>{s}</span>
+                        <span className="text-[10px] font-semibold" style={{ color: i === 0 ? net.color : '#64748B' }}>{s}</span>
                       </div>
-                      {i < 2 && <div className="flex-1 h-px bg-white/[0.07]" />}
+                      {i < 1 && <div className="flex-1 h-px bg-white/[0.07]" />}
                     </div>
                   ))}
-                </div>
-
-                {/* ── Network selector ── */}
-                <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #060E1A 0%, #0A1628 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div className="px-4 py-3 border-b border-white/[0.06]">
-                    <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider flex items-center gap-1.5">
-                      <Zap className="h-3 w-3" /> Choose Network
-                    </p>
-                  </div>
-                  <div className="p-3 grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {MANUAL_NETS.map(n => {
-                      const isActive = manualNetwork === n.val;
-                      return (
-                        <button key={n.val}
-                          onClick={() => { setManualNetwork(n.val); setCopied(false); setDepSuccess(false); setDepError(''); }}
-                          className="relative rounded-xl p-2.5 flex flex-col items-center gap-1 transition-all"
-                          style={{
-                            background: isActive ? `${n.color}18` : 'rgba(255,255,255,0.03)',
-                            border: `1.5px solid ${isActive ? n.color + '70' : 'rgba(255,255,255,0.07)'}`,
-                            boxShadow: isActive ? `0 0 12px ${n.color}18` : 'none',
-                          }}>
-                          {isActive && <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: n.color }} />}
-                          <span className="text-[11px] font-black" style={{ color: isActive ? n.color : '#94A3B8' }}>{n.short}</span>
-                          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full"
-                            style={{ background: `${n.color}15`, color: n.color, border: `1px solid ${n.color}25` }}>{n.badge}</span>
-                          <span className="text-[7px] font-bold" style={{ color: n.color, opacity: 0.65 }}>{n.min}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
 
                 {/* ── Address card ── */}
@@ -1731,7 +1686,7 @@ export function WalletPage() {
                           <Lock className="h-5 w-5 text-[#64748B]" />
                         </div>
                         <p className="text-[13px] font-bold text-[#F8FAFC]">Address not configured</p>
-                        <p className="text-[11px] text-[#64748B] max-w-xs">This network is not available right now. Please use NOWPayments or choose a different network.</p>
+                        <p className="text-[11px] text-[#64748B] max-w-xs">TRC-20 deposits are temporarily unavailable. Please use NOWPayments or try again shortly.</p>
                       </div>
                     )}
                   </div>
@@ -1841,10 +1796,10 @@ export function WalletPage() {
                             </label>
                             <div className="relative">
                               <input type="number"
-                                min={net.coinLabel === 'BTC' ? '0.00001' : net.coinLabel === 'XRP' ? '1' : String(depositInfo?.minDeposit ?? 10)}
-                                step={net.coinLabel === 'BTC' ? '0.00000001' : net.coinLabel === 'XRP' ? '0.000001' : '0.01'}
+                                min={String(depositInfo?.minDeposit ?? 10)}
+                                step="0.01"
                                 value={depAmount} onChange={e => setDepAmount(e.target.value)}
-                                placeholder={net.coinLabel === 'BTC' ? 'e.g. 0.001 BTC' : net.coinLabel === 'XRP' ? 'e.g. 50 XRP' : `Min ${depositInfo?.minDeposit ?? 10} USDT`}
+                                placeholder={`Min ${depositInfo?.minDeposit ?? 10} USDT`}
                                 className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#00DFA9]/60 focus:ring-1 focus:ring-[#00DFA9]/20 transition-all pr-16" />
                               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#00DFA9] bg-[#00DFA9]/10 px-2 py-0.5 rounded-lg">{net.coinLabel}</span>
                             </div>
@@ -2059,57 +2014,22 @@ export function WalletPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="w-5 h-5 rounded-full bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[9px] font-black text-[#38BDF8]">1</span>
-                      <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">Select Network</p>
+                      <p className="text-[11px] font-bold text-[#F8FAFC] uppercase tracking-wider">Withdrawal Network</p>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {([
-                        { id: 'TRC-20', label: 'TRC-20', chain: 'Tron (USDT)',      color: '#00DFA9', desc: 'Low fees',    icon: 'TRX' },
-                        { id: 'TRX',    label: 'TRX',    chain: 'Tron Coin',        color: '#EF4444', desc: 'Native TRX',  icon: 'TRX' },
-                        { id: 'BSC',    label: 'BEP-20', chain: 'BNB Smart Chain',  color: '#F0B90B', desc: 'Low fees',    icon: 'BNB' },
-                        { id: 'BTC',    label: 'BTC',    chain: 'Bitcoin',          color: '#F7931A', desc: 'Bitcoin',     icon: '₿'   },
-                      ] as const).map(net => (
-                        <button
-                          key={net.id}
-                          type="button"
-                          onClick={() => { setWdNetwork(net.id); setWdAddress(''); }}
-                          className={`relative p-3 rounded-xl border-2 text-left transition-all ${
-                            wdNetwork === net.id
-                              ? 'border-[#38BDF8] bg-[#38BDF8]/10'
-                              : 'border-white/[0.08] bg-[#0B0F14] hover:border-white/[0.15]'
-                          }`}
-                        >
-                          {wdNetwork === net.id && (
-                            <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#38BDF8] flex items-center justify-center">
-                              <span className="text-[7px] font-black text-[#0B0F14]">✓</span>
-                            </span>
-                        )}
-                          <div className="w-6 h-6 rounded-lg mb-2 flex items-center justify-center" style={{ backgroundColor: net.color + '22', border: `1px solid ${net.color}44` }}>
-                            <span className="text-[8px] font-black" style={{ color: net.color }}>{net.icon}</span>
-                          </div>
-                          <p className="text-[11px] font-bold text-[#F8FAFC]">{net.label}</p>
-                          <p className="text-[9px] text-[#64748B]">{net.chain}</p>
-                          <p className="text-[9px] mt-1 font-medium" style={{ color: net.color }}>{net.desc}</p>
-                        </button>
-                      ))}
+                    <div className="relative p-3.5 rounded-xl border-2 border-[#00DFA9]/40 bg-[#00DFA9]/[0.06] flex items-center gap-3">
+                      <span className="absolute top-2.5 right-2.5 text-[8px] font-black px-2 py-0.5 rounded-full bg-[#00DFA9]/15 text-[#00DFA9] border border-[#00DFA9]/30">USDT only</span>
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#00DFA922', border: '1px solid #00DFA944' }}>
+                        <span className="text-[14px] font-black text-[#00DFA9]">₮</span>
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-bold text-[#F8FAFC]">TRC-20</p>
+                        <p className="text-[10px] text-[#64748B]">Tron Network (USDT) · Low fees</p>
+                      </div>
                     </div>
-                    {wdNetwork === 'TRX' && (
-                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)' }}>
-                        <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-red-400/80 leading-relaxed">TRX withdrawals are processed as native Tron coin. Admin will convert your USDT balance and send TRX to your Tron address.</p>
-                      </div>
-                    )}
-                    {wdNetwork === 'BSC' && (
-                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(240,185,11,0.06)', border: '1px solid rgba(240,185,11,0.18)' }}>
-                        <AlertCircle className="h-3.5 w-3.5 text-[#F0B90B] shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-[#F0B90B]/80 leading-relaxed">Send your BSC (BEP-20) wallet address. Only send USDT on BNB Smart Chain to this address.</p>
-                      </div>
-                    )}
-                    {wdNetwork === 'BTC' && (
-                      <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(247,147,26,0.06)', border: '1px solid rgba(247,147,26,0.18)' }}>
-                        <AlertCircle className="h-3.5 w-3.5 text-[#F7931A] shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-[#F7931A]/80 leading-relaxed">BTC withdrawals are processed as Bitcoin. Admin will convert your USDT balance and send BTC to your address.</p>
-                      </div>
-                    )}
+                    <div className="mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(0,223,169,0.05)', border: '1px solid rgba(0,223,169,0.15)' }}>
+                      <Info className="h-3.5 w-3.5 text-[#00DFA9] shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-[#00DFA9]/80 leading-relaxed">Withdrawals are sent as <strong>USDT on the TRC-20 (Tron)</strong> network only. Enter a valid Tron (TRC-20) wallet address below.</p>
+                    </div>
                   </div>
 
                   {/* Step 2 — Amount */}
@@ -2171,13 +2091,7 @@ export function WalletPage() {
                         type="text"
                         value={wdAddress}
                         onChange={e => setWdAddress(e.target.value)}
-                        placeholder={
-                          wdNetwork === 'TRC-20' ? 'e.g. TQn5m… Tron USDT (TRC-20) address' :
-                          wdNetwork === 'TRX'    ? 'e.g. TQn5m… Tron (TRX) address' :
-                          wdNetwork === 'BSC'    ? 'e.g. 0x742d… BNB Smart Chain address' :
-                          wdNetwork === 'BTC'    ? 'e.g. bc1q… or 1… or 3… Bitcoin address' :
-                          'e.g. 0x742d… wallet address'
-                        }
+                        placeholder="e.g. TQn5m… Tron USDT (TRC-20) address"
                         className="w-full bg-[#0B0F14] border border-white/[0.08] rounded-xl px-4 py-3 text-[12px] font-mono text-[#F8FAFC] placeholder:text-[#2D3748] focus:outline-none focus:border-[#38BDF8]/50 transition-colors"
                       />
                     </div>

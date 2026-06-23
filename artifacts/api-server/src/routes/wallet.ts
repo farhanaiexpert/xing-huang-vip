@@ -513,7 +513,7 @@ router.post("/wallet/bonus/welcome", authenticate, async (req, res): Promise<voi
 const WithdrawBody = z.object({
   amount:        z.number().positive().min(100, "Minimum withdrawal is 100 USDT"),
   walletAddress: z.string().min(10, "Please enter a valid USDT wallet address"),
-  network:       z.enum(["TRC-20", "TRX", "BSC", "BTC"]),
+  network:       z.enum(["TRC-20"]),
 });
 
 router.post("/wallet/withdraw", authenticate, async (req, res): Promise<void> => {
