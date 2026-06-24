@@ -1,10 +1,12 @@
 import { createAppKit } from '@reown/appkit/react';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { mainnet, bsc, polygon, arbitrum, optimism, base, linea, type AppKitNetwork } from '@reown/appkit/networks';
+import { mainnet, type AppKitNetwork } from '@reown/appkit/networks';
 
 const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID as string) || '';
 
-const networks = [mainnet, bsc, polygon, arbitrum, optimism, base, linea] as [AppKitNetwork, ...AppKitNetwork[]];
+// Only Ethereum mainnet is registered — we use TRC-20 (TronLink) for deposits.
+// A single-network config prevents AppKit from showing a multi-chain "Switch Network" picker.
+const networks = [mainnet] as [AppKitNetwork, ...AppKitNetwork[]];
 
 export const wagmiAdapter = new WagmiAdapter({
   networks,
