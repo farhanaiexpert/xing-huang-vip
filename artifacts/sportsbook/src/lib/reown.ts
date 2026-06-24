@@ -5,85 +5,60 @@ import { mainnet, type AppKitNetwork } from '@reown/appkit/networks';
 const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID as string) || '';
 const networks = [mainnet] as [AppKitNetwork, ...AppKitNetwork[]];
 
-// wagmiAdapter is created eagerly — it is required by WagmiProvider in main.tsx
-// so that wagmi hooks (useAccount, useChainId, etc.) work everywhere.
-// createAppKit is NOT called here; it is deferred to initAppKit() below.
+// wagmiAdapter is created eagerly — required by WagmiProvider in main.tsx.
 export const wagmiAdapter = new WagmiAdapter({
   networks,
   projectId,
   ssr: false,
 });
 
-type AppKitInstance = ReturnType<typeof createAppKit>;
-let _appkit: AppKitInstance | null = null;
+// createAppKit MUST be called at module-load time (before WagmiProvider mounts)
+// so it can properly wire into the wagmiAdapter.
+// The modal only opens when the user explicitly clicks "Connect Wallet".
+export const appKit = createAppKit({
+  adapters: [wagmiAdapter],
+  networks,
+  projectId,
+  metadata: {
+    name: 'Xing Huang',
+    description: 'Xing Huang Sportsbook — Deposit USDT',
+    url: typeof window !== 'undefined' ? window.location.origin : '',
+    icons: ['https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp'],
+  },
+  features: {
+    analytics: false,
+    email: true,
+    socials: ['google', 'x'],
+    emailShowWallets: true,
+  },
+  themeMode: 'dark',
+  themeVariables: {
+    '--w3m-accent': '#00DFA9',
+    '--w3m-border-radius-master': '12px',
+    '--w3m-z-index': 2147483647,
+  },
+  allowUnsupportedChain: true,
+});
 
-/**
- * Lazily initialise Reown AppKit.
- * Safe to call multiple times — only the first call creates the instance.
- * Should be called right before opening the wallet modal (e.g. when the user
- * clicks "Connect Wallet" on the /account/wallet page).
- */
-export function initAppKit(): AppKitInstance {
-  if (_appkit) return _appkit;
-
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
-  _appkit = createAppKit({
-    adapters: [wagmiAdapter],
-    networks,
-    projectId,
-    metadata: {
-      name: 'Xing Huang',
-      description: 'Xing Huang Sportsbook — Deposit USDT',
-      url: siteUrl,
-      icons: ['https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp'],
-    },
-    features: {
-      analytics: false,
-      email: true,
-      socials: ['google', 'x'],
-      emailShowWallets: true,
-    },
-    themeMode: 'dark',
-    themeVariables: {
-      '--w3m-accent': '#00DFA9',
-      '--w3m-border-radius-master': '12px',
-      '--w3m-z-index': 2147483647,
-    },
-    // Never auto-show a "Switch Network" modal — user is on TRC-20 (Tron).
-    allowUnsupportedChain: true,
-  });
-
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
-    try {
-      _appkit.subscribeEvents(e => {
-        const RELAY_NOISE = new Set(['INITIALIZE', 'CONNECT_SUCCESS']);
-        if (RELAY_NOISE.has(e.data.event)) return;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        console.log('[Xing Huang AppKit]', e.data.event, (e.data as any).properties ?? '');
-      });
-    } catch { /* subscribeEvents may not exist on older SDK versions */ }
-  }
-
-  return _appkit;
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  try {
+    appKit.subscribeEvents(e => {
+      const RELAY_NOISE = new Set(['INITIALIZE', 'CONNECT_SUCCESS']);
+      if (RELAY_NOISE.has(e.data.event)) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      console.log('[Xing Huang AppKit]', e.data.event, (e.data as any).properties ?? '');
+    });
+  } catch { /* subscribeEvents may not exist on older SDK versions */ }
 }
 
 /**
  * Subscribe to whether the AppKit modal is currently open.
- * Safe to call before initAppKit() — returns a no-op unsubscribe and fires
- * callback(false) immediately so callers don't hang waiting for a signal.
  * Returns an unsubscribe function.
  */
 export function subscribeAppKitOpen(callback: (open: boolean) => void): () => void {
-  if (!_appkit) {
-    // AppKit not initialised yet — modal is definitely not open.
-    callback(false);
-    return () => {};
-  }
   try {
-    // subscribeState is a Reown AppKit v2 API that emits { open: boolean, ... }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unsub = (_appkit as any).subscribeState?.((state: { open?: boolean }) => {
+    const unsub = (appKit as any).subscribeState?.((state: { open?: boolean }) => {
       callback(!!state.open);
     });
     return typeof unsub === 'function' ? unsub : () => {};

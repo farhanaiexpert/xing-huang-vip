@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useAccount, useChainId, useDisconnect, useWalletClient, useSwitchChain, useConnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { watchAccount } from '@wagmi/core';
-import { wagmiAdapter, initAppKit } from '../lib/reown';
+import { wagmiAdapter, appKit } from '../lib/reown';
 
 export interface EvmWalletState {
   address: string | undefined;
@@ -39,13 +39,17 @@ export function useEvmWallet() {
 
   /**
    * Open the Reown AppKit modal.
-   * Lazily initialises AppKit on first call so the EVM wallet system stays
-   * completely dormant until the user explicitly requests it.
+   * appKit is initialised at module load time so open() is always safe to call.
    */
-  const openAppKitModal = useCallback(async (view?: Parameters<AppKitInstance['open']>[0]) => {
-    const kit = initAppKit();
+  const openAppKitModal = useCallback(async (view?: string) => {
     try {
-      await kit.open(view);
+      if (view) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (appKit as any).open({ view });
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (appKit as any).open();
+      }
     } catch (err) {
       console.error('[Xing Huang] AppKit open() failed:', err);
       throw new Error('APPKIT_OPEN_FAILED');
@@ -138,7 +142,7 @@ export function useEvmWallet() {
   }, [wagmiSwitchChain]);
 
   const openNetworks = useCallback(() => {
-    void openAppKitModal({ view: 'Networks' });
+    void openAppKitModal('Networks');
   }, [openAppKitModal]);
 
   const signMessage = useCallback(async (message: string): Promise<string> => {
@@ -161,6 +165,3 @@ export function useEvmWallet() {
 
   return { address, isConnected, chainId, connect, disconnect, signMessage, switchChain, openNetworks, openWalletModal };
 }
-
-// ── Type helper (avoids importing createAppKit just for its return type) ──────
-type AppKitInstance = Awaited<ReturnType<typeof initAppKit>>;
