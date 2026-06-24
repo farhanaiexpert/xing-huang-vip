@@ -3,63 +3,67 @@ import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { mainnet, type AppKitNetwork } from '@reown/appkit/networks';
 
 const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID as string) || '';
-
-// Only Ethereum mainnet is registered — we use TRC-20 (TronLink) for deposits.
-// A single-network config prevents AppKit from showing a multi-chain "Switch Network" picker.
 const networks = [mainnet] as [AppKitNetwork, ...AppKitNetwork[]];
 
+// wagmiAdapter is created eagerly — it is required by WagmiProvider in main.tsx
+// so that wagmi hooks (useAccount, useChainId, etc.) work everywhere.
+// createAppKit is NOT called here; it is deferred to initAppKit() below.
 export const wagmiAdapter = new WagmiAdapter({
   networks,
   projectId,
   ssr: false,
 });
 
-const siteUrl = (() => {
-  if (typeof window === 'undefined') return '';
-  // Use the real origin so WalletConnect deep links work on mobile.
-  // In Replit preview iframes the href includes the real production host.
-  return window.location.origin;
-})();
+type AppKitInstance = ReturnType<typeof createAppKit>;
+let _appkit: AppKitInstance | null = null;
 
-export const appkit = createAppKit({
-  adapters: [wagmiAdapter],
-  networks,
-  projectId,
-  metadata: {
-    name: 'Xing Huang',
-    description: 'Xing Huang Sportsbook — Deposit USDT',
-    url: siteUrl,
-    icons: ['https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp'],
-  },
-  features: {
-    analytics: false,
-    // Embedded wallets: lets non-crypto-native users sign in with email or a
-    // social account (Reown provisions a self-custodial wallet behind the scenes).
-    // NOTE: requires "Embedded Wallets" to be enabled for this project in the
-    // Reown Cloud dashboard (cloud.reown.com) — the toggle here is necessary but
-    // not sufficient on its own.
-    email: true,
-    socials: ['google', 'x'],
-    emailShowWallets: true,
-  },
-  themeMode: 'dark',
-  themeVariables: {
-    '--w3m-accent': '#00DFA9',
-    '--w3m-border-radius-master': '12px',
-    '--w3m-z-index': 2147483647,
-  },
-});
+/**
+ * Lazily initialise Reown AppKit.
+ * Safe to call multiple times — only the first call creates the instance.
+ * Should be called right before opening the wallet modal (e.g. when the user
+ * clicks "Connect Wallet" on the /account/wallet page).
+ */
+export function initAppKit(): AppKitInstance {
+  if (_appkit) return _appkit;
 
-// Log AppKit lifecycle events in dev — helps debug mobile wallet issues
-if (import.meta.env.DEV && typeof window !== 'undefined') {
-  try {
-    appkit.subscribeEvents(e => {
-      // Skip relay-maintenance events — the SDK fires these every ~10 s and they
-      // are not user-initiated actions, just SDK keep-alive/reconnect noise.
-      const RELAY_NOISE = new Set(['INITIALIZE', 'CONNECT_SUCCESS']);
-      if (RELAY_NOISE.has(e.data.event)) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      console.log('[Xing Huang AppKit]', e.data.event, (e.data as any).properties ?? '');
-    });
-  } catch { /* subscribeEvents may not exist on older SDK versions */ }
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  _appkit = createAppKit({
+    adapters: [wagmiAdapter],
+    networks,
+    projectId,
+    metadata: {
+      name: 'Xing Huang',
+      description: 'Xing Huang Sportsbook — Deposit USDT',
+      url: siteUrl,
+      icons: ['https://media.ourwebprojects.pro/wp-content/uploads/2026/06/Xing-Huang-Logo-official.webp'],
+    },
+    features: {
+      analytics: false,
+      email: true,
+      socials: ['google', 'x'],
+      emailShowWallets: true,
+    },
+    themeMode: 'dark',
+    themeVariables: {
+      '--w3m-accent': '#00DFA9',
+      '--w3m-border-radius-master': '12px',
+      '--w3m-z-index': 2147483647,
+    },
+    // Never auto-show a "Switch Network" modal — user is on TRC-20 (Tron).
+    allowUnsupportedChain: true,
+  });
+
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
+    try {
+      _appkit.subscribeEvents(e => {
+        const RELAY_NOISE = new Set(['INITIALIZE', 'CONNECT_SUCCESS']);
+        if (RELAY_NOISE.has(e.data.event)) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.log('[Xing Huang AppKit]', e.data.event, (e.data as any).properties ?? '');
+      });
+    } catch { /* subscribeEvents may not exist on older SDK versions */ }
+  }
+
+  return _appkit;
 }

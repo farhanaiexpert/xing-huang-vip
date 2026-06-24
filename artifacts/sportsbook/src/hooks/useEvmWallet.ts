@@ -1,9 +1,8 @@
 import { useCallback, useRef } from 'react';
 import { useAccount, useChainId, useDisconnect, useWalletClient, useSwitchChain, useConnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { useAppKit } from '@reown/appkit/react';
 import { watchAccount } from '@wagmi/core';
-import { wagmiAdapter } from '../lib/reown';
+import { wagmiAdapter, initAppKit } from '../lib/reown';
 
 export interface EvmWalletState {
   address: string | undefined;
@@ -33,11 +32,25 @@ export function useEvmWallet() {
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const { switchChain: wagmiSwitchChain } = useSwitchChain();
   const { connectAsync } = useConnect();
-  const { open } = useAppKit();
   const { data: walletClient } = useWalletClient();
 
   const walletClientRef = useRef(walletClient);
   walletClientRef.current = walletClient;
+
+  /**
+   * Open the Reown AppKit modal.
+   * Lazily initialises AppKit on first call so the EVM wallet system stays
+   * completely dormant until the user explicitly requests it.
+   */
+  const openAppKitModal = useCallback(async (view?: Parameters<AppKitInstance['open']>[0]) => {
+    const kit = initAppKit();
+    try {
+      await kit.open(view);
+    } catch (err) {
+      console.error('[Xing Huang] AppKit open() failed:', err);
+      throw new Error('APPKIT_OPEN_FAILED');
+    }
+  }, []);
 
   /**
    * Connect a wallet.
@@ -91,12 +104,7 @@ export function useEvmWallet() {
     }
 
     // ── Path B: AppKit modal (WalletConnect / QR / deep-link) ─────────────────
-    try {
-      await open();
-    } catch (err) {
-      console.error('[Xing Huang] AppKit open() failed:', err);
-      throw new Error('APPKIT_OPEN_FAILED');
-    }
+    await openAppKitModal();
 
     // Subscribe to account changes via the public wagmi/core API (no internal state access).
     // Resolves as soon as an address is detected, or after 5 minutes.
@@ -112,7 +120,7 @@ export function useEvmWallet() {
         },
       });
     });
-  }, [open, isConnected, address, connectAsync]);
+  }, [openAppKitModal, isConnected, address, connectAsync]);
 
   const disconnect = useCallback(() => wagmiDisconnect(), [wagmiDisconnect]);
 
@@ -130,8 +138,8 @@ export function useEvmWallet() {
   }, [wagmiSwitchChain]);
 
   const openNetworks = useCallback(() => {
-    void open({ view: 'Networks' });
-  }, [open]);
+    void openAppKitModal({ view: 'Networks' });
+  }, [openAppKitModal]);
 
   const signMessage = useCallback(async (message: string): Promise<string> => {
     let client = walletClientRef.current;
@@ -148,13 +156,11 @@ export function useEvmWallet() {
 
   /** Opens the official Reown/AppKit wallet modal directly (skips injected shortcut). */
   const openWalletModal = useCallback(async () => {
-    try {
-      await open();
-    } catch (err) {
-      console.error('[Xing Huang] AppKit open() failed:', err);
-      throw new Error('APPKIT_OPEN_FAILED');
-    }
-  }, [open]);
+    await openAppKitModal();
+  }, [openAppKitModal]);
 
   return { address, isConnected, chainId, connect, disconnect, signMessage, switchChain, openNetworks, openWalletModal };
 }
+
+// ── Type helper (avoids importing createAppKit just for its return type) ──────
+type AppKitInstance = Awaited<ReturnType<typeof initAppKit>>;
