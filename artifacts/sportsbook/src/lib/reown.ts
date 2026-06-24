@@ -67,3 +67,27 @@ export function initAppKit(): AppKitInstance {
 
   return _appkit;
 }
+
+/**
+ * Subscribe to whether the AppKit modal is currently open.
+ * Safe to call before initAppKit() — returns a no-op unsubscribe and fires
+ * callback(false) immediately so callers don't hang waiting for a signal.
+ * Returns an unsubscribe function.
+ */
+export function subscribeAppKitOpen(callback: (open: boolean) => void): () => void {
+  if (!_appkit) {
+    // AppKit not initialised yet — modal is definitely not open.
+    callback(false);
+    return () => {};
+  }
+  try {
+    // subscribeState is a Reown AppKit v2 API that emits { open: boolean, ... }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unsub = (_appkit as any).subscribeState?.((state: { open?: boolean }) => {
+      callback(!!state.open);
+    });
+    return typeof unsub === 'function' ? unsub : () => {};
+  } catch {
+    return () => {};
+  }
+}

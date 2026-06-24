@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'wouter';
-import { useAppKitState } from '@reown/appkit/react';
+import { subscribeAppKitOpen } from '../lib/reown';
 import {
   X, QrCode, Zap, CreditCard, Wallet, ArrowRight, Lock,
   Shield, Clock, CheckCircle2,
@@ -124,7 +124,7 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
   const { address, isConnected } = evmWallet;
   const { refreshBalance } = useWallet();
 
-  const { open: appkitModalOpen } = useAppKitState();
+  const appkitUnsubRef = useRef<(() => void) | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [connectError, setConnectError] = useState('');
@@ -183,9 +183,17 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     setConnecting(true);
     try {
       await evmWallet.openWalletModal();
-      // openWalletModal() resolves as soon as the modal opens, NOT when the user
-      // connects. Keep connecting=true — the effect below clears it when the modal
-      // closes or a wallet address is detected.
+      // openWalletModal() resolves as soon as the modal opens (after initAppKit runs).
+      // Subscribe to modal state now so we can clear the spinner when the user
+      // dismisses without connecting.
+      appkitUnsubRef.current?.();
+      appkitUnsubRef.current = subscribeAppKitOpen((open) => {
+        if (!open) {
+          setConnecting(false);
+          appkitUnsubRef.current?.();
+          appkitUnsubRef.current = null;
+        }
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'APPKIT_OPEN_FAILED') {
@@ -197,13 +205,8 @@ export function ConnectWalletModal({ open, onOpenChange, isOpen, onClose }: Conn
     }
   }
 
-  // Clear the "connecting" spinner when the AppKit modal closes without a connection,
-  // or when a wallet address becomes available (connection success).
-  useEffect(() => {
-    if (!appkitModalOpen && connecting) {
-      setConnecting(false);
-    }
-  }, [appkitModalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Clean up AppKit modal subscription on unmount.
+  useEffect(() => () => { appkitUnsubRef.current?.(); }, []);
 
   function handleDisconnect() {
     evmWallet.disconnect();
